@@ -1,0 +1,8 @@
+# Require the project owner's approval for every ordinary git push.
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "このプロジェクトの push は毎回ユーザーの手動承認を受ける",
+    match = ["git push origin main", "git push"],
+    not_match = ["git status", "git fetch origin"],
+)
