@@ -48,7 +48,9 @@ jobs:
           g++ -std=c++17 -O2 -Wall -Wextra -pedantic tests/associative_array.cpp -o /tmp/associative-array-test
           /tmp/associative-array-test
           g++ -std=c++17 -O2 -Wall -Wextra -pedantic tests/associative_array_checker.cpp -o /tmp/associative-array-checker
-          printf '6\n1 4\n0 4 7\n1 4\n0 4 0\n1 4\n1 5\n' | /tmp/associative-array-checker | diff - <(printf '0\n7\n0\n0\n')
+          printf '0\n7\n0\n0\n' > /tmp/associative-array-expected
+          printf '6\n1 4\n0 4 7\n1 4\n0 4 0\n1 4\n1 5\n' | /tmp/associative-array-checker > /tmp/associative-array-actual
+          diff -u /tmp/associative-array-expected /tmp/associative-array-actual
       - uses: actions/download-artifact@v4
         with:
           name: merge-sort-pasted
