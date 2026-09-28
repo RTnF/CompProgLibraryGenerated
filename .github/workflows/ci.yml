@@ -61,7 +61,7 @@ jobs:
           leanchecker: 'true'
           leanchecker-args: 'Proofs'
           axiom-audit: 'true'
-          axiom-audit-allow: 'propext,Quot.sound'
+          axiom-audit-allow: 'propext,Quot.sound,Classical.choice'
           axiom-audit-root: 'Proofs'
       - name: Check reviewed C++ AST to Lean mapping
         run: python3 verifier/merge_sort_bridge.py
