@@ -1,0 +1,11 @@
+name = "associative_array"
+source = "associative_array.hpp"
+dependencies = []
+proof = "Proofs/AssociativeArray.lean"
+model = "Proofs/Generated/AssociativeArray.lean"
+bridge = "verifier/associative_array_bridge.py"
+test = "tests/associative_array.cpp"
+benchmark = "benchmarks/associative_array.cpp"
+standard = "c++17"
+max_n = 1000000
+reviewed_ast_sha256 = "a13e8ae708ff997e87742af9420139d82cad9c6302db25c9cefa8b9b4cec349a"

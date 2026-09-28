@@ -69,6 +69,7 @@ Testing/
 .cache/
 .lake/
 .tools/
+benchmarks/local/
 __pycache__/
 *.pyc
 
