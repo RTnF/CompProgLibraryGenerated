@@ -67,3 +67,7 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+.lake/
+.tools/
+__pycache__/
+*.pyc

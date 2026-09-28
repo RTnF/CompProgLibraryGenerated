@@ -1,0 +1,5 @@
+name = "comp_prog_library_proofs"
+defaultTargets = ["Proofs"]
+
+[[lean_lib]]
+name = "Proofs"

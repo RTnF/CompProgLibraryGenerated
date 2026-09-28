@@ -1,0 +1,11 @@
+name = "merge_sort"
+source = "merge_sort.hpp"
+dependencies = []
+proof = "Proofs/MergeSort.lean"
+model = "Proofs/Generated/MergeSort.lean"
+bridge = "verifier/merge_sort_bridge.py"
+test = "tests/merge_sort.cpp"
+benchmark = "benchmarks/merge_sort.cpp"
+standard = "c++17"
+max_n = 300000
+reviewed_ast_sha256 = "3b974b797c64324bdf136445551d1a6b3fe62ab5a93605fabd5d2b5f2ddf60d4"

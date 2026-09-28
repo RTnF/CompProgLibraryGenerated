@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate public component metadata and dependencies
+        run: python3 tools/public.py
+      - name: Assemble paste-ready source
+        run: python3 tools/public.py --assemble merge_sort --output merge-sort-pasted.cpp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: merge-sort-pasted
+          path: merge-sort-pasted.cpp
+
+  cpp-template:
+    needs: public-gate
+    runs-on: ubuntu-24.04
+    container: gcc:13.3.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check compiler and template
+        run: |
+          g++ --version
+          test "$(g++ -dumpfullversion)" = "13.3.0"
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic a.cpp -o /tmp/comp-prog-template
+          /tmp/comp-prog-template < /dev/null
+      - name: Test merge sort without standard sorting functions
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -pedantic tests/merge_sort.cpp -o /tmp/merge-sort-test
+          /tmp/merge-sort-test
+      - uses: actions/download-artifact@v4
+        with:
+          name: merge-sort-pasted
+      - name: Compile pasted component
+        run: g++ -std=c++17 -O2 -Wall -Wextra -pedantic -fsyntax-only merge-sort-pasted.cpp
+
+  lean-proof:
+    needs: cpp-template
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        env:
+          LEAN_NUM_THREADS: '1'
+        with:
+          auto-config: 'false'
+          build: 'true'
+          test: 'false'
+          lint: 'false'
+          leanchecker: 'true'
+          leanchecker-args: 'Proofs'
+          axiom-audit: 'true'
+          axiom-audit-allow: 'propext,Quot.sound'
+          axiom-audit-root: 'Proofs'
+      - name: Check reviewed C++ AST to Lean mapping
+        run: python3 verifier/merge_sort_bridge.py
