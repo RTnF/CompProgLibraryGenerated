@@ -71,3 +71,6 @@ Testing/
 .tools/
 __pycache__/
 *.pyc
+
+## VSCode
+.vscode/
