@@ -10,60 +10,17 @@ permissions:
   contents: read
 
 jobs:
-  public-gate:
+  verify-public:
     runs-on: ubuntu-24.04
+    container: gcc:13.3.0-bookworm
     steps:
       - uses: actions/checkout@v4
-      - name: Validate public component metadata and dependencies
-        run: python3 tools/public.py
-      - name: Assemble paste-ready source
-        run: python3 tools/public.py --assemble merge_sort --output merge-sort-pasted.cpp
-      - name: Assemble associative array
-        run: python3 tools/public.py --assemble associative_array --output associative-array-pasted.cpp
-      - uses: actions/upload-artifact@v4
-        with:
-          name: merge-sort-pasted
-          path: |
-            merge-sort-pasted.cpp
-            associative-array-pasted.cpp
-
-  cpp-template:
-    needs: public-gate
-    runs-on: ubuntu-24.04
-    container: gcc:13.3.0
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check compiler and template
+      - name: Install Python and Lean prerequisites
         run: |
-          g++ --version
-          test "$(g++ -dumpfullversion)" = "13.3.0"
-          g++ -std=c++17 -O2 -Wall -Wextra -pedantic a.cpp -o /tmp/comp-prog-template
-          /tmp/comp-prog-template < /dev/null
-      - name: Test merge sort without standard sorting functions
-        run: |
-          g++ -std=c++17 -O2 -Wall -Wextra -pedantic tests/merge_sort.cpp -o /tmp/merge-sort-test
-          /tmp/merge-sort-test
-      - name: Test associative array
-        run: |
-          g++ -std=c++17 -O2 -Wall -Wextra -pedantic tests/associative_array.cpp -o /tmp/associative-array-test
-          /tmp/associative-array-test
-          g++ -std=c++17 -O2 -Wall -Wextra -pedantic tests/associative_array_checker.cpp -o /tmp/associative-array-checker
-          printf '0\n7\n0\n0\n' > /tmp/associative-array-expected
-          printf '6\n1 4\n0 4 7\n1 4\n0 4 0\n1 4\n1 5\n' | /tmp/associative-array-checker > /tmp/associative-array-actual
-          diff -u /tmp/associative-array-expected /tmp/associative-array-actual
-      - uses: actions/download-artifact@v4
-        with:
-          name: merge-sort-pasted
-      - name: Compile pasted component
-        run: |
-          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -fsyntax-only merge-sort-pasted.cpp
-          g++ -std=c++17 -O2 -Wall -Wextra -pedantic -fsyntax-only associative-array-pasted.cpp
-
-  lean-proof:
-    needs: cpp-template
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
+          apt-get update
+          apt-get install -y --no-install-recommends python3 unzip zstd
+      - name: Check all registered C++ components
+        run: python3 tools/check_public.py --mode cpp
       - uses: leanprover/lean-action@v1
         env:
           LEAN_NUM_THREADS: '1'
@@ -77,7 +34,5 @@ jobs:
           axiom-audit: 'true'
           axiom-audit-allow: 'propext,Quot.sound,Classical.choice'
           axiom-audit-root: 'Proofs'
-      - name: Check reviewed C++ AST to Lean mapping
-        run: |
-          python3 verifier/merge_sort_bridge.py
-          python3 verifier/associative_array_bridge.py
+      - name: Check all registered C++ AST to Lean mappings
+        run: python3 tools/check_public.py --mode bridge

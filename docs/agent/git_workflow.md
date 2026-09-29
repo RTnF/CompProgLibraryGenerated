@@ -7,8 +7,8 @@
 
 ## コミット前
 
-1. 変更に関係する検証を実行する。公開部品なら `tools/public.py`、対応する `verifier/*_bridge.py`、Lean ビルドと `leanchecker`、C++ テスト、貼り付け後のコンパイルを確認する。
-2. CI の実行シェルとコンテナを確認する。`sh` のステップでは Bash 専用構文を使わず、必要な場合は CI でシェルを明示する。
+1. 変更に関係する検証を実行する。公開部品なら `python3 tools/check_public.py` で登録済み全部品の公開判定、AST 対応、Lean ビルドと `leanchecker`、C++ テスト、入出力ケース、貼り付け後のコンパイルを確認する。CI の公理監査も結果を見る。
+2. CI の実行シェルと GCC 13.3.0 コンテナを確認する。`sh` のステップでは Bash 専用構文を使わず、必要な場合は CI でシェルを明示する。
 3. 測定環境情報と実測値を `benchmarks/local/` に保存する。`git check-ignore` で除外を確かめる。
 4. 対象ファイルをステージする。`git diff --cached --check`、`git diff --cached --stat`、`git diff --cached --name-only`、必要な内容確認で意図しないファイルやローカル情報がないことを確認する。
 5. コミット後にコミット ID と `git status --short --branch` を確認する。
