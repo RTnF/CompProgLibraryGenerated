@@ -1,4 +1,4 @@
-"""Validate public component metadata and assemble paste-ready source."""
+"""Validate public component metadata and generate ordered include checks."""
 
 import argparse
 from pathlib import Path
@@ -8,7 +8,7 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "library"
-MARKER = "// Paste public library components here, after their dependencies."
+TEMPLATE = "experiments/library/cpp/template/small_template.hpp"
 
 
 def repo_file(relative: str) -> Path:
@@ -53,6 +53,10 @@ def registry() -> dict[str, dict]:
                 if not isinstance(case[field], str):
                     raise ValueError(f"invalid I/O {field} for {name}")
                 repo_file(case[field])
+            for field, directory in (("input", "in"), ("expected", "out")):
+                path = Path(case[field])
+                if path.parent != Path("tests/data") / directory or path.suffix != ".txt":
+                    raise ValueError(f"I/O {field} must be tests/data/{directory}/*.txt for {name}")
             if not case["source"].endswith(".cpp"):
                 raise ValueError(f"invalid I/O source for {name}")
         source_digest = data.get("source_sha256")
@@ -107,7 +111,8 @@ def registry() -> dict[str, dict]:
         for field in ("input", "expected")
     }
     actual_cases = {
-        f"tests/data/{path.name}" for path in (ROOT / "tests/data").glob("*") if path.is_file()
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "tests/data").rglob("*") if path.is_file()
     }
     if actual_cases != expected_cases:
         raise ValueError("I/O case files and public registry differ")
@@ -147,25 +152,29 @@ def dependency_order(name: str, entries: dict[str, dict]) -> list[str]:
     return ordered
 
 
-def assemble(name: str, entries: dict[str, dict]) -> str:
-    template = repo_file("a.cpp").read_text()
-    if template.count(MARKER) != 1:
-        raise ValueError("a.cpp must contain exactly one paste marker")
-    parts = [repo_file(f"library/{entries[item]['source']}").read_text() for item in dependency_order(name, entries)]
-    return template.replace(MARKER, "\n".join(parts))
+def include_check(names: list[str], entries: dict[str, dict]) -> str:
+    paths = [TEMPLATE]
+    for name in names:
+        for item in dependency_order(name, entries):
+            source = f"library/{entries[item]['source']}"
+            if source not in paths:
+                paths.append(source)
+    for path in paths:
+        repo_file(path)
+    return "\n".join(f'#include "{path}"' for path in paths) + "\nint main() {}\n"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--assemble", metavar="COMPONENT")
+    parser.add_argument("--include-check", metavar="COMPONENT")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     entries = registry()
-    if args.assemble:
+    if args.include_check:
         if args.output is None:
-            parser.error("--assemble requires --output")
-        args.output.write_text(assemble(args.assemble, entries))
-        print(f"assembled {args.assemble} with {len(dependency_order(args.assemble, entries))} component(s)")
+            parser.error("--include-check requires --output")
+        args.output.write_text(include_check([args.include_check], entries))
+        print(f"generated include check for {args.include_check}")
     else:
         print(f"validated {len(entries)} public component(s)")
 

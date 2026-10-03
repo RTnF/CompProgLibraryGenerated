@@ -1,3 +1,4 @@
+#include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/associative_array.hpp"
 
 #include <cstdint>

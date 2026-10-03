@@ -56,7 +56,8 @@ def main() -> None:
         directory = Path(temp)
         binary = directory / "checker"
         subprocess.run(["g++", *FLAGS, str(SOURCE), "-o", str(binary)], check=True)
-        output = directory / "answer.out"
+        output = directory / "out" / "answer.txt"
+        output.parent.mkdir()
         timing = directory / "time.txt"
         for case in cases:
             expected = hashes[case.with_suffix(".out").name]

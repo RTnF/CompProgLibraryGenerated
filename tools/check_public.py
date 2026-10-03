@@ -8,7 +8,8 @@ import subprocess
 import sys
 import tempfile
 
-from public import ROOT, assemble, registry, repo_file
+from public import ROOT, TEMPLATE, include_check, registry, repo_file
+from offline import disable_network
 
 
 FLAGS = ["-std=c++17", "-O2", "-Wall", "-Wextra", "-pedantic"]
@@ -35,14 +36,20 @@ def check_local_results_untracked():
 def check_cpp(entries):
     with tempfile.TemporaryDirectory(prefix="public-check-") as directory:
         scratch = Path(directory)
-        run(["g++", *FLAGS, str(repo_file("a.cpp")), "-o", str(scratch / "template")])
-        run([str(scratch / "template")], input=b"")
+        for names, label in [([], "template"), (list(entries), "all-components")]:
+            source = scratch / f"{label}.cpp"
+            source.write_text(include_check(names, entries))
+            binary = scratch / label
+            run(["g++", *FLAGS, "-I", str(ROOT), str(source), "-o", str(binary)])
+            run([str(binary)])
         for name, data in entries.items():
             for index, test in enumerate(data["tests"]):
+                require_template_first(test)
                 binary = scratch / f"{name}-test-{index}"
                 run(["g++", *FLAGS, str(repo_file(test)), "-o", str(binary)])
                 run([str(binary)])
             for index, case in enumerate(data.get("io_cases", [])):
+                require_template_first(case["source"])
                 binary = scratch / f"{name}-io-{index}"
                 run(["g++", *FLAGS, str(repo_file(case["source"])), "-o", str(binary)])
                 result = subprocess.run(
@@ -53,10 +60,18 @@ def check_cpp(entries):
                 expected = repo_file(case["expected"]).read_bytes()
                 if result.stdout != expected:
                     raise RuntimeError(f"I/O case {index} failed for {name}: {result.stdout!r} != {expected!r}")
-            pasted = scratch / f"{name}-pasted.cpp"
-            pasted.write_text(assemble(name, entries))
-            run(["g++", *FLAGS, "-fsyntax-only", str(pasted)])
-            print(f"C++ tests and paste check passed: {name}")
+            included = scratch / f"{name}-included.cpp"
+            included.write_text(include_check([name], entries))
+            run(["g++", *FLAGS, "-I", str(ROOT), "-fsyntax-only", str(included)])
+            print(f"C++ tests and template-first include check passed: {name}")
+
+
+def require_template_first(test):
+    includes = [line.strip() for line in repo_file(test).read_text().splitlines()
+                if line.lstrip().startswith("#include")]
+    expected = f'#include "../{TEMPLATE}"'
+    if not includes or includes[0] != expected:
+        raise RuntimeError(f"test must include the library template first: {test}")
 
 
 def check_bridge(entries):
@@ -80,6 +95,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=("all", "cpp", "bridge"), default="all")
     args = parser.parse_args()
+    disable_network()
     entries = registry()
     check_local_results_untracked()
     check_compiler()
@@ -95,5 +111,5 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (RuntimeError, ValueError, subprocess.CalledProcessError) as error:
+    except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as error:
         raise SystemExit(str(error)) from error

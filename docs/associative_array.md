@@ -4,7 +4,7 @@
 
 [Library Checker の問題](https://judge.yosupo.jp/problem/associative_array) は、初期値がすべて 0 の連想配列に対し、`0 k v` で代入し、`1 k` で値を出力する。公式の[問題データ](https://github.com/yosupo06/library-checker-problems/tree/master/data_structure/associative_array)では `1 ≤ Q ≤ 1,000,000`、`0 ≤ k, v ≤ 10^18`、制限時間 5 秒である。問題データの README はローカルでのテスト利用を案内している。この環境からの提出は行わない。
 
-`library/associative_array.hpp` は `cp::AssociativeArray`、`cp::associative_array_set`、`cp::associative_array_get` を提供する。空の `cp::AssociativeArray` から始め、更新済みのキーには最後に代入した値を返し、未設定キーには 0 を返す。0 の代入も有効である。キーと値は符号なし 64 ビット整数で保持し、問題の上限はその範囲内にある。標準ヘッダを含み、`a.cpp` の `solve()` の直前に貼れる。
+`library/associative_array.hpp` は `cp::AssociativeArray`、`cp::associative_array_set`、`cp::associative_array_get` を提供する。空の `cp::AssociativeArray` から始め、更新済みのキーには最後に代入した値を返し、未設定キーには 0 を返す。0 の代入も有効である。キーと値は符号なし 64 ビット整数で保持し、問題の上限はその範囲内にある。標準ヘッダを含み、ライブラリ内のテンプレートに続けて include できる。
 
 `std::map` の要素数を `n` とすると、更新と参照は最悪 `O(log(n+1))` 時間であり、追加領域は `O(n)` である。合計 `Q` 操作は最悪 `O(Q log(Q+1))` 時間、`O(Q)` 領域である。`std::map` の比較、探索、代入の契約、およびメモリ確保の成功を前提とする。ハッシュの分布や乱数への前提はない。
 
@@ -20,4 +20,4 @@ Lean モデルは `std::map` を部分写像として扱い、未設定値を 0 
 
 ## 確認
 
-`tests/associative_array.cpp` は境界値、未設定キー、再代入、0 の代入と固定シードの操作列を確認する。`tests/associative_array_checker.cpp` は問題形式の入出力を確認する。`tools/public.py` で `a.cpp` に貼った結果も C++17 でコンパイルする。[公式ケースの生成・測定手順](../benchmarks/associative_array_official.md)を公開し、実測値と測定環境は Git の追跡対象外である `benchmarks/local/` に保存する。ローカル測定はジャッジでの実行時間を保証しない。
+`tests/associative_array.cpp` は境界値、未設定キー、再代入、0 の代入と固定シードの操作列を確認する。`tests/associative_array_checker.cpp` は問題形式の入出力を確認する。テストはライブラリ内のテンプレートを先に include する。`tools/public.py` による依存順の include 結合結果も C++17 でコンパイルする。[公式ケースの生成・測定手順](../benchmarks/associative_array_official.md)を公開し、実測値と測定環境は Git の追跡対象外である `benchmarks/local/` に保存する。ローカル測定はジャッジでの実行時間を保証しない。

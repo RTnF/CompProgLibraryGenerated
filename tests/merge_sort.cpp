@@ -1,3 +1,4 @@
+#include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/merge_sort.hpp"
 
 #include <cassert>

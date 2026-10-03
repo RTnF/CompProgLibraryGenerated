@@ -43,11 +43,6 @@ constexpr T local([[maybe_unused]] const T &lcl, [[maybe_unused]] const T &oj) {
   return oj;
 #endif
 }
-#ifdef OJ_LOCAL
-#include "dump.hpp"
-#else
-#define dump(...) ((void)0)
-#endif
 template <class S, class T> constexpr bool chmax(S &a, const T &b) {
   if (a < b) {
     a = b;
@@ -137,14 +132,12 @@ template <class Head, class... Tail> void print(Head &&head, Tail &&...tail) {
     return;                                                                    \
   } while (0)
 
-// Paste public library components here, after their dependencies.
 void solve() {}
 
 int main() {
   cin.tie(0);
   ios::sync_with_stdio(false);
   cout << fixed << setprecision(20);
-  cerr << fixed << setprecision(20);
   //*
   solve();
   /*/

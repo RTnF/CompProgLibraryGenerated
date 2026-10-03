@@ -18,21 +18,56 @@ jobs:
       - name: Install Python and Lean prerequisites
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends python3 unzip zstd
-      - name: Check all registered C++ components
-        run: python3 tools/check_public.py --mode cpp
+          apt-get install -y --no-install-recommends python3 unzip zstd git libseccomp2
       - uses: leanprover/lean-action@v1
         env:
           LEAN_NUM_THREADS: '1'
         with:
           auto-config: 'false'
-          build: 'true'
+          build: 'false'
           test: 'false'
           lint: 'false'
-          leanchecker: 'true'
-          leanchecker-args: 'Proofs'
-          axiom-audit: 'true'
-          axiom-audit-allow: 'propext,Quot.sound,Classical.choice'
-          axiom-audit-root: 'Proofs'
-      - name: Check all registered C++ AST to Lean mappings
-        run: python3 tools/check_public.py --mode bridge
+          leanchecker: 'false'
+          axiom-audit: 'false'
+          use-mathlib-cache: 'false'
+      - name: Prepare the pinned axiom auditor (GitHub only)
+        run: |
+          git clone --depth 1 --branch v0.1.2 https://github.com/leanprover-community/axiom-audit.git "$RUNNER_TEMP/axiom-audit"
+          test "$(git -C "$RUNNER_TEMP/axiom-audit" rev-parse HEAD)" = 46024e005996495c65ef609368e11ab39c4222e3
+          cp lean-toolchain "$RUNNER_TEMP/axiom-audit/lean-toolchain"
+          python3 tools/offline.py lake -d "$RUNNER_TEMP/axiom-audit" build
+      - name: Verify all public components without network access
+        env:
+          LEAN_NUM_THREADS: '1'
+        run: python3 tools/check_public.py
+      - name: Audit axioms without network access
+        run: python3 tools/offline.py lake env "$RUNNER_TEMP/axiom-audit/.lake/build/bin/axiom-audit" --allow propext,Quot.sound,Classical.choice --root Proofs
+      - name: Build and verify the header-only archive
+        run: |
+          python3 tools/offline.py python3 tools/package_headers.py --output "$RUNNER_TEMP/library-hpp.zip"
+          python3 tools/check_header_package.py "$RUNNER_TEMP/library-hpp.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: library-hpp
+          path: ${{ runner.temp }}/library-hpp.zip
+          if-no-files-found: error
+
+  release-headers:
+    needs: verify-public
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: release-headers
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: library-hpp
+          path: ${{ runner.temp }}/headers
+      - name: Update the header-only release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh tools/release_headers.sh "$RUNNER_TEMP/headers/library-hpp.zip"
