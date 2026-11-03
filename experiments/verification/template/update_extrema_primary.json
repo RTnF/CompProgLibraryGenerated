@@ -1,0 +1,267 @@
+{
+  "abi": "LP64: int32, long64, long-long64",
+  "templates": [
+    {
+      "name": "chmax",
+      "type_parameters": 2,
+      "parameters": [
+        {
+          "type": {
+            "kind": "parameter",
+            "index": 0
+          },
+          "reference": true,
+          "writable": true
+        },
+        {
+          "type": {
+            "kind": "parameter",
+            "index": 1
+          },
+          "reference": true,
+          "writable": false
+        }
+      ],
+      "result_type": {
+        "kind": "scalar",
+        "spelling": "bool"
+      },
+      "body": {
+        "kind": "scope",
+        "body": {
+          "kind": "sequence",
+          "first": {
+            "kind": "branch",
+            "condition": {
+              "kind": "comparison",
+              "operator": "<",
+              "resolution": "dependent",
+              "left": {
+                "kind": "variable",
+                "type": {
+                  "kind": "parameter",
+                  "index": 0
+                },
+                "slot": 0
+              },
+              "right": {
+                "kind": "variable",
+                "type": {
+                  "kind": "parameter",
+                  "index": 1
+                },
+                "slot": 1
+              }
+            },
+            "yes": {
+              "kind": "scope",
+              "body": {
+                "kind": "scope",
+                "body": {
+                  "kind": "sequence",
+                  "first": {
+                    "kind": "assignment",
+                    "slot": 0,
+                    "value": {
+                      "kind": "variable",
+                      "type": {
+                        "kind": "parameter",
+                        "index": 1
+                      },
+                      "slot": 1
+                    },
+                    "resolution": "requires_resolution"
+                  },
+                  "rest": {
+                    "kind": "sequence",
+                    "first": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "cast",
+                        "type": {
+                          "kind": "scalar",
+                          "spelling": "bool"
+                        },
+                        "operand": {
+                          "kind": "literal",
+                          "type": {
+                            "kind": "scalar",
+                            "spelling": "int"
+                          },
+                          "value": 1
+                        }
+                      }
+                    },
+                    "rest": {
+                      "kind": "skip"
+                    }
+                  }
+                }
+              }
+            },
+            "no": {
+              "kind": "skip"
+            },
+            "condition_conversion": "requires_resolution"
+          },
+          "rest": {
+            "kind": "sequence",
+            "first": {
+              "kind": "return",
+              "value": {
+                "kind": "cast",
+                "type": {
+                  "kind": "scalar",
+                  "spelling": "bool"
+                },
+                "operand": {
+                  "kind": "literal",
+                  "type": {
+                    "kind": "scalar",
+                    "spelling": "int"
+                  },
+                  "value": 0
+                }
+              }
+            },
+            "rest": {
+              "kind": "skip"
+            }
+          }
+        }
+      },
+      "coverage": "primary_syntax_only"
+    },
+    {
+      "name": "chmin",
+      "type_parameters": 2,
+      "parameters": [
+        {
+          "type": {
+            "kind": "parameter",
+            "index": 0
+          },
+          "reference": true,
+          "writable": true
+        },
+        {
+          "type": {
+            "kind": "parameter",
+            "index": 1
+          },
+          "reference": true,
+          "writable": false
+        }
+      ],
+      "result_type": {
+        "kind": "scalar",
+        "spelling": "bool"
+      },
+      "body": {
+        "kind": "scope",
+        "body": {
+          "kind": "sequence",
+          "first": {
+            "kind": "branch",
+            "condition": {
+              "kind": "comparison",
+              "operator": "<",
+              "resolution": "dependent",
+              "left": {
+                "kind": "variable",
+                "type": {
+                  "kind": "parameter",
+                  "index": 1
+                },
+                "slot": 1
+              },
+              "right": {
+                "kind": "variable",
+                "type": {
+                  "kind": "parameter",
+                  "index": 0
+                },
+                "slot": 0
+              }
+            },
+            "yes": {
+              "kind": "scope",
+              "body": {
+                "kind": "scope",
+                "body": {
+                  "kind": "sequence",
+                  "first": {
+                    "kind": "assignment",
+                    "slot": 0,
+                    "value": {
+                      "kind": "variable",
+                      "type": {
+                        "kind": "parameter",
+                        "index": 1
+                      },
+                      "slot": 1
+                    },
+                    "resolution": "requires_resolution"
+                  },
+                  "rest": {
+                    "kind": "sequence",
+                    "first": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "cast",
+                        "type": {
+                          "kind": "scalar",
+                          "spelling": "bool"
+                        },
+                        "operand": {
+                          "kind": "literal",
+                          "type": {
+                            "kind": "scalar",
+                            "spelling": "int"
+                          },
+                          "value": 1
+                        }
+                      }
+                    },
+                    "rest": {
+                      "kind": "skip"
+                    }
+                  }
+                }
+              }
+            },
+            "no": {
+              "kind": "skip"
+            },
+            "condition_conversion": "requires_resolution"
+          },
+          "rest": {
+            "kind": "sequence",
+            "first": {
+              "kind": "return",
+              "value": {
+                "kind": "cast",
+                "type": {
+                  "kind": "scalar",
+                  "spelling": "bool"
+                },
+                "operand": {
+                  "kind": "literal",
+                  "type": {
+                    "kind": "scalar",
+                    "spelling": "int"
+                  },
+                  "value": 0
+                }
+              }
+            },
+            "rest": {
+              "kind": "skip"
+            }
+          }
+        }
+      },
+      "coverage": "primary_syntax_only"
+    }
+  ]
+}

@@ -61,19 +61,22 @@ template <class T, int n> struct SquareMatrix {
     SquareMatrix<T, n> minus;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
-        minus.mat[i][j] - mat[i][j];
+        minus.mat[i][j] = -mat[i][j];
       }
     }
     return minus;
   }
   SquareMatrix<T, n> pow(ll e) const {
+    assert(e >= 0);
     SquareMatrix<T, n> y = *this, r = I();
     while (e) {
       if (e & 1) {
         r *= y;
       }
-      y *= y;
       e >>= 1;
+      if (e) {
+        y *= y;
+      }
     }
     return r;
   }
@@ -92,10 +95,17 @@ template <class T, int n> struct SquareMatrix {
   }
   friend bool operator==(const SquareMatrix<T, n> &a,
                          const SquareMatrix<T, n> &b) {
-    return a.x == b.x;
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (!(a.mat[i][j] == b.mat[i][j])) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
   friend bool operator!=(const SquareMatrix<T, n> &a,
                          const SquareMatrix<T, n> &b) {
-    return a.x != b.x;
+    return !(a == b);
   }
 };

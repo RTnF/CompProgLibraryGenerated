@@ -1,0 +1,13 @@
+# 読み取り専用UFをコピー元にする
+
+`Proofs/CppMoveReadReceiver.lean` は、元Field/view/headerから読取り用ReadReceiverを構成する。counter/sizeやvector viewへの書込み権限を要求せず、既存のproject_view_readyに接続する。通常のmutable Receiverからもこの情報を取り出せる。
+
+`Proofs/UfObjectReadSource.lean` のcopy_rawは、元ObjectRefの実copyClassが親配列とcounter/sizeの値をそのまま複製することを証明する。コピー自体にUF数学的不変条件や_n=vector長を要求しない。move後の空vector・成分数1・_n4の合法なコピーも、_nを勝手に0へ直さず扱う。
+
+source_viewは数学的に正常な元について、実projectされた型付きvector resolveとField.cellを既存のSourceViewへ接続する。new_ok/copy_representsは、元の書込み可能Invを要求せず、新しい書込み可能UFのRepresentsを構成する。
+
+copy_correctは正常な元について、実copy終了、同じ親配列/成分数/rankを持つ新Represents、元frameへのExtends、仕事量=元Context work+要素数+4を同時保証する。元の正常な参照読取りとscalar fieldは保持され、元へ書込み権限を付け直さない。copy先の正常UF表現を保証するmath/size条件と、コピーそのものの正常終了条件を区別する。
+
+`tests/test_uf_object_read_source.py` は、元ownerのwritableを任意のboolとして、mutable ownerからのreadonly borrow/readonly owner双方を検査する。source viewとscalar bindingsをfalseにしたまま、SourceView、実copy、新しいmutable UF、線形work、元の正常readとcounter binding false保持を確認する。readonly moved-from sourceの空vector/成分数1/_n4も検査する。
+
+copy結果は既存の低レベルNState/Representsへ接続している。新Contextのheap/fields/viewsへのexport、任意の他UF保持とcopy/assignment/寿命操作の混在、旧DisjointSet/getNum、元caller AST、公開UFの相違と他旧ライブラリは未完了である。元UFのnum_groupsはnon-constであり、元APIにないconst getterは追加しない。

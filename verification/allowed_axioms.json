@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "axioms": [
+    {
+      "name": "propext",
+      "definition_sha256": "03694489f19cb04472c2496d560d25dd5d0a1e3b341caf5f3977d0d7f7b910b7",
+      "reason": "Propositional extensionality"
+    },
+    {
+      "name": "Classical.choice",
+      "definition_sha256": "d45dded66394474fa631bc5639df40db232f6dd00cc279fa499f9f5e23eb3f27",
+      "reason": "Choice for nonempty types"
+    },
+    {
+      "name": "Quot.sound",
+      "definition_sha256": "d2afb758b4ecf008e0a04a571ff89bc8c488a57592904432a7ca8c305e4cf66f",
+      "reason": "Equality induced by the quotient relation"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+# FieldDeclからのContext method receiver生成
+
+`verifier/context_method_ir.py` は、元classのmethodを既存NestedBodyへ下ろし、ObjectRefのfield slotから[Context call](move_call_bindings.md)へ引数を生成する。元sourceのmethod定義・FieldDecl・型・権限を照合する経路であり、元free callerの式全体の生成は別段階である。
+
+## 同一TUの照合
+
+元qualified classを1件取得し、使用済み暗黙copy constructorのFieldDecl監査計画と元methodを同一TUで照合する。各synthetic field parameterについて、宣言ID・宣言順・型・scalar参照/値渡し・書込み権限、vector権限を確認する。既定では定義済みnonstatic methodを一意にすべて下ろす。method_namesを指定すると、その元名に対応する全overloadだけを出力し、到達するmethodをinlineする。選択外methodもfield書込み/外部alias判定には含める。生成物へ選択対象・全対象・依存と部分coverageを記録し、落としたmethodを暗黙に検証済み扱いしない。
+
+対象profileはflat integer vector1個とscalar fields。vectorの宣言位置は任意で、合成引数はvector先頭・scalarは元宣言順とする。暗黙copy監査自体は元宣言順を維持する。旧copy emitterのvector先頭条件は変更しない。default argument expression、unit/vector result、resize/構築/破棄/並べ替え等の対象外bodyは拒否する。生成Leanでも各methodのscalar/NoResize eligibilityを独立に証明する。対象外profileはexperimentsに残す。
+
+source SHAはlowering前後とemit前後で照合し、出力直前のsource変更も拒否する。namespace/生成名を検査し、AST IDを安定した生成名には使わない。fieldNamesは合成引数順を記録し、宣言順と異なる場合はdeclaredFieldNamesとfieldPermutationも生成する。既存の全method/vector先頭の生成結果は維持する。
+
+## 引数とalias
+
+vector fieldはreceiver.vectorSlot、scalar fieldは宣言順のreceiver.scalarSlotsから取得する。scalar fieldを参照で受けるprogramにはscalarReference、値で受けるprogramには元型のvariable expressionを生成する。field数と外部引数数を検査し、実引数評価・型・参照権限はContext.prepareArgumentsへ渡す。
+
+外部の可変scalar参照はreceiverのfield自身を指せる。例えばinspect(int& value)がvalue=9の後にcountを返し、inspect(object.count)と呼ぶ場合、countを古い値で捕捉してはならない。この場合はclass全methodのscalar fieldを参照で渡す保守的な変換を使用し、const methodの参照権限も保つ。新frontend内でこの方針を適用し、既存frontendの出力を変更していない。
+
+UFの外部引数は値渡しなので既存区分を維持する。_num_groupsは参照、classの通常methodでreadonlyな_nは値として渡し、生成した5programが既存canonical modelと一致する。
+
+## 生成物と検査
+
+各methodにarguments adapter、Context callFuel wrapper、call_of_argumentsの一般転送定理、eligible定理を生成する。wrapperは同じprogramと展開済み引数を実Context実行器へ渡し、返却値と更新状態を維持する。
+
+`tests/test_context_method_ir.py` は元UFの5method modelとのrfl一致、一般の引数転送、生成rootの圧縮とmoved-from getter、field数/arity不正拒否を検査する。renamed classのunsigned32最大値、signed64最小値、bool、vector書込みとscalar更新をLeanと固定GCC13.3/ASan/UBSanで照合する。
+
+外部可変参照とfieldのalias、const getterもLean/nativeで確認する。FieldDecl ID・型・参照mode・権限の変異、unsupported body/profile/default引数、不正namespace、lowering中/後のsource変更を拒否する。
+
+[receiver変数配置の一般証明](move_receiver_layout.md)では、このUF profileの実準備成功・memory/bindings/slotsとcompact/QSを構成する。さらに[元UFのQS/FW構成](union_find_receiver_layout.md)へ接続した。実引数評価結果を入力条件とし、ObjectRefからの一般評価とcaller全体の構成は残る。
+
+[ObjectRefの元field配置と生成評価定理](move_object_receiver.md)へ接続した。全methodのarguments_of_fieldsと、schemaが一致する場合のresolve_of_receiverを生成する。任意callerから元配置条件を導くことは残る。
+
+## 残件
+
+receiverのObjectRefと外部引数はこのadapterの入力である。元caller ASTの選択callee・receiver/引数評価順と副作用、正常クラス状態からprepare/QS/FWを一般構成する接続、償却証明・任意混在列、構築/返却/destructor、割当/resize/nested/異種vector、公開UFの既存相違解消と他旧ライブラリのverifyは残る。
+
+旧class caller経路のreadonly-field値捕捉についても、可変参照aliasを扱う際は同じ注意が必要である。新Context receiverのalias検査を、旧backendや任意callerの全体証明と取り違えない。
+
+[旧DisjointSetのgetNum](disjoint_set_getter.md)で、vectorが2番目の元FieldDeclと選択methodの本体証明を接続した。`tests/test_context_method_selection.py`は依存inline、選択外の再帰/default引数、選択外methodの外部alias/const権限、元copy profileの拒否も検査する。

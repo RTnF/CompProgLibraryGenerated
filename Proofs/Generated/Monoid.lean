@@ -1,0 +1,20 @@
+-- Generated from audited Clang vector operations and scalar syntax.
+import Proofs.CppNestedCall
+
+namespace Proofs.MonoidInstance
+open Proofs.CppScalar Proofs.CppNestedProgram Proofs.CppNestedCall
+
+def «op_MonoidMul_long_long» : NProgram := ⟨[.scalar ⟨64, true, false⟩ true false, .scalar ⟨64, true, false⟩ true false],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.declare ⟨64, true, false⟩ true (.binary ⟨64, true, false⟩ .mul (.variable ⟨64, true, false⟩ 0) (.variable ⟨64, true, false⟩ 1)))) (.sequence (.primitive (.declare ⟨64, true, false⟩ true (.variable ⟨64, true, false⟩ 2))) (.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 3))) (.primitive .skip))))⟩
+def «op_MonoidMax_long_long» : NProgram := ⟨[.scalar ⟨64, true, false⟩ true false, .scalar ⟨64, true, false⟩ true false],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.declare ⟨64, true, false⟩ true (.variable ⟨64, true, false⟩ 0))) (.sequence (.branch (.binary ⟨1, false, true⟩ .lt (.variable ⟨64, true, false⟩ 0) (.variable ⟨64, true, false⟩ 1)) (.sequence (.scope (.sequence (.primitive (.assign 2 ⟨64, true, false⟩ (.variable ⟨64, true, false⟩ 1))) (.primitive .skip))) (.primitive .skip)) (.primitive .skip)) (.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 2))) (.primitive .skip))))⟩
+def «op_MonoidMin_long_long» : NProgram := ⟨[.scalar ⟨64, true, false⟩ true false, .scalar ⟨64, true, false⟩ true false],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.declare ⟨64, true, false⟩ true (.variable ⟨64, true, false⟩ 0))) (.sequence (.branch (.binary ⟨1, false, true⟩ .lt (.variable ⟨64, true, false⟩ 1) (.variable ⟨64, true, false⟩ 0)) (.sequence (.scope (.sequence (.primitive (.assign 2 ⟨64, true, false⟩ (.variable ⟨64, true, false⟩ 1))) (.primitive .skip))) (.primitive .skip)) (.primitive .skip)) (.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 2))) (.primitive .skip))))⟩
+def «MonoidMul_long_long_new0» : NProgram := ⟨[.scalar ⟨64, true, false⟩ false true],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 0))) (.primitive .skip))⟩
+def «MonoidMul_long_long_new1» : NProgram := ⟨[],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.ret (.cast ⟨64, true, false⟩ (.literal ⟨32, true, false⟩ (1))))) (.primitive .skip))⟩
+def «MonoidMul_long_long_e» : NProgram := ⟨[],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.declare ⟨64, true, false⟩ true (.cast ⟨64, true, false⟩ (.literal ⟨32, true, false⟩ (1))))) (.sequence (.primitive (.declare ⟨64, true, false⟩ true (.variable ⟨64, true, false⟩ 0))) (.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 1))) (.primitive .skip))))⟩
+def «MonoidMax_long_long_new0» : NProgram := ⟨[.scalar ⟨64, true, false⟩ false true],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 0))) (.primitive .skip))⟩
+def «MonoidMax_long_long_new1» : NProgram := ⟨[],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.ret (.literal ⟨64, true, false⟩ (-9223372036854775808)))) (.primitive .skip))⟩
+def «MonoidMax_long_long_e» : NProgram := ⟨[],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.declare ⟨64, true, false⟩ true (.literal ⟨64, true, false⟩ (-9223372036854775808)))) (.sequence (.primitive (.declare ⟨64, true, false⟩ true (.variable ⟨64, true, false⟩ 0))) (.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 1))) (.primitive .skip))))⟩
+def «MonoidMin_long_long_new0» : NProgram := ⟨[.scalar ⟨64, true, false⟩ false true],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 0))) (.primitive .skip))⟩
+def «MonoidMin_long_long_new1» : NProgram := ⟨[],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.ret (.literal ⟨64, true, false⟩ (9223372036854775807)))) (.primitive .skip))⟩
+def «MonoidMin_long_long_e» : NProgram := ⟨[],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.declare ⟨64, true, false⟩ true (.literal ⟨64, true, false⟩ (9223372036854775807)))) (.sequence (.primitive (.declare ⟨64, true, false⟩ true (.variable ⟨64, true, false⟩ 0))) (.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 1))) (.primitive .skip))))⟩
+
+end Proofs.MonoidInstance

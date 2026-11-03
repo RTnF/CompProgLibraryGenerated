@@ -1,0 +1,25 @@
+# call結果の実currentBufferとUF状態の引継ぎ
+
+`Proofs/CppMoveCallPayload.lean` は、成功callの既存postが示す投影storageのpayloadを、結果heapにおける元headerの実 `currentBuffer` へ結び付ける。[呼び出し後の配置・heap条件](move_call_layout.md)と合わせ、同じObjectRefで次のroot等を呼ぶためのUF条件を導く部品である。
+
+## 元headerと結果payloadの対応
+
+`call_payload` は、実成功call、元header/currentBufferとreadable・所有条件、結果projectのstorage lookup/itemsから、結果heapの実currentBuffer成功とそのitems=finalを構成する。
+
+sourceと結果の両方で `current_entry` を使い、同じheaderが指すbufferを求める。headerとallocation表長の保持からownerの対応を導き、投影lookupの一致とinteger要素の単射性からpayloadを一致させる。古いbuffer内容や、一時的なproject bindingを結果のC++ objectとして流用しない。
+
+allocationを持つheaderと空headerの両方を対象にする。空headerは既存モデルの容量0の補助bufferであり、要素領域の新allocationとして扱わない。callの正常終了自体は既存の正常call定理から導き、本定理はその実runとpostへ適用する効果定理である。
+
+## 次のUF呼び出し
+
+`tests/test_cpp_move_call_payload.py` は、別成分uniteの正常callから得たpayload・countAfter・新rankのValidを、実結果currentBufferと同じObjectRefへ引き継ぐ。Compressed/uniteVecの長さ保持からsize field=結果vector長と添字の範囲条件を導き、次root本体まで一般定理で正常終了させる。root後のCompressedからValidも保持し、counter1/他scalar不変を確認する。
+
+move元の空vectorについても一般getter callへ適用し、実結果currentBufferの空payload・容量0・補助ownerを確認する。元header/alloc表長を保ち、旧target allocationの退役とimmutable grantを引き継ぐため、旧targetの要素参照が復活しないことも証明する。元size fieldを0へ正規化せず、元_n=4でもgetterを扱う。
+
+いずれも固定fuel計算や成功済みの次root/getterを入力仮定にしない。元C++は変更せず、既存native照合を維持する。
+
+[全5methodの状態不変条件保持](union_find_object_state.md)を追加し、結果Receiver/currentBuffer/UF Valid/heap条件を束ねて次callへ渡す経路へ接続した。
+
+## 残件
+
+全5methodの結果Receiver・payload・UF Valid・heap正常条件を束ねて保持する一般不変条件、元caller/constructorからの正常配置、償却/任意混在寿命列、caller ASTと評価順/副作用、copy/move/return/destructor、割当/resize/nested/異種vector、公開UF相違と他旧ライブラリは未完了である。

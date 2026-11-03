@@ -1,0 +1,11 @@
+# header scopeと投影後のcontext
+
+`Proofs/CppMoveFrameScopes.lean` はmutable header/allocation表のscopeと、materializeされたFrameのforest contextを接続する。
+
+`HeaderScopes heap upper` は全ての生きたheaderのscope≤upperを表す。`headers_of_contexts` はUnique/OwnsAll/HeadersLiveと元materializeのcontext上界からこの性質を導く。allocationを持つheaderはownerHeaderの一意性、空headerはplaceholderの実entryを使って、対応するrootへ移す。
+
+逆方向の `entry_root` / `materialize_root` は、任意の投影entry/tagを元headerへ戻す。`contexts_of_headers` は全headerのscope上界から全投影contextの上界を導く。この方向ではbufferの内容や既存のwellFormedを前提にしてrootの対応を先取りしない。表内のnoneも明示的に扱う。
+
+`appended_scopes` は新owned headerを追加しても、元headerと新scopeの上界から同じ性質を保つことを証明する。[元UF constructorからの正常State構成](union_find_object_constructed_state.md)では、空headerやmove後の参照がある既存heapを含めて利用する。
+
+`tests/test_uf_object_constructed_state.py` が空caller、既存scalar、既存move後のheapと新UF構築の組合せを検査する。これらの表・scopeの証明だけでcaller全体のNState再番号付けや寿命操作の意味対応が完了したとはしない。

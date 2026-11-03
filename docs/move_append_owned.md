@@ -1,0 +1,15 @@
+# 構築済みowned bufferの表への追加
+
+`Proofs/CppMoveAppendOwned.lean` は、構築が既に実行されたbufferをmutable header/allocationモデルへ登録するための表操作を定義する。C++ constructorの本体実行そのものではない。
+
+`appended` はheader表とallocation表の末尾へ1件ずつ追加する。新headerは元allocation表長を所有し、bufferのownerもそのIDへ付け替える。内容、capacity、limit、epochを保ち、元header、allocation、grantのIDを変更せず、死んだallocationのIDを再利用しない。work/peak/baseSpaceはこの表操作では変更せず、constructor実行との接続で実際の値を与える必要がある。
+
+`header_lookup` / `allocation_lookup` は新旧の任意IDに対する厳密なlookup、`old_header` / `old_allocation` は元表内の保持を証明する。`appended_unique` はUniqueとHeadersLiveから所有の一意性を保つ。HeadersLiveは元headerが新規IDを既に指す異常状態を除くためにも必要である。OwnsAll、HeadersLive、AllocationsValidの保持、新headerのcurrentBufferも証明する。
+
+`old_read` は元grantのownerが元allocation表内にある条件で、実readの結果が一致することを示す。有効/無効のどちらの参照も対象で、元のdead allocationを復活させない。`liveSpace` は新しい物理領域が元生存量+1+buffer.capacityとなることを示す。空bufferのcapacity=0でもheader1個を数える。
+
+`tests/test_cpp_move_append_owned.py` は元move後のheapへreadonly bufferを追加し、既存の有効grantの値2と既存無効grantのnoneを保つこと、死んだallocation1の保持、新規currentBufferとreadonly権限、所有/生存/型不変条件を確認する。空bufferの場合にもheaderを数え、空要素へのcaptureを拒否する。
+
+materializeの空header用placeholder番号はallocation表長に依存するため、追加前後のNState全体が等しいとはしない。元constructorの実exportとこの表操作の接続、scalar fields/views/slotsの登録、正常なObjectRef State、実仕事量/peak、全callerの意味対応は残る。
+
+[元UF constructorの実bufferとcounterからのexport](union_find_object_construction_export.md)を追加した。scalar fields/views/slotsを含むContext State全体の接続は残る。

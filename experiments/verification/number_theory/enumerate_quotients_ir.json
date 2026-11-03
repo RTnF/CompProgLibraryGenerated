@@ -1,0 +1,762 @@
+{
+ "callees": [],
+ "coverage": "nested_control_flow",
+ "functions": [
+  {
+   "body": [
+    {
+     "kind": "declare",
+     "type": {
+      "boolean": false,
+      "signed": false,
+      "width": 64
+     },
+     "value": {
+      "kind": "cast",
+      "operand": {
+       "kind": "literal",
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       },
+       "value": 4294967296
+      },
+      "type": {
+       "boolean": false,
+       "signed": false,
+       "width": 64
+      }
+     },
+     "writable": true
+    },
+    {
+     "kind": "declare",
+     "type": {
+      "boolean": false,
+      "signed": false,
+      "width": 64
+     },
+     "value": {
+      "kind": "cast",
+      "operand": {
+       "kind": "literal",
+       "type": {
+        "boolean": false,
+        "signed": true,
+        "width": 32
+       },
+       "value": 0
+      },
+      "type": {
+       "boolean": false,
+       "signed": false,
+       "width": 64
+      }
+     },
+     "writable": true
+    },
+    {
+     "body": [
+      {
+       "body": [
+        {
+         "kind": "declare",
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         },
+         "value": {
+          "kind": "binary",
+          "left": {
+           "kind": "binary",
+           "left": {
+            "kind": "variable",
+            "slot": 1,
+            "type": {
+             "boolean": false,
+             "signed": false,
+             "width": 64
+            }
+           },
+           "operation": "add",
+           "right": {
+            "kind": "variable",
+            "slot": 2,
+            "type": {
+             "boolean": false,
+             "signed": false,
+             "width": 64
+            }
+           },
+           "type": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           }
+          },
+          "operation": "div",
+          "right": {
+           "kind": "cast",
+           "operand": {
+            "kind": "literal",
+            "type": {
+             "boolean": false,
+             "signed": true,
+             "width": 32
+            },
+            "value": 2
+           },
+           "type": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           }
+          },
+          "type": {
+           "boolean": false,
+           "signed": false,
+           "width": 64
+          }
+         },
+         "writable": false
+        },
+        {
+         "condition": {
+          "kind": "binary",
+          "left": {
+           "kind": "binary",
+           "left": {
+            "kind": "variable",
+            "slot": 3,
+            "type": {
+             "boolean": false,
+             "signed": false,
+             "width": 64
+            }
+           },
+           "operation": "mul",
+           "right": {
+            "kind": "binary",
+            "left": {
+             "kind": "variable",
+             "slot": 3,
+             "type": {
+              "boolean": false,
+              "signed": false,
+              "width": 64
+             }
+            },
+            "operation": "add",
+            "right": {
+             "kind": "cast",
+             "operand": {
+              "kind": "literal",
+              "type": {
+               "boolean": false,
+               "signed": true,
+               "width": 32
+              },
+              "value": 1
+             },
+             "type": {
+              "boolean": false,
+              "signed": false,
+              "width": 64
+             }
+            },
+            "type": {
+             "boolean": false,
+             "signed": false,
+             "width": 64
+            }
+           },
+           "type": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           }
+          },
+          "operation": "ge",
+          "right": {
+           "kind": "variable",
+           "slot": 0,
+           "type": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           }
+          },
+          "type": {
+           "boolean": true,
+           "signed": false,
+           "width": 1
+          }
+         },
+         "kind": "branch",
+         "no": [
+          {
+           "body": [
+            {
+             "kind": "assign",
+             "slot": 2,
+             "type": {
+              "boolean": false,
+              "signed": false,
+              "width": 64
+             },
+             "value": {
+              "kind": "variable",
+              "slot": 3,
+              "type": {
+               "boolean": false,
+               "signed": false,
+               "width": 64
+              }
+             }
+            }
+           ],
+           "kind": "scope"
+          }
+         ],
+         "yes": [
+          {
+           "body": [
+            {
+             "kind": "assign",
+             "slot": 1,
+             "type": {
+              "boolean": false,
+              "signed": false,
+              "width": 64
+             },
+             "value": {
+              "kind": "variable",
+              "slot": 3,
+              "type": {
+               "boolean": false,
+               "signed": false,
+               "width": 64
+              }
+             }
+            }
+           ],
+           "kind": "scope"
+          }
+         ]
+        }
+       ],
+       "kind": "scope"
+      }
+     ],
+     "condition": {
+      "kind": "binary",
+      "left": {
+       "kind": "binary",
+       "left": {
+        "kind": "variable",
+        "slot": 1,
+        "type": {
+         "boolean": false,
+         "signed": false,
+         "width": 64
+        }
+       },
+       "operation": "sub",
+       "right": {
+        "kind": "variable",
+        "slot": 2,
+        "type": {
+         "boolean": false,
+         "signed": false,
+         "width": 64
+        }
+       },
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       }
+      },
+      "operation": "gt",
+      "right": {
+       "kind": "cast",
+       "operand": {
+        "kind": "literal",
+        "type": {
+         "boolean": false,
+         "signed": true,
+         "width": 32
+        },
+        "value": 1
+       },
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       }
+      },
+      "type": {
+       "boolean": true,
+       "signed": false,
+       "width": 1
+      }
+     },
+     "kind": "while"
+    },
+    {
+     "kind": "declare",
+     "type": {
+      "boolean": false,
+      "signed": false,
+      "width": 64
+     },
+     "value": {
+      "kind": "binary",
+      "left": {
+       "kind": "variable",
+       "slot": 0,
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       }
+      },
+      "operation": "div",
+      "right": {
+       "kind": "variable",
+       "slot": 1,
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       }
+      },
+      "type": {
+       "boolean": false,
+       "signed": false,
+       "width": 64
+      }
+     },
+     "writable": false
+    },
+    {
+     "element": {
+      "boolean": false,
+      "signed": false,
+      "width": 64
+     },
+     "kind": "declare_vector",
+     "writable": true
+    },
+    {
+     "container": {
+      "element": {
+       "boolean": false,
+       "signed": false,
+       "width": 64
+      },
+      "kind": "local",
+      "slot": 4,
+      "writable": true
+     },
+     "element": {
+      "boolean": false,
+      "signed": false,
+      "width": 64
+     },
+     "kind": "reserve",
+     "value": {
+      "kind": "binary",
+      "left": {
+       "kind": "binary",
+       "left": {
+        "kind": "variable",
+        "slot": 3,
+        "type": {
+         "boolean": false,
+         "signed": false,
+         "width": 64
+        }
+       },
+       "operation": "add",
+       "right": {
+        "kind": "variable",
+        "slot": 1,
+        "type": {
+         "boolean": false,
+         "signed": false,
+         "width": 64
+        }
+       },
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       }
+      },
+      "operation": "sub",
+      "right": {
+       "kind": "cast",
+       "operand": {
+        "kind": "literal",
+        "type": {
+         "boolean": false,
+         "signed": true,
+         "width": 32
+        },
+        "value": 1
+       },
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       }
+      },
+      "type": {
+       "boolean": false,
+       "signed": false,
+       "width": 64
+      }
+     }
+    },
+    {
+     "body": [
+      {
+       "kind": "declare",
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       },
+       "value": {
+        "kind": "cast",
+        "operand": {
+         "kind": "literal",
+         "type": {
+          "boolean": false,
+          "signed": true,
+          "width": 32
+         },
+         "value": 1
+        },
+        "type": {
+         "boolean": false,
+         "signed": false,
+         "width": 64
+        }
+       },
+       "writable": true
+      },
+      {
+       "body": [
+        {
+         "body": [
+          {
+           "container": {
+            "element": {
+             "boolean": false,
+             "signed": false,
+             "width": 64
+            },
+            "kind": "local",
+            "slot": 4,
+            "writable": true
+           },
+           "element": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           },
+           "kind": "append_reserved",
+           "value": {
+            "kind": "variable",
+            "slot": 5,
+            "type": {
+             "boolean": false,
+             "signed": false,
+             "width": 64
+            }
+           }
+          }
+         ],
+         "kind": "scope"
+        },
+        {
+         "kind": "assign",
+         "slot": 5,
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         },
+         "value": {
+          "kind": "binary",
+          "left": {
+           "kind": "variable",
+           "slot": 5,
+           "type": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           }
+          },
+          "operation": "add",
+          "right": {
+           "kind": "literal",
+           "type": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           },
+           "value": 1
+          },
+          "type": {
+           "boolean": false,
+           "signed": false,
+           "width": 64
+          }
+         }
+        }
+       ],
+       "condition": {
+        "kind": "binary",
+        "left": {
+         "kind": "variable",
+         "slot": 5,
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         }
+        },
+        "operation": "le",
+        "right": {
+         "kind": "variable",
+         "slot": 3,
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         }
+        },
+        "type": {
+         "boolean": true,
+         "signed": false,
+         "width": 1
+        }
+       },
+       "kind": "while"
+      }
+     ],
+     "kind": "scope"
+    },
+    {
+     "body": [
+      {
+       "kind": "declare",
+       "type": {
+        "boolean": false,
+        "signed": false,
+        "width": 64
+       },
+       "value": {
+        "kind": "binary",
+        "left": {
+         "kind": "variable",
+         "slot": 1,
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         }
+        },
+        "operation": "sub",
+        "right": {
+         "kind": "cast",
+         "operand": {
+          "kind": "literal",
+          "type": {
+           "boolean": false,
+           "signed": true,
+           "width": 32
+          },
+          "value": 1
+         },
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         }
+        },
+        "type": {
+         "boolean": false,
+         "signed": false,
+         "width": 64
+        }
+       },
+       "writable": true
+      },
+      {
+       "body": [
+        {
+         "body": [
+          {
+           "container": {
+            "element": {
+             "boolean": false,
+             "signed": false,
+             "width": 64
+            },
+            "kind": "local",
+            "slot": 4,
+            "writable": true
+           },
+           "element": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           },
+           "kind": "append_reserved",
+           "value": {
+            "kind": "binary",
+            "left": {
+             "kind": "variable",
+             "slot": 0,
+             "type": {
+              "boolean": false,
+              "signed": false,
+              "width": 64
+             }
+            },
+            "operation": "div",
+            "right": {
+             "kind": "variable",
+             "slot": 5,
+             "type": {
+              "boolean": false,
+              "signed": false,
+              "width": 64
+             }
+            },
+            "type": {
+             "boolean": false,
+             "signed": false,
+             "width": 64
+            }
+           }
+          }
+         ],
+         "kind": "scope"
+        },
+        {
+         "kind": "assign",
+         "slot": 5,
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         },
+         "value": {
+          "kind": "binary",
+          "left": {
+           "kind": "variable",
+           "slot": 5,
+           "type": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           }
+          },
+          "operation": "sub",
+          "right": {
+           "kind": "literal",
+           "type": {
+            "boolean": false,
+            "signed": false,
+            "width": 64
+           },
+           "value": 1
+          },
+          "type": {
+           "boolean": false,
+           "signed": false,
+           "width": 64
+          }
+         }
+        }
+       ],
+       "condition": {
+        "kind": "binary",
+        "left": {
+         "kind": "variable",
+         "slot": 5,
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         }
+        },
+        "operation": "ge",
+        "right": {
+         "kind": "cast",
+         "operand": {
+          "kind": "literal",
+          "type": {
+           "boolean": false,
+           "signed": true,
+           "width": 32
+          },
+          "value": 1
+         },
+         "type": {
+          "boolean": false,
+          "signed": false,
+          "width": 64
+         }
+        },
+        "type": {
+         "boolean": true,
+         "signed": false,
+         "width": 1
+        }
+       },
+       "kind": "while"
+      }
+     ],
+     "kind": "scope"
+    },
+    {
+     "element": {
+      "boolean": false,
+      "signed": false,
+      "width": 64
+     },
+     "kind": "return_vector",
+     "slot": 4
+    }
+   ],
+   "name": "enumerate_quotients",
+   "parameters": [
+    {
+     "element": {
+      "boolean": false,
+      "signed": false,
+      "width": 64
+     },
+     "kind": "scalar",
+     "reference": false,
+     "writable": true
+    }
+   ],
+   "result": {
+    "vector": {
+     "boolean": false,
+     "signed": false,
+     "width": 64
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,14 @@
+name = "vector_min"
+source = "vector_min.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.VectorMinInstance"
+proof = "Proofs/VectorMinCall.lean"
+model = "Proofs/Generated/VectorMin.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/vector_min.cpp"]
+sanitizers = true
+spec = "docs/vector_min.md"
+standard = "c++17"
+source_sha256 = "67a2d0d808f48676235e168c26958ad99beddfab2d9b0bbdfb4de71993be4d14"
+public_declarations = ["FunctionTemplateDecl:vector_min<vector>"]

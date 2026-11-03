@@ -1,0 +1,18 @@
+# Modules whose import closure is audited once per Mathlib version (tools/audit_mathlib.py).
+# The whole of Mathlib does not fit the memory of the export tool, so this list names the areas the proofs use:
+# tactics, naturals and integers (primes, gcd, binomials, factorization, bit operations), ZMod, finite sums and
+# sets, lists, orders.
+Mathlib.Tactic.Ring
+Mathlib.Tactic.NormNum
+Mathlib.Tactic.Linarith
+Mathlib.Tactic.Positivity
+Mathlib.Data.Nat.Prime.Basic
+Mathlib.Data.Nat.Factorization.Basic
+Mathlib.Data.Nat.Choose.Basic
+Mathlib.Data.Nat.GCD.Basic
+Mathlib.Data.Nat.Bitwise
+Mathlib.Data.ZMod.Basic
+Mathlib.Data.Finset.Basic
+Mathlib.Algebra.BigOperators.Group.Finset.Basic
+Mathlib.Data.List.Basic
+Mathlib.Order.Basic

@@ -1,0 +1,27 @@
+# calleeのbinding整理とContext call
+
+`Proofs/CppMoveCallBindings.lean` は、Contextで準備したcalleeのformal slotが指すvector bindingだけを取り出す。callerのimmutable grant履歴をhigh-level heapに残しながら、既存のbody証明が扱うcallee表現へ接続するための処理である。
+
+## 対応
+
+compactはformal slot順に元vector bindingを集め、vector locationを0から再番号化する。scalar locationと全scalar状態、Frame.state/rootWritable、scope、work/peakを保持する。異なるformal slotが同じvectorを指す場合も、同じbindingへのaliasを保持する。存在しないbindingの参照は拒否する。
+
+compact_scalarSlot/compact_scalarCellはscalar参照先の一致、captured_binding/compact_vectorSlot/compact_resolveは各vector引数が同じBindingとBufferへ解決されることを一般証明する。元の権限・寿命検査も保持する。compact_one_vectorはvector1個＋任意個数のscalar formalについて、既存FW/QS用の表現を直接構成する。
+
+表の整理はghost処理でありC++ workへ加算しない。既に捕捉したcallerの要素参照をcalleeの新slot番号に変換したことにはしない。それらは元high-level heap/grantに残り、finish後も元identityで解釈する。
+
+## call
+
+callFuelはeligible検査、Context.prepareArguments、callee compact、実body runFuel、元callerを使うfinish、restoreContextの順に実行する。対象はscalar resultとNoResizeAllowedなbodyである。
+
+call_of_bodyは実prepare/compactと正常bodyの終了・返却・memory条件から、実callの成功、work=body終状態work+1、全ownerの実payload lookup保持、scalar/heap/合成peakの式を導く。bodyのwellFormednessとfinish成功は既存一般定理から構成する。
+
+各引数の入口での対応と任意bodyの全実行同値は別の主張である。このmoduleだけで非compact版との任意body同値や元caller AST生成の完了を主張しない。[旧UF rootの正常終了・資源証明](union_find_compact_root.md)は、この経路の実bodyを直接証明する。
+
+## 検査
+
+`tests/test_cpp_move_call_bindings.py` は元UFのContext準備でvector index4→0、scalar参照・vector解決・alias・不正slot拒否を確認する。元same bodyを整理後に実行し、finish後の全NStateが整理前の実結果と一致する有限例も照合する。rootについては正常条件からの一般call定理と実例を検査する。
+
+元caller AST/FieldDecl→ObjectRef生成、source move overload/評価順、他methodのこの経路への接続、構築/返却/destructor、割当/resize/nested/異種vectorと任意混在寿命列は残る。
+
+finish_memory/call_of_bodyは、callee scalar memoryのcaller長prefixと最終Context memoryの一致も証明する。正常binding表からのcompact成功はCppMoveCallBindingsReadyに、元same/sizeの実body・call対応は[query証明](union_find_compact_queries.md)に記載する。

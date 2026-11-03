@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parent.parent
 CLANG_VERSION = "clang version 22.1.4"
 GCC_VERSION = "13.3.0"
 VOLATILE_KEYS = {"id", "loc", "range", "mangledName"}
-PUBLIC_KINDS = {"FunctionDecl", "TypeAliasDecl", "CXXRecordDecl", "EnumDecl", "VarDecl"}
+PUBLIC_KINDS = {"FunctionDecl", "TypeAliasDecl", "CXXRecordDecl", "EnumDecl", "VarDecl", "ClassTemplateDecl", "FunctionTemplateDecl",
+                "ClassTemplateSpecializationDecl"}
 
 
 def normalized(value):
@@ -89,6 +90,36 @@ def public_declarations(source: Path):
         kind, name = ast.get("kind"), ast.get("name")
         if kind not in PUBLIC_KINDS or not name:
             raise RuntimeError(f"unsupported public declaration: {kind} {name}")
+        if kind == "ClassTemplateDecl" and not any(c.get("kind") == "CXXRecordDecl" and c.get("completeDefinition")
+                                                   for c in ast.get("inner", [])):
+            # A forward declaration of a class template is not a second public declaration.
+            while position < len(output) and output[position].isspace():
+                position += 1
+            continue
+        if kind == "FunctionTemplateDecl" and not any(
+                c.get("kind") == "FunctionDecl" and any(x.get("kind") == "CompoundStmt" for x in c.get("inner", []))
+                for c in ast.get("inner", [])):
+            while position < len(output) and output[position].isspace():
+                position += 1
+            continue
+        if kind == "ClassTemplateSpecializationDecl":
+            arguments = [str(c.get("value", c.get("type", {}).get("qualType", ""))) for c in ast.get("inner", [])
+                         if c.get("kind") == "TemplateArgument"]
+            name = f"{name}<{','.join(arguments)}>"
+        if kind == "FunctionTemplateDecl":
+            # Overloaded function templates are told apart by the class template of the first parameter
+            # (`op<MonoidMul>`); a template without parameters keeps its plain name.
+            functions = [c for c in ast.get("inner", []) if c.get("kind") == "FunctionDecl"]
+            parameters = [c for c in functions[0].get("inner", []) if c.get("kind") == "ParmVarDecl"] if functions else []
+            if parameters:
+                spelling = re.sub(r"\bconst\b|&|\*|<.*>", "", parameters[0]["type"]["qualType"]).strip()
+                spelling = re.sub(r"^.*::", "", spelling)
+                name = f"{name}<{spelling}>"
+        if kind in ("ClassTemplateDecl", "FunctionTemplateDecl") and f"{kind}:{name}" in declarations:
+            # a redeclaration of a template (forward declaration before the definition)
+            while position < len(output) and output[position].isspace():
+                position += 1
+            continue
         declarations.append(f"{kind}:{name}")
         while position < len(output) and output[position].isspace():
             position += 1

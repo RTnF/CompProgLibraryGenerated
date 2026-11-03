@@ -1,0 +1,14 @@
+name = "find_cycle"
+source = "find_cycle.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.FindCycleInstance"
+proof = "Proofs/FindCycleComponent.lean"
+model = "Proofs/Generated/FindCycle.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/find_cycle.cpp"]
+sanitizers = true
+spec = "docs/find_cycle.md"
+standard = "c++17"
+source_sha256 = "71df89f1db56bbbb01993d6c21e440cdedde5dbf5150174cddb64c04bcb14bd0"
+public_declarations = ["FunctionDecl:find_cycle"]

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "contracts": [
+    {
+      "name": "Proofs.StlContracts.sort_comparisons_bound",
+      "definition_sha256": "8fb27eb44e8ac25c687e7fe223e630d8d46ce8acc49311801250b23f01891b42",
+      "clause": "ISO/IEC 14882:2017 [alg.sort]/1 (std::sort: O(N log N) comparisons)",
+      "reason": "Cost bound of std::sort. The standard states it asymptotically; the existential constant is not fixed. Results (sorted order, permutation) are defined by the model and need no axiom."
+    }
+  ]
+}

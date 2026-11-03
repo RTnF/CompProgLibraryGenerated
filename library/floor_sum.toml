@@ -1,0 +1,15 @@
+name = "floor_sum"
+source = "floor_sum.hpp"
+dependencies = ["safe_mod", "floor_sum_unsigned"]
+translation = "state_ir"
+signed_conversion = "gcc13.3-lp64-twos-complement"
+lean_namespace = "Proofs.FloorSumSignedInstance"
+proof = "Proofs/FloorSumSignedSpecification.lean"
+model = "Proofs/Generated/FloorSumSigned.lean"
+bridge = "verifier/state_bridge.py"
+tests = ["tests/floor_sum.cpp"]
+sanitizers = true
+spec = "docs/floor_sum_experiment.md"
+standard = "c++17"
+source_sha256 = "9945d1bd38dd8c3843782e9802f26f31c6775648f3adb0157b33b590d36d0d42"
+public_declarations = ["FunctionDecl:safe_mod", "FunctionDecl:floor_sum_unsigned", "FunctionDecl:floor_sum"]

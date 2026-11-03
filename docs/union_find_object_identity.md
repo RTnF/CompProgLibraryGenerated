@@ -1,0 +1,11 @@
+# 呼出し前後のUFの識別情報と独立性
+
+`Proofs/UfObjectIdentity.lean` は実callのLayoutと、同じObjectRefの前後のReceiverからcounter/size address、view、headerの同一性を導く。Fieldのslot/index/bindingを比較するので、field値が書き換わるuniteにも使える。
+
+正常Stateについてはcurrent_entryのowner式とallocation表長の保持を使い、data.ownerも同一となる。空headerのownerはallocation表長+header IDであり、割当表長を保持するmethod呼出しでは変わらない。新allocationを追加するconstructorでownerが変わる場合とは区別する。
+
+`Proofs/UfObjectPair.lean` のApartは両UFのdata ownerと、書込み可能なcounterと反対側counter/sizeの非aliasを明示する。apart_afterは識別情報の保持からこの条件を引き継ぐ。ObjectRefが異なることだけを非aliasの根拠にしない。
+
+Pairは両方の正常StateとApartを持つ。step_left/step_rightは元methodの実正常終了・意味・仕事量を持つStepを保ち、別側のrank/親配列/counter/sizeを保持して次のPairを構成する。[任意の交互列](union_find_object_pair_trace.md)へ接続し、`tests/test_uf_object_pair_trace.py`で検査する。
+
+copy/move/破棄や新規構築ではLayoutの条件が異なるため、この保持定理をそのまま適用しない。

@@ -1,0 +1,37 @@
+# Contextで準備する非resize scalar call
+
+`Proofs/CppMovePreparedCall.lean` は、生きたcaller slotと実引数を使って準備したcalleeを、既存のbody実行・finish・Context戻し込みへ接続する。参照履歴を予約量へ含める既存NestedCall.prepareとの違いは[従来callの戻し込み](move_call_restore.md)に記載している。
+
+## 実行経路
+
+`preparedCallFuel` はeligible検査、Context.prepareArguments、projectしたcalleeでのrunFuel、元callerを使うNestedCall.finish、restoreContextの順に実行する。返却Retを保持し、対象外programや失敗をfault、燃料不足をexhaustedにする。対象はscalar resultと既存NoResizeScope.Allowedのbodyである。
+
+`prepareArguments_effects` は実準備からheap不変とcallee scope=caller+1を導く。借用viewは増えるが、Frame.stateとrootWritableはheapから決まるため元callerと同じである。
+
+## 状態妥当性と正常なfinish
+
+`Proofs/CppNoResizeValid.lean` のwrite_validとprimitive_validは、実vector書込みのcommit guardまたはscalar操作のframe保持からwellFormednessを導く。leave_validはscope終了の実retireScope成功を使う。run_validは初期wellFormednessとscope条件の下で、Allowedな分岐・ループ・scopeを含む任意の成功runFuelがwellFormednessを保持することを証明する。実行の成功自体を任意bodyの終了証明と取り違えない。
+
+`finish_ready` は呼出し元memoryを覆う長さ、prefixのcell型一致、callee wellFormednessと返却値の型妥当性から、実scalar finishの成功を構成する。
+
+`preparedCall_ready` は実prepare/body/finishの成功と元contexts/OwnsAllから、実高level成功、再射影した全NStateと実afterの一致、work=body終了時work+1を証明する。
+
+`preparedCall_of_body` は元caller wellFormednessからrun_validを適用し、正常なbody返却値とmemoryの条件からfinish_readyを構成して戻し込みまで進む。最終wellFormednessやfinish成功を独立仮定にしない。body実行の終了、返却値、memory prefixの型保持はアルゴリズムの証明から接続する条件として残る。
+
+## 資源
+
+引数準備は登録済みprepareArguments_resourcesを使う。callerのscalar memory長をM、baselineをB、slot数をL、parameter数をpとすると、準備scalar liveの上界はM−B+L+2pである。ghost grant表の長さはこの式に現れない。準備workは実引数評価後work+1+pである。
+
+新鮮scopeのretire_workとfinish_workにより、finishはbody終了時workに1を加える。finish_countersは実finishから、scalar peakがmax(max callerScalarPeak calleeScalarPeak)(caller scalar live)、heap peakがmax calleeHeapPeak(callee liveSpace−heap baseline)、合成peakがmax(max callerPeak calleePeak)(最終scalarPeak+最終heapPeak)となることを証明する。restored_finish_countersはこれらを高levelのcounterへ接続する。
+
+準備・finishの式だけで任意bodyの計算量を主張しない。body自身のwork/peak上界とsource caller全体への生成対応は継続する。
+
+## 検査と残件
+
+`tests/test_cpp_move_prepared_call.py` は旧UF candidateをclass moveした状態で、Context準備→実same body→実finish→戻し込みを実行する。一般のrun_valid/finish_ready/preparedCall_of_bodyとprepareArguments_resources/finish_countersを適用する。元要素grantの更新、旧領域参照の失効維持、燃料0を検査する。
+
+参照履歴が2件と200件の両方で準備scalar memory長14を確認し、返却値・scalar/payload・work・各peakが同じになる有限例を照合する。この例を全履歴についての一般独立性証明にはしない。元candidateのC++動作は登録済みtest_cpp_move_call_restore.pyのGCC13.3/ASan/UBSan検査と照合する。
+
+元caller AST/FieldDecl→ObjectRef、source move overload/評価順、各methodの正常入力からこの準備経路へのbody証明と全資源の接続、構築/返却/destructor、割当/resize/nested/異種vector、任意混在寿命列は未完了。公開UFの既存違反と全旧ライブラリの検証も残る。
+
+[callee binding整理](move_call_bindings.md)はformal vector参照の解決結果を保ってFW/QS表現へ接続する。[旧UF root](union_find_compact_root.md)は整理後の実bodyとcallの正常終了・圧縮結果・資源を直接証明する。元caller ASTと他methodへの一般接続は継続する。

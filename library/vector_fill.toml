@@ -1,0 +1,14 @@
+name = "vector_fill"
+source = "vector_fill.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.VectorFillInstance"
+proof = "Proofs/VectorFillCall.lean"
+model = "Proofs/Generated/VectorFill.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/vector_fill.cpp"]
+sanitizers = true
+spec = "docs/vector_fill.md"
+standard = "c++17"
+source_sha256 = "5bd277d29b6662a11b1d6c346ea3a3a6d8ae18436e9e2339ee4fa58bd8ebf4ca"
+public_declarations = ["FunctionTemplateDecl:vector_fill<vector>"]

@@ -1,0 +1,79 @@
+# 構築段階での同一オブジェクトのメソッド呼出し
+
+`nested_ir.lower_source(..., construction_stages=True)` は、宣言順のメンバ初期化と構成子本体を一つの生成段階として扱う。本体から `this` のメソッドを呼ぶ場合、既存の `inline_ast` と `class_method_functions` により、構築中の実フィールド局所変数を引数にして展開する。メソッドの引数捕捉、値渡し・参照渡し、ネストした呼出し、再帰と評価順の拒否規則は既存経路と共通である。
+
+`ast_stream.class_construction_stages` はフィールド局所変数を宣言順の `_all_fields` に記録する。`direct_functions` は同じ Clang 宣言IDのメソッドを構築用の展開候補として渡し、候補自体を生成対象のトップレベル関数には加えない。メソッド中の vector 操作と実際の初期化は、展開後に通常の型・標準ライブラリ監査を通る。未知のメソッドや再帰を標準 vector 操作と見なして受理しない。
+
+`_read_only_fields` は可変 scalar 参照引数を持つクラスではscalarフィールドの値渡し最適化を行わない。引数がフィールド自身を別名参照する場合の更新を、同じフィールドの後続読取りへ反映する。
+
+`tests/test_constructor_stage_methods.py` は複数 vector の構築後のヘルパー更新を Lean の生成実行と C++/UBSan で比較し、初期値と引数の変更がモデルへ反映されること、再帰を拒否すること、scalarのみのクラスの更新、フィールドへの別名参照更新を確認する。`Proofs/Generated/BeatsConstructionStage.lean` はBeatsの実ソースから生成し、検査で全文一致を要求する。このモデルでは15本の vector の確保を含む構築段階を生成し、スタック3本の256要素、フィールド順序・型、既存の本体モデルとのスロット置換による構文一致を検査する。
+
+生成段階はフィールドを保持した `runFuel` 用のモデルである。クラスオブジェクトの export、呼出し後の寿命・scope、任意 caller の成功条件、計算量、全入力での意味保存は別の証明が必要である。Beats の構文一致だけから、確保後の状態と BFreshS/CVecs の関係や、評価器のスロット置換に関する意味保存が証明済みとは扱わない。`context_class_ir`/`class_copy_layout` の公開 bundle が複数 vector の class export を扱えるようになった、という変更でもない。
+
+## 複数vector rootの移譲とscope破棄
+
+`Proofs/CppConstructorRoots.lean` の `transferAll` は、owner IDとelement型の列を取り、各rootを構築scopeからcaller scopeへ順に移す。実行関数には論理的なvector内容を渡さない。`finishRoots` はすべての移譲が成功した後、一度だけ元scopeを破棄する。旧 `CppConstructorFinish.finish` は1本のvector用としてそのまま保持する。
+
+`transferAll_ok` は、異なるownerと元scopeの正しいModelsから、実transferRoot列の成功、選んだ全rootの新scopeでのModels、他rootのModels保持を導く。`movedAll_layout` は移譲中のstorage全体・binding表・rootWritable表が同一であることを示す。`finishRoots_ok` は元scopeとcaller scopeが異なる場合の実retireScopeの成功と、選んだ全rootおよび元scope外の無関係なrootのModels保持を合成する。Modelsのflat/rows両方を扱い、rowsの子bufferも移譲先で保持する。空の選択も扱う。
+
+`tests/test_cpp_constructor_roots.py` は15本のflatメンバーの保持、nested rootと子bufferの保持、未選択の構築scopeのroot・子の破棄、他scopeのcallerデータ保持、epoch/権限/binding表の保持を実評価する。重複owner、誤った元scope、子headerをrootとして渡す操作、element型不一致は失敗することも確認する。一般定理の適用例は任意のowner・型・本数・scope・内容を使う。
+
+これは複数rootを扱う終了処理の補助部品である。生成されたclass field slotsからrootを捕捉し、scalar値・更新済みcaller prefixとともにcallerへ再配置すること、Beats stageの最終モデルとの接続、copy/move/destructionとその仕事量・peak、converterの複数vector export対応は残る。公開C++や固定仕様の切替、独立kernel検証の成功は主張しない。
+
+## field slotsからcallerへ返す複数vector構築終了処理
+
+`Proofs/CppConstructorMultiFinish.lean` の `captureVectors` は実NStateのfield slotsを順に解決し、型・元scopeのroot header・実Frame.resolveの権限検査を通ったBindingを捕捉する。全vectorとscalar値を先に捕捉してから、前節のfinishRootsを一度実行する。子headerはこの保持対象のowned memberとして受理しない。構成子の入力として行をborrowする一般性は別の残件である。
+
+`restored` はcallerの元binding表とslotsへ、新しいroot headerのvector bindings、scalar bindingsとslotsを追加する。owner/element/writableは保持し、vector payloadはcopyしない。scalar memoryは**構築後のcalleeから取り出すcaller prefix**にfield値を加え、参照引数への更新を保持する。返すObjectRefはvectorSlots/scalarSlotsの両列を持つ。scalar baseMemoryはcallerから、storage baselineとrootWritableは終了後Frameから引き継ぐ。管理処理のscalar仕事量をvector本数+scalar個数+1だけ追加してobserveする。ここまでの総仕事量・peak上界をBeatsのstageへ合成する証明はまだない。
+
+`finish_ok` はfield slot/resolve/型/headerの一致、scalar capture条件、相異なる選択rootのModelsから、実finishの成功、全memberと無関係なrootのModels、更新済みcaller memoryと復元したbinding/slot配置を導く。成功済みのfinishを前提にはしない。restored_vector/restored_scalarはcaller側の実slot lookupと新binding/cellを示す。NProgram.constructMembersFuelとconstruct_of_stepsは実prepare/runFuel/finishを接続する。旧1vector用のconstructFuel/finishと既存公開モデルは変更しない。
+
+`nested_ir.lower_source(..., construction_stages=True)` は実fieldのslot・scalar/vector種別・要素型・権限を `construction_layout` に記録する。`emit_lean(..., constructor_exports=True)` はそこから `vectorFields`、`scalarFields` と `exportMembersFuel` を生成し、共通の `constructMembersFuel` へ接続する。既定のLean出力は変更しない。配置の欠落、順序・slotの不一致、重複slot、不正な種別・権限値は拒否する。テンプレート構成子のexportは汎用モデルへの接続が未完了のため、このオプションでは拒否する。
+
+`tests/test_cpp_constructor_multi_finish.py` は一般定理の適用に加えて、nested rootの子とreadonly bindingの保持、過剰な書込み権限・child header・不正slot/型/scope/caller prefix・重複ownerの拒否、scalarのみ/vectorのみ/空の保持レイアウトを確認する。C++から生成した2vector/2scalarクラスの実prepare→構築→生成exportを評価し、参照引数の更新・元scalar別名とreadonly cell・非ゼロbaseline・無関係vector・各field内容・返却参照からの読書き・fuel不足を検査する。同じソースをC++/UBSanでも実行する。生成descriptorを期待する型・slotと照合し、不正な配置情報の拒否と既定出力の維持も確認する。既存class bundle全体の複数vector対応、copy/move/destructionと総資源の接続は残る。
+
+候補の生成検査は、実ソースから生成した15vector/2scalarのdescriptorと既存のBeatsConstructorFieldsの一致、および任意fuel/caller/引数に対する生成exportとBeatsConstructCallの構築・終了処理の一致をLeanのrflで確認する。手書きdescriptorのテスト内再構築は不要になった。scalarとvectorが入り交じり、const scalar・mutable scalar・二重vector・const vectorを持つ別クラスでも、実生成exportのslot・内容・権限・子buffer保持をLean実行とC++/UBSanで確認する。
+
+残件は既存class bundle全体での新entry point採用、copy/move/destruction・資源、元入力範囲を保つ公開版への切替と独立監査である。
+
+Beatsの接続は `BeatsConstructorFields.stage_export` で、初期caller条件から実確保・本体・15vector/2scalarの終了処理まで進んだ。構築後の成功やfieldモデルを入力条件に加えず、FinalLayoutから実resolve/captureと相異なる所有rootを導く。実ソースのfield descriptorsとの対応も候補の生成検査で要求する。root prepareから初期prefix条件を自動導出する最終呼出し、総資源、class bundleのconverter採用と全寿命については引き続き残件である。
+
+`BeatsConstructCall.construct` は元callerのroot grantから実prepare→wide stage→multi finishを接続し、fieldのModelsと入力内容の保持を導く。初期prefixの長さ/型/scopeを呼出し側から自動導出する接続は完了した。候補から生成したNProgram全体とprogramのrfl一致を検査する。child header入力、全caller領域保持の一般証明、総資源、receiver操作・converter・全寿命・公開切替は引き続き残件である。
+
+返却metadataは `ExportLayout` と `BeatsConstructCall.construct_full` で構築成功と合成済み。`BeatsConstructReceiver.construct_fields` は実field slotのwritable root resolveとbuffer内容、old_scalar_keptは元callerの有効なscalar別名の保持を導く。6操作を呼ぶための残りのbuffer契約・scope条件と、全無関係vector保持・総資源・全寿命は引き続き未完了である。
+
+CppConstructorRetirementの退役後contextとbuffer全体保持の補題を使い、ExportLayoutはFieldBuffersと全ownerのstrictも返す。BeatsConstructReceiver.construct_readyは構築結果から、既存6操作のvector条件BVecs（Valid/limit/owner/small、全scopeとscalar baseを含む）を導く。各操作へのscalar引数・Safe条件・実call/更新後receiverの接続と総資源・全寿命は残る。
+
+BeatsReceiverCallsは返却inf/nの実scalarCell読取りを6操作の生成NProgram引数へ接続し、従来のSafe等の前提下で成功・意味・更新後表現・ScalarPostMBを引き継ぐ。実回帰では6操作を同じobjectの更新後状態へ続けて適用し、C++/UBSanと照合する。任意の操作列について更新後BVecs/Scalarsを復元する一般証明、Safe導出・converter/全寿命・総資源は残る。
+
+BeatsReceiverRestoreは6操作の結果へCallEffects/Scalars/BVecsを追加し、一般の更新後receiverを次の入口へ戻す。既存意味・BRepS・ScalarPostMBを維持する。unit結果はCppCallUnitFrameを通して扱い、scalar値不変はScalarPostMB.scalarMemoryから別に導く。各Safe・任意長操作列/総資源・class converter/寿命/公開切替は未完了である。
+
+## 複数fieldの暗黙copyとコピー先の配置（2026-11-03）
+
+`emit_context_class(..., member_exports=True)` の経路では、複数のflat vectorとscalarが入り交じるクラスについて、監査したFieldDeclの宣言順にcopy命令を生成する。コピー先の権限は宣言のconst/mutableとtargetConstから決める。readonlyなコピー元から通常のコピーを作る場合にも、新しい通常fieldは書込み可能である。既定の1vector経路は維持する。
+
+`MemberCopy.validate` は全source slotの種別・型を最初の確保前に検査し、先行コピーで後続の不正source slotが有効になることを防ぐ。初期の`Good`（FrameのwellFormedとrootWritable長の一致）と`Sources`（typed scalarCellと所有vector rootの読取り・対応型）から、各primitiveの成功を導いて宣言順に合成する。コピー元のwritable権限は要求しない。
+
+`source_copy_layout` は実copyの成功、コピー後のGood、元scalarと所有rootの読取り保持Keepsに加え、slot数がfield数だけ増えることとscopeの不変を返す。各クラスへ生成する`copy_layout_of_fields`は、実copyFieldsとcopyFuel・返却ObjectRefへこの結果を接続する。fuelのfields.length+1は停止に十分な段数であり、仕事量や領域の計算量とは区別する。
+
+primitive単位では、`scalar_destination`が新しいslotのtyped読取り、値、権限、cell addressを示す。`resolved_payload`は実resolveからコピー元のpayload契約を導き、`vector_destination`は新しいslotからcopyBindingとコピーしたbufferへの実resolveを示す。共通view/copy部は、これらとslot数・scopeの合成を含め、固定独立kernelで3317宣言を検査した。許可は基礎3公理のみで、標準stack・2threadsを維持する。
+
+`Copied`は、元のfieldの実読取りに対し、新しいtyped scalarの値・権限、またはvectorの内容・権限・caller scopeの所有rootを対応付ける。初期Sourcesが実読取りの存在を保証するため、不正sourceに対する空虚な含意を成功条件にしない。後続copyのKeepsで先に作ったfieldを保持し、`ready_targets`で宣言順に合成する。
+
+`FieldsCopied`はfield列と実slot列を要素ごとに同じ順序で対応付ける。`ObjectCopies`はvector/scalarで選別した元field列と、返却ObjectRefの各slot配列の対応を示す。`source_copy_values`と生成する`copy_values_of_fields`は、初期Good/Sourcesから実copy成功・保持・配置・この値と権限の対応まで返す。fieldの順序を入れ替えたObjectRefや、コピー先の権限を誤った状態を拒否する具体例も独立検証する。共通部とこの具体例は固定kernelで3582宣言を成功した。
+
+`Position`と`Placements`は、宣言順の各新fieldについて、実slotとvector owner/scalar cell addressを記録する。vector ownerはコピー前のstorage長にそのfieldより前のvector数を足した値、scalar addressはコピー前のmemory長にそのfieldより前のscalar数を足した値になる。`ready_placements`と`ready_counts`は実primitiveの状態からこれらと確保数を合成する。source_copy_positionsと生成するcopy_positions_of_fieldsは、従来の成功・保持・値と権限の対応にこの配置と個数の結果を加える。
+
+`vectorOwner`/`scalarAddress`は実slot lookupとtyped resolve/cell読取りからowner/addressを取り出す。vector_owners_distinct/scalar_addresses_distinctは、異なるコピー先fieldの結果が異なることを示す。vector_old_separated/scalar_old_separatedは、コピー前の領域内のowner/addressと重ならないことを示す。単なるslot番号の相違とは区別する。これらと具体例を含む共通部は、固定独立kernelで3618宣言を成功した。Beatsの15vector/2scalarでは、元の一般入力からの実copyに加え、正確に15ownerと2scalar cellが増えることも確認する。
+
+vectorのCopiedは、内容・権限・所有scopeに加えて、capacityが元の要素数、limitが元と同じ、epochが0、buffer.ownerが実binding.ownerと同じであることを返す。後続fieldのcopyはbuffer全体を保持するため、これらも最終ObjectRefまで引き継ぐ。予約で元capacityとepochを変えた具体例でも、コピー後のcapacity・limit・epochを確認する。C++/UBSan側でも予約後のコピーを確認する。
+
+`fieldWork`は初期sourceのscalarを2、vectorを元の要素数+3と数え、`copyWork`は全fieldの和を取る。Sourceが実読取りを保証し、Keepsが後続copyから元bufferを保持するため、中間状態の未知なサイズを上界へ仮定し直さず初期状態の式へ合成できる。ready_work/source_copy_workと生成するcopy_work_of_fieldsは、従来の成功・値/権限/metadata・配置・確保数に加えて、`after.work = before.work + copyWork before fields`を返す。固定幅の要素について、copy本体の仕事量はfield数とvector要素数の総和に線形である。これはモデル上の仕事量であり実測時間ではなく、fuelとも区別する。scalarだけのコピーと3vector/3scalarの具体例では、非0の初期カウンタからの正確な増分も確認する。
+
+これらと具体例を含む共通部は、標準資源の固定独立kernelで3684宣言を成功した。
+
+`SpaceBounds`は、storage baselineの保存、scalar/storageのlive領域とpeak、全体peakの上界をまとめる。予算W=copyWork before fieldsに対して、scalar peakは`max before.scalars.peak (liveS before+W)`、storage peakは`max before.storage.peak (before.liveSpace+W-before.baseSpace)`、全体peakは元のpeakと両上界の和のmax以下となる。storage側のliveSpaceはnested Stateの定義を使い、子headerを二重に数えない。自然数のbaseline減算も飽和減算のまま扱う。
+
+各primitiveのSpaceBoundsをtransで加算し、初期Sourcesから変化しないcopyWorkへ戻して、ready_space/source_copy_spaceと生成するcopy_space_of_fieldsへ合成する。scalarのliveSはmemoryだけでなくbindingsも含み、1fieldの増分を2以下と数える。最初の一括算術が標準heartbeat上限に達したため、上限を上げず、scalar/storage/全体の単調性と推移へ分割した。共通部と具体例は固定独立kernelで3735宣言を成功した。これらはcopy本体のモデル上の領域上界であり、実測bytesやcaller全体の資源とは区別する。
+
+borrowed childを含む任意callerの全保持、caller AST、assignment/move/destruction、公開版切替は引き続き残件である。

@@ -14,7 +14,9 @@ public:
       tree[i + 1] = v[i];
     }
     for (int i = 1; i < (int)v.size(); i++) {
-      tree[i + (i & -i)] += tree[i];
+      if (i + (i & -i) < (int)tree.size()) {
+        tree[i + (i & -i)] += tree[i];
+      }
     }
   }
   // sum of A[0, r)

@@ -30,18 +30,25 @@ jobs:
           leanchecker: 'false'
           axiom-audit: 'false'
           use-mathlib-cache: 'false'
-      - name: Prepare the pinned axiom auditor (GitHub only)
+      - name: Fetch Mathlib and its build cache (outside the test path)
+        run: lake exe cache get
+      - uses: dtolnay/rust-toolchain@1.94.1
+      - name: Fetch the pinned proof checkers (outside the test path)
         run: |
-          git clone --depth 1 --branch v0.1.2 https://github.com/leanprover-community/axiom-audit.git "$RUNNER_TEMP/axiom-audit"
-          test "$(git -C "$RUNNER_TEMP/axiom-audit" rev-parse HEAD)" = 46024e005996495c65ef609368e11ab39c4222e3
-          cp lean-toolchain "$RUNNER_TEMP/axiom-audit/lean-toolchain"
-          python3 tools/offline.py lake -d "$RUNNER_TEMP/axiom-audit" build
+          python3 tools/prepare_proof_checkers.py --fetch
+      - name: Build the pinned proof checkers without network access
+        run: python3 tools/prepare_proof_checkers.py
+      - uses: actions/cache@v4
+        with:
+          path: .cache/axiom-definitions.json
+          key: axiom-definitions-${{ hashFiles('verification/allowed_axioms.json', 'lean-toolchain', 'verification/InspectEnvironment.lean', 'tools/proof_security.py') }}
+          restore-keys: axiom-definitions-
+      - name: Check imported-source inventory references and hashes
+        run: python3 tools/inventory_imports.py --check
       - name: Verify all public components without network access
         env:
           LEAN_NUM_THREADS: '1'
-        run: python3 tools/check_public.py
-      - name: Audit axioms without network access
-        run: python3 tools/offline.py lake env "$RUNNER_TEMP/axiom-audit/.lake/build/bin/axiom-audit" --allow propext,Quot.sound,Classical.choice --root Proofs
+        run: python3 tools/check_public.py --timeout-seconds 7200
       - name: Build and verify the header-only archive
         run: |
           python3 tools/offline.py python3 tools/package_headers.py --output "$RUNNER_TEMP/library-hpp.zip"

@@ -1,0 +1,200 @@
+{
+  "abi": "LP64: int32, long64, long-long64",
+  "templates": [],
+  "functions": [
+    {
+      "name": "bit_width_u64",
+      "parameters": [
+        {
+          "type": {
+            "width": 64,
+            "signed": false,
+            "boolean": false
+          },
+          "reference": false,
+          "writable": true
+        }
+      ],
+      "result_type": {
+        "width": 32,
+        "signed": true,
+        "boolean": false
+      },
+      "body": {
+        "kind": "scope",
+        "body": {
+          "kind": "sequence",
+          "first": {
+            "kind": "sequence",
+            "first": {
+              "kind": "declare",
+              "type": {
+                "width": 32,
+                "signed": true,
+                "boolean": false
+              },
+              "reference": false,
+              "writable": true,
+              "value": {
+                "kind": "literal",
+                "type": {
+                  "width": 32,
+                  "signed": true,
+                  "boolean": false
+                },
+                "value": 0
+              }
+            },
+            "rest": {
+              "kind": "skip"
+            }
+          },
+          "rest": {
+            "kind": "sequence",
+            "first": {
+              "kind": "while",
+              "condition": {
+                "kind": "binary",
+                "type": {
+                  "width": 1,
+                  "signed": false,
+                  "boolean": true
+                },
+                "operation": "ne",
+                "left": {
+                  "kind": "variable",
+                  "type": {
+                    "width": 64,
+                    "signed": false,
+                    "boolean": false
+                  },
+                  "slot": 0
+                },
+                "right": {
+                  "kind": "cast",
+                  "type": {
+                    "width": 64,
+                    "signed": false,
+                    "boolean": false
+                  },
+                  "operand": {
+                    "kind": "literal",
+                    "type": {
+                      "width": 32,
+                      "signed": true,
+                      "boolean": false
+                    },
+                    "value": 0
+                  }
+                }
+              },
+              "body": {
+                "kind": "scope",
+                "body": {
+                  "kind": "scope",
+                  "body": {
+                    "kind": "sequence",
+                    "first": {
+                      "kind": "assign",
+                      "slot": 1,
+                      "value": {
+                        "kind": "binary",
+                        "type": {
+                          "width": 32,
+                          "signed": true,
+                          "boolean": false
+                        },
+                        "operation": "add",
+                        "left": {
+                          "kind": "variable",
+                          "type": {
+                            "width": 32,
+                            "signed": true,
+                            "boolean": false
+                          },
+                          "slot": 1
+                        },
+                        "right": {
+                          "kind": "literal",
+                          "type": {
+                            "width": 32,
+                            "signed": true,
+                            "boolean": false
+                          },
+                          "value": 1
+                        }
+                      }
+                    },
+                    "rest": {
+                      "kind": "sequence",
+                      "first": {
+                        "kind": "assign",
+                        "slot": 0,
+                        "value": {
+                          "kind": "binary",
+                          "type": {
+                            "width": 64,
+                            "signed": false,
+                            "boolean": false
+                          },
+                          "operation": "div",
+                          "left": {
+                            "kind": "variable",
+                            "type": {
+                              "width": 64,
+                              "signed": false,
+                              "boolean": false
+                            },
+                            "slot": 0
+                          },
+                          "right": {
+                            "kind": "cast",
+                            "type": {
+                              "width": 64,
+                              "signed": false,
+                              "boolean": false
+                            },
+                            "operand": {
+                              "kind": "literal",
+                              "type": {
+                                "width": 32,
+                                "signed": true,
+                                "boolean": false
+                              },
+                              "value": 2
+                            }
+                          }
+                        }
+                      },
+                      "rest": {
+                        "kind": "skip"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "rest": {
+              "kind": "sequence",
+              "first": {
+                "kind": "return",
+                "value": {
+                  "kind": "variable",
+                  "type": {
+                    "width": 32,
+                    "signed": true,
+                    "boolean": false
+                  },
+                  "slot": 1
+                }
+              },
+              "rest": {
+                "kind": "skip"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

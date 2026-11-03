@@ -1,0 +1,13 @@
+-- Generated syntax-directed scalar state IR.
+import Proofs.CppLoop
+
+namespace Proofs.FloorSumUnsignedInstance
+open Proofs.CppScalar Proofs.CppState
+
+open Proofs.CppLoop
+
+def «floor_sum_unsigned» : LoopProgram :=
+  ⟨[⟨⟨64, false, false⟩, false, true⟩, ⟨⟨64, false, false⟩, false, true⟩, ⟨⟨64, false, false⟩, false, true⟩, ⟨⟨64, false, false⟩, false, true⟩], ⟨64, false, false⟩,
+   (.scope (.sequence (.sequence (.declare ⟨64, false, false⟩ true (.cast ⟨64, false, false⟩ (.literal ⟨32, true, false⟩ (0)))) .skip) (.sequence (.whileLoop (.literal ⟨1, false, true⟩ (1)) (.scope (.scope (.sequence (.branch (.binary ⟨1, false, true⟩ .ge (.variable ⟨64, false, false⟩ 2) (.variable ⟨64, false, false⟩ 1)) (.scope (.scope (.sequence (.assign 4 (.binary ⟨64, false, false⟩ .add (.variable ⟨64, false, false⟩ 4) (.binary ⟨64, false, false⟩ .mul (.divrem ⟨64, false, false⟩ false (.binary ⟨64, false, false⟩ .mul (.variable ⟨64, false, false⟩ 0) (.binary ⟨64, false, false⟩ .sub (.variable ⟨64, false, false⟩ 0) (.cast ⟨64, false, false⟩ (.literal ⟨32, true, false⟩ (1))))) (.cast ⟨64, false, false⟩ (.literal ⟨32, true, false⟩ (2)))) (.divrem ⟨64, false, false⟩ false (.variable ⟨64, false, false⟩ 2) (.variable ⟨64, false, false⟩ 1))))) (.sequence (.assign 2 (.divrem ⟨64, false, false⟩ true (.variable ⟨64, false, false⟩ 2) (.variable ⟨64, false, false⟩ 1))) .skip)))) .skip) (.sequence (.branch (.binary ⟨1, false, true⟩ .ge (.variable ⟨64, false, false⟩ 3) (.variable ⟨64, false, false⟩ 1)) (.scope (.scope (.sequence (.assign 4 (.binary ⟨64, false, false⟩ .add (.variable ⟨64, false, false⟩ 4) (.binary ⟨64, false, false⟩ .mul (.variable ⟨64, false, false⟩ 0) (.divrem ⟨64, false, false⟩ false (.variable ⟨64, false, false⟩ 3) (.variable ⟨64, false, false⟩ 1))))) (.sequence (.assign 3 (.divrem ⟨64, false, false⟩ true (.variable ⟨64, false, false⟩ 3) (.variable ⟨64, false, false⟩ 1))) .skip)))) .skip) (.sequence (.sequence (.declare ⟨64, false, false⟩ true (.binary ⟨64, false, false⟩ .add (.binary ⟨64, false, false⟩ .mul (.variable ⟨64, false, false⟩ 2) (.variable ⟨64, false, false⟩ 0)) (.variable ⟨64, false, false⟩ 3))) .skip) (.sequence (.branch (.binary ⟨1, false, true⟩ .lt (.variable ⟨64, false, false⟩ 5) (.variable ⟨64, false, false⟩ 1)) (.scope (.scope (.sequence .breakLoop .skip))) .skip) (.sequence (.assign 0 (.divrem ⟨64, false, false⟩ false (.variable ⟨64, false, false⟩ 5) (.variable ⟨64, false, false⟩ 1))) (.sequence (.assign 3 (.divrem ⟨64, false, false⟩ true (.variable ⟨64, false, false⟩ 5) (.variable ⟨64, false, false⟩ 1))) (.sequence (.swap 1 2) .skip)))))))))) (.sequence (.ret (.variable ⟨64, false, false⟩ 4)) .skip))))⟩
+
+end Proofs.FloorSumUnsignedInstance

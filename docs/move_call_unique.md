@@ -1,0 +1,11 @@
+# compact Context呼び出しのfuelと成功結果
+
+`Proofs/CppMoveCallUnique.lean` は、元ObjectRefを扱う共通compact Context callFuelについて、fuel追加時の成功保持と異なるfuelで成功した結果の一意性を証明する。UFや特定の返却値に固定せず、NProgram、Context、Ty、引数列を一般に取る。
+
+`call_success_mono` はfuelで成功したcallがfuel+extraでも同じContextとRetを返すことを示す。実eligible/prepareArguments/compactの判定と本体runFuelを分け、成功しない分岐も処理する。本体では既存のCppNestedHoare.runFuel_success_monoを使い、その後のbreaking判定、finish、restoreContextを同じまま引き継ぐ。
+
+`call_unique` は二つのfuelを共通の和へ増やし、両方の成功結果を同定する。Context全体が一致するため、scalar値やvector payloadだけでなく、slot/binding/header、work、各peakも一致する。
+
+fuelは評価器の打切り上限であり、C++の実際の計算量や仕事量そのものではない。fuel追加を仕事量の追加として数えない。これらは成功済み実行の比較定理であり、停止は既存の正常call/列構成定理から導く。
+
+`tests/test_uf_object_trace_actual.py` は通常UF列とmove後の元オブジェクトのgetterでこの経路を検査する。後者はvectorが空、元size fieldが4、counterが1という状態を保ち、追加fuelで返却1と結果Contextが一致する。通常UFのStateに含まれない弱状態にも、一般の一意性定理を適用する。[実UF列への証明転送](union_find_object_trace_actual.md)がこの定理を利用する。

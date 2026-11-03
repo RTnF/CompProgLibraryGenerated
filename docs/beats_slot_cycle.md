@@ -1,0 +1,70 @@
+# Beats構築のスロット置換と読取り
+
+`Proofs/BeatsSlotCycle.lean` は、確保を含む構築段階と既存の本体モデルで異なる先頭16スロットを扱う。
+
+| 既存本体のスロット | 実構築段階のスロット |
+| --- | --- |
+| 0～14: 節点・作業用vector | 1～15 |
+| 15: 入力vector a | 0 |
+| 16以降: inf/n/局所変数 | 同じ番号 |
+
+`cycle` がこの添字対応、`permute` が実構築状態を既存本体の順序で見るためのスロット表の置換である。先頭16スロットがあることを前提に、任意の添字での `vectorSlot`、`scalarSlot`、型付き `scalarCell`、`envOf` の読取りが対応することを示す。16以降のscalar読取りは変わらない。
+
+`uncycle`/`unpermute` は逆置換であり、相互の合成が恒等となる。スロット表の長さ、scalar状態、vectorフレーム、scope、peak、workも保つ。したがって、型付き読取りが返す値とbindingの権限・アドレスは対応する。vectorデータやscalarメモリをコピーしてC++実行を増やす操作ではなく、同じ格納内容を別のスロット順で見る補助定義である。
+
+これらは読取りと表現の補題であり、命令のrename、宣言・書込み・scope終了・ループ・`runFuel` 全体の意味保存はまだ含まない。実際の15確保から初期表現と16スロットの存在を示す証明、全構築・export・寿命への合成は別に必要である。実ソースから得た構文上の置換関係は [構築段階の生成](constructor_stage_methods.md) を参照する。
+
+
+`Proofs/CppSlotRename.lean` は任意の添字写像に対するContainer/式の置換を定義し、scalar補助評価器`denote`の環境対応、nodes、scalarOnlyの保存を示す。`BeatsSlotCycle.denote_permute`はこれを上記の状態置換へ結ぶ。`denote`はvectorのsize/readを評価せずnoneを返すため、この定理をvector読取りの実行対応とは扱わない。
+
+`Proofs/BeatsSlotEval.lean` は状態付き評価器の対応をContainerとNExprの全構文へ拡張する。cast/targetCast/unary/binary/divrem/短絡logicalに加え、vectorのsize/readとrowを扱う。`expr_eval_permute` と `container_eval_permute` は、置換した式を実状態で評価した結果に状態置換を施すと、元の式を置換状態で評価した結果に一致することを示す。Option全体の等式なので、失敗する場合も含む。`expr_fault_permute` は失敗の同値を明示する。
+
+補助関係EvalRelはこの対応と、評価がスロット表を変更しないことを組み合わせる。前段・後段をつなぐbind、事前のcharge、変換結果、Frame操作の合成で証明し、後段にも先頭16スロットの存在を渡す。型・bindingの権限・参照先・新しいrow binding・仕事量・peakを含むNState全体が対応し、値だけの一致に弱めていない。前提は16スロットの存在だけで、成功やFrameの妥当性を仮定して失敗を除外していない。
+
+`tests/test_beats_slot_eval.py` は、異なる16個のvectorと末尾scalarからのread/size複合式、範囲外read、失敗する右辺を短絡で飛ばす式、新しい参照bindingを作るrowのsize/readを実評価する。値、失敗、カウンタの増加、Frame binding数、置換後の結果状態全体を照合する。汎用定理の適用もLeanで型検査する。命令とrunFuelへの接続範囲は以下に示す。
+
+`Proofs/BeatsSlotStmt.lean` は、16スロット以降への末尾追加とrotateが両立すること、一時参照のrelease、scalarのdeclared、scopeへの進入、leaveの対応を示す。leaveはscalar型のprefix検査、戻りvectorの移譲、scopeの破棄を含む実定義を使い、任意の戻り値と成功・失敗を扱う。leave自体には16スロットの仮定は不要である。
+
+同moduleのdeclare_run_permute、assign_run_permute、write_run_permuteは、式評価の対応を各命令のrunへ接続する。代入ではbindingのwritableと型変換の失敗を含める。配列書込みではC++17の右辺先行順を保ち、container/indexの評価・elementRef・実Frame.write・一時binding解放・課金まで扱う。結果はNStep全体の対応であり、元のセルや配列を書き換えた後の状態を比較する。
+
+回帰検査を2testsへ拡張し、末尾に宣言したscalarのスロットと値、通常/readonly/範囲外変換の代入、対象vectorだけへの書込み、rowの書込み後の一時binding除去、正常なscope終了によるscalarとslotの復元、prefix検査で失敗するscope終了を照合する。以下のrunFuelの検査にもこれらを使う。
+
+`Proofs/BeatsSlotRun.lean` はstmt/commandの構文置換を定義する。意味対応の対象はCoreStmt/CoreCommandで明示する。skip、scalar宣言・代入、配列書込み、check、scalar/vector/unitのreturn、sequence/scope/branch/while/breakを扱う。vectorの確保・reserve/append/copy等とinvokeScalarはこの証明の対象外で、述語はそれらを拒否する。構文置換が定義されていることと、意味保存を証明していることを区別する。
+
+stmt_longとrun_longは、後続処理に必要な16スロットの存在を成功後も保証する。run_permuteは任意のfuelについて、置換した命令の結果状態をoutcomeViewで見ると元の命令を置換状態で実行した結果に一致することを示す。正常終了時のNState全体・return/breakの制御情報に加え、faultとexhaustedも対応する。正常終了だけを前提にせず、短絡・scope復元とループの継続も扱う。
+
+`BeatsWideCtorExec.wide_ctor_core` は実候補の構築本体WideCtorCmdがこの範囲に収まることを示し、wide_ctor_cycle_runFuelはその状態付き実行へ定理を適用する。候補の生成テストは、15確保を除いた実stage本体が `CppSlotRename.command cycle (WideCtorCmd 16)` とrfl一致することも要求する。
+
+回帰検査は3testsとなり、宣言した局所変数を毎回破棄するループの実配列更新、scopeを出るbreak、scalar returnによる後続処理の省略、branchのfault、有限fuelと無限ループのexhaustedを確認する。ここで無限ループの終了を主張しているのではなく、同じfuelでの実行結果の対応を確認する。実15確保からFrame/16slots/初期表現を構成すること、確保を含む全体の資源、class export/copy/move/寿命、公開版切替と独立監査は残っている。
+
+`Proofs/BeatsBindingCycle.lean` はslotの位置の置換とは別に、Frameの先頭16bindingsを循環させる。新binding iは旧binding cycle iなので、保存したReference.slotとvector slot内のbinding番号には逆写像uncycleを適用する。allocation owner・buffer・forest・権限は変えない。bindingsが16個以上あることだけを要求し、resolve/elementRef/grant/read/write/commitと末尾addBindingの対応を示す。Option全体の等式により、readonly、古いepoch、誤ったowner、範囲外などの失敗も含める。16以降のbindingと追加bindingの番号は保つ。
+
+同moduleのviewはNStateのslot位置を保ち、vectorが記録するbinding番号とFrameのbinding表を同時に変換する。scalarSlot/scalarCell、vector slotからのresolve、work/charge/observeの対応を示す。先頭16slotの位置を扱うBeatsSlotCycle.permuteと合成すると、通常の確保後のslot表[1..15,0]をidentityのbinding番号へ対応させられる。restore/rebindとreference/unreferenceの逆変換も証明した。式eval・命令run/runFuel・scope終了・一時bindingのrelease全体のview対応はまだ含めていない。
+
+`Proofs/MultiVecOwnedSound.lean` は、インライン構築に必要なscope条件を扱う。既存soundMのmv.sc≤scは、FWM.strictと合わせると現在のscopeで確保したrootを除外する。内側scope sc+1を出るときに必要なのは、そのscopeに属するrootがないことであり、FWM.strictとmv.sc≤sc+1から導ける。fresh_ownedとsoundM_ownedはこの条件で同じRunsTo/QpostM（正常実行、状態、仕事量・領域）を導く。元のsoundM/FWM/既存公開定理は変更していない。これは不正なscope終了を許す仮定の省略ではなく、同じscopeで所有するrootが内側scopeの終了で破棄されないことを使う証明である。
+
+回帰は5testsへ拡張した。binding表だけを回して保存参照を更新しないとgrantが失敗する例、両方を変換した読書きと他ownerの保持、readonly/epoch/owner/範囲外の失敗、16以降のbinding追加と逆変換、slot位置とbinding番号の別々の対応、元のscopeで所有するvectorを内側scope終了後も保持する実leaveを確認する。全体のインライン構築runFuelへの合成と独立監査は未完了である。
+
+`Proofs/BeatsBindingExpr.lean` はbinding表のview対応をContainer/NExprの全構文へ合成する。Containerの結果はbinding番号なのでuncycleで写し、整数の結果は同じ値を保つ。EvalRelはOption全体の対応とbindings長の単調性を組にする。bind/precharge/finish/frameStepの合成により、rowでbindingが増えた後も16bindings以上という条件を引き継ぐ。前提は初期bindings長のみで、妥当なFrameや評価成功は要求しない。
+
+bindChild/childの対応は新しいbindingが旧長（16以上）の位置に追加され、その番号がuncycleで変わらないことを使う。sizeは同じFrame、readValueは同じFrameと参照の値を返す。型変換・targetCast・単項/二項演算・divrem・短絡logical・size/read・再帰的なrowをすべて扱う。expr_eval_view/container_eval_viewは値だけでなくFrameのbindings・storage・権限、scalar状態、仕事量・peakを含むNState全体を対応させ、expr_fault_viewは失敗の同値を明示する。
+
+回帰は6testsとなった。scalarとvectorの複合式、通常/target型変換、除算/剰余、ゼロ除算、範囲外、短絡、rowの新binding16と値/長さ、readonly親から子bindingへの権限継承を実評価し、前後の状態全体を照合する。binding viewに関する宣言・代入・書込み・release/leave・命令列runFuelへの合成はこれからであり、既存のslot位置の置換に関するrun_permuteと区別する。
+
+`Proofs/BeatsBindingStmt.lean` は、bindingの先頭16個を回すことと16個以上のprefixを残すtakeが両立するrotate_takeを示す。これを使い、式終了時のreleaseとviewの対応を導く。scalarのdeclared、scopeへの進入、NStmt.declare/assign/writeのrunも接続する。いずれもOption/NStep全体の等式であり、型変換・権限・添字の失敗を除外しない。
+
+書込みは右辺→container→添字の実評価順を保ち、Frame.elementRef/writeを通じて実配列を更新する。commit/writeがbinding表を変えないことと、式評価がbindings長を減らさないことを組み合わせ、rowで作った一時bindingが後続評価に残ることを示す。最後に元のbinding数へ解放してから課金する実定義へ対応させる。解放後の長さが途中の長さ以上であるとは仮定しない。
+
+leave_viewは任意の戻り値とscope復元の成功・失敗を扱う。exitFrameは実transferRoot/retireScopeと同じ処理をまとめ、leave_normalで元のNState.leaveとの一致を証明する。戻りvectorの所有権移譲とscope破棄でbinding表自体が変わらないため、prefixのtakeへrotate_takeを適用できる。条件はouter/inner双方のbindingsが16個以上あること。scalar memoryの長さと型prefixを検査する実条件も保持する。
+
+回帰は7testsとなった。scalar宣言・代入・readonly/変換失敗、実配列の書込み、row参照を右辺とtargetで二度作った後の一時binding解放、readonly行への書込み失敗、正常/異常なscope復元、戻りvectorが内側から外側へ移る実leaveを確認する。check/return等の残るprimitive、命令列/loopのrunFuel、初期FrameからのFWM/QSとインライン構築全体への合成、全体資源・class寿命・独立監査は未完了である。
+
+`Proofs/BeatsBindingRun.lean` は既存のCoreStmt/CoreCommandをそのまま検証範囲に用いる。skip・宣言・代入・書込み・check・scalar/vector/unitのreturnと、sequence/scope/branch/while/breakを扱う。その他のvector確保・reserve/append/copy等とinvokeScalarは述語が拒否し、全構文一般の意味保存とは扱わない。
+
+stmt_long/run_longは、実成功した各命令と制御全体の後にも16個以上のbindingsを保つことを示す。式評価途中はbindingsが増え得るため、release_longはtakeの両側が16以上であることを使う。scopeは内側の結果と元の外側の長さからleave_longを適用する。stmt_commuteはretVectorが参照するbinding番号も逆写像で対応させ、同じowner/elementを返す。
+
+run_viewは任意のfuelで、実runFuelのOutcome全体をviewへ対応させる。正常終了時のstate/returned/breakingを保ち、faultとexhaustedも同じ結果へ写す。途中の正常終了を仮定して全体の成功を結論しているのではなく、実行結果全体の等式である。BeatsWideCall.body_view/inline_body_viewは実WideCtorCmdに適用し、slot位置の置換とbinding viewの両方を合成する。余分なprepare/finishやscope増分を挿入しない。
+
+回帰は8testsとなった。scope内のlocalと実配列更新を含むループ、break、return後の無効checkの省略、branch fault、有限fuelと無限loopのexhausted、vector/unitのreturnと無効なvector slotを、複数fuelで結果状態全体ごと比較する。元の初期Frameからview後のFWM/QSを作ること、数学的本体証明と実stage全体を合成すること、全体資源・class寿命・公開版切替・独立監査は未完了である。
+
+BeatsInlineFrame/Execは、準備済み1vector入力から実15確保後のFrame/slotsとFWM/QSを導き、soundM_ownedと両view対応を数学的構築へ合成する。これにより候補ソースと全文生成一致するインラインstageの正常終了、BRepS、実buffer内容まで接続した。入口prepare、確保中を含む全体資源、class寿命、公開版切替・独立監査は残る。条件と検査範囲は[wide候補](beats_wide_candidate.md)を参照する。

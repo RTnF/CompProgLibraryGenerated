@@ -1,0 +1,14 @@
+name = "group"
+source = "group.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.GroupInstance"
+proof = "Proofs/GroupCall.lean"
+model = "Proofs/Generated/Group.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/group.cpp"]
+sanitizers = true
+spec = "docs/group.md"
+standard = "c++17"
+source_sha256 = "04050b70fb2c79ab68a1ca1c504ec762787d82b85d417f65abc9044c19b0378f"
+public_declarations = ["ClassTemplateDecl:GroupAffine", "ClassTemplateDecl:GroupMul", "ClassTemplateDecl:GroupSum", "ClassTemplateSpecializationDecl:GroupAffine<long long>", "ClassTemplateSpecializationDecl:GroupMul<long long>", "ClassTemplateSpecializationDecl:GroupSum<long long>", "FunctionTemplateDecl:op<GroupAffine>", "FunctionTemplateDecl:op<GroupMul>", "FunctionTemplateDecl:op<GroupSum>"]

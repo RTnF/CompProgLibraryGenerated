@@ -4,5 +4,7 @@
 
 - [これまでの教訓](lessons.md)
 - [Git ワークフロー](git_workflow.md)
+- [作業の引き継ぎ（新規セッション向け）](handoff.md)
+- [C++ ライブラリの不具合修正記録](fixes.md)（直したら追記する）
 
 環境固有の値や測定結果はここへ書かず、Git の追跡対象外である `benchmarks/local/` に保存する。

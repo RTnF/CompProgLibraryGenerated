@@ -1,0 +1,29 @@
+{
+  "coverage": "parameter_bindings_only",
+  "functions": [
+    {
+      "name": "doubling",
+      "parameters": [
+        {
+          "kind": "vector",
+          "element": {
+            "width": 32,
+            "signed": true,
+            "boolean": false
+          },
+          "writable": false
+        },
+        {
+          "kind": "scalar",
+          "element": {
+            "width": 64,
+            "signed": false,
+            "boolean": false
+          },
+          "reference": false,
+          "writable": true
+        }
+      ]
+    }
+  ]
+}

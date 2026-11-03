@@ -1,0 +1,14 @@
+name = "fenwick_tree"
+source = "fenwick_tree.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.FenwickTreeInstance"
+proof = "Proofs/FenwickTreeCall.lean"
+model = "Proofs/Generated/FenwickTree.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/fenwick_tree.cpp"]
+sanitizers = true
+spec = "docs/fenwick_tree.md"
+standard = "c++17"
+source_sha256 = "b6e1924976db63c81429650545062cc65b68df01d373f282c3fcbc0b438819f5"
+public_declarations = ["ClassTemplateDecl:FenwickTree", "ClassTemplateSpecializationDecl:FenwickTree<long long>"]
