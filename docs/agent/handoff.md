@@ -4,6 +4,10 @@
 
 ## 復帰時の最新確認（2026-11-03）
 
+- CI41594742022/watch27532は終了1を回収済み。検証開始前のgit ls-filesがcontainer内のdubious ownershipで停止し、release-headersはskip。ci_failed.txtに保存。workflowへGITHUB_WORKSPACEだけのsafe.directory登録を追加。一時repoで異なる所有者の拒否を再現し、POSIX shで修正後成功・別repoは拒否を確認した。C++/Lean/固定仕様は未変更なので全件の重複実行はせず、修正SHAのCIで全件確認する。
+
+- リリースcommit `3aaa6e69bd946e8b9d68ad64acf84ae14a5c12b0` を作成し、手動承認付き `git push origin main` は終了0。remote mainは013cf1f→3aaa6e6へ更新済み。対象CIは https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41594742022 （run41594742022）、watch実27532で監視中。ログは.cache/wip/release_20261103/ci_watch.txt。CI/release-headersはまだ成功未確認。push後のこの記録はローカル差分として保持する。MEMORY.mdもローカル未追跡のまま。
+
 - リリースのステージ確認: index全1914ファイルが最終機密走査のSHA256と一致し、検出0。変更1737ファイル、325976追加/1146削除。MEMORY.mdと.cache/.tools/.lake/benchmarks/localは除外。git diff --cached --checkは引継ぎ済み追加ファイルの行末空白・末尾空行を報告した（ログはrelease_20261103/staged_whitespace.txt）。今回それらを整形せず検証済み内容を維持した。構文sh -nは成功。commit/push後の対象SHAとCI結果は引き続き確認する。
 
 - **全件gate実72559は終了0を回収済み（4636.309秒）。再pollしない。** `.cache/wip/check_public_after_wide_call_fix{.txt,_state.json}` に実結果を保存。C++/bridge59、共有235checks、正本/scratchのLean build各1789targets、Mathlib778modules、52228宣言の公理依存・固定仕様監査、Lean kernel replay、未改変固定nanodaの **49088宣言** がすべて成功した。export917517490bytes、nanoda.stderr.logは0bytes。証明監査開始から773.7秒でreplay完了、832.7秒でexport完了、1044.2秒で独立検証完了（各値は開始からの累積時間）。2threads/標準16MiB stackを維持した。以下の72559「稼働中」は終了前の観測履歴。

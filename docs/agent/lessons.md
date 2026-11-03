@@ -78,3 +78,8 @@
 ## 2026-11-01: 構築本体の追加領域上界の一括計算
 
 - WideCtorCmdのNb≤100を一括のdecideで計算すると標準の再帰深度に達した。資源上限を増やさず、Nb/grC/grS/exS/vwpと式の構文ごとの式をsimpで分解すると、同じ上界100の証明が通った。BeatsWideCtorExecのwide_ctor_nbを `by decide` に置き換えた草案で再現した（実15909終了1）。式全体の再帰計算が失敗した場合、構文に沿う小さな計算・合成へ分け、主張や資源上限を緩めない。
+
+## 2026-11-03: CIコンテナ内のGit所有者確認
+
+- run41594742022は公開検証開始前のgit ls-filesでdubious ownershipとなった。checkout action内の一時HOMEでの設定だけに依存せず、検証runと同じ環境でGITHUB_WORKSPACEだけをsafe.directoryへ登録する。ワイルドカードで全リポジトリを信頼しない。
+- 一時リポジトリとGIT_TEST_ASSUME_DIFFERENT_OWNERを使い、登録前の拒否、POSIX shでの登録後の成功、別リポジトリの拒否を確認した。

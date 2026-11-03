@@ -43,6 +43,8 @@ jobs:
           path: .cache/axiom-definitions.json
           key: axiom-definitions-${{ hashFiles('verification/allowed_axioms.json', 'lean-toolchain', 'verification/InspectEnvironment.lean', 'tools/proof_security.py') }}
           restore-keys: axiom-definitions-
+      - name: Trust the checked-out workspace inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Check imported-source inventory references and hashes
         run: python3 tools/inventory_imports.py --check
       - name: Verify all public components without network access
