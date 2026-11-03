@@ -1,6 +1,7 @@
 """Registration checks for shared verification infrastructure."""
 
 from pathlib import Path
+from contextlib import ExitStack
 import sys
 import tempfile
 import unittest
@@ -9,10 +10,50 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import public
+import check_public
 from offline import disable_network
 
 
 class SupportTests(unittest.TestCase):
+    def test_full_gate_builds_imports_before_tests_and_audits_afterwards(self):
+        events = []
+
+        def imported_check(*args):
+            self.assertEqual(events, ['build'])
+            events.append('imported-test')
+
+        with ExitStack() as stack:
+            for name in ['disable_network', 'lower_priority', 'check_local_results_untracked', 'check_compiler']:
+                stack.enter_context(patch.object(check_public, name))
+            stack.enter_context(patch.object(sys, 'argv', ['check_public.py']))
+            stack.enter_context(patch.object(check_public, 'registry', return_value={}))
+            stack.enter_context(patch.object(check_public, 'cpp_tasks', return_value=[]))
+            stack.enter_context(patch.object(check_public, 'bridge_tasks', return_value=[]))
+            stack.enter_context(patch.object(check_public, 'support_registry',
+                                            return_value={'checks': ['tests/test_public_support.py']}))
+            stack.enter_context(patch.object(check_public, 'run_traced', side_effect=imported_check))
+            stack.enter_context(patch.object(check_public, 'build_lean', side_effect=lambda: events.append('build')))
+            stack.enter_context(patch.object(check_public, 'check_lean', side_effect=lambda: events.append('audit')))
+            check_public.main()
+        self.assertEqual(events, ['build', 'imported-test', 'audit'])
+
+    def test_failed_proof_build_stops_before_tests_and_audit(self):
+        with ExitStack() as stack:
+            for name in ['disable_network', 'lower_priority', 'check_local_results_untracked', 'check_compiler']:
+                stack.enter_context(patch.object(check_public, name))
+            stack.enter_context(patch.object(sys, 'argv', ['check_public.py']))
+            stack.enter_context(patch.object(check_public, 'registry', return_value={}))
+            stack.enter_context(patch.object(check_public, 'cpp_tasks', return_value=[]))
+            stack.enter_context(patch.object(check_public, 'bridge_tasks', return_value=[]))
+            stack.enter_context(patch.object(check_public, 'support_registry', return_value={'checks': []}))
+            stack.enter_context(patch.object(check_public, 'build_lean', side_effect=RuntimeError('build failed')))
+            tasks = stack.enter_context(patch.object(check_public, 'run_tasks'))
+            audit = stack.enter_context(patch.object(check_public, 'check_lean'))
+            with self.assertRaisesRegex(RuntimeError, 'build failed'):
+                check_public.main()
+            tasks.assert_not_called()
+            audit.assert_not_called()
+
     def fixture(self, root):
         def write(path, text=""):
             destination = root / path

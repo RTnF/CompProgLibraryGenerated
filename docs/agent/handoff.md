@@ -4,6 +4,10 @@
 
 ## 復帰時の最新確認（2026-11-03）
 
+- 順序修正後の実96035は終了0回収済み（3157.625秒）。order_fix/checks_state.json: inventory0、all0/3149.547秒、package0、archive0。Leanを先にbuildした全件59部品/共有235checksが成功、正本未変更のproof-securityは成功cache。ZIPの内容・単独/全体include compile実行も成功。追加の順序/失敗時停止の回帰は8tests終了0。次は機密再確認・commit/pushと修正SHAのCIを監視する。96035は再pollしない。
+
+- 再CI41595322068/watch7099は終了1を回収済み。所有者設定・inventory・C++59部品・AST照合成功後、Lean本体build前にtests/test_mat_pow_kernel.pyとtest_cpp_constructor_multi_finish.pyがimportしてunknown module prefix Proofsとなった。ci_failed_e62828c.txt保存。check_public.pyでbuild_leanを分離し、全件のテスト前に実行、証明監査はテスト後に維持した。test_public_support.pyで順序/ビルド失敗時停止を追加、8tests成功。ローカル全件/ZIP検証は実96035で実行中、ログ/状態はrelease_20261103/order_fix/。旧17394の成功記録は上書きしていない。
+
 - CI41594742022/watch27532は終了1を回収済み。検証開始前のgit ls-filesがcontainer内のdubious ownershipで停止し、release-headersはskip。ci_failed.txtに保存。workflowへGITHUB_WORKSPACEだけのsafe.directory登録を追加。一時repoで異なる所有者の拒否を再現し、POSIX shで修正後成功・別repoは拒否を確認した。C++/Lean/固定仕様は未変更なので全件の重複実行はせず、修正SHAのCIで全件確認する。
 
 - リリースcommit `3aaa6e69bd946e8b9d68ad64acf84ae14a5c12b0` を作成し、手動承認付き `git push origin main` は終了0。remote mainは013cf1f→3aaa6e6へ更新済み。対象CIは https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41594742022 （run41594742022）、watch実27532で監視中。ログは.cache/wip/release_20261103/ci_watch.txt。CI/release-headersはまだ成功未確認。push後のこの記録はローカル差分として保持する。MEMORY.mdもローカル未追跡のまま。

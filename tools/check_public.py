@@ -161,7 +161,8 @@ def run_tasks(tasks, jobs):
             raise RuntimeError(f"check failed: {failure[0]}: {failure[1]}") from failure[1]
 
 
-def check_lean():
+def build_lean():
+    """Prepare imported proof modules before any test tries to load them."""
     local_lake = ROOT / ".tools/elan/bin/lake"
     if local_lake.is_file():
         os.environ["ELAN_HOME"] = str(ROOT / ".tools/elan")
@@ -169,6 +170,9 @@ def check_lean():
     if lake is None:
         raise RuntimeError("lake is required for Lean proof checks")
     run([lake, "build"])
+
+
+def check_lean():
     # The proof security check is a function of the proof sources, the reviewed contract and the checker tools.
     inputs = [ROOT / name for name in ("Proofs.lean", "Proofs", "verification", "lakefile.toml", "lake-manifest.json",
                                        "lean-toolchain", "verifier/support.toml", "tools/proof_security.py",
@@ -229,6 +233,8 @@ def main():
     if args.mode == "all":
         tasks += [(f"check:{check}", lambda check=check: run_traced(f"check:{check}", [sys.executable, str(repo_file(check))]))
                   for check in support_registry()["checks"]]
+    if args.mode == "all":
+        build_lean()
     run_tasks(tasks, args.jobs)
     if args.mode == "all":
         check_lean()

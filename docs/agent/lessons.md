@@ -83,3 +83,8 @@
 
 - run41594742022は公開検証開始前のgit ls-filesでdubious ownershipとなった。checkout action内の一時HOMEでの設定だけに依存せず、検証runと同じ環境でGITHUB_WORKSPACEだけをsafe.directoryへ登録する。ワイルドカードで全リポジトリを信頼しない。
 - 一時リポジトリとGIT_TEST_ASSUME_DIFFERENT_OWNERを使い、登録前の拒否、POSIX shでの登録後の成功、別リポジトリの拒否を確認した。
+
+## 2026-11-03: ビルド済みLeanモジュールへの暗黙依存
+
+- CI41595322068はC++59部品/AST照合後、MatPow独立検査とmulti finishテストのimportでunknown module prefix Proofsとなった。check_public.pyが共有テスト後にlake buildを行っていたため、既存oleanのあるローカルだけ通過した。
+- 全件gateは最初にLeanモジュールをbuildし、テスト後に証明監査を行う。ビルド失敗でテスト/監査へ進まないことと、build→import利用テスト→監査の順序をtest_public_support.pyで回帰確認する。部分cpp/bridgeモードの範囲は維持する。
