@@ -4,7 +4,68 @@
 
 ## 復帰時の最新確認（2026-11-04）
 
-- CI修正後の全件gate実56399は終了0を回収済み。C++/AST59部品、共有235項目、独立source build、52228宣言の仕様/公理監査、Lean kernel replay、固定nanoda49088宣言、59ヘッダーZIP検証が成功。現在の検査・監視はすべて終了している。
+- **機密確認:** 変更15ファイルの差分/前後内容は検出0。全公開予定treeの1件はverification/statements.jsonのProofs.MultiVecN.rowKeyの公開SHA256指紋で、検証環境のkind/module/type/levels/body/unsafeから再計算して一致を確認した誤検出。reviewed_false_positive.jsonに根拠を保存した。既定ルール・ignore無効化を維持してraw findingを残し、この厳密な照合以外の未分類検出があれば停止する。最終結果はci_fix_supervisor/secret_scan.jsonを参照する。
+- **ローカル検証はすべて終了済み。稼働中の重い検査はない。** 反映前のキャッシュなしgate33537、子孫回収修正後のgate10899はともにterminal終了0を回収済み。両handleを再poll/再起動しない。
+- **反映前33537:** C++/template-first59、AST/Lean59、共有235、独立build1790jobs、52238宣言の仕様/公理監査、Mathlib関連778module範囲、Lean kernel replay、固定nanoda49092宣言、59header ZIPが全成功。1915入力hash一致。STL契約依存のsort work定理2件は別区分のまま。証拠はrelease_20261103/ci_fix_py311/。
+- **反映後10899:** inventory/all/package/archiveが全て終了0。all2864.992秒、全工程2873.037秒、1916入力hash一致。成功cacheを有効にして変更された依存を再実行し、証明入力1005件は不変なのでproof-security成功cacheを再利用した。これはnanodaをもう一度実行した結果ではない。内訳と証拠はci_fix_supervisor/{checks_state,final_gate_receipt,input_manifest}.json、各txt。ZIP SHA256は `6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e`。
+- **修正内容:** Python3.11のAST未完了文字列captureを修正し、CIのproof build前に境界検査を追加。任意Element/root/借用childの成功済みresolveを保つCppFrameResolveExtensionと生成member copy定理、二段の借用header回帰を追加した。さらにtraced実行をLinux subreaper/親死亡通知/別sessionの監視役で保護し、子孫をkill/reapする。既存SupportTestsへ8ケース/cache連携を追加して正本17tests成功、監視設定の失敗は実コマンド開始前に拒否する。旧定理/既定生成経路と元C++は維持。詳細はCI専用引継ぎとlessons。
+- **リリース準備時点の記録。** この修正のcommit/push状態はgit status/logと対象SHAのCIを照合する。修正前のpush4129afeのCI41757715784はAST trailerで終了1、releaseはskipだった。次は機密検査→対象stage/commit→通常pushの手動承認→新SHAのCI/release-headersを完了まで確認。機密検査スクリプトはci_fix_supervisor/scan_latest_diff.py、結果は同secret_scan.json、stage照合はverify_staged.py。最新の機密検査は、差分/前後内容が検出0、公開予定1918ファイルの1件は上記の検証用SHA256として照合済みで、未分類検出0。raw findingはそのまま保存している。MEMORY.mdとcache・ローカル測定値は公開しない。
+- **全137旧ファイルの目標は未達・active。** 公開59部品の成功を全体完了としない。元API/汎用性、caller AST、child入力、Safe、assignment/move/destruction、混在寿命列、償却、他旧ライブラリの残件は維持する。捕捉整数参照の保持草案copy_observers_20261104/は未compile/kernel/nativeのまま隔離。既に移したtraced_deadline_probe/の旧候補を正本へ再適用しない。
+
+以下は記録時点の履歴であり、現在の再開手順として扱わない。
+
+## 反映後gate10899実行時の記録（各記録時点の状態）
+
+- **現在の重い検査は実10899のみ。** `.cache/wip/release_20261103/ci_fix_supervisor/check.py` をCPython3.11.3で実行中。inventory成功→反映後all（cache有効/jobs1/7200秒）→ZIP作成/検証。ログ/状態/入力manifestは同ci_fix_supervisor/。nice19/ionice3/offline/Lean build1thread、固定nanodaは通常stack/2threads。実handleを確認してterminal結果を回収し、同じ検査を重複起動しない。
+- **10899の途中確認:** C++/template-first59が再実行成功、AST59は成功cacheで照合済み。共有ログは登録96番目のtest_class_copy_audit.pyまで進み、次はunion_find_copy_peak/preserve/receiver。1916入力は途中照合で全hash一致。cache有効のrunでは未実行の項目も前runのfingerprintに一致し得るため、旧observe_shared.pyの二分探索結果を現runの完了件数に使わない。最終判定は実handleのterminalとchecks_state/allログで行う。
+- **キャッシュなし全件33537は終了0を回収済み。再pollしない。** ci_fix_py311/checks_state.json: C++/template-first59、AST/Lean照合59、共有235、独立build1790jobs、52238宣言の固定仕様/公理監査、Mathlib関連778module範囲、Lean kernel replay、固定nanoda49092宣言、59ヘッダーZIPが全成功。all5432.667秒/全工程5440.876秒、1915入力は終了時hash一致。STL契約依存のsort work定理2件は別区分のまま。ZIP SHA256は `6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e`。
+- **子孫回収を正本へ反映済み。** tools/process_supervisor.pyを追加し、check_cache.run_tracedが専用Linux subreaper/親死亡通知を使うよう変更。別sessionの子・成功後の残子・timeout・割込み・親group SIGKILLをkill/reapする。trace hookに停止例外を飲まれず、監視設定/procfsが使えない時は実コマンドを開始しない。エラー理由も親へ渡す。tests/test_public_support.pyの既存suiteへ回帰を追加し、正本で17tests成功。新実行器がcache依存に記録されることも確認した（ci_fix_supervisor/support_tests_receipt.json）。共有check数235は維持する。
+- **反映前後の検証範囲を区別する。** 33537は上の実行器反映前の全件成功。反映後もProofs/verification等の1005入力はhash不変なので、10899では正当な成功cacheを有効にして全件を再確認している。まだ10899の終了は未確認。重い検査の予算は増やしていない。
+- **今回の他の変更:** Python3.11のAST未完了文字列captureを修正し、CIのproof build前に境界テストを追加。CppFrameResolveExtensionを登録し、member copyが任意Element/root/借用childの成功済みresolveを保つ一般定理と生成wrapper、二段の借用header回帰を追加した。旧定理/既定生成経路と元C++は維持。詳細は [CI専用引継ぎ](ci_release_handoff_20261103.md) とlessons。
+- **まだcommit/pushしていない。** 最新push4129afeのCI41757715784はAST trailerで終了1、releaseはskip。次は10899のterminal結果とmanifest→最新差分の機密再検査→対象stage/commit→通常pushの手動承認→新SHAのCIとrelease-headersを完了まで確認する。古いwatch32873/診断/33537は終了済み。MEMORY.md、cache、ローカル測定値を公開しない。
+- **全137旧ファイルの目標は未達・active。** 公開59部品の成功を全体完了としない。元API/汎用性、caller AST、child入力、Safe、assignment/move/destruction、混在寿命列、償却、他旧ライブラリの残件は維持する。捕捉整数参照の保持草案はcopy_observers_20261104/に隔離したまま未compile/kernel/native。新実行器の旧候補と登録用草案はtraced_deadline_probe/に保存したが、正本へ移したものを再適用しない。
+
+以下は各記録時点の履歴であり、現在の再開手順として扱わない。
+
+## 全件33537終了前後の記録（各記録時点の状態）
+
+- **重い検査は実33537のみ稼働中。** 実handleを再確認済み。CPython3.11.3で `.cache/wip/release_20261103/ci_fix_py311/check.py` を実行している。inventory成功、全件は`--no-cache --jobs 1 --timeout-seconds 7200`、続いてZIP作成/検証。nice19/ionice3/offline/Lean1thread、固定nanodaは通常stack/2threadsを維持する。状態/ログは同ci_fix_py311/。同じ検査を重複起動しない。
+- **現在の到達点:** C++/template-firstとAST/Lean照合は各全59部品成功。共有検査も全235項目が成功（現Python3.11の成功fingerprint一致と、制御が最終監査へ進んだことを確認）。現在は最終仕様/公理/両kernel監査中。独立scratch1790jobsとMathlib関連778moduleの範囲確認が成功し、全監査・ZIPの終了はまだ未確認。manifest1915入力は再確認時に全てhash一致（進捗用handoff2文書とMEMORY.mdは対象外）。gate完了まで対象入力を変更しない。
+- **最新pushは4129afe、CI41757715784は失敗・releaseはskip。** watch32873は終了1回収済みで再pollしない。独立build1789jobsは2611.7秒で成功後、bellman_fordのAST trailerで停止。全文ログはrelease_20261103/job_4129afe.txt。今回のローカル修正はまだcommit/pushしていない。
+- **AST修正:** CPython3.11.3で既存stream3testsの30 failures/87 errorsと実AST失敗を再現した。SKIP外側の`*+`だけ`*`へ変えると3testsと95rootのサイズ/hash比較が成功。CIにproof build前のstream境界検査を追加した。証拠と詳細は [CI専用引継ぎ](ci_release_handoff_20261103.md) とlessonsを参照する。
+- **新しいコピー保持証明:** `CppFrameResolveExtension.lean` をRoot/supportへ登録。member_exports経路に任意Element/root/child headerの成功済みresolveを保つPreservesContainersと生成wrapperを追加した。既定生成経路と旧Keeps/定理は維持。二段の借用headerを持つ具体例も独立kernel回帰へ登録。関連3suiteはcontext11/Beats4/layout4の計19tests成功、固定nanoda3781宣言成功（実25170）。compileを1threadへ統一した後の結果は実33537で確認する。元C++は変更していない。
+- **次の手順:** 33537のterminal結果と入力manifestを確認→下記traced実行器の修正・回帰登録と必要な再検証→最新差分の機密再検査→対象stage/commit→通常pushの手動承認→新SHAのCIとrelease-headersを終了まで確認。機密検査の前回結果はci_fix_py311/secret_scan.json（12ファイル、差分/前後内容とも検出0）で、以後のhandoff追記は最後に再検査する。`MEMORY.md`、cache、ローカル測定値は公開しない。
+- **全137旧ファイルの目標は未達・active。** 公開59部品の成功を全体完了としない。元API/汎用性、caller AST、child入力、Safe、assignment/move/destruction、混在寿命列、償却、他の旧ライブラリの残件は維持する。child入力ではCppNestedCallのvectorChildだけでなく、BeatsInputPrepare/MatMulPrepare.VOKG/CppRootModelのroot限定モデルも拡張する必要がある。
+
+- **次の証明案（未検証）:** `.cache/wip/copy_observers_20261104/` にReady列が捕捉済み整数参照の成功readを保持する `PreservesReferences` とsource_copy_preserves_observersの草案を用意した。外側rowをreserveして借用child headerがstaleでも、子の別allocationへの捕捉参照はliveのまま、という具体例とC++/UBSan用コードを含む。まだcompile/kernel/nativeを実行していない。33537が終了するまで重い検査を重複起動せず、次の段階で確認する。正本には反映していない。
+
+- **traced実行器の子停止漏れ（正本未修正）:** `tools/check_cache.py:run_traced` のsubprocess.runはtimeoutで親だけを止める。証拠/候補は `.cache/wip/release_20261103/traced_deadline_probe/`。元再現state.jsonでは.2秒timeout後も子がmarkerを記録。単純なgroup停止候補bounded_capture.pyは通常の子には効いたが、別sessionの子では漏れた（escape_state.json、戻りも.656秒）。**この単純候補を最終修正として採用しない。**
+- **子孫回収の新候補:** 同cacheのprocess_supervisor.pyはLinuxの専用subreaper/親死亡通知を使い、監視役も別sessionへ分離。親groupごとのSIGKILLでも監視役が子孫を回収する。CPython3.11.3/offlineでsupervisor_cases.pyの8ケース（stdin/stdout、失敗17/負signal、通常/別session子のtimeout、成功後の残子、割込み、親group SIGKILL）が成功。check_cache_candidate.pyの連携も成功/失敗出力・終了コード、成功だけのcache保存、hit維持、別session子timeoutの非保存を確認した（integration_state.json）。停止例外はtrace hookのexcept Exceptionに飲まれないBaseException派生。prototype_receipt.jsonに最終source hashを保存。まだ正本へ反映/CI確認していない。
+- **回帰登録の準備済み:** 同cacheのtest_public_support_candidate.pyは既存の登録済みSupportTestsへ8ケース/cache連携を追加する草案。run_support_draft.pyで候補check_cache/moduleを注入し、Python3.11.3/offlineで既存16+追加1の17testsが全成功した（support_draft_state.json、prototype_receipt.jsonのsource hash）。正本反映時はtools/process_supervisor.pyの追加、tools/check_cache.pyの呼出し変更、tests/test_public_support.pyの追加method/import/fixtureだけを移す。独立test_process_supervisor.pyはcache内の準備用で、正本へ重複登録しない。共有check数235と既存support manifestを維持でき、必要な再検証では変更のない証明の成功cache利用を正確に区別する。
+- **33537終了後の順序:** 新候補を正本toolsへ統合して専用回帰を登録し、適切な再検証（現在gateで証明sourceと両kernelが成功した場合は、その後の非変更とcache利用を明記）を行う。その後に機密再確認→commit/push→新SHAのCI/release。進行中33537の1915入力を変えない。診断・候補の子プロセスは全て終了済み。
+
+以下の再開記録とCI経過の「稼働中」「未確認」「次は」は各記録時点の状態であり、現在の再開手順として扱わない。
+
+## 2026-11-04の再開記録（各記録時点の状態）
+
+- 実33537は今回の復帰時にも実handleで稼働を確認。キャッシュなし全件検査はC++/template-firstが44/59まで成功（同時点のlog 1469584bytes）、bridge/共有/最終監査はまだ未確認。ローカル重い検査を追加起動せず、対象入力を維持して待つ。
+- 次段階のchild入力について、`CppNestedCall.resolve`/`bindOne` はflat vectorの`.vectorChild`を扱える一方、`BeatsInputPrepare.prepared`/`MatMulPrepare.VOKG`と`CppRootModel.Flat.tag`はroot tagを要求する。借用子をrootと仮定して既存構築定理へ渡すことはできない。保持の新補題だけでchild入力対応済みとせず、呼出し準備・状態表現を合わせて拡張する。
+
+- **現在の重い検査は実33537のみ。** CPython3.11.3で `.cache/wip/release_20261103/ci_fix_py311/check.py` を実行中。inventory成功→全件 `--no-cache --jobs 1 --timeout-seconds 7200`→ZIP作成/検証の順。nice19/ionice3/offline/Lean1thread、変更後入力manifest付き（進捗用handoff2文書とMEMORY.mdは対象外）。ログ/状態は同ci_fix_py311/、まだall終了未確認。33537の実handleを確認し、stateだけで稼働/停止を判断しない。CI監視32873と診断/関連検査はすべて終了済み。次はこの結果→機密検査→対象のcommit/push→新SHAのCI/release確認。旧137件目標は未達のまま。
+
+- 借用参照保持の関連検査25170は終了0。context11/Beats4/layout4 tests成功、共通部の固定nanoda3781宣言成功。実prepare73194のscratch1790jobs/テスト用imports配布も成功。Root登録と新補題・生成器・回帰はローカル未commit。以後の全件検査では独立回帰のLean compileを1threadに統一（nanoda2threadsは維持）する。
+- CIのAST失敗はPython3.11.3で再現し、SKIP外側のpossessive repetitionだけ通常greedyへ修正。3.11のstream3tests成功、実Bellman AST95rootsのhash/sizeが従来版と全chunk一致。CIにもbuild前の軽い境界検査を追加した。詳細はCI専用引継ぎとlessons。旧137件全体・caller AST・混在寿命等の残件は維持する。
+
+- **CI 41757715784/watch32873は終了1。** 独立scratchの1789jobsは2611.7秒で成功したが、その後bellman_fordのAST bridgeでinvalid translation-unit trailer。releaseはskip。ログはrelease_20261103/job_4129afe.txt、最新CI状態は専用引継ぎを参照。32873を再pollしない。新しい借用参照回帰の初回は#guard禁止のsource auditで失敗し、通常定理へ修正後に実25170で関連3suiteを逐次再検査中。AST修正はこの重い検査と重複起動せず、終了後に再現する。
+
+- 借用header保持候補をローカル正本へ統合中。`Proofs/CppFrameResolveExtension.lean` をRoot/supportへ登録し、member_exports経路に `PreservesContainers` / `ready_preserves_containers` / `source_copy_preserves_containers` と生成wrapper `copy_containers_of_fields` を追加した。旧Keeps・旧定理・既定生成経路は維持。`tests/lean/member_copy_containers.lean` を既存独立kernel回帰へ組み込んだ。実73194で監査済みscratchからtest import準備→context/Beats/layoutの関連検査を逐次実行中（各ログ・状態はborrowed_resolve_20261104/）。CI監視32873も稼働中。まだ追加分の全件gate/commitは行っていない。
+
+- 機密検査の再確認: `4129afe` の変更前後43blobのSHA256が検査記録と一致。現在の引継ぎ2文書の5289bytes差分もGitleaksで検出0・終了0（`diff_secret_scan_4129afe/current_worktree_receipt.json`）。この追記はその再検査後のローカル記録。
+- CI待機中の旧137件向け候補は `.cache/wip/borrowed_resolve_20261104/` に隔離。`BorrowedResolveProbe.lean` はExtendsの下で任意Element・root/borrowed-child headerの成功済みresolveを保持する補題で、Lean終了0、source audit、固定nanoda1871宣言成功（export1.204秒/kernel0.202秒、基礎3公理・通常stack）。まだ正本へ追加していない。生成member copyへの接続候補 `CopyContainerProbe.lean` も実59175終了0（2.329秒）、独立検査12851終了0/2845宣言成功。初回67061はoverlay import不足等で終了1、修正後に成功した。二段の借用子header・入れ子型・捕捉した整数参照・scalarを含む3field copyの具体例 `CopyContainerFixture.lean` は実80939終了0（0.416秒）。ローカル候補検査は全て終了し、稼働中はCI監視32873のみ。次はこの候補の正本module/生成器への統合と専用回帰が必要で、全caller AST・寿命・Safe等の完了とは扱わない。
+
+- **機密検査後にcommit/push済み。** 現行SHAは `4129afe52b30e94585dd2ffd0411586b752b6fe3`。Gitleaks 8.30.1で `38e0171..4129afe` の22ファイル差分・差分全文・変更前後43版（8.11MB）が検出0、合成markerによる検出器の動作確認も成功した。結果は `.cache/wip/release_20261103/diff_secret_scan_4129afe/summary.json`。通常pushは終了0。対象[CI 41757715784](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41757715784)は進行中で、CI/release-headersは終了未確認。下の「未commit」はその記録時点の状態。
+
+- CI修正後の全件gate実56399は終了0を回収済み。C++/AST59部品、共有235項目、独立source build、52228宣言の仕様/公理監査、Lean kernel replay、固定nanoda49088宣言、59ヘッダーZIP検証が成功。ローカル検査は終了し、対象CIはwatch実32873で監視中。
 - 詳細・失敗候補・証拠は [CI専用引継ぎの最新状態](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を優先する。ローカルの成功cacheを再利用した検証であり、cold CIの実行時間は別途確認が必要。
 - この記録時点では修正は未commit。次は機密再確認→対象ファイルのstage/commit→手動承認付きpush→対象SHAのCI/release-headersを終了まで確認する。`MEMORY.md` と各cache・ローカル測定値は公開対象から除外する。
 - 公開59部品の成功と、旧137ファイル全体の検証完了を区別する。元API・汎用性・class copyのcaller AST/寿命・Safe導出/任意長操作列/償却等の残件は維持する。

@@ -1,5 +1,16 @@
 # 作業上の教訓
 
+## 2026-11-04: timeout時は別sessionの子孫も回収する
+
+- `check_cache.run_traced` のsubprocess.runはtimeoutで検査Pythonだけを止め、子が後からmarkerを書いた。単純なkillpgも、別sessionを作る検査の子では漏れた。通常の親子だけを使う回帰では、この停止漏れを検出できない。
+- 専用のLinux監視プロセスをsubreaperにし、親死亡通知を設定して別sessionで動かす。検査終了・timeout・割込み・親groupのSIGKILLでも子孫をkill/reapし、cleanup完了の記録から実コマンドの終了コードを親へ返す。監視設定とprocfs確認に失敗したら実コマンドを開始しない。
+- 通常/別sessionの子、成功後の残子、親の強制終了、stdin/stdout、失敗コード/負signal、cacheの成功のみ保存を確認する。停止用例外はtrace hookのexcept Exceptionに飲まれないものにする。証明sourceが変わらない場合でも、反映前gateと反映後のcache利用を区別して記録する。
+
+## 2026-11-04: CIのPythonでもAST境界を先に検査する
+
+- CI41757715784は独立Lean build成功後、ASTのinvalid translation-unit trailerで停止した。CPython3.11.3で同じ境界テストを実行すると30 failures/87 errors、同じBellman–Ford ASTも切断扱いになり、3.12では通った。skip正規表現の外側をpossessive repetitionにすると、後続の未完了文字列のcaptureが3.11でNoneになる最小例を確認した。
+- 外側だけ通常のgreedy repetitionへ戻し、文字列内部のpossessive runと生bytes保持は維持する。3.11でも不正文字列の拒否と全境界テスト、実AST95rootのサイズ/hash一致を確認する。CIではこの軽い検査を全件proof buildより先に置き、ローカルPythonだけの成功をCI互換性の証拠にしない。
+
 ## 2026-11-03: member copyは元slotを確保前に全件検査する
 
 - 宣言順にfieldを追加すると、初期状態では存在しなかった不正source slotが後のcopy時に有効になり得る。各fieldを実行直前に調べるだけでなく、元ObjectRefの全sourceを最初の確保前にkind/typeとともに検査する。scalar-firstの実クラスで、後からvector/scalarとして読める不正slotを指定する回帰を追加した。

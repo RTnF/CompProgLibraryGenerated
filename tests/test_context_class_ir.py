@@ -31,13 +31,14 @@ class ContextClassTests(unittest.TestCase):
             scratch = Path(directory)
             proof = scratch/'MemberViewSupportAudit.lean'
             proof.write_text('import Proofs.CppConstructorView\nimport Proofs.CppConstructorMultiFinish\n'
-                             'import Proofs.CppClassCopyCommands\n'
+                             'import Proofs.CppClassCopyCommands\nimport Proofs.CppFrameResolveExtension\n'
                              'namespace MemberViewIndependent\n'+MEMBER_VIEW_SUPPORT+
                              MEMBER_COPY_SUPPORT+
                              (ROOT/'tests/lean/member_copy_values.lean').read_text()+
+                             (ROOT/'tests/lean/member_copy_containers.lean').read_text()+
                              '\nend MemberViewIndependent\n')
             audit_source(proof)
-            env = dict(env,LEAN_PATH=directory,LEAN_NUM_THREADS='2')
+            env = dict(env,LEAN_PATH=directory,LEAN_NUM_THREADS='1')
             compiled = subprocess.run([lake,'env','lean','--root='+directory,
                                        '-o',str(proof.with_suffix('.olean')),str(proof)],
                                       cwd=ROOT,env=env,capture_output=True,text=True,timeout=120)
@@ -53,11 +54,14 @@ class ContextClassTests(unittest.TestCase):
                     *['MemberViewIndependent.MemberCopy.'+name for name in
                       ['Field','statement','validate','command','reference','runCopyFuel','Steps',
                        'command_complete','copy_complete','Ready','ready_steps','copy_ready_complete',
-                       'source_copy_complete','scalar_destination','resolved_payload','vector_destination',
+                       'source_copy_complete','PreservesContainers','ready_preserves_containers',
+                       'source_copy_preserves_containers','scalar_destination','resolved_payload','vector_destination',
                        'ready_shape','source_copy_layout','source_copy_values','source_copy_positions','source_copy_work','source_copy_space',
                        'vector_owners_distinct','scalar_addresses_distinct','vector_old_separated','scalar_old_separated','invalid_source']],
                     *['MemberViewIndependent.MemberCopyValuesRegression.'+name for name in
-                      ['ordered_copy','wrong_order_rejected','wrong_permission_rejected','scalar_work_exact']]],
+                      ['ordered_copy','wrong_order_rejected','wrong_permission_rejected','scalar_work_exact']],
+                    *['MemberViewIndependent.MemberCopyContainersRegression.'+name for name in
+                      ['nested_headers_preserved','captured_read_preserved',*[f'check_{i}' for i in range(1,13)]]]],
                     cwd=ROOT,env=env,stdout=output,stderr=subprocess.PIPE,text=True,timeout=120)
             self.assertEqual(exported.returncode,0,exported.stderr)
             config = scratch/'nanoda.json'

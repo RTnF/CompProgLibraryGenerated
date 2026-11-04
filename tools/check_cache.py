@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from process_supervisor import capture as supervised_capture
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE_FILE = ROOT / ".cache/check-results.json"
@@ -227,8 +228,8 @@ def run_traced(name, command, cwd=ROOT, extra_files=(), timeout=None, **kwargs):
         environment["CHECK_TRACE_ROOT"] = str(ROOT)
         environment["PYTHONPATH"] = os.pathsep.join(filter(None, [str(TRACE_DIR), environment.get("PYTHONPATH")]))
         try:
-            subprocess.run(command, cwd=cwd, check=True, env=environment, timeout=timeout,
-                           capture_output=True, text=True, **kwargs)
+            supervised_capture(command, cwd=cwd, env=environment, timeout=timeout,
+                               text=True, **kwargs)
         except subprocess.CalledProcessError as error:
             # Checks run in parallel, so their output is shown only when one fails.
             sys.stderr.write((error.stdout or "") + (error.stderr or ""))

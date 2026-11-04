@@ -4,12 +4,45 @@
 
 ## 再開時に最初に確認する状態
 
+- **機密確認:** 変更15ファイルの差分/前後内容は検出0。全公開予定treeの1件はverification/statements.jsonのProofs.MultiVecN.rowKeyの公開SHA256指紋で、検証環境のkind/module/type/levels/body/unsafeから再計算して一致を確認した誤検出。reviewed_false_positive.jsonに根拠を保存した。既定ルール・ignore無効化を維持してraw findingを残し、この厳密な照合以外の未分類検出があれば停止する。最終結果はci_fix_supervisor/secret_scan.jsonを参照する。
+- **33537/10899はともに全工程terminal終了0。再pollしない。** ローカル重い検査は全て終了済み。33537はPython3.11/cacheなしで59部品/共有235、独立build1790、52238宣言監査、Mathlib778範囲、Lean replay、固定nanoda49092、ZIP成功。10899は子孫回収修正後のcache有効all/ZIP成功、1916入力hash一致。証明入力1005件不変でproof-securityは成功cacheを使用した。反映後に独立kernelを再実行したとは扱わない。
+- 10899のall2864.992秒/全2873.037秒、証拠はci_fix_supervisor/{checks_state,final_gate_receipt,input_manifest}.json。ZIP SHA256 `6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e`。33537の証拠はci_fix_py311/、all5432.667秒/全5440.876秒。STL契約定理2件は別区分。
+- 子孫回収はtools/process_supervisor.py/check_cache.pyと既存SupportTestsへ正本反映済み、17tests成功。共有登録は235のまま。AST/借用binding保持の修正も含む。リリース準備snapshotとしてgit status/logとCIを照合し、最新差分/公開予定treeの機密検査→stage照合→commit→手動承認付きpush→新SHAのCI/releaseを終了まで確認する。scan_latest_diff.py/verify_staged.pyはci_fix_supervisor/に保存。最新scanは差分/前後内容0、1918ファイル全体の1件を検証用SHA256として照合し、未分類検出0で通過した。raw findingも保存した。
+- 修正前push4129afeのCI41757715784は失敗/release skip。まだ修正SHAのCI/release成功は確認していない。全137件の未完了義務は全体handoffを参照する。
+
+## 反映後gate実行時の状態記録（各記録時点の観測）
+
+- **稼働中は反映後gate実10899のみ。** CPython3.11.3、cache有効/jobs1/7200秒、ci_fix_supervisor/check.py。inventory成功、all/ZIPは終了未確認。実handleを確認し、stateだけで再起動しない。
+- 10899途中確認: C++59再実行成功、AST59成功cache、共有ログは登録96番目class_copy_auditまで進行。1916入力hash一致。cache有効時は前runのhitも残るので、旧observe_shared.pyのprefix一致を現runの終了根拠にしない。
+- **キャッシュなし33537は全工程終了0、再pollしない。** ci_fix_py311/checks_state.json: C++59/AST59/共有235、独立build1790jobs、52238宣言の仕様/公理、778module範囲、Lean kernel replay、固定nanoda49092宣言、59header ZIP成功。all5432.667秒、全5440.876秒、1915入力hash一致。sort契約定理2件は別区分。Zip SHA256 `6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e`。
+- **traced停止漏れの修正は正本反映済み。** tools/process_supervisor.py/check_cache.pyと既存SupportTestsへ統合し17tests成功。Linux subreaper/親死亡通知/別sessionの監視役で、別groupへ逃げる子孫と親group SIGKILLも回収する。sourceがcache依存へ記録されることも確認。新たなcheck登録は不要、235のまま。変更のない証明入力1005件のhashを確認して10899を開始した。反映前gateと反映後の成功cache利用を区別する。
+- **最新push4129afeのCI41757715784は失敗・release skip。今回の修正は未commit。** 10899終了→機密再確認→commit→手動承認付きpush→新SHAのCI/release完了確認へ進む。詳細と未完了の137件全体の義務は全体handoffを参照する。
+
+## 反映前の状態記録（各記録時点の観測）
+
+- **現在はローカル全件gate実33537のみ稼働中。** CPython3.11.3、キャッシュなし/jobs1/7200秒、ログと状態はci_fix_py311/。inventory、C++全59、AST照合全59が成功。共有全235成功（Python3.11 fingerprintと最終監査への遷移を確認）。最終監査は独立build1790jobs/Mathlib関連778module範囲確認まで成功。監査全体・ZIPは未確認。1915入力は途中照合でhash一致。実handleをpollしてterminal結果を回収するまで同じ検査を再起動しない。
+- **最新push4129afeのCI41757715784は終了1、releaseはskip。** watch32873とログ取得26641は終了済み。Python3.11で再現したASTのcapture不具合を修正し、proof build前に軽い境界テストを追加した。修正と借用参照保持証明はローカル未commit。全件gate後に機密再確認→commit→承認付きpush→新SHAのCI/releaseを確認する。
+
+- 追加のtimeout診断でcheck_cache.run_tracedの子停止漏れを実再現した。候補/実結果はtraced_deadline_probe/。単純group停止候補は別sessionの子で失敗したので採用しない。専用subreaper/親死亡通知のprocess_supervisor.py候補はPython3.11/offlineの8ケースとcache連携で成功（prototype_receipt.json）。正本はまだ変更していない。33537終了後に専用groupのkill/reapと回帰を統合・必要な再検証を行ってからcommit/pushする。進行中gateの入力を途中変更しない。詳細は全体handoff冒頭。
+
+## 2026-11-04の状態記録（以下は記録時点の観測）
+
+- **修正後の全件gateは実33537で実行中。** CPython3.11.3からci_fix_py311/check.pyを起動し、inventory終了0、allは`--no-cache --jobs 1 --timeout-seconds 7200`。続いてZIP/package検証、終了時に入力manifestを照合する。ログ/状態はci_fix_py311/。nice19/ionice3/offline/Lean1thread、資源上限は増やしていない。借用参照保持の新module/生成器/回帰もこの作業木に含む。all終了・新commit/push・再CIは未確認。検査実33537以外の旧handleを再pollしない。
+
+- AST失敗をCPython3.11.3で再現・修正した。診断用runtimeはuvでast_trailer_repair/python/へ取得（cacheのみ、3.12既定は維持）。修正前は既存stream3testsが30 failures/87 errors、実Bellman ASTもtruncated。SKIP外側の`*+`だけ`*`へ変更すると3tests成功、実AST95rootsの全サイズ/hashが旧実装と一致（1MiB±1/65537/4093bytes各chunk）。`.github/workflows/ci.yml` に同3testsをproof build前に実行するstepを追加。証拠はast_trailer_repair/{python311_tests.before.log,python311_tests.after.log,reproduction_(3, 11, 3).json,regex_minimal.py,variants311.log}。まだこの修正の全件gate/commit/pushは行っていない。
+
+- **CI 41757715784/watch32873は終了1を回収済み。再pollしない。** scratchの1789jobsは成功（2611.7秒、約44分）、test imports配布後にbellman_fordのnested_bridgeで `ast_stream.root_objects` の `invalid translation-unit trailer` が発生した。今回は7200秒上限ではない。release-headersはskip、リリース未完了。job126337671060のAPIログ取得実26641は終了0、全文は `.cache/wip/release_20261103/job_4129afe.txt`。既存ローカルのAST比較をすり抜けたチャンク境界の可能性を調べる。下の稼働中記録は以前の観測。
+
+- 最新再確認では対象commitの43blob hash一致、現在の引継ぎ2文書の5289bytes差分も機密検出0・終了0。`diff_secret_scan_4129afe/current_worktree_receipt.json` に保存した。この追記は検査後のローカル記録。watch実32873は実handleで稼働を確認し、push約25分後も全件検証工程中。archive/releaseは終了未確認。
+
+- **この文書のcommit後記録:** 現行SHA `4129afe52b30e94585dd2ffd0411586b752b6fe3` を通常pushして終了0。対象[CI 41757715784](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41757715784)は進行中。Gitleaks 8.30.1の公式archive/checksumをAPIのSHA256と照合し、network禁止・project ignoreなし・inline allow無視のdefault rulesで、commit範囲/差分全文/変更前後43版を各検出0で確認後にpushした。summaryとtool検証はdiff_secret_scan_4129afe/、watch実32873は稼働中、ログはci_watch_4129afe.txt。このpush後の文書追記はlocal差分として保持する。以下の「未commit」はcommit前snapshot。
+
 - **現行版の全件検証は実56399のterminal終了0を回収済み。再pollしない。** `ci_fix_deadline/checks_state.json` は全工程成功。inventory、登録59部品のC++/AST、共有235項目、固定仕様/公理、Lean kernel replay、固定nanoda、59ヘッダーZIPの内容/単独・結合コンパイルが成功した。
 - allは5308.249秒、全wrapperは5316.946秒。独立nanodaは49088宣言成功、stderr 0bytes、export 917517490bytes。監査前の52228宣言の固定仕様/定義・公理依存チェックとMathlib関連778moduleの範囲一致も成功。STL契約依存のsort work定理2件は引き続き契約付きで区別する。
 - 検証済み入力1525ファイルは終了後もhash一致。ZIPのSHA256は `6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e`。現行のmode保存付き配布1990partsも、source/destinationのmodeとsize一致を確認済み。
 - この記録時点では修正は未commit。機密再走査は1916ファイル・1914内容で検出0、binary/symlink0。APIで確認したremote mainはローカルHEAD/追跡参照と同じ `38e01716c2cce45d7dbfbcbff824b18d56ba6387`。そのCIは失敗・release未更新であり、**リリース未完了**。次は走査manifestとstageの照合→commit→手動承認付きpush→対象SHAのCI/release確認へ進む。
 - このローカルgateはbuild/一部チェックの成功cacheを再利用した。cold CIが7200秒に収まるとは断定しない。旧137ファイル全体の検証、元API/汎用性/寿命/Safe/償却等の残件も未完了。
-- 旧実51437は制御修正を適用するため手動中断130でterminal回収済み。旧stateの停止前snapshotとterminal_evidenceを保存。現在、この作業の検査・監視の実行はない。
+- 旧実51437は制御修正を適用するため手動中断130でterminal回収済み。旧stateの停止前snapshotとterminal_evidenceを保存。ローカル検査は終了済み。commit後のCI監視は上の追記を参照する。
 
 ## 修正再開後の検証経過（各記録時点の観測）
 

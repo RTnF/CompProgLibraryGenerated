@@ -19,6 +19,12 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends python3 unzip zstd git libseccomp2
+      - name: Check AST stream boundaries before the proof build
+        run: |
+          python3 tools/offline.py python3 tests/test_direct_file_ast.py \
+            DirectASTTests.test_stream_preserves_raw_roots_across_every_string_boundary \
+            DirectASTTests.test_stream_rejects_truncated_strings_and_extra_environments \
+            DirectASTTests.test_stream_chunk_boundaries_strings_and_trailer
       - uses: leanprover/lean-action@v1
         env:
           LEAN_NUM_THREADS: '1'

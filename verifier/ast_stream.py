@@ -12,11 +12,13 @@ from class_lowering import ErasedClass, SCALAR_FIELD_TYPES, build_functions, era
 from class_split import SplitClass, is_split_candidate, split_functions
 
 # Consume text and complete strings in the regex engine: Python visits only
-# braces and unfinished strings. Possessive repetitions avoid backtracking
-# through long escaped strings. At chunk boundaries retain the closing-quote
+# braces and unfinished strings. Possessive string runs avoid backtracking
+# through long escaped strings. The outer skip repetition stays greedy:
+# CPython 3.11 can lose the following unfinished-string capture when that
+# repetition is possessive. At chunk boundaries retain the closing-quote
 # and trailing-backslash state, while leaving the original root bytes intact.
 STRING_END = rb'[^"\\]*+(?:\\[\s\S][^"\\]*+)*+(?:(?P<closed>")|(?P<escape>\\)?\Z)'
-SKIP = rb'(?:[^"{}]++|"[^"\\]*+(?:\\[\s\S][^"\\]*+)*+")*+'
+SKIP = rb'(?:[^"{}]++|"[^"\\]*+(?:\\[\s\S][^"\\]*+)*+")*'
 TOKENS = re.compile(SKIP + rb'(?:(?P<brace>[{}])|(?P<string>"' + STRING_END + rb')|\Z)')
 STRING_CONTINUATION = re.compile(STRING_END)
 INNER = re.compile(rb'"inner"\s*:\s*\[')

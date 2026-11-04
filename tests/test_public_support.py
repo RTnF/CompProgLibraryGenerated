@@ -1,8 +1,9 @@
 """Registration checks for shared verification infrastructure."""
 
 from pathlib import Path
-from contextlib import ExitStack
+from contextlib import ExitStack, redirect_stderr, redirect_stdout
 import json
+import io
 import os
 import signal
 import subprocess
@@ -16,10 +17,108 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import public
 import check_public
+import process_supervisor as supervisor
 from offline import disable_network
 
 
+WORKER_SOURCE='from pathlib import Path\nimport json,os,subprocess,sys,time\nmarker=Path(sys.argv[1])\nchild=subprocess.Popen([sys.executable,\'-c\',"from pathlib import Path;import sys,time;time.sleep(1.2);Path(sys.argv[1]).write_text(\'late\')",str(marker)],start_new_session=sys.argv[2]==\'escape\')\nPath(str(marker)+\'.ready\').write_text(json.dumps([os.getpid(),child.pid,os.getppid()]))\nif len(sys.argv)>3 and sys.argv[3]==\'finish\':raise SystemExit(0)\ntime.sleep(2)\n'
+
+
 class SupportTests(unittest.TestCase):
+    def test_supervised_commands_and_traced_cache(self):
+        out=Path(supervisor.__file__).resolve().parent
+        rows=[]
+        def absent(pid):
+            try:return Path('/proc',str(pid),'stat').read_text().split()[2]=='Z'
+            except FileNotFoundError:return True
+        with tempfile.TemporaryDirectory(prefix='supervisor-cases-') as directory:
+            scratch=Path(directory)
+            worker=scratch/'worker.py';worker.write_text('from pathlib import Path\nimport json,os,subprocess,sys,time\nmarker=Path(sys.argv[1])\nchild=subprocess.Popen([sys.executable,\'-c\',"from pathlib import Path;import sys,time;time.sleep(1.2);Path(sys.argv[1]).write_text(\'late\')",str(marker)],start_new_session=sys.argv[2]==\'escape\')\nPath(str(marker)+\'.ready\').write_text(json.dumps([os.getpid(),child.pid,os.getppid()]))\nif len(sys.argv)>3 and sys.argv[3]==\'finish\':raise SystemExit(0)\ntime.sleep(2)\n')
+            r=supervisor.capture([sys.executable,'-c','import sys;print(sys.stdin.read())'],input='in',text=True,timeout=2)
+            assert r.stdout=='in\n' and r.stderr==''
+            rows.append(dict(case='stdin_stdout',passed=True))
+            for code in (17,-signal.SIGTERM):
+                script='import sys;print("out");print("err",file=sys.stderr);raise SystemExit(17)' if code==17 else 'import os,signal;os.kill(os.getpid(),signal.SIGTERM)'
+                try:supervisor.capture([sys.executable,'-c',script],text=True,timeout=2)
+                except subprocess.CalledProcessError as e:
+                    assert e.returncode==code
+                    if code==17:assert (e.stdout,e.stderr)==('out\n','err\n')
+                else:raise AssertionError('failure swallowed')
+                rows.append(dict(case='exit_'+str(code),passed=True))
+            for kind in ('ordinary','escape'):
+                marker=scratch/kind;ready=Path(str(marker)+'.ready')
+                try:supervisor.capture([sys.executable,str(worker),str(marker),kind],text=True,timeout=.5)
+                except subprocess.TimeoutExpired:pass
+                else:raise AssertionError('timeout not raised')
+                assert ready.exists(),'worker did not start before deadline'
+                pids=json.loads(ready.read_text());assert all(absent(pid) for pid in pids[:2])
+                assert not marker.exists()
+                rows.append(dict(case='timeout_'+kind,passed=True))
+            marker=scratch/'background';ready=Path(str(marker)+'.ready')
+            r=supervisor.capture([sys.executable,str(worker),str(marker),'escape','finish'],text=True,timeout=2)
+            assert r.returncode==0 and ready.exists() and not marker.exists()
+            assert all(absent(pid) for pid in json.loads(ready.read_text())[:2])
+            rows.append(dict(case='reap_after_success',passed=True))
+            marker=scratch/'interrupt';ready=Path(str(marker)+'.ready');original=subprocess.Popen.communicate;seen=[]
+            def interrupt(child,*args,**kwargs):
+                if not seen:
+                    seen.append(child);end=time.monotonic()+1
+                    while not ready.exists():
+                        assert time.monotonic()<end
+                        time.sleep(.01)
+                    raise KeyboardInterrupt
+                return original(child,*args,**kwargs)
+            with patch.object(subprocess.Popen,'communicate',new=interrupt):
+                try:supervisor.capture([sys.executable,str(worker),str(marker),'escape'],text=True,timeout=2)
+                except KeyboardInterrupt:pass
+                else:raise AssertionError('interrupt swallowed')
+            assert seen[0].returncode==0 and not marker.exists()
+            assert all(absent(pid) for pid in json.loads(ready.read_text())[:2])
+            rows.append(dict(case='interrupt_escape',passed=True))
+            marker=scratch/'parentdeath';ready=Path(str(marker)+'.ready');driver=scratch/'driver.py'
+            driver.write_text('import sys\nsys.path.insert(0,'+repr(str(out))+')\nfrom process_supervisor import capture\ncapture(sys.argv[1:],timeout=5,text=True)\n')
+            parent=subprocess.Popen([sys.executable,str(driver),sys.executable,str(worker),str(marker),'escape'],start_new_session=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            end=time.monotonic()+2
+            while not ready.exists():
+                assert time.monotonic()<end
+                time.sleep(.01)
+            os.killpg(parent.pid,signal.SIGKILL);parent.communicate(timeout=3)
+            assert parent.returncode==-signal.SIGKILL and not marker.exists()
+            pids=json.loads(ready.read_text());end=time.monotonic()+1
+            while not all(absent(pid) for pid in pids):
+                assert time.monotonic()<end
+                time.sleep(.01)
+            rows.append(dict(case='parent_group_sigkill_escape',passed=True))
+        print(json.dumps(rows))
+
+        import check_cache as cache
+        root=cache.ROOT
+        with tempfile.TemporaryDirectory(prefix='supervised-trace-cache-') as directory:
+            scratch=Path(directory);worker=scratch/'worker.py'
+            worker.write_text(WORKER_SOURCE)
+            with patch.object(cache,'CACHE_FILE',scratch/'cache.json'), patch.object(cache,'enabled',True):
+                success=[sys.executable,'-c','print("ok")']
+                cache.run_traced('probe_success',success,cwd=root,timeout=2)
+                assert 'probe_success' in json.loads(cache.CACHE_FILE.read_text())
+                buffer=io.StringIO()
+                with redirect_stdout(buffer):cache.run_traced('probe_success',success,cwd=root,timeout=2)
+                assert buffer.getvalue()=='(cached) probe_success\n'
+                failed=[sys.executable,'-c','import sys;print("out");print("err",file=sys.stderr);raise SystemExit(17)']
+                errors=io.StringIO()
+                with redirect_stderr(errors):
+                    try:cache.run_traced('probe_failure',failed,cwd=root,timeout=2)
+                    except subprocess.CalledProcessError as e:assert (e.returncode,e.stdout,e.stderr)==(17,'out\n','err\n')
+                    else:raise AssertionError('failure accepted')
+                assert errors.getvalue()=='out\nerr\n'
+                assert 'probe_failure' not in json.loads(cache.CACHE_FILE.read_text())
+                marker=scratch/'timeout'
+                try:cache.run_traced('probe_timeout',[sys.executable,str(worker),str(marker),'escape'],cwd=root,timeout=.5)
+                except subprocess.TimeoutExpired:pass
+                else:raise AssertionError('timeout accepted')
+                assert not marker.exists() and 'probe_timeout' not in json.loads(cache.CACHE_FILE.read_text())
+                with self.assertRaisesRegex(RuntimeError, 'FileNotFoundError'):
+                    supervisor.capture([str(scratch/'missing-command')], text=True, timeout=2)
+
     def test_expired_budget_does_not_start_or_accept_cached_proof_audit(self):
         with patch.object(check_public, 'deadline', 0), \
                 patch.object(check_public.check_cache, 'cached_call') as cache, \

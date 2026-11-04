@@ -514,6 +514,7 @@ import Proofs.CppConstructionRetire
 import Proofs.UfConstructionPreserve
 
 import Proofs.CppFrameExtension
+import Proofs.CppFrameResolveExtension
 
 import Proofs.UfConstructionReferences
 
