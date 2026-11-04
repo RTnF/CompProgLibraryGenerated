@@ -1,5 +1,6 @@
 """Check source, axioms, specification integrity and two kernels offline."""
 
+import argparse
 import gc
 import hashlib
 import json
@@ -156,6 +157,88 @@ def stage(label, started):
     print(f'[{time.monotonic() - started:7.1f}s] {label}', flush=True)
 
 
+def build_screened_sources(lake, env, started):
+    """Build screened sources without consuming repository project artifacts."""
+    for source in [ROOT / 'Proofs.lean', *sorted((ROOT / 'Proofs').rglob('*.lean'))]:
+        audit_source(source)
+    manifest_text = (ROOT / 'lake-manifest.json').read_text()
+    manifest = json.loads(manifest_text)
+    mathlib = next(p for p in manifest['packages'] if p['name'] == 'mathlib')
+    lakefile_text = ('name = "proof_security"\n'
+        'defaultTargets = ["Proofs"]\n\n[[require]]\nname = "mathlib"\nscope = "leanprover-community"\n'
+        f'rev = "{mathlib["inputRev"]}"\n\n[[lean_lib]]\nname = "Proofs"\n'
+        'leanOptions = {linter.unusedSimpArgs = false}\n')
+    sync_scratch(manifest_text, lakefile_text)
+    stage('sources synchronised', started)
+    # Only sources and shared dependencies enter scratch. No repository
+    # project oleans or Lake traces are copied into the independent build.
+    run([lake, 'build'], SCRATCH, env)
+    stage('scratch build finished', started)
+
+
+def publish_test_imports(build_root, destination, sources, retired_root):
+    """Copy compiled imports out of scratch; never copy build traces or hashes."""
+    artifacts = []
+    absent_parts = []
+    for source in sorted(sources):
+        stem = source.with_suffix('')
+        compiled = build_root / stem.with_suffix('.olean')
+        if not compiled.is_file():
+            raise RuntimeError(f'screened build is missing {compiled}')
+        for suffix in ('.olean', '.olean.private', '.olean.server', '.ilean'):
+            relative = stem.with_suffix(suffix)
+            path = build_root / relative
+            if path.is_file():
+                artifacts.append((path, relative))
+            else:
+                absent_parts.append(relative)
+    prune_stale_olean_parts(destination, sources, retired_root)
+    # A live module can stop emitting a private/server part after an edit.
+    # Do not leave an old part available to the test compiler in that case.
+    archive = None
+    for relative in absent_parts:
+        target = destination / relative
+        if target.exists() or target.is_symlink():
+            if archive is None:
+                retired_root.mkdir(parents=True, exist_ok=True)
+                archive = Path(tempfile.mkdtemp(prefix='parts-', dir=retired_root))
+            retired = archive / relative
+            retired.parent.mkdir(parents=True, exist_ok=True)
+            target.rename(retired)
+    for source, relative in artifacts:
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # Replace atomically rather than writing through an old file symlink.
+        with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as output:
+            temporary = Path(output.name)
+        try:
+            shutil.copyfile(source, temporary)
+            shutil.copymode(source, temporary)
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def prepare_test_imports():
+    """Prepare imports only. The full audit must still run after the tests."""
+    disable_network()
+    started = time.monotonic()
+    local_lake = ROOT / '.tools/elan/bin/lake'
+    lake = str(local_lake) if local_lake.is_file() else shutil.which('lake')
+    if lake is None:
+        raise RuntimeError('lake is required for proof imports')
+    env = os.environ.copy()
+    if local_lake.is_file():
+        env['ELAN_HOME'] = str(ROOT / '.tools/elan')
+    env.pop('LEAN_PATH', None)
+    env['LEAN_ABORT_ON_PANIC'] = '1'
+    build_screened_sources(lake, env, started)
+    sources = {Path('Proofs.lean'), *(p.relative_to(ROOT) for p in (ROOT / 'Proofs').rglob('*.lean'))}
+    publish_test_imports(SCRATCH / '.lake/build/lib/lean', ROOT / '.lake/build/lib/lean',
+                         sources, ROOT / '.cache/proof-test-retired')
+    print('test imports prepared from screened build; full proof audit still required', flush=True)
+
+
 def main():
     started = time.monotonic()
     disable_network()
@@ -182,17 +265,7 @@ def main():
     env['LEAN_NUM_THREADS'] = '2'
     if True:
         scratch = SCRATCH
-        manifest = json.loads((ROOT / 'lake-manifest.json').read_text())
-        mathlib = next(p for p in manifest['packages'] if p['name'] == 'mathlib')
-        lakefile_text = ('name = "proof_security"\n'
-            'defaultTargets = ["Proofs"]\n\n[[require]]\nname = "mathlib"\nscope = "leanprover-community"\n'
-            f'rev = "{mathlib["inputRev"]}"\n\n[[lean_lib]]\nname = "Proofs"\n')
-        sync_scratch((ROOT / 'lake-manifest.json').read_text(), lakefile_text)
-        stage('sources synchronised', started)
-        # No project oleans or Lake traces are copied from the repository build. The scratch build is made from
-        # precisely the screened sources; Lake rebuilds only the modules whose content changed.
-        run([lake, 'build'], scratch, env)
-        stage('scratch build finished', started)
+        build_screened_sources(lake, env, started)
         listing = run([lake, 'env', 'lean', '--run', str(ROOT / 'verification/ListModules.lean'), 'Proofs'],
                       scratch, env, capture_output=True, text=True).stdout.split()
         covered = audit_mathlib_coverage(listing)
@@ -301,4 +374,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--prepare-test-imports', action='store_true',
+                        help='build screened test imports; does not perform the proof audit')
+    args = parser.parse_args()
+    if args.prepare_test_imports:
+        prepare_test_imports()
+    else:
+        main()

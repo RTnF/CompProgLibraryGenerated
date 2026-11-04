@@ -88,3 +88,18 @@
 
 - CI41595322068はC++59部品/AST照合後、MatPow独立検査とmulti finishテストのimportでunknown module prefix Proofsとなった。check_public.pyが共有テスト後にlake buildを行っていたため、既存oleanのあるローカルだけ通過した。
 - 全件gateは最初にLeanモジュールをbuildし、テスト後に証明監査を行う。ビルド失敗でテスト/監査へ進まないことと、build→import利用テスト→監査の順序をtest_public_support.pyで回帰確認する。部分cpp/bridgeモードの範囲は維持する。
+
+## 2026-11-03: 実状態を補題適用ごとに展開しない
+
+- cold CIでBeatsExecAA/UM/UNのコンパイルが非常に遅くなった。小さいomegaだけのcontext削減や評価器pexecM/vdenMの局所irreducibleでは解消せず、seq_writeへ具体的なPSとvector写像を渡す型合わせに時間を要した。
+- 主定理の範囲だけでgS/VVBをlocal irreducibleとし、既存の読取り/更新補題で扱う。元の宣言名・型・計算定義を照合し、固定nanodaの3752宣言を基礎3公理・標準stackで通した。定理の条件や上界、プログラムを小さくして回避しない。cold leaf再コンパイルを時間内で行う回帰をtest_beats_capacities.pyへ加えた。
+- 定理のproof ExprをreprStrすると共有DAGが重複展開され、診断出力だけが巨大になり得る。型/計算定義は正確に比較し、証明本体は共有を保つexportと独立kernelで検証する。構造hashは参考値であり安全性の判定を代替しない。
+
+## 2026-11-04: 独立buildとテスト準備の重複
+
+- 通常projectを全件buildしてから独立scratchを全件buildすると、cold CIでコンパイル時間を二重に消費する。監査済みsourceだけから固定設定でscratchを先にbuildし、テスト用importsをscratchから通常環境へ一方向に配布する。通常projectのolean/traceを監査側へ取り込まない。テスト後の仕様/公理/両kernel監査は引き続き必須とする。
+- ASTのroot抽出では、quoteごとのPython loopより、正規表現内で完全な文字列と通常文字をまとめて走査してbraceだけPythonへ渡す形を検討する。任意chunk境界のescapeと生bytesを回帰で確認し、同じClang processの全rootを比較する。文字列単位のregexに変えるだけでは遅くなる場合もある。
+
+## 2026-11-04: 最終監査にも全体deadlineを渡す
+
+- buildと共有テストだけにremainingを渡しても、最後のproof-securityがsubprocess.runへtimeoutなしで渡されると全体制限が効かない。cache判定の前後にも予算を確認し、実監査にはその時点の残時間を使う。監査のtimeoutでは親だけでなく同じ専用process groupのcompiler/exporter/kernelも止める。期限切れ時の未起動、cache走査後の再確認、実子プロセスの停止を回帰で確認する。

@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
@@ -16,7 +17,8 @@ from proof_security import (audit_axiom_definitions, audit_contract, audit_depen
     audit_source, changed_axiom_entries, contract_dependents, definition_digest, lean_code, load_contracts,
     statement_contract)
 from check_proof_security import (BUILTINS, check_independent_kernel, compact_replay_targets,
-                                  prune_stale_olean_parts)
+                                  prune_stale_olean_parts, publish_test_imports)
+import check_proof_security
 from test_scalar_ir import lean_environment
 
 
@@ -26,6 +28,93 @@ def row(name, kind, type_, body='', dependencies=(), module='Proofs.Test'):
 
 
 class SecurityTests(unittest.TestCase):
+    def test_screened_build_rejects_source_before_sync_or_compilation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'Proofs').mkdir()
+            (root / 'Proofs.lean').write_text('import Proofs.Bad\n')
+            (root / 'Proofs/Bad.lean').write_text('theorem bad : False := by sorry\n')
+            with patch.object(check_proof_security, 'ROOT', root), \
+                    patch.object(check_proof_security, 'sync_scratch') as sync, \
+                    patch.object(check_proof_security, 'run') as compile_, \
+                    self.assertRaises(ValueError):
+                check_proof_security.build_screened_sources('lake', {}, 0)
+            sync.assert_not_called()
+            compile_.assert_not_called()
+
+    def test_screened_build_keeps_its_fixed_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'Proofs').mkdir()
+            (root / 'Proofs.lean').write_text('theorem tested : True := True.intro\n')
+            manifest = json.dumps({'packages': [{'name': 'mathlib', 'inputRev': 'pinned-revision'}]})
+            (root / 'lake-manifest.json').write_text(manifest)
+            (root / 'lakefile.toml').write_text('leanOptions = {debug.skipKernelTC = true}\n')
+            with patch.object(check_proof_security, 'ROOT', root), \
+                    patch.object(check_proof_security, 'sync_scratch') as sync, \
+                    patch.object(check_proof_security, 'run') as compile_, \
+                    patch.object(check_proof_security, 'stage'):
+                check_proof_security.build_screened_sources('lake', {}, 0)
+            copied_manifest, config = sync.call_args.args
+            self.assertEqual(copied_manifest, manifest)
+            self.assertIn('rev = "pinned-revision"', config)
+            self.assertIn('linter.unusedSimpArgs = false', config)
+            self.assertNotIn('skipKernelTC', config)
+            compile_.assert_called_once_with(['lake', 'build'], check_proof_security.SCRATCH, {})
+
+    def test_import_publication_flows_out_of_scratch_without_traces(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scratch = Path(directory)
+            build, destination, retired = [scratch / name for name in ('build', 'destination', 'retired')]
+            for base in (build, destination):
+                (base / 'Proofs').mkdir(parents=True)
+            for suffix in ('.olean', '.olean.private', '.olean.server', '.ilean', '.trace', '.olean.hash'):
+                (build / ('Proofs/Live' + suffix)).write_text('screened' + suffix)
+                (destination / ('Proofs/Live' + suffix)).write_text('old' + suffix)
+            (build / 'Proofs.olean').write_text('screened root')
+            (destination / 'Proofs/Gone.olean').write_text('retired')
+            (destination / 'Proofs/Live.ilean').unlink()
+            # Existing file links must be replaced without modifying their targets.
+            victim = scratch / 'old-linked-file'
+            victim.write_text('untouched')
+            (destination / 'Proofs/Live.ilean').symlink_to(victim)
+            (destination / 'Proofs/Live.Nested.olean').write_text('unrelated')
+            (destination / 'Proofs/Live.private.olean').write_text('unrelated')
+            (destination / 'Proofs/LiveOld.olean').write_text('obsolete')
+            (build / 'Proofs/Live.olean.server').unlink()
+            before = {p.relative_to(build): p.read_bytes() for p in build.rglob('*') if p.is_file()}
+            publish_test_imports(build, destination, {Path('Proofs.lean'), Path('Proofs/Live.lean')}, retired)
+            self.assertEqual((destination / 'Proofs.olean').read_text(), 'screened root')
+            for suffix in ('.olean', '.olean.private', '.ilean'):
+                self.assertEqual((destination / ('Proofs/Live' + suffix)).read_text(), 'screened' + suffix)
+                self.assertEqual((destination / ('Proofs/Live' + suffix)).stat().st_mode & 0o777,
+                                 (build / ('Proofs/Live' + suffix)).stat().st_mode & 0o777)
+            for suffix in ('.trace', '.olean.hash'):
+                self.assertEqual((destination / ('Proofs/Live' + suffix)).read_text(), 'old' + suffix)
+            self.assertFalse((destination / 'Proofs/Live.olean.server').exists())
+            self.assertFalse((destination / 'Proofs/Gone.olean').exists())
+            self.assertEqual(victim.read_text(), 'untouched')
+            self.assertEqual(before, {p.relative_to(build): p.read_bytes() for p in build.rglob('*') if p.is_file()})
+            self.assertTrue(list(retired.rglob('*.olean')))
+
+    def test_missing_screened_module_preserves_existing_imports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scratch = Path(directory)
+            build, destination = scratch / 'build', scratch / 'destination'
+            build.mkdir(); destination.mkdir()
+            (destination / 'Proofs.olean').write_text('old root')
+            with self.assertRaisesRegex(RuntimeError, 'screened build is missing'):
+                publish_test_imports(build, destination, {Path('Proofs.lean')}, scratch / 'retired')
+            self.assertEqual((destination / 'Proofs.olean').read_text(), 'old root')
+
+    def test_failed_screened_build_does_not_publish_imports(self):
+        with patch.object(check_proof_security, 'disable_network'), \
+                patch.object(check_proof_security, 'build_screened_sources', side_effect=RuntimeError('build failed')), \
+                patch.object(check_proof_security, 'publish_test_imports') as publish, \
+                self.assertRaisesRegex(RuntimeError, 'build failed'):
+            check_proof_security.prepare_test_imports()
+        publish.assert_not_called()
+
     def test_stale_compiled_project_modules_are_removed_without_losing_live_modules(self):
         with tempfile.TemporaryDirectory() as directory:
             build = Path(directory) / 'build'

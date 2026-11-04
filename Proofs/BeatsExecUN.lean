@@ -59,6 +59,9 @@ theorem den_andc (mv : MV) (vv : Nat → List Int) (env : Nat → Ty → Option 
     · simp [hp, hq, hr]
   · simp [hp]
 
+-- Keep concrete scalar states and vector maps folded while applying execution lemmas.
+attribute [local irreducible] gS VVB
+
 set_option maxHeartbeats 0 in
 theorem unm_exec (mv : MV) (hnv : mv.nv = 15) (pre : List Cell) (hty : ∀ v, v < 9 → mv.ty v = s64) (b : BS) (P : List Cell)
     (inf x : Int) (n k : Nat) (hk : k < M31) (hinf : s64.valid inf = true) (hninf : s64.valid (-inf) = true)

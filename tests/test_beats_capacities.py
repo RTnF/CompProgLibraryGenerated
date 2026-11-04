@@ -1,6 +1,8 @@
-"""Exercise constructor states with distinct node and DFS stack capacities."""
+"""Check Beats capacities, kernel certificates and bounded state elaboration."""
 from pathlib import Path
 import json
+import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -14,6 +16,39 @@ from check_proof_security import BUILTINS
 
 
 class BeatsCapacityTests(unittest.TestCase):
+    def test_state_theorems_elaborate_with_bounded_resources(self):
+        # A warm lake build concealed repeated expansion of gS/VVB during
+        # lemma application: the cold CI compilation took 1006/566/623 s.
+        lake, env = lean_environment()
+        env['LEAN_NUM_THREADS'] = '1'
+        with tempfile.TemporaryDirectory(prefix='beats-state-elaboration-') as directory:
+            scratch = Path(directory)
+            for name in ['BeatsExecAA', 'BeatsExecUM', 'BeatsExecUN']:
+                with self.subTest(module=name):
+                    log = scratch / (name + '.txt')
+                    with log.open('w') as output:
+                        process = subprocess.Popen(
+                            [lake, 'env', 'lean', '--root=' + str(ROOT),
+                             '-o', str(scratch / (name + '.olean')),
+                             str(ROOT / 'Proofs' / (name + '.lean'))],
+                            cwd=ROOT, env=env, stdout=output, stderr=subprocess.STDOUT,
+                            start_new_session=True)
+                        try:
+                            code = process.wait(timeout=120)
+                        except BaseException as error:
+                            try:
+                                os.killpg(process.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+                            process.wait()
+                            if isinstance(error, subprocess.TimeoutExpired):
+                                self.fail(name + ': elaboration exceeded 120 s with one thread')
+                            raise
+                    with log.open('rb') as output:
+                        output.seek(max(0, log.stat().st_size - 8000))
+                        diagnostics = output.read().decode(errors='replace')
+                    self.assertEqual(code, 0, diagnostics)
+
     def test_constructor_independent_kernel(self):
         # The constructor's inline arithmetic certificate formerly exhausted
         # nanoda's default 16 MiB worker stack after hours of checking.

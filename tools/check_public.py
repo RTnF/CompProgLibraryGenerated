@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import signal
 from pathlib import Path
 import shutil
 import subprocess
@@ -24,14 +25,30 @@ DEFAULT_TIMEOUT_SECONDS = 240
 deadline = None
 
 
-def run(command, **kwargs):
+def remaining_seconds():
     remaining = None if deadline is None else deadline - time.monotonic()
     if remaining is not None and remaining <= 0:
         raise RuntimeError("check_public.py exceeded its time limit")
-    try:
-        subprocess.run(command, cwd=ROOT, check=True, timeout=remaining, **kwargs)
-    except subprocess.TimeoutExpired as error:
-        raise RuntimeError(f"check_public.py exceeded its time limit while running: {command[:3]}") from error
+    return remaining
+
+
+def run(command, **kwargs):
+    """Bound a command and its compiler/exporter/kernel process group."""
+    remaining = remaining_seconds()
+    with subprocess.Popen(command, cwd=ROOT, start_new_session=True, **kwargs) as child:
+        try:
+            code = child.wait(timeout=remaining)
+        except BaseException as error:
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            child.wait()
+            if isinstance(error, subprocess.TimeoutExpired):
+                raise RuntimeError(f"check_public.py exceeded its time limit while running: {command[:3]}") from error
+            raise
+        if code:
+            raise subprocess.CalledProcessError(code, command)
 
 
 def check_compiler():
@@ -127,9 +144,7 @@ def require_template_first(test):
 
 
 def run_traced(name, command):
-    remaining = None if deadline is None else deadline - time.monotonic()
-    if remaining is not None and remaining <= 0:
-        raise RuntimeError("check_public.py exceeded its time limit")
+    remaining = remaining_seconds()
     try:
         check_cache.run_traced(name, command, timeout=remaining)
     except subprocess.TimeoutExpired as error:
@@ -162,14 +177,8 @@ def run_tasks(tasks, jobs):
 
 
 def build_lean():
-    """Prepare imported proof modules before any test tries to load them."""
-    local_lake = ROOT / ".tools/elan/bin/lake"
-    if local_lake.is_file():
-        os.environ["ELAN_HOME"] = str(ROOT / ".tools/elan")
-    lake = str(local_lake) if local_lake.is_file() else shutil.which("lake")
-    if lake is None:
-        raise RuntimeError("lake is required for Lean proof checks")
-    run([lake, "build"])
+    """Prepare test imports from the independently built, screened sources."""
+    run([sys.executable, str(ROOT / "tools/check_proof_security.py"), "--prepare-test-imports"])
 
 
 def check_lean():
@@ -179,7 +188,10 @@ def check_lean():
                                        "tools/check_proof_security.py", "tools/offline.py", "tools/public.py")]
     inputs += sorted((ROOT / "library").glob("*.toml"))
     inputs += [ROOT / ".tools/lean4export/.lake/build/bin/lean4export", ROOT / ".tools/nanoda_lib/target/release/nanoda_bin"]
-    check_cache.run_with_deps("proof-security", [sys.executable, str(ROOT / "tools/check_proof_security.py")], inputs)
+    remaining_seconds()
+    check_cache.cached_call("proof-security", inputs,
+                            lambda: run([sys.executable, str(ROOT / "tools/check_proof_security.py")]))
+    remaining_seconds()
 
 
 def lower_priority():

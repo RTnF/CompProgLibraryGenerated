@@ -1,8 +1,32 @@
 # 作業の引き継ぎ
 
-更新: 2026-11-03。過去の引き継ぎ全文は [履歴](handoff_history_20261101.md) にbyte同一で保存した。通常はこの文書から再開し、履歴は必要な節だけ検索して読む。
+更新: 2026-11-04。過去の引き継ぎ全文は [履歴](handoff_history_20261101.md) にbyte同一で保存した。通常はこの文書から再開し、履歴は必要な節だけ検索して読む。
 
-## 復帰時の最新確認（2026-11-03）
+## 復帰時の最新確認（2026-11-04）
+
+- CI修正後の全件gate実56399は終了0を回収済み。C++/AST59部品、共有235項目、独立source build、52228宣言の仕様/公理監査、Lean kernel replay、固定nanoda49088宣言、59ヘッダーZIP検証が成功。現在の検査・監視はすべて終了している。
+- 詳細・失敗候補・証拠は [CI専用引継ぎの最新状態](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を優先する。ローカルの成功cacheを再利用した検証であり、cold CIの実行時間は別途確認が必要。
+- この記録時点では修正は未commit。次は機密再確認→対象ファイルのstage/commit→手動承認付きpush→対象SHAのCI/release-headersを終了まで確認する。`MEMORY.md` と各cache・ローカル測定値は公開対象から除外する。
+- 公開59部品の成功と、旧137ファイル全体の検証完了を区別する。元API・汎用性・class copyのcaller AST/寿命・Safe導出/任意長操作列/償却等の残件は維持する。
+
+## CI修正の経過（以下は各記録時点の状態）
+
+- 全件57874は終了1回収済み。正本1789jobsは成功、共有196/235のtest_vector_construction.py中で7200秒上限。正本module時間合計3690秒へ改善したが、全件/CIは未成功。追加の状態表現最適化とテスト重複計算を調べる。最新結果は [CI専用引継ぎ](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を優先し、57874を再pollしない。
+
+- CI性能修正を正本10ファイルへ反映し、不要simp引数のstyle診断だけをLake/scratch設定で無効化した。公理・固定仕様・両kernelの判定は維持。現在実57874で1thread/jobs1/7200秒の全件gateとZIP検証を実行中。ログはrelease_20261103/ci_fix_statefold/、詳細と最新状態は [CI専用引継ぎ](ci_release_handoff_20261103.md#再開時に最初に確認する状態)。同じ検査を重複起動しない。
+
+- CI時間切れの修正継続で、AA/UM/UNの元の全定理を保つ候補 `attribute [local irreducible] gS VVB` が1thread/通常linterで46.9/28.5/30.4秒の型検査に成功した。宣言名・型・計算定義の一致も終了0確認。現在の独立kernel検査と正本反映状況は [CI専用引継ぎの最新状態](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を優先する。
+
+- CI修正を継続再開。最新の診断・正本への反映・検証状態は [CI専用引継ぎの再開後最新状態](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を更新する。write_argument_traceの実26318を60秒の有界診断として起動した。下記の全停止は前回引継ぎ時点の記録。
+
+- **CI修正・リリースの再開は [CI専用引継ぎ](ci_release_handoff_20261103.md) を最優先する。** commit/push済みの38e0171のCI41603164208は初回Lean build約118分後、C++テスト中の7200秒制限で失敗した。Release更新はskip、リリース未完了。正本への性能修正はまだ反映していない。
+- **検査・監視・ログ取得はすべて終了済み。稼働中の検査はない。** 最後のcost_context_bounds診断35752もAAを120.025秒でkillpg/reap、Lean終了-9/timed_out=trueを回収済み。UM/UNは未実行。wrapper終了0をLean成功と混同しない。専用引継ぎに全診断の結果・失敗候補・次の手順・ログの場所を記録した。
+- この最新引継ぎとCI専用文書は利用者の指示でローカル更新したもの。まだcommit/pushしていないため、同じworkspaceの他agentは読めるが、別checkout/別環境へは文書と必要な.cacheログを共有する必要がある。下の「稼働中」「未確認」は経過履歴であり、現在の状態ではない。
+
+- 最新CI41603164208/watch36152は終了1を回収済み。初回Lean build1789jobsが08:28→10:26 UTC、約118分/994 Proofs modules累計7053秒。全体7200秒制限が次のcpp:floyd_warshall sanitizer compile中に切れた。C++/Lean内容エラーとは区別し、制限は増やさず本質改善を調査中。release-headersはskip。gh run view --log-failedはHTTP2 CANCEL、HTTP1 unexpected EOFで取得失敗し、ジョブ単体APIの実24083は終了0、全文58,749,084bytesをrelease_20261103/job_38e0171.txtへ保存した。58MBを丸ごと表示しない。遅いmoduleはBeatsExecAA1006秒、UN623秒、UM566秒、IntervalCall296秒、TreeFullDpExec224秒。
+- 診断linter_probe: CalcLoopIterDsetは同じsource/1threadで通常18.460秒/警告2,306,987bytes、unusedSimpArgs無効9.658秒/7,883bytes（実29284終了0）。AAの同条件比較実11922は両方120秒でkillpg/reapし、時間上限を増やしていない。宣言・証明項比較補助CompareDeclarations.leanは最初List.qsort import不足で失敗、Array.qsortへ修正済み（比較は未完了）。AA/UM/UNの最終simp at *; omegaを費用/領域仮定だけへclear * -で絞る候補をcost_context_probe/Proofs/へ作り、実62549で通常linter/1thread/各120秒診断中。公開正本にはまだ適用していない。
+
+- 最新修正commit `38e01716c2cce45d7dbfbcbff824b18d56ba6387` は機密走査検出0・cached差分check成功後に作成、手動承認付きpushは終了0（e62828c→38e0171）。CI https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41603164208 をwatch実36152で監視中。ログci_watch_38e0171.txt。CI/release-headersは未確認。先の7099/27532は終了1回収済みで再pollしない。このpush後記録はローカル差分として保持する。
 
 - 順序修正後の実96035は終了0回収済み（3157.625秒）。order_fix/checks_state.json: inventory0、all0/3149.547秒、package0、archive0。Leanを先にbuildした全件59部品/共有235checksが成功、正本未変更のproof-securityは成功cache。ZIPの内容・単独/全体include compile実行も成功。追加の順序/失敗時停止の回帰は8tests終了0。次は機密再確認・commit/pushと修正SHAのCIを監視する。96035は再pollしない。
 

@@ -2,8 +2,13 @@
 
 from pathlib import Path
 from contextlib import ExitStack
+import json
+import os
+import signal
+import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +20,99 @@ from offline import disable_network
 
 
 class SupportTests(unittest.TestCase):
+    def test_expired_budget_does_not_start_or_accept_cached_proof_audit(self):
+        with patch.object(check_public, 'deadline', 0), \
+                patch.object(check_public.check_cache, 'cached_call') as cache, \
+                self.assertRaisesRegex(RuntimeError, 'exceeded its time limit'):
+            check_public.check_lean()
+        cache.assert_not_called()
+
+    def test_proof_audit_rechecks_budget_after_cache_lookup(self):
+        def lookup(name, inputs, function):
+            check_public.deadline = 0
+            function()
+        with patch.object(check_public, 'deadline', time.monotonic() + 60), \
+                patch.object(check_public.check_cache, 'cached_call', side_effect=lookup), \
+                patch.object(check_public.subprocess, 'Popen') as start, \
+                self.assertRaisesRegex(RuntimeError, 'exceeded its time limit'):
+            check_public.check_lean()
+        start.assert_not_called()
+
+    def test_cached_audit_still_checks_budget_on_return(self):
+        def lookup(name, inputs, function):
+            check_public.deadline = 0
+        with patch.object(check_public, 'deadline', time.monotonic() + 60), \
+                patch.object(check_public.check_cache, 'cached_call', side_effect=lookup), \
+                self.assertRaisesRegex(RuntimeError, 'exceeded its time limit'):
+            check_public.check_lean()
+
+    def test_proof_audit_uses_the_bounded_command_runner(self):
+        def lookup(name, inputs, function):
+            self.assertEqual(name, 'proof-security')
+            function()
+        with patch.object(check_public, 'deadline', time.monotonic() + 60), \
+                patch.object(check_public.check_cache, 'cached_call', side_effect=lookup), \
+                patch.object(check_public, 'run') as run:
+            check_public.check_lean()
+        run.assert_called_once_with([sys.executable, str(ROOT / 'tools/check_proof_security.py')])
+
+    def test_timeout_stops_the_command_and_its_child(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scratch = Path(directory)
+            record = scratch / 'pids.json'
+            script = scratch / 'parent.py'
+            script.write_text('import json,os,subprocess,sys,time\n'
+                              'from pathlib import Path\n'
+                              'child=subprocess.Popen([sys.executable,"-c","import time; time.sleep(60)"])\n'
+                              'Path(sys.argv[1]).write_text(json.dumps([os.getpid(),child.pid]))\n'
+                              'time.sleep(60)\n')
+            with patch.object(check_public, 'deadline', time.monotonic() + 1), \
+                    self.assertRaisesRegex(RuntimeError, 'exceeded its time limit'):
+                check_public.run([sys.executable, str(script), str(record)])
+            parent_pid, child_pid = json.loads(record.read_text())
+            try:
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(parent_pid, 0)
+                end = time.monotonic() + 1
+                while True:
+                    stat = Path(f'/proc/{child_pid}/stat')
+                    try:
+                        state = stat.read_text().split()[2]
+                    except FileNotFoundError:
+                        break
+                    if state == 'Z':
+                        break
+                    self.assertLess(time.monotonic(), end, 'timed-out child is still running')
+                    time.sleep(.01)
+            finally:
+                try:
+                    os.kill(child_pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    def test_command_failure_keeps_the_exit_status(self):
+        with patch.object(check_public, 'deadline', time.monotonic() + 10), \
+                self.assertRaises(subprocess.CalledProcessError) as error:
+            check_public.run([sys.executable, '-c', 'raise SystemExit(7)'])
+        self.assertEqual(error.exception.returncode, 7)
+
+    def test_interrupted_command_is_stopped_before_propagating(self):
+        with patch.object(check_public, 'deadline', time.monotonic() + 60), \
+                patch.object(check_public.subprocess, 'Popen') as start, \
+                patch.object(check_public.os, 'killpg') as stop:
+            child = start.return_value.__enter__.return_value
+            child.wait.side_effect = [KeyboardInterrupt(), -9]
+            with self.assertRaises(KeyboardInterrupt):
+                check_public.run(['owned-command'])
+        stop.assert_called_once_with(child.pid, signal.SIGKILL)
+        child.wait.assert_any_call()
+
+    def test_test_imports_come_from_screened_build(self):
+        with patch.object(check_public, 'run') as run:
+            check_public.build_lean()
+        run.assert_called_once_with([
+            sys.executable, str(ROOT / 'tools/check_proof_security.py'), '--prepare-test-imports'])
+
     def test_full_gate_builds_imports_before_tests_and_audits_afterwards(self):
         events = []
 

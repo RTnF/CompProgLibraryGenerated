@@ -41,6 +41,9 @@ def ummB (b : BS) (inf x : Int) (k : Nat) : BS :=
     smx := b.smx.set k (if ¬ (b.mxv.getD k 0 = b.mnv.getD k 0) ∧ b.smx.getD k 0 = b.mnv.getD k 0 then x else b.smx.getD k 0)
     lval := b.lval.set k (if (b.lval.getD k 0 ≠ inf ∧ b.lval.getD k 0 < x) then x else b.lval.getD k 0) }
 
+-- Keep concrete scalar states and vector maps folded while applying execution lemmas.
+attribute [local irreducible] gS VVB
+
 set_option maxHeartbeats 0 in
 theorem umm_exec (mv : MV) (hnv : mv.nv = 15) (pre : List Cell) (hty : ∀ v, v < 9 → mv.ty v = s64) (b : BS) (P : List Cell)
     (inf x : Int) (n k : Nat) (hk : k < M31) (hinf : s64.valid inf = true) (hninf : s64.valid (-inf) = true)

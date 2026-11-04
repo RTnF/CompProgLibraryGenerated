@@ -11,7 +11,14 @@ import re
 from class_lowering import ErasedClass, SCALAR_FIELD_TYPES, build_functions, erase_functions
 from class_split import SplitClass, is_split_candidate, split_functions
 
-TOKENS = re.compile(rb'["\\{}]')
+# Consume text and complete strings in the regex engine: Python visits only
+# braces and unfinished strings. Possessive repetitions avoid backtracking
+# through long escaped strings. At chunk boundaries retain the closing-quote
+# and trailing-backslash state, while leaving the original root bytes intact.
+STRING_END = rb'[^"\\]*+(?:\\[\s\S][^"\\]*+)*+(?:(?P<closed>")|(?P<escape>\\)?\Z)'
+SKIP = rb'(?:[^"{}]++|"[^"\\]*+(?:\\[\s\S][^"\\]*+)*+")*+'
+TOKENS = re.compile(SKIP + rb'(?:(?P<brace>[{}])|(?P<string>"' + STRING_END + rb')|\Z)')
+STRING_CONTINUATION = re.compile(STRING_END)
 INNER = re.compile(rb'"inner"\s*:\s*\[')
 
 
@@ -34,25 +41,27 @@ def root_objects(stream, chunk_size=1 << 20):
     quoted = escaped = False
     while buffer:
         start = 0 if depth else None
-        previous = -1
-        for token in TOKENS.finditer(buffer):
-            pos = token.start()
-            char = token.group()
-            if quoted:
-                if pos > previous+1:
-                    escaped = False
-                if escaped:
-                    escaped = False
-                elif char == b'\\':
-                    escaped = True
-                elif char == b'"':
-                    quoted = False
-            elif char == b'"':
-                quoted = True
+        previous = 0
+        if quoted:
+            # An unpaired backslash in the previous chunk escapes this byte,
+            # even when it is a quote or another backslash.
+            token = STRING_CONTINUATION.match(buffer, int(escaped))
+            quoted = token['closed'] is None
+            escaped = token['escape'] is not None
+            previous = token.end()
+        for token in TOKENS.finditer(buffer, previous):
+            char = token['brace']
+            if char is None and token['string'] is None:
+                # Keep skipped trailing text for the root delimiter check.
+                break
+            pos = token.end() - 1
+            if token['string'] is not None:
+                quoted = token['closed'] is None
+                escaped = token['escape'] is not None
             elif char == b'{':
                 if depth == 0:
                     # Whitespace and commas are the only delimiters of roots.
-                    if (outside+buffer[(previous+1):pos]).strip(b' \r\n\t,'):
+                    if (outside+buffer[previous:pos]).strip(b' \r\n\t,'):
                         raise ValueError('unexpected translation-unit delimiter')
                     outside = b''
                     start = pos
@@ -67,18 +76,16 @@ def root_objects(stream, chunk_size=1 << 20):
                 elif depth < 0:
                     # The closing inner array and root object must terminate
                     # the stream; no second environment may be concatenated.
-                    tail = outside+buffer[previous+1:]
+                    tail = outside+buffer[previous:]
                     tail += stream.read()
                     if tail.strip() != b']\n}' and not re.fullmatch(rb'\s*]\s*}\s*',tail):
                         raise ValueError('invalid translation-unit trailer')
                     return
-            previous = pos
+            previous = token.end()
         if start is not None:
             parts.append(buffer[start:])
         else:
-            outside += buffer[previous+1:]
-        if quoted and escaped and previous < len(buffer)-1:
-            escaped = False
+            outside += buffer[previous:]
         buffer = stream.read(chunk_size)
     raise ValueError('truncated Clang translation unit')
 

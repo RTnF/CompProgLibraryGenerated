@@ -19,6 +19,44 @@ from offline import disable_network
 
 
 class DirectASTTests(unittest.TestCase):
+    def test_stream_preserves_raw_roots_across_every_string_boundary(self):
+        # Exact bytes (including whitespace, UTF-8 and declaration IDs) must
+        # survive streaming. Reference edges still belong to one AST process.
+        nodes = [
+            {'kind': 'NamespaceDecl', 'id': '0x123', 'inner': [
+                {'kind': 'FunctionDecl', 'id': '0x456', 'value':
+                 '\\' * count + '"{}日本語\n\t' + '\\' * count}
+                for count in range(17)]},
+            {'kind': 'FunctionDecl', 'id': '0x789', 'referencedDecl':
+             {'id': '0x456'}, 'inner': [[], {}, {'text': '"\\"'}]},
+        ]
+        roots = [json.dumps(node, ensure_ascii=False, indent=1).encode()
+                 for node in nodes]
+        raw = (b'{"kind":"TranslationUnitDecl","inner":[\n' +
+               b' ,\n'.join(roots) + b'\n]\t}\n')
+        for chunk in range(1, 129):
+            with self.subTest(chunk=chunk):
+                self.assertEqual(list(root_objects(io.BytesIO(raw), chunk)), roots)
+        # Strings spanning many chunks include both a long plain run and a
+        # long escape run, without mistaking quoted braces for root tokens.
+        root = json.dumps({'text': 'x' * 131072 + '\\"{}' * 16384}).encode()
+        raw = b'{"kind":"TranslationUnitDecl","inner":[' + root + b']}'
+        for chunk in (1, 31, 4096, len(raw)):
+            with self.subTest(long_string_chunk=chunk):
+                self.assertEqual(list(root_objects(io.BytesIO(raw), chunk)), [root])
+
+    def test_stream_rejects_truncated_strings_and_extra_environments(self):
+        prefix = b'{"kind":"TranslationUnitDecl","inner":['
+        invalid = [prefix + suffix for suffix in (
+            b'{"text":"unfinished', b'{"text":"escaped\\',
+            b'{"text":"quoted } ] }', b'{}', b'{}] extra }',
+            b'{}]} {}', b'{}]} {"kind":"TranslationUnitDecl","inner":[]}',
+            b'word {}]}', b'{}]')]
+        for raw in invalid:
+            for chunk in (1, 2, 3, 7, len(raw)):
+                with self.subTest(raw=raw, chunk=chunk), self.assertRaises(ValueError):
+                    list(root_objects(io.BytesIO(raw), chunk))
+
     def test_stream_chunk_boundaries_strings_and_trailer(self):
         nodes=[{'kind':'FunctionDecl','name':'one','loc':{'offset':1},
                 'inner':[{'value':'quotes " \\ } { and \\" remain strings','inner':[]}]},

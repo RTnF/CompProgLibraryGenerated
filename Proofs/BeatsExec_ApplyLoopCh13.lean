@@ -1,5 +1,8 @@
 import Proofs.BeatsExec_ApplyLoopDefs
 namespace Proofs.BeatsExec
+-- Avoid repeatedly expanding concrete states while applying execution lemmas.
+attribute [local irreducible] Proofs.GenState.gS Proofs.BeatsExec.VVB
+
 open Proofs.CppScalar Proofs.CppNestedProgram Proofs.StraightLine Proofs.VecExpr Proofs.VecStraight Proofs.VecStmt
 open Proofs.VecWrite Proofs.VecKitW Proofs.GenState Proofs.MultiVec Proofs.MultiKit Proofs.ForLoopM Proofs.ForLoopC
 open Proofs.ForLoopB

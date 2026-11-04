@@ -139,6 +139,9 @@ def aa4 (b : BS) (k : Nat) (m0 m3 x SM SN LA LV : Int) : BS := { aa3 b k m0 m3 x
 def aa5 (b : BS) (k : Nat) (m0 m3 x SM SN LA LV : Int) : BS := { aa4 b k m0 m3 x SM SN LA LV with ladd := b.ladd.set k LA }
 def aa6 (b : BS) (k : Nat) (m0 m3 x SM SN LA LV : Int) : BS := { aa5 b k m0 m3 x SM SN LA LV with lval := b.lval.set k LV }
 
+-- Keep concrete scalar states and vector maps folded while applying execution lemmas.
+attribute [local irreducible] gS VVB
+
 set_option maxHeartbeats 0 in
 theorem aa_exec (mv : MV) (hnv : mv.nv = 15) (pre : List Cell) (hty : ∀ v, v < 9 → mv.ty v = s64) (b : BS) (P : List Cell)
     (inf x : Int) (n k : Nat) (hk : k < M31) (hinf : s64.valid inf = true) (hninf : s64.valid (-inf) = true)

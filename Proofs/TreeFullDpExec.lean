@@ -60,6 +60,9 @@ theorem VA_set8 (a : Arr) (x : List Int) : upd (VA a) 8 x = VA { a with fu := x 
 
 /-! ### Reading a vector at a cell index -/
 
+-- Keep concrete states folded while applying the vector execution lemmas.
+attribute [local irreducible] Proofs.GenState.gS VA
+
 theorem rdv (mv : MV) (vv : Nat → List Int) (P : List Cell) (cl : List Cell) (j c idx : Nat) (t : Ty)
     (hj : j < mv.nv) (ht : t = mv.ty j) (hc : cl[c]? = some (ci idx)) (hidx : idx < 2147483648) (x : Int)
     (hx : (vv j)[idx]? = some x) (hxv : (mv.ty j).valid x = true) :
