@@ -49,6 +49,20 @@ jobs:
           path: .cache/axiom-definitions.json
           key: axiom-definitions-${{ hashFiles('verification/allowed_axioms.json', 'lean-toolchain', 'verification/InspectEnvironment.lean', 'tools/proof_security.py') }}
           restore-keys: axiom-definitions-
+      - name: Restore independently built imports and successful checks
+        id: restore-progress
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .cache/proof-security-scratch/.lake/build
+            .cache/ci-check-results.json
+          key: public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-
+            public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-
+      - name: Restore checks while requiring the final proof audit
+        id: restore-check-results
+        run: python3 tools/offline.py python3 tools/ci_check_cache.py restore
       - name: Trust the checked-out workspace inside the container
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Check imported-source inventory references and hashes
@@ -66,6 +80,18 @@ jobs:
           name: library-hpp
           path: ${{ runner.temp }}/library-hpp.zip
           if-no-files-found: error
+      - name: Snapshot successful checks from this main run
+        id: snapshot-progress
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.restore-check-results.outcome == 'success'
+        run: python3 tools/offline.py python3 tools/ci_check_cache.py snapshot
+      - name: Preserve completed work even when a later check fails
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.snapshot-progress.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .cache/proof-security-scratch/.lake/build
+            .cache/ci-check-results.json
+          key: public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   release-headers:
     needs: verify-public

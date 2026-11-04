@@ -161,8 +161,19 @@ def bridge_tasks(entries):
 
 def run_tasks(tasks, jobs):
     """Run independent checks in parallel; the first failure cancels the rest and is re-raised."""
+    def timed(label, function):
+        started = time.monotonic()
+        print(f"check started: {label}", flush=True)
+        try:
+            result = function()
+        except BaseException:
+            print(f"check failed after {time.monotonic() - started:.3f}s: {label}", flush=True)
+            raise
+        print(f"check passed after {time.monotonic() - started:.3f}s: {label}", flush=True)
+        return result
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, jobs)) as pool:
-        futures = {pool.submit(function): label for label, function in tasks}
+        futures = {pool.submit(timed, label, function): label for label, function in tasks}
         failure = None
         for future in concurrent.futures.as_completed(futures):
             if future.cancelled():

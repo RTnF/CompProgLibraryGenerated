@@ -36,4 +36,6 @@
 - 日常の `tools/check_proof_security.py` は、現在のリビジョンとツールチェーンに合う記録があり、`Proofs` が import する Mathlib 側のモジュールがすべてその記録の対象に入っていることを確かめる。入っていなければ、検査のやり直しを促して失敗する。記録がそろっている間は Mathlib の中身を信頼する。ただし今のところ、日常の検査も Mathlib の宣言を含む閉包を独立カーネルで通している（約 7 分）。時間が問題になったら、監査済みの Mathlib の定理を公理に置き換えて省く。
 - 証明の取り込みは `import Mathlib.…` に限る（`tools/proof_security.py` の `audit_source`）。`Proofs/` の自前のソースには、従来どおり `sorry`、`axiom`、`native_decide`、`macro` などを置かない。公理の許可リスト（`verification/allowed_axioms.json`）は変えない。
 - `tools/check_proof_security.py` の一時プロジェクトは、同じ `lake-manifest.json` と、リポジトリの `.lake/packages`（ビルド済み）を使う。取得（`lake update`、`lake exe cache get`）はテスト・CI の実行経路の外で行い、`check_public.py` は通信しない。
+
+- CIは独立scratchの`.lake/build`と、成功したC++/bridge/共有検査の依存fingerprintを再利用できる。scratchのソース監査・同期・Lakeによる入力照合と、各検査の現在の入力・ツールによるfingerprint照合は毎回行う。リポジトリ側のproject oleanをscratchへ持ち込まない。キャッシュの保存元はmainへのpush実行に限り、後続検査が失敗しても成功済み部分を保存する。試行ごとのkeyで途中経過を更新し、変更入力と未成功の検査は再実行する。最終proof-securityの成功結果とkernel replayのmodule cacheはCIへ復元せず、固定仕様・公理依存と両kernelを毎回確認する。保存・復元は検証の通信禁止経路の外で行う。キャッシュがない場合に全工程が7200秒へ収まる保証ではなく、時間切れ後も検証済み部分を失わないための仕組みである。
 - 新しい補題は、まず Mathlib にあるものを探し、なければ書く。既存の証明は書き換えない。

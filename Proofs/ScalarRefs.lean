@@ -50,9 +50,11 @@ theorem prep_refs4t (caller : NState) (params : List CppVectorBindings.Parameter
   simp [bindAll,bindOne,CppState.bindArgument,callerP,NState.observe,CppState.State.observe,h1,h2,h3,h4,w1,w2,w3,w4]
   simp only [charge_scalar_peak, charge_work]
   refine ⟨trivial, ?_⟩
-  repeat first
-    | exact Nat.le_max_left _ _
-    | (apply Nat.le_trans (Nat.le_max_left _ _); skip)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  exact Nat.le_max_left _ _
 
 theorem refs4t_correct (prog : NProgram) (tn : Ty)
     (t1 : Ty) (t2 : Ty) (t3 : Ty) (t4 : Ty)
@@ -121,9 +123,9 @@ theorem prep_refs2t (caller : NState) (params : List CppVectorBindings.Parameter
   simp [bindAll,bindOne,CppState.bindArgument,callerP,NState.observe,CppState.State.observe,h1,h2,w1,w2]
   simp only [charge_scalar_peak, charge_work]
   refine ⟨trivial, ?_⟩
-  repeat first
-    | exact Nat.le_max_left _ _
-    | (apply Nat.le_trans (Nat.le_max_left _ _); skip)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  exact Nat.le_max_left _ _
 
 theorem refs2t_correct (prog : NProgram) (tn : Ty)
     (t1 : Ty) (t2 : Ty)

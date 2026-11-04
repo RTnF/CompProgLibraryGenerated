@@ -474,9 +474,11 @@ theorem prep_rrrr (caller : NState) (params : List CppVectorBindings.Parameter)
   simp [bindAll,bindOne,CppState.bindArgument,callerP,NState.observe,CppState.State.observe,h1,h2,h3,h4,w1,w2,w3,w4]
   simp only [charge_scalar_peak, charge_work]
   refine ⟨trivial, ?_⟩
-  repeat first
-    | exact Nat.le_max_left _ _
-    | (apply Nat.le_trans (Nat.le_max_left _ _); skip)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  exact Nat.le_max_left _ _
 
 theorem prep_rrr (caller : NState) (params : List CppVectorBindings.Parameter)
     (hp : params = [.scalar s64 true false,.scalar s64 true false,.scalar s64 true false])
@@ -513,9 +515,10 @@ theorem prep_rrr (caller : NState) (params : List CppVectorBindings.Parameter)
   simp [bindAll,bindOne,CppState.bindArgument,callerP,NState.observe,CppState.State.observe,h1,h2,h3,w1,w2,w3]
   simp only [charge_scalar_peak, charge_work]
   refine ⟨trivial, ?_⟩
-  repeat first
-    | exact Nat.le_max_left _ _
-    | (apply Nat.le_trans (Nat.le_max_left _ _); skip)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  exact Nat.le_max_left _ _
 
 
 -- Generic preparation for two read-only references followed by a value argument.

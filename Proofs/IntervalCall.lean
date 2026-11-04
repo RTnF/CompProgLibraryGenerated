@@ -46,9 +46,11 @@ theorem prep_refs3 (caller : NState) (params : List CppVectorBindings.Parameter)
   simp [bindAll,bindOne,CppState.bindArgument,callerP,NState.observe,CppState.State.observe,h1,h2,h3,w1,w2,w3]
   simp only [charge_scalar_peak, charge_work]
   refine ⟨trivial, ?_⟩
-  repeat first
-    | exact Nat.le_max_left _ _
-    | (apply Nat.le_trans (Nat.le_max_left _ _); skip)
+  -- Match the outer maxima before comparing the caller's peak.
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  exact Nat.le_max_left _ _
 
 set_option maxHeartbeats 8000000 in
 theorem prep_refs6 (caller : NState) (params : List CppVectorBindings.Parameter)
@@ -100,9 +102,13 @@ theorem prep_refs6 (caller : NState) (params : List CppVectorBindings.Parameter)
   simp [bindAll,bindOne,CppState.bindArgument,callerP,NState.observe,CppState.State.observe,h1,h2,h3,h4,h5,h6,w1,w2,w3,w4,w5,w6]
   simp only [charge_scalar_peak, charge_work]
   refine ⟨trivial, ?_⟩
-  repeat first
-    | exact Nat.le_max_left _ _
-    | (apply Nat.le_trans (Nat.le_max_left _ _); skip)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  refine Nat.le_trans ?_ (Nat.le_max_left _ _)
+  exact Nat.le_max_left _ _
 
 
 theorem penv_old (ps : PS) (k : Nat) (ty : Ty) (b : CppState.Binding) (v : Int) (hb : ps.bs[k]? = some b)

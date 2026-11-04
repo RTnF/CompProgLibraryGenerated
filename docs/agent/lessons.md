@@ -1,5 +1,11 @@
 # 作業上の教訓
 
+## 2026-11-04: max不等式の証明探索で大きいstateを展開しない
+
+- IntervalCallのprep_refs6は、`repeat first`で`Nat.le_max_left`を目標全体へ試すたびに、失敗する定義的等価性比較が入れ子のcharge stateを展開していた。単独profileではファイル全体233.125秒の大半がこのexact探索だった。
+- `refine Nat.le_trans ?_ (Nat.le_max_left _ _)`で外側のmaxから先に一致させ、既知の段数だけ進めて最後の不等式を閉じると2.922秒になった。同じ前提・結論の2定理を固定nanodaで2156依存宣言まで確認した。単純なomegaへの置換も71秒へ短縮したが、oleanが約1.9MBから20.6MBへ膨らむため採用していない。証拠は`.cache/wip/ci_timeout_20261104/`。
+- CIの7200秒timeoutは、直前に表示されたテスト固有の無限ループを意味しない。独立buildと先行検査が消費した時間を分け、各checkの開始・終了・所要時間をflushして記録する。時間枠や並列数の増加で回避しない。
+
 ## 2026-11-04: timeout時は別sessionの子孫も回収する
 
 - `check_cache.run_traced` のsubprocess.runはtimeoutで検査Pythonだけを止め、子が後からmarkerを書いた。単純なkillpgも、別sessionを作る検査の子では漏れた。通常の親子だけを使う回帰では、この停止漏れを検出できない。

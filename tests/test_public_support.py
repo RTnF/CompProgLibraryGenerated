@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import public
 import check_public
 import process_supervisor as supervisor
+import ci_check_cache
 from offline import disable_network
 
 
@@ -25,6 +26,37 @@ WORKER_SOURCE='from pathlib import Path\nimport json,os,subprocess,sys,time\nmar
 
 
 class SupportTests(unittest.TestCase):
+    def test_ci_checkpoint_revalidates_inputs_and_never_restores_the_final_audit(self):
+        with tempfile.TemporaryDirectory(prefix='ci-checkpoint-') as directory:
+            scratch = Path(directory)
+            source = scratch/'source.hpp'
+            source.write_text('first input')
+            results, snapshot = scratch/'results.json', scratch/'snapshot.json'
+            with patch.object(check_public.check_cache, 'ROOT', scratch), \
+                 patch.object(check_public.check_cache, 'CACHE_FILE', results), \
+                 patch.object(check_public.check_cache, '_environment', return_value='fixed-toolchain'), \
+                 patch.object(check_public.check_cache, 'enabled', True):
+                calls = []
+                check_public.check_cache.cached_call('cpp:example', [source], lambda: calls.append('first'))
+                check_public.check_cache.cached_call('proof-security', [source], lambda: calls.append('audit'))
+                self.assertEqual(ci_check_cache.transfer(results, snapshot), 1)
+                # Also reject an audit entry in an incorrectly populated snapshot.
+                data = json.loads(snapshot.read_text())
+                data['proof-security'] = json.loads(results.read_text())['proof-security']
+                snapshot.write_text(json.dumps(data))
+                self.assertEqual(ci_check_cache.transfer(snapshot, results), 1)
+                check_public.check_cache.cached_call('cpp:example', [source], lambda: calls.append('unexpected'))
+                check_public.check_cache.cached_call('proof-security', [source], lambda: calls.append('fresh audit'))
+                source.write_text('changed input')
+                check_public.check_cache.cached_call('cpp:example', [source], lambda: calls.append('changed'))
+                self.assertEqual(calls, ['first', 'audit', 'fresh audit', 'changed'])
+            self.assertEqual(ci_check_cache.transfer(scratch/'missing', snapshot), 0)
+            self.assertEqual(json.loads(snapshot.read_text()), {})
+            malformed = scratch/'malformed.json'
+            malformed.write_text('[]')
+            with self.assertRaisesRegex(ValueError, 'must be an object'):
+                ci_check_cache.transfer(malformed, results)
+
     def test_supervised_commands_and_traced_cache(self):
         out=Path(supervisor.__file__).resolve().parent
         rows=[]
