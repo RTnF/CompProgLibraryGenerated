@@ -34,3 +34,24 @@ theorem nested_headers_preserved :
 theorem captured_read_preserved : copied.bind (fun s => reference.bind s.frame.read) = some 91 := by
   decide +kernel
 end MemberCopyContainersRegression
+
+namespace MemberCopyContainersRegression
+-- Reallocating the outer row invalidates its borrowed child header, while
+-- the captured reference into the child's separate allocation remains live.
+def staleCaller : Proofs.CppNestedProgram.NState :=
+  {caller with frame := (caller.frame.reserve 4 row 6).getD caller.frame}
+
+theorem borrowed_header_stale : staleCaller.frame.resolve 5 atom = none := by decide +kernel
+
+theorem captured_read_still_live : reference.bind staleCaller.frame.read = some 91 := by decide +kernel
+
+def staleCopied : Option Proofs.CppNestedProgram.NState :=
+  match MemberCopy.runCopyFuel 4 staleCaller fields with
+  | .finished step => some step.state
+  | _ => none
+
+theorem copy_after_header_invalidation : staleCopied.isSome = true := by decide +kernel
+
+theorem captured_read_after_copy : staleCopied.bind (fun s => reference.bind s.frame.read) = some 91 := by
+  decide +kernel
+end MemberCopyContainersRegression

@@ -67,3 +67,19 @@ python3 verifier/scalar_ir.py SOURCE.cpp --ir /tmp/scalar.json --lean /tmp/scala
 ## スカラー関数の展開（`[[gnu::always_inline]]`）
 
 呼び出される側の関数に `[[gnu::always_inline]]` を付けると、共通生成器（`verifier/inline_ast.py`）はその呼び出しを呼び出し側の文として展開する。値の引数は新しい局所変数、最後の `return` の式は呼び出しの値を持つ局所変数になる。付けないスカラー関数は従来どおり `invokeScalar`（別の `LoopProgram` を呼ぶ形）になる。展開できる条件は vector を取る関数の展開と同じ（再帰・途中の `return`・ループ条件や短絡演算の中の呼び出しは拒否）。展開した場合、補助関数も単独の関数として生成されるので、公開するなら補助関数ごとに証明が要る。`tests/test_inline_scalar_calls.py` が確認している。
+
+## スカラークラスの委譲構築と型だけの宣言（2026-11-05）
+
+スカラー値への消去は、helperクラスも含めてtrivial copy/move/dtor、baseなし、bitfieldなしをクラス全体で確認する。独自copy/dtorや格納幅をidentityで消さない。これらの意味を持つ元CPPのAPIを削るのではなく、object-state/lifetimeの変換経路で扱うまで消去経路では未対応として拒否する。
+
+単一fieldの直接構築でbodyが状態を変更したりfieldを参照する場合は、初期化式の値を先に局所fieldへ保存し、その後でbodyを実行する。bodyのthis/fieldへのアクセスと戻り値はその同じ局所fieldを使う。bodyが引数を書き換えた後に初期化式を再評価しない。引数変更、field変更、両方の変更、body内のhelper構築、初期化式内の呼出しをC++/UBSanと生成モデルの具体例・固定独立kernelで比較する。既存の純粋な初期化と引数に対するassertだけの経路は維持する。
+
+単一スカラーfieldの消去経路では、同じクラスへの空bodyの委譲構築を、その初期化式を返す関数へ変換する。委譲先の呼出しは既存のinlinerを通し、生成された一時セルとassertを残す。trivial copy/move/dtorを確認し、後処理を持つ一時値や非空bodyは拒否する。これにより、初期化後のbodyや破棄を実行せずに消すことを避ける。
+
+複数スカラーfieldの投影経路では、同一クラスへのtrivialなコピー/移動と、引数なし静的factoryの単一returnを辿る。再帰を検出し、委譲/対象構成子のbodyは空、各fieldの初期化は整数literalと許可したcastだけであることを全件確認する。他fieldの副作用や失敗する算術を落とさないため、未使用fieldに加えて、置換前の全構成子引数もliteral-onlyと確認する。未使用引数のrandやゼロ除算も消さない。一般の投影では、全fieldとbodyのどちらからも参照されない構成子引数も、返却前の局所宣言として評価する。例えば未使用の7/nはn=0でfaultとなり、成功したfield値だけを返すことはない。一般の投影でも構成子引数/field初期化式の呼出し・書込みや、bodyの状態変更は未対応として拒否する。これらは全fieldを順に構築するobject-state経路へ接続する残件である。この経路では値/既定構成子の各fieldも検証対象として出力する。3field、異なる整数幅、改名とnamespaceを変えたクラスも回帰に含める。クラスの型名はClangのdelegating initializerに含まれる修飾済み型から得る。
+
+関数body内のusing/typedef、属性のない関数の前方宣言、コンパイルで成立を確認したstatic_assertは実行時命令を持たないため取り除く。型の宣言でもVLAやtypeofのように評価を伴い得る形は取り除かず、未対応として拒否する。constexpr ifを消せるのは、runtime initと条件変数がなく、残った両分岐が空blockの場合だけである。通常if、実行する宣言/文、属性を持つ関数宣言は残す。
+
+元のhidden friendとnamespace関数テンプレートが併存する場合は、別の生成名で両方を検証する。具体化を促す非型テンプレート引数のwitnessは型だけの宣言で構成し、実行時の局所変数を作らない。`Group`の公開CPPは元のfriend/委譲/return形式を保ち、LL以外のTへwitnessの条件を加えない。証明対象は明記した整数具体化とfield投影であり、任意Tや完全なC++ object/lifetime ASTを扱うこととは区別する。
+
+`tests/test_scalar_class_delegation.py`は、原本との構築event列比較、上記の受理/拒否、生成された構成子の具体例、一般の構成子定理とfriendプログラムの一致を検査する。Leanの型検査に加え、基礎3公理だけを許可した固定nanodaの通常stack/2threadsで独立検証する。

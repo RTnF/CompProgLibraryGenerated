@@ -19,6 +19,50 @@ OPERATOR_NAMES = {'+=': 'add_assign', '-=': 'sub_assign', '*=': 'mul_assign', '/
                   '>>': 'shr', '&': 'and', '|': 'or', '^': 'xor', '()': 'call', '[]': 'index', '=': 'assign'}
 
 
+def validate_scalar_value_record(record, fields):
+    """Identity copying is valid only for plain scalar value objects.
+
+    Rich construction/lifetime frontends have their own contracts. This guard
+    applies to scalar erasure, including helper records in factory bodies.
+    """
+    if record.get('bases') or any(c.get('kind') == 'CXXBaseSpecifier' for c in record.get('inner', [])):
+        raise ValueError('scalar value erasure does not support base classes')
+    if any(field.get('isBitfield') for field in fields):
+        raise ValueError('scalar value erasure does not support bitfields')
+    definition = record.get('definitionData', {})
+    if not definition.get('dtor', {}).get('trivial'):
+        raise ValueError('scalar value erasure requires trivial destruction')
+    if not definition.get('copyCtor', {}).get('trivial') or (
+            definition.get('moveCtor', {}).get('exists') and
+            not definition.get('moveCtor', {}).get('trivial')):
+        raise ValueError('scalar value erasure requires trivial copy and move construction')
+
+
+def constructor_body_may_change_state(node):
+    """Keep the old pure/assert-only models; sequence all other bodies explicitly.
+
+    The assertion verifier still checks the system failure declaration later.
+    A successful call to that noreturn declaration cannot modify a live state.
+    """
+    kind = node.get('kind')
+    if kind in ('CXXConstructExpr', 'CXXTemporaryObjectExpr') or node.get('cleanupsHaveSideEffects'):
+        return True
+    if kind in ('CallExpr', 'CXXMemberCallExpr', 'CXXOperatorCallExpr'):
+        from scalar_assert import direct_callee
+        callee = direct_callee(node)
+        if callee is None or callee.get('referencedDecl', {}).get('name') != '__assert_fail':
+            return True
+    if kind == 'CompoundAssignOperator' or (kind == 'BinaryOperator' and node.get('opcode') == '=') or (
+            kind == 'UnaryOperator' and node.get('opcode') in ('++', '--')):
+        return True
+    return any(constructor_body_may_change_state(c) for c in node.get('inner', []))
+
+
+def constructor_uses_this(node):
+    return node.get('kind') == 'CXXThisExpr' or any(
+        constructor_uses_this(c) for c in node.get('inner', []))
+
+
 def function_name(class_name, method_name):
     if method_name.startswith('operator'):
         symbol = method_name[len('operator'):].strip()
@@ -40,6 +84,7 @@ class ErasedClass:
         fields = [c for c in record.get('inner', []) if c.get('kind') == 'FieldDecl']
         if len(fields) != 1 or any(c.get('kind') in ('CXXBaseSpecifier',) for c in record.get('inner', [])):
             raise ValueError('single scalar field required')
+        validate_scalar_value_record(record, fields)
         self.field = fields[0]
         self.field_type = self.field['type'].get('desugaredQualType', self.field['type']['qualType'])
         if self.field_type not in SCALAR_FIELD_TYPES:
@@ -271,15 +316,53 @@ def build_functions(erased, source, friends):
             functions.append(function)
         elif kind == 'CXXConstructorDecl' and len(bodies) == 1:
             initializers = [c for c in member.get('inner', []) if c.get('kind') == 'CXXCtorInitializer']
-            if len(initializers) != 1 or initializers[0].get('anyInit', {}).get('id') != erased.field['id']:
-                raise ValueError('constructors must initialize exactly the field')
-            expression = initializers[0]['inner'][0]
+            if len(initializers) != 1:
+                raise ValueError('constructors must initialize exactly the field or delegate')
+            initializer = initializers[0]
+            direct = initializer.get('anyInit', {}).get('id') == erased.field['id']
+            delegated = initializer.get('delegatingInit')
+            if not direct:
+                if not isinstance(delegated, dict) or not erased.pattern.fullmatch(
+                        delegated.get('desugaredQualType', delegated.get('qualType', ''))):
+                    raise ValueError('constructor delegation must name the same scalar class')
+                # A delegated initializer is evaluated before this body. The scalar
+                # erasure returns the initializer last, so a nonempty body needs
+                # a separate sequencing model; reject it here.
+                if bodies[0].get('inner'):
+                    raise ValueError('delegating constructor body must be empty')
+            if len(initializer.get('inner', [])) != 1:
+                raise ValueError('exactly one constructor initializer expression required')
+            expression = initializer['inner'][0]
+            if not direct:
+                def check_cleanup(node):
+                    if node.get('kind') == 'CXXBindTemporaryExpr' or node.get('cleanupsHaveSideEffects'):
+                        raise ValueError('delegated temporary has unsupported cleanup effects')
+                    for child in node.get('inner', []):
+                        check_cleanup(child)
+                check_cleanup(expression)
+                if expression.get('kind') == 'ExprWithCleanups':
+                    if len(expression.get('inner', [])) != 1:
+                        raise ValueError('one delegated initializer expression required')
+                    expression = expression['inner'][0]
             parameters = [c for c in member.get('inner', []) if c.get('kind') == 'ParmVarDecl']
             return_statement = {'kind': 'ReturnStmt', 'range': member.get('range', {}), 'inner': [expression]}
-            # Statements in the constructor body (for instance an assert on a parameter) run before the returned
-            # field value is computed; they cannot mention `this` (the lowering rejects that).
+            body_statements = list(bodies[0].get('inner', []))
+            field_local = None
+            if direct and (constructor_uses_this(bodies[0]) or
+                    constructor_body_may_change_state(bodies[0]) or (
+                    body_statements and constructor_body_may_change_state(expression))):
+                # Field initialization precedes the body, including writes to
+                # constructor parameters and to this field. Store that value
+                # once, then use the local as this for the body and result.
+                field_local = dict(kind='VarDecl', id='constructor-field:'+member['id'],
+                                   name='constructor_field', type={'qualType':erased.field_type},
+                                   init='c', inner=[expression])
+                reference = dict(kind='DeclRefExpr', type=field_local['type'], valueCategory='lvalue',
+                                 referencedDecl={k:field_local[k] for k in ('id','kind','name','type')})
+                return_statement = dict(return_statement, inner=[reference])
+                body_statements.insert(0, dict(kind='DeclStmt', inner=[field_local]))
             body = {'kind': 'CompoundStmt', 'range': bodies[0].get('range', {}),
-                    'inner': list(bodies[0].get('inner', [])) + [return_statement]}
+                    'inner': body_statements + [return_statement]}
             signature = member['type']['qualType']
             function = {key: value for key, value in member.items() if key != 'inner'}
             function['kind'] = 'FunctionDecl'
@@ -288,6 +371,8 @@ def build_functions(erased, source, friends):
             function['inner'] = parameters + [body]
             function['loc'].setdefault('file', str(source))
             function['_inline'] = True
+            if field_local is not None:
+                function['_this'] = field_local
             function['_template'] = erased.template_key(function['name'])
             erased.constructors[signature.replace(' noexcept', '')] = function
             functions.append(function)

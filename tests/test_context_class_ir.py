@@ -55,13 +55,15 @@ class ContextClassTests(unittest.TestCase):
                       ['Field','statement','validate','command','reference','runCopyFuel','Steps',
                        'command_complete','copy_complete','Ready','ready_steps','copy_ready_complete',
                        'source_copy_complete','PreservesContainers','ready_preserves_containers',
-                       'source_copy_preserves_containers','scalar_destination','resolved_payload','vector_destination',
+                       'source_copy_preserves_containers','PreservesReferences','ready_preserves_references',
+                       'source_copy_preserves_observers','scalar_destination','resolved_payload','vector_destination',
                        'ready_shape','source_copy_layout','source_copy_values','source_copy_positions','source_copy_work','source_copy_space',
                        'vector_owners_distinct','scalar_addresses_distinct','vector_old_separated','scalar_old_separated','invalid_source']],
                     *['MemberViewIndependent.MemberCopyValuesRegression.'+name for name in
                       ['ordered_copy','wrong_order_rejected','wrong_permission_rejected','scalar_work_exact']],
                     *['MemberViewIndependent.MemberCopyContainersRegression.'+name for name in
-                      ['nested_headers_preserved','captured_read_preserved',*[f'check_{i}' for i in range(1,13)]]]],
+                      ['nested_headers_preserved','captured_read_preserved','borrowed_header_stale',
+                       'captured_read_still_live','copy_after_header_invalidation','captured_read_after_copy',*[f'check_{i}' for i in range(1,13)]]]],
                     cwd=ROOT,env=env,stdout=output,stderr=subprocess.PIPE,text=True,timeout=120)
             self.assertEqual(exported.returncode,0,exported.stderr)
             config = scratch/'nanoda.json'
@@ -73,6 +75,12 @@ class ContextClassTests(unittest.TestCase):
             self.assertEqual(checked.returncode,0,checked.stdout+checked.stderr)
             self.assertRegex(checked.stdout,r'\AChecked [1-9][0-9]* declarations with no errors\s*\Z')
             print(checked.stdout.strip())
+            cpp = scratch/'member_copy_observers.cpp'
+            cpp.write_text((ROOT/'tests/imports/member_copy_observers.cpp').read_text())
+            binary = scratch/'native'
+            subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined',
+                            '-fno-sanitize-recover=all',str(cpp),'-o',str(binary)],check=True)
+            subprocess.run([str(binary)],check=True)
 
     def test_all_methods_and_constructor_exports_match_proved_programs(self):
         generated = bundle.emit_context_class(SOURCE, 'cp::UnionFind', 'UFClassBundle')

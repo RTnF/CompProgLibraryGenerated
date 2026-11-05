@@ -4,15 +4,25 @@
 
 ## 再開時に最初に確認する状態
 
+- **公開前の機密検査28ファイルも通過:** sequenced_gate/secret_scan.jsonを参照。差分0、前後全文2件/tree1件は公開検証用SHA256の誤検出のみで未分類0。この追記を含め再走査して、走査済みblobとindex/commit treeを照合してから公開する。まだcommit/pushしていない。
+
+- **最終差分のローカルgate35231は終了0（2026-11-05）:** C++59（cache）・bridge59（今回再実行）・共有236（233再実行/3cache）・59header ZIPが成功、固定1923入力hash不変。proof-securityは同じ1074入力の成功cacheを再検証して使用し、実監査は全体handoffに示した前回の52274/固定nanoda49128宣言を根拠とする。all4605.389秒/全工程4613.081秒。証拠はscalar_erasure_effects_20261105/sequenced_gate/。旧61601は中断済みなので再pollしない。今から最新機密検査→commit→承認付き通常push→新SHAのCI/releaseを確認する。まだcommit/pushしていない。全137件は未達。
+
+- **未commitの境界修正（2026-11-05）:** scalar helperのcopy/dtor・bitfield・構築順・未使用引数の検査を追加中。以前の全件79672と機密検査25ファイルはその後の追加コードを含まない。公開59のbridge再確認、関連回帰、最新入力の全件gate・機密検査を終えてからcommit/pushする。最新handleと実結果は全体handoff冒頭を優先する。CI/release21ef46fの成功と、この未公開差分の状態を混同しない。
+
+- **リリース照合済み（2026-11-05）:** 21ef46fb9a9b8d752703521244ea42a621304a92のCI41852024210 attempt2はverify-public/release-headersともsuccess。attempt1のcacheから224成功検査を復元し、独立prebuild9.7秒、最終監査側build14.0秒。最終監査は省略せず52238宣言の固定仕様/定義/公理、778 import module範囲、fresh Lean kernel replay、固定nanoda49092宣言を実行成功した。STL契約依存2定理は別区分。公開tag/bodyのSHAとZIP全59headerのbyte一致を実照合し、ZIP SHA256もローカルと同じ6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e。証拠はci_timeout_20261104/gate/{attempt2_receipt,published_receipt}.jsonとjob_21ef46f_attempt2.txt。CI監視は不要。全137件の検証目標は未達のまま続行する。
+
+- **CI再実行（2026-11-05）:** 21ef46fのCI41852024210 attempt1は7200秒制限で失敗。独立buildは4414.6秒で成功、C++/bridge119検査と共有105検査の計224件を保存し、328961109bytesのcache保存成功をログで確認した。uniform_scalar_peakで時間切れ、最終監査/releaseは未実行。失敗jobログ/receiptはci_timeout_20261104/gate/{job_21ef46f_attempt1.txt,attempt1_receipt.json}。保存済み進捗の実確認後に同SHAのfailed jobを再実行し、APIでattempt2/in_progressを確認、当時のwatch実84661（ci_watch_21ef46f_attempt2.txt）。現在は上記の成功結果を優先する。旧watch96359はツールhost停止で失効、APIでattempt1 terminal failureを確認済みなので再pollしない。
+- **最新push後の状態:** `21ef46fb9a9b8d752703521244ea42a621304a92` を通常pushし終了0（実49242）。ローカル追跡参照も一致。検査した全1919blobとcommit treeが一致し、12ファイルのみをcommitした。対象[CI41852024210](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41852024210)はattempt2でCI/release成功、公開assetも照合済み（上記）。旧watch96359を再pollしない。この追記はcommit後のローカル記録として保持する。
 - **今回の機密確認:** 12変更ファイルの差分/前後内容は検出0。全公開予定1919ファイルの1件は、既知のProofs.MultiVecN.rowKeyの公開検証用SHA256としてsource/定義/行/digestを厳密照合した誤検出。未分類検出0で通過した。公式checksum照合済みGitleaks8.30.1をoffline/既定ルール/ignore無効化/redact100で使用し、合成controlの検出も確認。raw findingを維持しており、Gitleaksのraw full-tree結果を検出0とは扱わない。証拠はci_timeout_20261104/gate/{secret_scan,reviewed_false_positive}.json。今回のcommit準備snapshotであり、commit/push状態はgitと対象SHAのCIを照合する。
-- **全件gate27768はterminal終了0を回収済み。再pollしない。** CPython3.11.3/cache有効/jobs1/7200秒でinventory/all/package/archiveが全成功。all3963.578秒、全工程3972.946秒。C++59/AST59/共有235、52238宣言の固定仕様/定義/公理監査、Mathlib関連778module範囲、Lean kernel replay（8変更module/1prefix）、固定nanoda49092宣言、59header ZIPを実確認。proof-securityはcacheではなく今回実行した。1917入力hash不変。ZIP SHA256 6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e。証拠は`.cache/wip/ci_timeout_20261104/gate/{checks_state,final_gate_receipt,input_manifest}.json`と各txt。現在、重い検査は終了済み。次は最新差分と全公開treeの機密再検査→stage/commit→承認付きpush→新SHAのCI/releaseを完了まで確認する。新差分の機密確認は上記のとおり通過し、stage/commit/push待ち。
+- **全件gate27768はterminal終了0を回収済み。再pollしない。** CPython3.11.3/cache有効/jobs1/7200秒でinventory/all/package/archiveが全成功。all3963.578秒、全工程3972.946秒。C++59/AST59/共有235、52238宣言の固定仕様/定義/公理監査、Mathlib関連778module範囲、Lean kernel replay（8変更module/1prefix）、固定nanoda49092宣言、59header ZIPを実確認。proof-securityはcacheではなく今回実行した。1917入力hash不変。ZIP SHA256 6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e。証拠は`.cache/wip/ci_timeout_20261104/gate/{checks_state,final_gate_receipt,input_manifest}.json`と各txt。これは21ef46f前の検証記録。その後の機密検査/commit/push/CI/release/配布ZIP照合も上記のとおり完了。現在の未commit追加は全体handoff冒頭を参照する。
 最新の状態と再開順序は[全体handoffの冒頭](handoff.md)を参照する。以下の履歴中の「稼働中」は記録時点の状態。
 
 - c319aeafcab2ac7e231d141255b76f3c07b394bdは機密検査後にcommit/push済み。CI41813361669は終了1、release-headersはskipでリリース未完了。watch85409/ログ取得27898は終了済み。ログはrelease_20261103/ci_fix_supervisor/job_c319aea.txt。
 - 7200秒制限で共有検査84番目test_ret_unit_ir.pyが停止した。独立build1790jobsは4789.4秒で成功、C++/AST59も通過した。前CIの同等buildは2611.7秒。ローカル33537の`--no-cache`は検査結果cacheを無効にするが、scratchの独立buildは9秒の再利用でありcold buildではなかった。
 - 未commit差分は7個のmax不等式の証明探索短縮、各checkの即時timing表示、CIの成功済み途中経過保存/復元。IntervalCallは単独233.125秒→2.922秒、7定理の固定nanoda2162宣言成功。SupportTests18件、実Lakeのrestore/変更依存拒否/再build、YAML/sh構文が成功。FindCycleOuter候補は比較未了で不採用。詳細と証拠はci_timeout_20261104/。
 - cacheはmainのpushでのみ保存し、成功検査だけを現在入力のfingerprintで照合する。独立scratchは現ソースの監査/同期/Lake照合を維持し、最終proof-securityとkernel replayのmodule cacheは復元しない。新規cacheなしのCIが一度で7200秒へ収まる保証はない。時間枠/並列数は増やしていない。再試行前にそのSHAの保存成功/検証進捗を確認する。
-- 全件gateは上記27768で終了0。次は機密再検査/commit/push→機密再検査→commit→承認付きpush→対象SHAのCI/release完了確認。全件/機密検査は通過し、新差分のcommit/push/CI/releaseは未完了。旧137件全体はactive/未達。
+- 21ef46fのgate/機密検査/commit/push/CI/release/配布ZIP照合は完了。旧137件全体はactive/未達で、以後の追加は全体handoff冒頭を参照する。
 - c319aeaの検査は差分/前後内容0、全1918ファイルの1件は公開仕様SHA256と実検証環境から照合した誤検出、未分類0。検査treeとcommit一致済み。release_20261103/ci_fix_supervisor/のsecret_scan/reviewed_false_positive/staged_receipt/commit_receiptを参照。MEMORY.mdは公開しない。
 
 ## 反映後gate実行時の状態記録（各記録時点の観測）

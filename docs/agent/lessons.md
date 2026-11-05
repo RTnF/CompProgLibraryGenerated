@@ -1,5 +1,11 @@
 # 作業上の教訓
 
+## 2026-11-05: scalar消去はhelperの寿命と初期化順も検査する
+
+- 委譲先のクラスだけtrivial copy/dtorを確認しても、factory内の別helperの独自copy/dtorは消せてしまった。1bitのfieldも格納幅を省くと、C++の-1をモデルが1として受理した。C++実行と生成モデルの `by decide +kernel` /固定nanoda2523宣言で不一致を確認した。
+- 全ての消去対象recordでtrivial copy/move/dtor・baseなし・bitfieldなしを確認する。元CPPの機能削減で合わせず、未対応の効果はobject/lifetime経路の残件として保持する。複数fieldのliteral factoryでも、置換後fieldだけでなく未使用を含む置換前の全構成子引数を調べる。unused randは置換すると消えてしまう。 非委譲の一般投影でも、未使用引数の純粋な算術は失敗し得るため、局所宣言として必ず評価してからfieldを返す。7/nの成功・ゼロ除算を両fieldのモデルで確認する。
+- 初期化式をbody後のreturnへ移すだけでは、bodyが引数を書き換えると別の値になる。状態変更/field参照を伴う単一field構築は先に局所fieldを初期化し、その同じfieldでbodyとreturnを実行する。引数だけ/fieldだけ/両方の変更をnativeとモデルの結果・caller保存・work/peak上界で比較する。body内の別helperの構築も呼出しであり、直接の代入/CallExprだけを調べると見落とす。CPP1/IR2の不一致を固定nanoda2517宣言で再現し、構築呼出しも含める修正後の5ケースを固定nanoda2529宣言で確認した。証拠は`.cache/wip/scalar_erasure_effects_20261105/`。既存gateの成功を、新しく見つかった未登録境界の正しさの証拠にしない。
+
 ## 2026-11-04: max不等式の証明探索で大きいstateを展開しない
 
 - IntervalCallのprep_refs6は、`repeat first`で`Nat.le_max_left`を目標全体へ試すたびに、失敗する定義的等価性比較が入れ子のcharge stateを展開していた。単独profileではファイル全体233.125秒の大半がこのexact探索だった。

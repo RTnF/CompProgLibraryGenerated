@@ -16,6 +16,8 @@
 | 2026-11-02 | `experiments/library/cpp/number/square_matrix.hpp` の比較・pow | 比較を具体化すると存在しないxへの参照でコンパイル不可。LLONG_MAX/LLONG_MINの1×1行列のpow(1)で不要な二乗が桁あふれ | 比較がmat以外を参照し、最後の指数ビットの後もyを二乗していた | 各要素を比較し、指数を右シフトして残りがあるときだけ二乗する。非負指数を明示し、pow(ll)・行参照・公開配列・aggregateは維持 | `tests/imports/square_matrix_source.cpp` の全81行列/6561組、独自要素型・乗算回数・型/trait確認と既存power/unary回帰。クラス全体のLean証明は未完了 |
 | 2026-11-02（候補、未公開） | `experiments/verification/number/square_matrix.hpp` の型と初期化 | LP64でpow(int64_t)は原本のpow(ll)とメンバー関数型が異なり、配列のメンバー初期化子でtrivialな型でもなくなる | 検証候補へ移す際の型・初期化の書換え | 引数をlong longに戻し、原本と同じ配列宣言にした。追加の次元static_assertも外した | `tests/imports/square_matrix.cpp` のpow型・aggregate/trivial/standard-layoutのstatic_assertと全ケース。標準C++での正次元の前提は文書化し、クラス全体のLean証明は未完了 |
 
+| 2026-11-05 | `library/group.hpp` の `op`・既定構築・return初期化 | 元で通るraw値との `op` が推論失敗し、汎用型のAffine既定構築でコピー回数やe()の構築順が変わる | hidden friendを関数テンプレートへ、委譲構築を直接field初期化へ、波括弧returnを括弧呼出しへ変えていた | 元のhidden friend/委譲/return形式を復元し、既存qualified opも維持。LLだけ型のwitnessでfriend本文を具体化する。持ち込みコードは変更しない | 隔離候補で原本とのevent列比較、raw値/変換proxy/local型と既存C++のUBSan、29生成モデルと同じ仕様の既定構築/新Affine構成子の一般定理を検査済み。正本でもC++/template-first・29モデルのbridgeとPython3.11の共有5testsが成功（一般構成子/friendの固定nanoda3624、生成例2520/2663宣言）。全件gateはhandoff参照 |
+
 ## 付記（直したのではなく、前提に含めたもの）
 
 次は元のコードが持つ性質で、直さずに前提として明記した（`docs/experiments_findings.md`）: `GroupMul::inv()` は整数で `±1` 以外だと 0、`MonoidMul::op` と `CumulativeSum` は符号付きの桁あふれが未定義動作。

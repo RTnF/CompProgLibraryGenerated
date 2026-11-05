@@ -8,7 +8,7 @@
 
 | 元ヘッダー | 状況 | 公開部品／残りの理由 |
 | --- | --- | --- |
-| algebraic_structure/group.hpp | 済 | `group` |
+| algebraic_structure/group.hpp | 一部 | `group`。2026-11-05にhidden friend・元の委譲構築/returnを復元し、LL構成子のfieldモデルと一般定理を追加。統合後の全件検証中。任意Tや完全なobject/lifetime ASTの証明は未完了 |
 | algebraic_structure/monoid.hpp | 済 | `monoid` |
 | algebraic_structure/monoid_lazy.hpp | 済 | `monoid_lazy` |
 | array/cumulative_sum.hpp | 一部 | `cumulative_sum`（クラス `CumulativeSum<T>` と `CumulativeSum2D<T>`） |
@@ -50,14 +50,14 @@
 
 ## experiments/library3/cpp（旧版）
 
-`library3` は `library` の旧版で、同じ名前の機能を持つ。`library` 側の公開部品と重複する場合は、命名規則を含めて `library/` を優先する（AGENTS.md 方針）。`Group`, `Monoid`, `CumulativeSum`, `SortUtil`, `BellmanFord`, `Dijkstra`, `GraphL`, `GraphM`, `Lowlink`, `Prim`, `TopologicalSort`, `UnionFind`, `WarshallFloyd`, `ModInt`, `Factorize`, `IsPrime`, `SegmentTree` は上の表の同名ヘッダーと同じ状況。`Mapping`（アフィン写像など）は `library/affine` に対応する（`Affine` の合成と適用）。`Geometry/Point` は整数の点で象限を `int8_t` に持つ（`int8_t` は生成器の型表に無く、象限による `operator<` の比較も未対応）ため未。
+`library3` は `library` の旧版で、同じ名前の機能を持つ。`library` 側の公開部品と重複する場合は、命名規則を含めて `library/` を優先する（AGENTS.md 方針）。`Group`, `Monoid`, `CumulativeSum`, `SortUtil`, `BellmanFord`, `Dijkstra`, `GraphL`, `GraphM`, `Lowlink`, `Prim`, `TopologicalSort`, `UnionFind`, `WarshallFloyd`, `ModInt`, `Factorize`, `IsPrime`, `SegmentTree` は上の表の同名ヘッダーと同じ状況。`Mapping`（アフィン写像など）は `library/group.hpp` と一部対応するが、下表のAPI/型の差が未解消。`Geometry/Point` は整数の点で象限を `int8_t` に持つ（`int8_t` は生成器の型表に無く、象限による `operator<` の比較も未対応）ため未。
 
 ### library3 の対応表（2026-10-12 時点で全ファイルを確認）
 
 | library3 のファイル | 対応 | 状況 |
 | --- | --- | --- |
-| AlgebraicStructure/Group.hpp | `library/group.hpp` | 統合済み（`GroupAffine` を含む） |
-| AlgebraicStructure/Mapping.hpp（`Affine<T>`） | `library/group.hpp` の `GroupAffine` | 統合済み（`ide`/`apply`/`compose`/`inv`） |
+| AlgebraicStructure/Group.hpp | `library/group.hpp` | 一部。旧版のpublic field `x/a/b` は未復元。`GroupSum<double>::inv` は旧版の `e().x-x` と公開版の単項minusで正の0の符号が異なることを再現。旧版全体の統合・検証は未完了 |
+| AlgebraicStructure/Mapping.hpp（`Affine<T>`） | `library/group.hpp` の `GroupAffine` | 一部。public field `a/b`、`ide/compose` と `template<class U> U apply(U)` の元APIは未復元。`Affine<long long>(2,1).apply(0.5)` は旧版2・公開版1。異型引数・値渡しも保持する必要がある |
 | AlgebraicStructure/Monoid.hpp | `library/monoid.hpp` | 統合済み |
 | Array/CumulativeSum.hpp | `library/cumulative_sum.hpp` | 統合済み（`CumulativeSum2D` を含む） |
 | Array/SortUtil.hpp | `library/sort_util.hpp`, `search_util.hpp` | 統合済み。`arg_sort` 系は未（ラムダ比較の `stable_sort`） |
@@ -85,6 +85,8 @@
 
 ### 1. 同じクラスなのにファイルを分けている、またはクラスにしていない
 
+
+
 | 元のクラス | 現在の公開部品 | 目標 |
 | --- | --- | --- |
 | `ModInt` / `DynamicModInt` 周辺 | `modint`, `mod61`, `pow_mod`, `dynamic_modint` | 元のヘッダーごとに 1 つ（`mod61`・`mul61` は `string/rolling_hash.hpp` の `rh_in`、`pow_mod` の元を確認する） |
@@ -93,8 +95,10 @@
 
 ### 2. 元の汎用性を狭めている変更
 
+- 旧`library3`の`Group`/`Mapping`のAPI・意味を縮小している: public field `x/a/b`、`ide/compose`、`template<class U> U apply(U)` の値渡しを現行公開版は保持していない。逆元の演算の定義も異なり、doubleの0の符号が変わる。上の旧版対応表と `docs/experiments_findings.md` に実比較を記録した。元APIを持つクラスとして全機能を検証するまで未解消。
+
 - 型 `T` を `long long` に固定: なし（`run_length`・`bellman_ford`・`dijkstra` も 2026-10-12 にテンプレート化済み。`monoid_lazy` もテンプレート化済み。入れ子の構造体の平らな形は下の「構造を変えている」に残る）。
-- 機能を落としている、または構造を変えている: `tree_root`/`tree_ancestor`（`Tree` の高さ・直径・全方位木 DP とコンストラクタ類を含めず、隣接リストを CSR、`stack<tuple>` を呼び出し側の `stk` に変えている。解消は残りの `Tree` の機能を同じ枠組みで足す）、`interval_union`（`pair` の vector を 2 本の vector に分け、結果を呼び出し側の vector に書く。並べ替えは `std::sort` でなく挿入ソート）、`union_find`（`unite`/`same`/`size` が経路圧縮をしない。木の数を `ps` の末尾に持つ。入力assertは復元済み）、`group`（`inv` は元どおり整数除算）、`interval`（`<=>` と入出力演算子なし）、`bellman_ford`（負閉路の印は元の `NEGATIVE_CYCLE` 値でなく `-inf`。負閉路から届く頂点が必ず `-inf` になることは未証明でテストのみ）、`dijkstra`（`priority_queue` でなく O(n²)）、`topological_sort`（辞書順最小版なし）、`floyd_warshall`（負の辺と親なし）、`dynamic_modint`（静的な法を各値のフィールドに変更）、`ratio`（符号付き `T n, d` でなく符号を分けた形、演算子なし）、`modint`（二項演算子は `+ - * /`。入出力、変換コンストラクタなし）、`mat_mul`（積のみ）、`segtree_sum`（和のみ）、`monoid_lazy`（入れ子の構造体 `RangeAddRangeMaxMin` などを平らにし、値モノイドを `monoid` に統合し、`apply` を分けた）。
+- 機能を落としている、または構造を変えている: `tree_root`/`tree_ancestor`（`Tree` の高さ・直径・全方位木 DP とコンストラクタ類を含めず、隣接リストを CSR、`stack<tuple>` を呼び出し側の `stk` に変えている。解消は残りの `Tree` の機能を同じ枠組みで足す）、`interval_union`（`pair` の vector を 2 本の vector に分け、結果を呼び出し側の vector に書く。並べ替えは `std::sort` でなく挿入ソート）、`union_find`（`unite`/`same`/`size` が経路圧縮をしない。木の数を `ps` の末尾に持つ。入力assertは復元済み）、`interval`（`<=>` と入出力演算子なし）、`bellman_ford`（負閉路の印は元の `NEGATIVE_CYCLE` 値でなく `-inf`。負閉路から届く頂点が必ず `-inf` になることは未証明でテストのみ）、`dijkstra`（`priority_queue` でなく O(n²)）、`topological_sort`（辞書順最小版なし）、`floyd_warshall`（負の辺と親なし）、`dynamic_modint`（静的な法を各値のフィールドに変更）、`ratio`（符号付き `T n, d` でなく符号を分けた形、演算子なし）、`modint`（二項演算子は `+ - * /`。入出力、変換コンストラクタなし）、`mat_mul`（積のみ）、`segtree_sum`（和のみ）、`monoid_lazy`（入れ子の構造体 `RangeAddRangeMaxMin` などを平らにし、値モノイドを `monoid` に統合し、`apply` を分けた）。
 - 機能を落としている（`lazy_segment_tree`）: 元の `LazySegmentTree<M, F>` は任意のモノイド `M` と作用 `F` のオブジェクトの木だが、公開版は値と作用の vector（`vector<value_type>`、`vector<action_type>`）の木で、方針 `P` の静的関数 `e`/`id`/`op`/`mapping`/`composition` で与える（1 つの整数だけの値と作用に限る）。既定構成子と `int` を取る構成子、`search_prod_right`/`search_prod_left`（述語を取る二分探索）、`assert` は含めない。検証した具体化は `long long` の最大値と chmin のみ。区間操作は `h_node <= 29`（`n <= 2^29`）に限る。解消は、構造体のオブジェクトのベクトルを扱う変換器の拡張、述語の扱い、区間加算などの具体化を足すこと。
 - 機能を落としている（`segment_tree`）: 元の `SegmentTree<M>` は任意のモノイド `M` のオブジェクトの木だが、公開版は値（`vector<value_type>`）の木で、モノイドは `value_type`・静的 `e()`・静的 `apply` を持つ方針として与える（1 つの値だけのモノイドに限る）。`search_prod_right`/`search_prod_left`（述語を取る二分探索）と `assert` は含めない。検証した具体化は `long long` の最大値と最小値のみ。解消は、構造体のオブジェクトのベクトルを扱う変換器の拡張、述語 `F` の扱い、`MonoidMin/Mul` などの具体化を足すこと。
 - 機能を落としている（`square_matrix`）: 元の `SquareMatrix<T, N>`（非型テンプレート引数 `N`、`operator*`/`+`/`-`/`==`、`pow`）を、`vector` と `int n` を取る関数 8 個（`mat_mul`・`mat_add_assign`・`mat_sub_assign`・`mat_zero`・`mat_negate`・`mat_identity`・`mat_equal`・`mat_pow`）にしている。値を返す演算子（`+`/`-`/`*`）、クラスとしての形は未（`!=` は `!mat_equal`、`pow` は `mat_pow` が相当し、`pow` の指数は非負の `unsigned long long` に限る）。解消はC配列・非型テンプレート・行参照・初期化状態の変換器対応を足し、公開mat配列と元の全クラスAPI・型traitを維持してクラス全体を検証すること。
@@ -107,7 +111,7 @@
 実装済み（`verifier/ast_stream.py`、`class_lowering.py`、`class_split.py`、`vector_stl.py`、`clang_ast.py`）:
 
 - `vector` をフィールドに持つクラス: フィールドを引数にしたメソッド。書き換えないスカラーのフィールドは値渡し。構成子は、スカラーのフィールドをメンバー初期化子の値を持つ局所変数にし、`vector` のフィールドは標準の構築子の契約に任せ、本体の文を関数にする。同名メソッドは引数の個数で区別する。
-- クラステンプレート: 明示的な具体化（`template class X<long long>;`）を検証する。関数テンプレートも明示的な具体化を普通の関数として検証し、`op` のようなクラスのフレンドは、クラスのインスタンスのフレンドである関数テンプレートとして書く。
+- クラステンプレート: 明示的な具体化（`template class X<long long>;`）を検証する。関数テンプレートも明示的な具体化を普通の関数として検証し、`op`のような元のhidden friendも、型だけのwitnessで本文を具体化して検証できる。namespaceテンプレートと併存する場合はモデル名の衝突を区別する。
 - 静的メンバー関数、`std::numeric_limits<整数型>::min()/max()/lowest()`、`const` へ修飾変換された `this` でのメソッド呼び出し。
 
 残り:

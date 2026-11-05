@@ -1,5 +1,13 @@
 # 持ち込みコードの検証で見つけた不具合・注意点
 
+## 2026-11-05: groupの公開側で暗黙変換呼出しが失われている
+
+元のGroupSum/GroupMulの非テンプレートhidden friendと、公開版の関数テンプレートopでは、引数推論と暗黙変換の適用が異なる。元の`GroupSum<long long> a(2); op(a,3LL); op(3LL,a);`と`GroupMul<long long> m(2); op(m,3LL);`はコンパイル/実行に成功し、値5/5/6になる。公開版は同じ呼出しをコンパイルできない。これは元コードの不具合ではなく、公開側の書換えによる未修正のAPI縮小である。オブジェクト同士のlong long演算の既存証明を、この呼出しまで検証済みとは扱わない。
+
+GCC 13.3.0/C++17/offlineでの再現とログは`.cache/wip/group_api_review_20261105/{original.cpp,published.cpp,state.json}`。`docs/group.md`と違反一覧へ反映した。元のフレンド形式を保ち、検証に必要な本文の具体化を共通変換器で扱う方法を調べる。公開C++はまだ修正していない。
+
+同日の追加確認では、コピーと整数からの構築を記録する`Traced`を`GroupAffine`へ渡すと、元の既定構築の2回のコピーが公開版では0回だった。`e()`の構築順も元の1→0から公開版の0→1へ変わる。値1/0は両方で一致する。GCC13.3.0/C++17/-O2の再現は`group_api_review_20261105/constructor_{original,published,guarded}.cpp`と`constructor_observers_state.json`。暗黙変換を直す隔離候補guardedにもこの差が残るため、元の全APIを復元した候補とは扱わない。元の委譲構築・波括弧初期化と、その共通変換・証明への接続を残件として維持する。公開C++は未修正。
+
 2026-10-09 時点。検証（C++ の実行と Lean の証明）の過程で確認した、元の `experiments/` のコードの問題を残す。いずれも元のソースは変更していない。
 
 | 元のコード | 内容 | 確認 | 公開版での扱い |
@@ -32,3 +40,13 @@
 ## 2026-11-02: SquareMatrixの比較と不要な最終二乗を原本で修正
 
 原本の比較をmatの各要素へ直し、powは指数を右シフトして残りがある場合だけ二乗するようにした。pow(ll) const、行配列参照、公開mat配列、aggregate/trivial/standard-layoutの性質を保つ。元の非負指数の用途を明示し、負の指数はassertで拒否する。修正記録はdocs/agent/fixes.md、原本の回帰はtests/imports/square_matrix_source.cpp。全クラスの共通変換器対応とLean証明は引き続き未完了で、C++の修正だけで公開・検証完了とは扱わない。
+
+## 2026-11-05: Groupの公開側の暗黙変換・構築形式を復元
+
+同日に再現した暗黙変換の縮小と、Affineの既定構築のコピー回数/e()の構築順の差を、公開CPPの元hidden friend・委譲・return形式を復元して修正した。元ソースは維持する。記録はdocs/agent/fixes.md、仕様と検証範囲はdocs/group.md。元と同じLLの一般定理と生成モデルの一致を候補で確認後に正本へ統合し、追加後の全件検証は進行中。任意TのLean証明や完全なobject/lifetime ASTの検証が完了したとは扱わない。
+
+## 2026-11-05: library3のGroup/Mappingは同一APIとして統合できていない
+
+GCC13.3.0/C++17で旧版と公開版を直接比較した。旧Groupのpublic field `x/a/b` への書込みは旧版でコンパイル・実行成功、公開版はコンパイル失敗。旧Mappingの `Affine<long long>(2,1).apply(0.5)` は2、公開GroupAffineは引数をlong longへ変換して1。旧GroupSum<double>の正の0の逆元は `e().x-x` により正の0だが、公開版の単項minusでは負の0になる。証拠は `.cache/wip/group_legacy_api_review_20261105/receipt.json` と各CPP/log。元ソースの不具合と断定せず、公開側が旧API/汎用性を保持していない未解消差として台帳を訂正した。
+
+全137件の検証では、元のpublic field・異型Uのapply・値渡し・ide/compose・演算の定義を維持して扱う必要がある。単一の整数具体化やgetterへの置換で旧版検証完了とはしない。独立したnamespaceの元APIを共通変換器と証明で扱う対応も含め、解消まで未完了。

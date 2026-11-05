@@ -1113,6 +1113,35 @@ theorem source_copy_preserves_containers (s : NState) (fields : List Field)
   exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,
     goodAfter,kept,ready_preserves_containers fields s after ready⟩
 end MemberCopy
+
+namespace MemberCopy
+open Proofs.CppNestedProgram Proofs.CppNestedVectorBindings
+
+def PreservesReferences (before after : NState) : Prop :=
+  ∀ reference value, before.frame.read reference = some value → after.frame.read reference = some value
+
+theorem ready_preserves_references (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) : PreservesReferences before after := by
+  induction ready with
+  | nil s => intro reference value actual; exact actual
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    intro reference value actual
+    exact ih reference value actual
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    intro reference value actual
+    have extension := vector_extension before slot index ty writable binding buffer found resolved lengths supported
+    exact ih reference value (Proofs.CppFrameExtension.read_kept _ _ extension reference value actual)
+
+theorem source_copy_preserves_observers (s : NState) (fields : List Field)
+    (good : Good s) (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after ∧ PreservesContainers s after ∧ PreservesReferences s after := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,
+    goodAfter,kept,ready_preserves_containers fields s after ready,
+    ready_preserves_references fields s after ready⟩
+end MemberCopy
+
 '''
 
 
@@ -1269,6 +1298,18 @@ def emit_class_layout(source, qualified, namespace='Proofs.Generated.ClassLayout
                   '  obtain ⟨after,ran,goodAfter,kept,containers⟩ :=',
                   '    MemberCopy.source_copy_preserves_containers state fields good sources',
                   '  refine ⟨after,?_,goodAfter,kept,containers⟩',
+                  '  simp [copyFuel,assembled,ran,Proofs.CppLoop.liftChecked,Bind.bind,Proofs.CppLoop.Outcome.bind]; rfl',
+                  'theorem copy_observers_of_fields (state : NState) (source : Proofs.CppConstructorMultiFinish.ObjectRef)',
+                  '    (targetConst : Bool) (fields : List MemberCopy.Field)',
+                  '    (assembled : copyFields source targetConst = some fields)',
+                  '    (good : MemberCopy.Good state) (sources : MemberCopy.Sources state fields) :',
+                  '    ∃ after, copyFuel (fields.length+1) state source targetConst =',
+                  '        .finished (after,MemberCopy.reference state fields) ∧',
+                  '      MemberCopy.Good after ∧ MemberCopy.Keeps state after ∧',
+                  '      MemberCopy.PreservesContainers state after ∧ MemberCopy.PreservesReferences state after := by',
+                  '  obtain ⟨after,ran,goodAfter,kept,containers,references⟩ :=',
+                  '    MemberCopy.source_copy_preserves_observers state fields good sources',
+                  '  refine ⟨after,?_,goodAfter,kept,containers,references⟩',
                   '  simp [copyFuel,assembled,ran,Proofs.CppLoop.liftChecked,Bind.bind,Proofs.CppLoop.Outcome.bind]; rfl',
                   'theorem copy_layout_of_fields (state : NState) (source : Proofs.CppConstructorMultiFinish.ObjectRef)',
                   '    (targetConst : Bool) (fields : List MemberCopy.Field)',

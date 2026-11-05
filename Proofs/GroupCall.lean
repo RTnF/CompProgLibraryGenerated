@@ -413,6 +413,89 @@ theorem groupsum_new_correct (caller : NState) (e : NExpr) (v : Int)
       ScalarPost2 caller Sinit res e.nodes 70 caller.scalars.memory :=
   ctor_correct _ rfl rfl rfl caller e v hs hty value hv valid lengths strict base
 
+def copy_tail : Command :=
+  .sequence (.primitive (.declare s64 true (.variable s64 0)))
+    (.sequence (.primitive (.declare s64 true (.variable s64 1)))
+      (.sequence (.primitive (.ret (.variable s64 2))) Sk))
+
+def default_shape (checked : Bool) (e : NExpr) : Command :=
+  .sequence (.primitive (.declare s64 true e))
+    (if checked then .sequence (.primitive (.check (nz 0))) copy_tail else copy_tail)
+
+theorem copy_tail_exec (P : List Cell) (v : Int) (hv : s64.valid v = true) :
+    ∃ r, pexec 1 copy_tail (ws P [] [⟨s64,v⟩]) = some r ∧ r.ret = some v ∧
+      r.cost ≤ 10 ∧ r.need ≤ P.length+40 ∧ r.ps.mem = P ++ [⟨s64,v⟩,⟨s64,v⟩,⟨s64,v⟩] := by
+  have e0 : penv (ws P [] [⟨s64,v⟩]) 0 s64 = some v :=
+    ws_env_loc _ _ _ 0 ⟨s64,v⟩ s64 rfl rfl hv
+  have q1 := (pexec_prim 1 _ _).trans (ws_declare P [] [⟨s64,v⟩] s64 (.variable s64 0) v
+    (by rw [den_variable]; exact e0) (convS _ hv))
+  have e1 : penv (ws P [] [⟨s64,v⟩,⟨s64,v⟩]) 1 s64 = some v :=
+    ws_env_loc _ _ _ 1 ⟨s64,v⟩ s64 rfl rfl hv
+  have q2 := (pexec_prim 1 _ _).trans (ws_declare P [] [⟨s64,v⟩,⟨s64,v⟩] s64 (.variable s64 1) v
+    (by rw [den_variable]; exact e1) (convS _ hv))
+  have e2 : penv (ws P [] [⟨s64,v⟩,⟨s64,v⟩,⟨s64,v⟩]) 2 s64 = some v :=
+    ws_env_loc _ _ _ 2 ⟨s64,v⟩ s64 rfl rfl hv
+  have q3 := exec_ret 1 (ws P [] [⟨s64,v⟩,⟨s64,v⟩,⟨s64,v⟩]) (.variable s64 2) v
+    (by rw [den_variable]; exact e2)
+  have q := seq_some q1 rfl (seq_some q2 rfl q3)
+  refine ⟨_,q,rfl,?_,?_,?_⟩
+  · simp [NExpr.nodes]
+  · simp [NExpr.nodes,ws]
+  · simp [ws]
+
+theorem default_exec (P : List Cell) (checked : Bool) (e : NExpr) (v : Int)
+    (hv : s64.valid v = true) (he : e.denote (penv (ws P [] [])) = some v)
+    (hn : e.nodes ≤ 10) (hne : checked = true → v ≠ 0) :
+    ∃ r, pexec 1 (default_shape checked e) ⟨P,[]⟩ = some r ∧ r.ret = some v ∧
+      r.cost ≤ 30 ∧ r.need ≤ P.length+40 ∧ r.ps.mem = P ++ [⟨s64,v⟩,⟨s64,v⟩,⟨s64,v⟩] := by
+  have q1 := (pexec_prim 1 _ _).trans (ws_declare P [] [] s64 e v he (convS _ hv))
+  obtain ⟨r,tail,ret,cost,need,mem⟩ := copy_tail_exec P v hv
+  cases checked with
+  | false =>
+    have q := seq_some q1 rfl tail
+    rw [ws_nil] at q
+    refine ⟨_,q,ret,?_,?_,mem⟩
+    · simpa using (by omega : e.nodes+1+r.cost ≤ 30)
+    · simp; omega
+  | true =>
+    have e0 : penv (ws P [] [⟨s64,v⟩]) 0 s64 = some v :=
+      ws_env_loc _ _ _ 0 ⟨s64,v⟩ s64 rfl rfl hv
+    have qc := (pexec_prim 1 _ _).trans (ws_check P [] [⟨s64,v⟩] (nz 0) 1
+      (nz_value _ 0 v e0 (hne rfl)) (by decide))
+    have q := seq_some q1 rfl (seq_some qc rfl tail)
+    rw [ws_nil] at q
+    refine ⟨_,q,ret,?_,?_,mem⟩
+    · simp [NExpr.nodes]; omega
+    · simp [NExpr.nodes]; omega
+
+theorem default_correct (prog : NProgram) (checked : Bool) (e : NExpr) (v : Int)
+    (hp : prog.parameters = []) (hb : prog.body = default_shape checked e)
+    (hr : prog.result = ResultKind.scalar s64) (he : ∀ env, e.denote env = some v)
+    (hs : e.scalarOnly = true) (hn : e.nodes ≤ 10) (hv : s64.valid v = true)
+    (hne : checked = true → v ≠ 0)
+    (caller : NState) (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller prog.parameters [] = some Sinit ∧
+      prog.callFuel fuel caller [] = .finished (res,.scalar v) ∧
+      ScalarPost2 caller Sinit res 0 70 caller.scalars.memory := by
+  obtain ⟨Sinit,hprep,sSlots,sMem,sBind,sBase,sScope,sFrame,sWork,sPeak⟩ := prep_none caller _ hp valid
+  have hlen : (callerP caller).length = caller.scalars.memory.length +
+      (caller.scalars.bindings.length+caller.frame.bindings.length) := by simp [callerP]
+  have takeM : (callerP caller ++ [(⟨s64,v⟩ : Cell),⟨s64,v⟩,⟨s64,v⟩]).take caller.scalars.memory.length = caller.scalars.memory := take_P caller _
+  obtain ⟨r,ran,ret,cost,need,mem⟩ := default_exec (callerP caller) checked e v hv (he _) hn hne
+  rw [← hb] at ran
+  have scalar : Scalar prog.body = true := by
+    rw [hb]; cases checked <;> simp [default_shape,copy_tail,Scalar,hs,nz,NExpr.scalarOnly]
+  have hpost := call_scalar caller prog [] Sinit (callerP caller) []
+    hprep (by rw [sSlots]; rfl) sMem sBind sBase sScope sFrame sPeak
+    (by omega) (by simp [callerP]) valid lengths strict base scalar 1 r ran v ret s64 hr hv
+    (by omega) (by simp) 0 70 (by omega)
+  obtain ⟨fuel,res,hrun,post⟩ := hpost
+  refine ⟨Sinit,fuel,res,hprep,hrun,?_⟩
+  simpa only [mem,takeM] using post
+
 theorem groupsum_default_correct (caller : NState) (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
@@ -420,8 +503,11 @@ theorem groupsum_default_correct (caller : NState) (valid : caller.frame.state.w
     ∃ Sinit fuel res, prepare caller Proofs.GroupInstance.GroupSum_long_long_new1.parameters [] = some Sinit ∧
       Proofs.GroupInstance.GroupSum_long_long_new1.callFuel fuel caller [] = .finished (res,.scalar 0) ∧
       ScalarPost2 caller Sinit res 0 70 caller.scalars.memory :=
-  const_correct _ _ _ rfl rfl rfl (by intro env; simp [NExpr.denote, Ty.valid, Ty.convert, s64]) (by simp [NExpr.scalarOnly])
-    (by simp [NExpr.nodes]) (by simp [Ty.valid]) caller valid lengths strict base
+  default_correct _ false (.cast s64 (.literal i32 0)) 0 rfl rfl rfl
+    (by intro env; simp [NExpr.denote, Ty.valid, Ty.convert, s64])
+    (by decide) (by decide) (by decide) (by simp)
+    caller valid lengths strict base
+
 
 theorem groupmul_default_correct (caller : NState) (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
@@ -430,11 +516,12 @@ theorem groupmul_default_correct (caller : NState) (valid : caller.frame.state.w
     ∃ Sinit fuel res, prepare caller Proofs.GroupInstance.GroupMul_long_long_new1.parameters [] = some Sinit ∧
       Proofs.GroupInstance.GroupMul_long_long_new1.callFuel fuel caller [] = .finished (res,.scalar 1) ∧
       ScalarPost2 caller Sinit res 0 70 caller.scalars.memory :=
-  const_correct _ _ _ rfl rfl rfl (by intro env; simp [NExpr.denote, Ty.valid, Ty.convert, s64]) (by simp [NExpr.scalarOnly])
-    (by simp [NExpr.nodes]) (by simp [Ty.valid]) caller valid lengths strict base
+  default_correct _ true (.cast s64 (.literal i32 1)) 1 rfl rfl rfl
+    (by intro env; simp [NExpr.denote, Ty.valid, Ty.convert, s64])
+    (by decide) (by decide) (by decide) (by simp)
+    caller valid lengths strict base
 
 
--- `Affine_compose_a/b` take four read-only references (p.a, p.b, q.a, q.b).
 theorem prep_rrrr (caller : NState) (params : List CppVectorBindings.Parameter)
     (hp : params = [.scalar s64 true false,.scalar s64 true false,.scalar s64 true false,.scalar s64 true false])
     (s1 s2 s3 s4 : Nat) (b1 b2 b3 b4 : CppState.Binding) (v1 v2 v3 v4 : Int)
@@ -982,5 +1069,138 @@ theorem affine_inv_b_correct (caller : NState) (sa sb : Nat) (ba bb : CppState.B
   · simp [NExpr.nodes]
   · simp [NExpr.nodes]
   · simpa using take_P caller []
+
+theorem prepare_values2 (ty : Ty) (caller : NState) (params : List Proofs.CppVectorBindings.Parameter)
+    (hp : params = [.scalar ty false true, .scalar ty false true]) (e1 e2 : NExpr) (v1 v2 : Int)
+    (h1 : e1.scalarOnly = true) (h2 : e2.scalarOnly = true) (t1ty : e1.resultType = ty) (t2ty : e2.resultType = ty)
+    (d1 : e1.denote (envOf caller) = some v1) (d2 : e2.denote (envOf caller) = some v2)
+    (valid : caller.frame.state.wellFormed = true) (n1 : ty.valid v1 = true) (n2 : ty.valid v2 = true) :
+    ∃ t1 t2, Good caller t1 e1.nodes e1.nodes ∧ Good t1 t2 e2.nodes e2.nodes ∧
+      ∃ Sinit, prepare caller params [.value e1,.value e2] = some Sinit ∧
+        Sinit.slots = [.scalar 0,.scalar 1] ∧
+        Sinit.scalars.memory = callerP caller ++ [⟨ty,v1⟩,⟨ty,v2⟩] ∧
+        Sinit.scalars.bindings = [⟨(callerP caller).length,true⟩,⟨(callerP caller).length+1,true⟩] ∧
+        Sinit.scalars.baseMemory = caller.scalars.baseMemory ∧ Sinit.scope = caller.scope+1 ∧
+        Sinit.frame = ⟨caller.frame.state,caller.frame.rootWritable,[]⟩ ∧
+        Sinit.scalars.work = t2.scalars.work+3 ∧ t2.scalars.peak ≤ Sinit.scalars.peak := by
+  obtain ⟨t1,ran1,g1⟩ := scalar_eval e1 caller v1 h1 d1
+  obtain ⟨t2,ran2,g2⟩ := scalar_eval e2 t1 v2 h2 (by rw [envOf_core g1.1]; exact d2)
+  refine ⟨t1,t2,g1,g2,?_⟩
+  have frameT : t2.frame = caller.frame := by rw [g2.1.1,g1.1.1]
+  have fs : t2.frame.state = caller.frame.state := by rw [frameT]
+  have fr : t2.frame.rootWritable = caller.frame.rootWritable := by rw [frameT]
+  have fb : t2.frame.bindings = caller.frame.bindings := by rw [frameT]
+  have hmem : t2.scalars.memory = caller.scalars.memory := by
+    have a := g2.1.2.2.2.1; have b := g1.1.2.2.2.1; rw [a,b]
+  have hbind : t2.scalars.bindings = caller.scalars.bindings := by
+    have a := g2.1.2.2.2.2.1; have b := g1.1.2.2.2.2.1; rw [a,b]
+  have hbase : t2.scalars.baseMemory = caller.scalars.baseMemory := by
+    have a := g2.1.2.2.2.2.2; have b := g1.1.2.2.2.2.2; rw [a,b]
+  have res1 : resolve caller (.scalar ty false true) (.value e1) = some (t1,.scalar ty true v1) := by
+    simp [resolve,t1ty,ran1]
+  have res2 : resolve t1 (.scalar ty false true) (.value e2) = some (t2,.scalar ty true v2) := by
+    simp [resolve,t2ty,ran2]
+  rw [hp]
+  simp [prepare,valid,resolveAll,res1,res2]
+  simp [fs,fr,fb,hmem,hbind,hbase,bindAll,bindOne,CppState.bindArgument,n1,n2,callerP,
+    NState.observe,CppState.State.observe]
+  omega
+
+theorem value2_correct (prog : NProgram) (second : Bool)
+    (hp : prog.parameters = [.scalar s64 false true,.scalar s64 false true])
+    (hb : prog.body = .sequence (.primitive (.ret (.variable s64 (if second then 1 else 0)))) Sk)
+    (hr : prog.result = ResultKind.scalar s64) (caller : NState) (e1 e2 : NExpr) (x y : Int)
+    (hs1 : e1.scalarOnly = true) (hs2 : e2.scalarOnly = true)
+    (ht1 : e1.resultType = s64) (ht2 : e2.resultType = s64)
+    (d1 : e1.denote (envOf caller) = some x) (d2 : e2.denote (envOf caller) = some y)
+    (hx : s64.valid x = true) (hy : s64.valid y = true) (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller prog.parameters [.value e1,.value e2] = some Sinit ∧
+      prog.callFuel fuel caller [.value e1,.value e2] = .finished (res,.scalar (if second then y else x)) ∧
+      ScalarPost2 caller Sinit res (e1.nodes+e2.nodes) 70 caller.scalars.memory := by
+  obtain ⟨t1,t2,g1,g2,Sinit,hprep,sSlots,sMem,sBind,sBase,sScope,sFrame,sWork,sPeak⟩ :=
+    prepare_values2 s64 caller _ hp e1 e2 x y hs1 hs2 ht1 ht2 d1 d2 valid hx hy
+  let P := callerP caller
+  let M := P ++ [(⟨s64,x⟩ : Cell),⟨s64,y⟩]
+  let bs : List CppState.Binding := [⟨P.length,true⟩,⟨P.length+1,true⟩]
+  have ev : penv ⟨M,bs⟩ (if second then 1 else 0) s64 = some (if second then y else x) := by
+    cases second
+    · exact penv_ok _ 0 s64 ⟨P.length,true⟩ ⟨s64,x⟩ rfl
+        (by simp [M,P]) rfl hx
+    · exact penv_ok _ 1 s64 ⟨P.length+1,true⟩ ⟨s64,y⟩ rfl
+        (by simp [M,P]) rfl hy
+  have takeM : M.take caller.scalars.memory.length = caller.scalars.memory := take_P caller _
+  have q := exec_ret 1 (⟨M,bs⟩ : PS) (.variable s64 (if second then 1 else 0)) (if second then y else x)
+    (by rw [den_variable]; exact ev)
+  rw [← hb] at q
+  have hexec := q
+  have peak1 := g1.2.2.2.2.1
+  have peak2 := g2.2.2.2.2.1
+  have work1 := g1.2.2.1
+  have work2 := g2.2.2.1
+  have hlen : P.length = caller.scalars.memory.length +
+      (caller.scalars.bindings.length+caller.frame.bindings.length) := by simp [P,callerP]
+  have hpost := call_scalar caller prog [.value e1,.value e2] Sinit M bs
+    hprep (by rw [sSlots]; rfl) sMem sBind sBase sScope sFrame (by omega)
+    (by simp [M]; omega) (by rw [takeM]) valid lengths strict base
+    (by rw [hb]; simp [Scalar,NExpr.scalarOnly]) 1 _ hexec _ rfl s64 hr
+    (by cases second <;> assumption) (by simp [M,bs,P,NExpr.nodes]) (by simp [M,bs,P])
+    (e1.nodes+e2.nodes) 70 (by simp [NExpr.nodes]; omega)
+  obtain ⟨fuel,res,hrun,post⟩ := hpost
+  exact ⟨Sinit,fuel,res,hprep,hrun,by simpa only [takeM] using post⟩
+
+theorem affine_new_a_correct (caller : NState) (e1 e2 : NExpr) (x y : Int)
+    (hs1 : e1.scalarOnly = true) (hs2 : e2.scalarOnly = true)
+    (ht1 : e1.resultType = s64) (ht2 : e2.resultType = s64)
+    (d1 : e1.denote (envOf caller) = some x) (d2 : e2.denote (envOf caller) = some y)
+    (hx : s64.valid x = true) (hy : s64.valid y = true) (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.GroupInstance.GroupAffine_long_long_new0__a.parameters [.value e1,.value e2] = some Sinit ∧
+      Proofs.GroupInstance.GroupAffine_long_long_new0__a.callFuel fuel caller [.value e1,.value e2] = .finished (res,.scalar x) ∧
+      ScalarPost2 caller Sinit res (e1.nodes+e2.nodes) 70 caller.scalars.memory :=
+  value2_correct _ false rfl rfl rfl caller e1 e2 x y hs1 hs2 ht1 ht2 d1 d2 hx hy valid lengths strict base
+
+theorem affine_new_b_correct (caller : NState) (e1 e2 : NExpr) (x y : Int)
+    (hs1 : e1.scalarOnly = true) (hs2 : e2.scalarOnly = true)
+    (ht1 : e1.resultType = s64) (ht2 : e2.resultType = s64)
+    (d1 : e1.denote (envOf caller) = some x) (d2 : e2.denote (envOf caller) = some y)
+    (hx : s64.valid x = true) (hy : s64.valid y = true) (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.GroupInstance.GroupAffine_long_long_new0__b.parameters [.value e1,.value e2] = some Sinit ∧
+      Proofs.GroupInstance.GroupAffine_long_long_new0__b.callFuel fuel caller [.value e1,.value e2] = .finished (res,.scalar y) ∧
+      ScalarPost2 caller Sinit res (e1.nodes+e2.nodes) 70 caller.scalars.memory :=
+  value2_correct _ true rfl rfl rfl caller e1 e2 x y hs1 hs2 ht1 ht2 d1 d2 hx hy valid lengths strict base
+
+theorem affine_default_a_correct (caller : NState) (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.GroupInstance.GroupAffine_long_long_new1__a.parameters [] = some Sinit ∧
+      Proofs.GroupInstance.GroupAffine_long_long_new1__a.callFuel fuel caller [] = .finished (res,.scalar 1) ∧
+      ScalarPost2 caller Sinit res 0 70 caller.scalars.memory :=
+  const_correct _ _ _ rfl rfl rfl (by intro env; simp [NExpr.denote, Ty.valid, Ty.convert]) (by simp [NExpr.scalarOnly])
+    (by simp [NExpr.nodes]) (by simp [Ty.valid]) caller valid lengths strict base
+
+theorem affine_default_b_correct (caller : NState) (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.GroupInstance.GroupAffine_long_long_new1__b.parameters [] = some Sinit ∧
+      Proofs.GroupInstance.GroupAffine_long_long_new1__b.callFuel fuel caller [] = .finished (res,.scalar 0) ∧
+      ScalarPost2 caller Sinit res 0 70 caller.scalars.memory :=
+  const_correct _ _ _ rfl rfl rfl (by intro env; simp [NExpr.denote, Ty.valid, Ty.convert]) (by simp [NExpr.scalarOnly])
+    (by simp [NExpr.nodes]) (by simp [Ty.valid]) caller valid lengths strict base
+
+-- The original hidden friends have the same complete scalar programs as their namespace counterparts.
+theorem groupsum_friend_program : Proofs.GroupInstance.GroupSum_long_long_op = Proofs.GroupInstance.op_GroupSum_long_long := rfl
+theorem groupmul_friend_program : Proofs.GroupInstance.GroupMul_long_long_op = Proofs.GroupInstance.op_GroupMul_long_long := rfl
+theorem affine_friend_a_program : Proofs.GroupInstance.GroupAffine_long_long_op_friend__a = Proofs.GroupInstance.GroupAffine_long_long_op__a := rfl
+theorem affine_friend_b_program : Proofs.GroupInstance.GroupAffine_long_long_op_friend__b = Proofs.GroupInstance.GroupAffine_long_long_op__b := rfl
 
 end Proofs.GroupCall

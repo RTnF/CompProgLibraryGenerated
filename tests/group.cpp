@@ -19,7 +19,60 @@ struct TrackedValue {
 };
 int TrackedValue::copies = 0;
 
+// The original braced return and delegating constructor have observable effects for generic T.
+struct ConstructionEvent {
+    int value;
+    static std::vector<int> events;
+    ConstructionEvent(int x) : value(x) { events.push_back(x); }
+    ConstructionEvent(const ConstructionEvent &other) : value(other.value) { events.push_back(100 + value); }
+};
+std::vector<int> ConstructionEvent::events;
+
+template <template <class> class Affine> std::vector<int> default_events() {
+    ConstructionEvent::events.clear();
+    Affine<ConstructionEvent> value;
+    auto events = ConstructionEvent::events;
+    assert(value.a().value == 1 && value.b().value == 0);
+    return events;
+}
+
+template <template <class> class Affine> std::vector<int> identity_events() {
+    ConstructionEvent::events.clear();
+    auto value = Affine<ConstructionEvent>::e();
+    auto events = ConstructionEvent::events;
+    assert(value.a().value == 1 && value.b().value == 0);
+    return events;
+}
+
+void check_original_api() {
+    const auto identity = identity_events<cp::GroupAffine>();
+    assert(identity.size() >= 2 && identity[0] == 1 && identity[1] == 0);
+    assert(default_events<cp::GroupAffine>() == identity);
+    cp::GroupSum<long long> sum(2);
+    cp::GroupMul<long long> mul(2);
+    assert(op(sum, 3LL).x() == 5 && op(3LL, sum).x() == 5);
+    assert(op(mul, 3LL).x() == 6 && op(3LL, mul).x() == 6);
+    assert(op(sum, 3).x() == 5 && op(cp::GroupSum<int>(2), 3L).x() == 5);
+    assert(cp::op(sum, sum).x() == 4 && cp::op(mul, mul).x() == 4);
+    struct AffineProxy {
+        cp::GroupAffine<long long> value;
+        operator cp::GroupAffine<long long>() const { return value; }
+    };
+    cp::GroupAffine<long long> a(2, 3);
+    AffineProxy b{{5, 7}};
+    assert(op(a, b).a() == 10 && op(a, b).b() == 22);
+    assert(op(b, a).a() == 10 && op(b, a).b() == 17);
+    struct Local {
+        int value;
+        Local(int x) : value(x) {}
+        Local operator+(const Local &other) const { return Local(value + other.value); }
+    };
+    cp::GroupSum<Local> local(Local(2));
+    assert(op(local, local).x().value == 4 && cp::op(local, local).x().value == 4);
+}
+
 int main() {
+    check_original_api();
     using GroupMul = cp::GroupMul<long long>;
     using GroupSum = cp::GroupSum<long long>;
     using GroupAffine = cp::GroupAffine<long long>;

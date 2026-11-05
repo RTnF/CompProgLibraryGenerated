@@ -615,6 +615,58 @@ def direct_functions(stream, source, *, construction_stages=False):
         if header.get('kind') in ('FunctionDecl','FunctionTemplateDecl','NamespaceDecl','CXXRecordDecl',
                                   'ClassTemplateSpecializationDecl') and direct_location(header,source):
             collect(json.loads(raw))
+    def compile_only_type(node):
+        if not isinstance(node, dict):
+            return True
+        kind = node.get('kind', '')
+        if kind in ('VariableArrayType', 'DependentSizedArrayType') or 'typeof' in kind.lower():
+            return False
+        info = node.get('type', {})
+        if any('[' in text or 'typeof' in text.lower() for text in info.values() if isinstance(text, str)):
+            return False
+        return all(compile_only_type(child) for child in node.get('inner', []))
+
+    def compile_only_declaration(node):
+        kind = node.get('kind')
+        children = node.get('inner', [])
+        if kind == 'StaticAssertDecl':
+            return True
+        if kind in ('TypeAliasDecl', 'TypedefDecl'):
+            return compile_only_type(node) and not any(c.get('kind', '').endswith('Attr') for c in children)
+        return (kind == 'FunctionDecl' and compile_only_type(node) and node.get('storageClass') in (None, 'extern')
+                and all(c.get('kind') == 'ParmVarDecl' for c in children))
+
+    def empty_constexpr_if(node):
+        if (node.get('kind') != 'IfStmt' or not node.get('isConstexpr')
+                or node.get('hasInit') or node.get('hasVar')):
+            return False
+        children = node.get('inner', [])
+        expected = 3 if node.get('hasElse') else 2
+        return (len(children) == expected and children[0].get('kind') not in ('VarDecl', 'DeclStmt')
+                and all(c.get('kind') == 'CompoundStmt' and not c.get('inner') for c in children[1:]))
+
+    def strip_compile_only(node):
+        if not isinstance(node, dict):
+            return
+        children = node.get('inner', [])
+        for child in children:
+            strip_compile_only(child)
+        if node.get('kind') == 'CompoundStmt':
+            retained = []
+            for child in children:
+                if child.get('kind') == 'StaticAssertDecl' or empty_constexpr_if(child):
+                    continue
+                if child.get('kind') == 'DeclStmt' and child.get('inner') and all(
+                        compile_only_declaration(c) for c in child['inner']):
+                    continue
+                retained.append(child)
+            node['inner'] = retained
+
+    # Clang has checked compile-time declarations and resolved all references.
+    # Empty constexpr branches have no init/condition variable or runtime body.
+    # Runtime variables, attributed functions and all executable statements stay.
+    for node in [*roots, *(c.record for c, _ in [*erased_classes, *split_classes])]:
+        strip_compile_only(node)
     from inline_ast import inline_functions
     if split_classes:
         from class_split import Splitter
