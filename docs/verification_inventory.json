@@ -22014,273 +22014,494 @@
           "kind": "ClassTemplateDecl",
           "line": 5,
           "declaration": "GroupSum",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
           "line": 5,
           "declaration": "struct GroupSum definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 6,
           "declaration": "referenced x 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 7,
           "declaration": "GroupSum<T> 'void (T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 8,
           "declaration": "GroupSum<T> 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 9,
           "declaration": "referenced e 'GroupSum<T> ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 10,
           "declaration": "friend_undeclared op 'GroupSum<T> (const GroupSum<T> &, const GroupSum<T> &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 11,
           "declaration": "inv 'GroupSum<T> () const' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "ClassTemplateDecl",
           "line": 19,
           "declaration": "GroupAffine",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
           "line": 19,
           "declaration": "struct GroupAffine definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 20,
           "declaration": "referenced a 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 20,
           "declaration": "referenced b 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 21,
           "declaration": "GroupAffine<T> 'void (T, T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 22,
           "declaration": "GroupAffine<T> 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 23,
           "declaration": "referenced e 'GroupAffine<T> ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 24,
           "declaration": "friend_undeclared op 'GroupAffine<T> (const GroupAffine<T> &, const GroupAffine<T> &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 25,
           "declaration": "inv 'GroupAffine<T> () const' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_sum.cpp",
+            "tests/imports/original_group_affine.cpp",
+            "tests/lean/original_sum.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         }
       ],
       "declaration_scan": {
@@ -22295,12 +22516,12 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": null,
+      "verification_target": "tests/test_original_template_classes.py",
       "status": {
-        "review": "pending",
+        "review": "partial",
         "bug": "unknown",
-        "cpp_tested": false,
-        "common_translator": false,
+        "cpp_tested": true,
+        "common_translator": true,
         "lean_proved": false,
         "include_verified": false,
         "published": false
@@ -22315,7 +22536,20 @@
         "experiments/library/cpp/algebraic_structure/monoid_lazy.hpp",
         "experiments/library3/cpp/AlgebraicStructure/Monoid.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "verifier/class_templates.py",
+        "verifier/template_class_ir.py",
+        "tests/test_class_templates.py",
+        "tests/test_original_template_classes.py",
+        "docs/original_template_classes.md",
+        "tests/imports/original_sum.cpp",
+        "tests/imports/original_group_affine.cpp",
+        "tests/lean/original_sum.lean"
+      ],
+      "review_notes": [
+        "2026-11-06: 原本のGroupSum<long long>/GroupAffine<long long>を共通変換器で15モデルへ生成。Sum invはe().x-xのまま任意typed callerの結果・停止・元memory保持・ScalarPost2 0 80を証明。他14モデルは既存モデルと全プログラム/callFuel一致をLean/固定nanodaで回帰検査。 有限具体化の部分検証であり、原本のAPIや型を変更していない。任意T/U・全caller AST・完全object/lifetime・公開統合は未完了。file/declarationのlean_provedとpublishedはfalseを維持する。"
+      ]
     },
     {
       "source": "experiments/library3/cpp/AlgebraicStructure/Mapping.hpp",
@@ -22334,177 +22568,320 @@
           "kind": "ClassTemplateDecl",
           "line": 16,
           "declaration": "Affine",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
           "line": 16,
           "declaration": "struct Affine definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 17,
           "declaration": "referenced a 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 17,
           "declaration": "referenced b 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 18,
           "declaration": "Affine<T> 'void (T, T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 19,
           "declaration": "Affine<T> 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 20,
           "declaration": "referenced ide 'Affine<T> ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FunctionTemplateDecl",
           "line": 22,
           "declaration": "apply",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 22,
           "declaration": "apply 'U (U) const' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 25,
           "declaration": "friend_undeclared compose 'Affine<T> (const Affine<T> &, const Affine<T> &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 26,
           "declaration": "inv 'Affine<T> () const' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "verifier/class_templates.py",
+            "verifier/template_class_ir.py",
+            "tests/test_class_templates.py",
+            "tests/test_original_template_classes.py",
+            "docs/original_template_classes.md",
+            "tests/imports/original_mapping.cpp",
+            "tests/lean/original_mapping.lean",
+            "tests/lean/original_mapping_int.lean"
+          ],
+          "review_notes": [
+            "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         }
       ],
       "declaration_scan": {
@@ -22519,12 +22896,12 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": null,
+      "verification_target": "tests/test_original_template_classes.py",
       "status": {
-        "review": "pending",
+        "review": "partial",
         "bug": "unknown",
-        "cpp_tested": false,
-        "common_translator": false,
+        "cpp_tested": true,
+        "common_translator": true,
         "lean_proved": false,
         "include_verified": false,
         "published": false
@@ -22533,7 +22910,20 @@
       "duplicate_candidates": [
         "experiments/library/cpp/algebraic_structure/monoid_lazy.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "verifier/class_templates.py",
+        "verifier/template_class_ir.py",
+        "tests/test_class_templates.py",
+        "tests/test_original_template_classes.py",
+        "docs/original_template_classes.md",
+        "tests/imports/original_mapping.cpp",
+        "tests/lean/original_mapping.lean",
+        "tests/lean/original_mapping_int.lean"
+      ],
+      "review_notes": [
+        "2026-11-06: 原本のAffine<long long>の12モデルを共通変換器から生成。apply<long long>/apply<int>の値渡しを保った任意typed callerの結果・停止・元memory保持・ScalarPost2 0 80をLean/固定nanodaで回帰検査。intの結果はGCC13.3 LP64 signedDecode32で、結果のint範囲制限は追加していない。doubleはnative回帰のみ。 有限具体化の部分検証であり、原本のAPIや型を変更していない。任意T/U・全caller AST・完全object/lifetime・公開統合は未完了。file/declarationのlean_provedとpublishedはfalseを維持する。"
+      ]
     },
     {
       "source": "experiments/library3/cpp/AlgebraicStructure/Monoid.hpp",

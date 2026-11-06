@@ -75,6 +75,16 @@ member_exports経路の `*_exportViewFuel(..., targetConst)` は、構築本体�
 
 実クラスの回帰は、int/long longの3vectorと3scalar、通常/const/mutable宣言、構成子中の書込みとreturn;、const methodによるmutable更新をLeanとC++/UBSanで照合する。別のクラスでは元scalarへの書込みとreadonly別名の保持、追加fieldだけのview制限を確認する。既存オブジェクトへのconst参照view、caller ASTからのconstness導出、class copy/move/assignment/destructionと総資源は引き続き残件である。
 
+## 原本テンプレートの具体化入口
+
+`vector_stl.translation_unit` の任意指定 `template_instance` は、`TemplateInstance(arguments, witness)` で指定した primitive 型または非負の十進整数の引数と、専用の具体化ファイルを使う。通常のクラス経路は従来どおりである。元ヘッダーを唯一の forced include とし、生成した非公開 namespace の型 alias から、同一 Clang TU の specialization ID と primary template ID を辿る。両宣言が元ヘッダーに属する場合だけ採用し、別の include 先や witness 側の明示的具体化は受け入れない。元ソースと具体化ファイルの内容 hash を実行前後で確認し、標準 include/宣言監査も同じ TU を使う。この経路の自由関数候補は元 forced source 所有の定義に限定する。具体化ファイルや依存ヘッダーの関数を元ソースの定義として信頼しない。
+
+alias や copy の使用だけでは未使用メソッドの本体は具体化されない。lowering 前に `instantiate_members(record, requested)` で member template の具体的な型引数を明記し、`require_method_bodies` で本体不足を拒否する。選択したメソッドの宣言 ID・本体・値渡し・戻り型を保持し、モデル用の名前と元の名前・型引数・ID の台帳を分ける。未指定・未具体化・重複・名前衝突を拒否する。これは有限の具体化の入口であり、任意の T/U やクラス全体の C++ object/lifetime を検証済みとはしない。既存 Context の member template 対応を拡大するものでもない。原本の有限具体化は下記の共通 lowering 入口と登録回帰で検査する。任意型と完全な object/lifetime の統合は引き続き未完了である。
+
+scalar 消去では、既に trivial copy/move/destruction 等を確認した既知クラスの materialization を含む単一値式だけ、`ExprWithCleanups` の外枠を外せる。子の評価は保持し、cleanup の副作用、`CXXBindTemporaryExpr`、未知の型、既知名に似た別の型、複数値を拒否する。`tests/test_class_templates.py` で実 Clang の宣言所有性・未具体化本体・member instance の選択とこれらの境界を確認する。
+
+`template_class_ir.lower_template_class` はこの前処理を必ず通してからscalar消去・field分割・同一TU標準宣言監査・NestedBodyのloweringへ渡す共通入口である。元sourceとwitnessのhashをlowering完了時にも照合し、型probeが必要な場合は同じ具体化文脈で実行する機能ができるまで拒否する。原本Group／Mappingの具体化ファイルと一般callerの証明を用いた登録回帰は[旧library3の有限具体化](original_template_classes.md)を参照する。
+
 ## 複数メンバーの暗黙copy命令
 
 Construction.copyFieldsは、監査した元FieldDeclの宣言順にscalar宣言とvector copyの記述を作る。sourceのObjectRefはvector/scalarごとのslot列なので、宣言IDに対応した各列の位置を使って元の順序へ戻す。Construction.copyFuelは通常NStmt/Commandを使い、結果のObjectRefは宣言順で追加された実slotから各種fieldを選ぶ。constなsourceから通常のcopy先を作るときも、元のbinding権限をコピー先へ流用せず、宣言とcopy先のtargetConstに従って新しいcell/rootの権限を決める。

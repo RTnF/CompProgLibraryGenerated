@@ -4,6 +4,12 @@
 
 ## 再開時に最初に確認する状態
 
+- **96ecd58後の原本template統合は全件gate成功・未commit（2026-11-06）:** 実61257は終了0回収済み、再pollしない。CPython3.11.3/offline/jobs1/7200秒でC++59成功cache/bridge59今回実行/共有238（235今回実行/3cache）、52274宣言監査/Mathlib778module範囲/固定nanoda49128宣言、59header ZIPが成功。unchanged axiom定義とLean replayは照合済みcache（変更module0）でありfresh全module replayとはしない。STL sort契約依存2定理は別区分。all4835.601秒、1934入力hash不変。証拠は`.cache/wip/template_integration_20261106/gate/final_gate_receipt.json`。次は最新全tree機密走査とstage/commit blob照合→commit→手動承認付きpush→新SHAのCI/releaseを確認する。旧96ecd58のCI/release成功を現差分の公開完了に使わない。全137件は未達。
+
+- **今回の機密検査は未分類0:** 最新19変更ファイルの差分/変更前後は検出0、全公開予定1936ファイルの1件は既知のrowKey公開仕様digestとしてsource/定義hash/行/値を照合した誤検出。公式checksum照合済みGitleaks8.30.1/offline/既定ルール/ignore・inline allow無効、合成対照成功。この記録を含む再走査とstage/commit treeの全blob照合を行う。証拠はtemplate_integration_20261106/gate/release_secrets/secret_scan.json。MEMORY.md/cacheは公開しない。
+
+- **96ecd58のCI/release/配布照合は完了（2026-11-06確認）:** [CI42017723738](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42017723738) attempt1のverify-publicとrelease-headersともsuccess。実jobログで公開59/共有236、fresh最終監査52274宣言/778Mathlib import/full Lean replay/固定nanoda49128宣言を確認した。headers tag/bodyのSHA、公開ZIP全59header byteも一致し、ZIP SHA256は09356f4777cc6fac6636e179bd5c45f6f684b85d8b431682ebfad013a451c939。証拠はscalar_erasure_effects_20261105/sequenced_gate/{ci_api_receipt,ci_audit_receipt,published_receipt}.jsonとci_job_96ecd58_api.txt。監視92883は終了0で再pollしない。post-commitのこの記録はローカルで保持。元137件全体は未達で、次の原本template候補は全体handoff冒頭を参照する。
+
 - **公開前の機密検査28ファイルも通過:** sequenced_gate/secret_scan.jsonを参照。差分0、前後全文2件/tree1件は公開検証用SHA256の誤検出のみで未分類0。この追記を含め再走査して、走査済みblobとindex/commit treeを照合してから公開する。まだcommit/pushしていない。
 
 - **最終差分のローカルgate35231は終了0（2026-11-05）:** C++59（cache）・bridge59（今回再実行）・共有236（233再実行/3cache）・59header ZIPが成功、固定1923入力hash不変。proof-securityは同じ1074入力の成功cacheを再検証して使用し、実監査は全体handoffに示した前回の52274/固定nanoda49128宣言を根拠とする。all4605.389秒/全工程4613.081秒。証拠はscalar_erasure_effects_20261105/sequenced_gate/。旧61601は中断済みなので再pollしない。今から最新機密検査→commit→承認付き通常push→新SHAのCI/releaseを確認する。まだcommit/pushしていない。全137件は未達。

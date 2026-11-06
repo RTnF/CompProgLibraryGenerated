@@ -56,8 +56,8 @@
 
 | library3 のファイル | 対応 | 状況 |
 | --- | --- | --- |
-| AlgebraicStructure/Group.hpp | `library/group.hpp` | 一部。旧版のpublic field `x/a/b` は未復元。`GroupSum<double>::inv` は旧版の `e().x-x` と公開版の単項minusで正の0の符号が異なることを再現。旧版全体の統合・検証は未完了 |
-| AlgebraicStructure/Mapping.hpp（`Affine<T>`） | `library/group.hpp` の `GroupAffine` | 一部。public field `a/b`、`ide/compose` と `template<class U> U apply(U)` の元APIは未復元。`Affine<long long>(2,1).apply(0.5)` は旧版2・公開版1。異型引数・値渡しも保持する必要がある |
+| AlgebraicStructure/Group.hpp | `library/group.hpp` | 一部。旧版のpublic field `x/a/b` は公開版へ未復元。原本を変更せずLLの15モデルを生成する共通入口と独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。任意Tと完全object/lifetimeは未完了。`GroupSum<double>::inv` は旧版の `e().x-x` と公開版の単項minusで正の0の符号が異なる |
+| AlgebraicStructure/Mapping.hpp（`Affine<T>`） | `library/group.hpp` の `GroupAffine` | 一部。原本のpublic field・ide/compose・値渡しapplyを保持し、LLの12モデルとapplyのLL/intに一般callerの証明・独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。元APIの公開版への統合、任意T/U、完全object/lifetimeは未完了。`Affine<long long>(2,1).apply(0.5)` は旧版2・公開版1で、doubleはC++回帰のみ |
 | AlgebraicStructure/Monoid.hpp | `library/monoid.hpp` | 統合済み |
 | Array/CumulativeSum.hpp | `library/cumulative_sum.hpp` | 統合済み（`CumulativeSum2D` を含む） |
 | Array/SortUtil.hpp | `library/sort_util.hpp`, `search_util.hpp` | 統合済み。`arg_sort` 系は未（ラムダ比較の `stable_sort`） |

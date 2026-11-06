@@ -167,6 +167,33 @@ class Eraser:
             return node
         kind = node.get('kind')
         children = node.get('inner', [])
+        if kind == 'ExprWithCleanups':
+            # Drop only the envelope of known trivial record materializations;
+            # keep every child expression and reject destruction/cleanup effects.
+            materialized = []
+            known = set()
+            for cls in self.classes:
+                known.update((cls.display, 'cp::'+cls.display))
+                requested = cls.record.get('_template_witness_origin', {}).get('requested')
+                if requested:
+                    known.add(requested)
+
+            def validate_cleanup(expression):
+                if expression.get('cleanupsHaveSideEffects') or expression.get('kind') == 'CXXBindTemporaryExpr':
+                    raise ValueError('materialized scalar expression has unsupported cleanup effects')
+                if expression.get('kind') == 'MaterializeTemporaryExpr':
+                    info = expression.get('type', {})
+                    text = info.get('desugaredQualType', info.get('qualType', '')).removeprefix('const ').removeprefix('::')
+                    if text not in known:
+                        raise ValueError('materialized scalar expression needs an exact known trivial record type')
+                    materialized.append(text)
+                for child in expression.get('inner', []):
+                    validate_cleanup(child)
+
+            validate_cleanup(node)
+            if len(children) != 1 or not materialized:
+                raise ValueError('materialized scalar expression needs one value and a known materialization')
+            return self.transform(children[0], this_parameter)
         if kind == 'SubstNonTypeTemplateParmExpr':
             replacement = [c for c in children if c.get('kind') != 'NonTypeTemplateParmDecl']
             declarations = [c for c in children if c.get('kind') == 'NonTypeTemplateParmDecl']

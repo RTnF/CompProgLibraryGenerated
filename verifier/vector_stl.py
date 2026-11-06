@@ -15,6 +15,7 @@ from ast_stream import root_objects, node_header, direct_functions, forced_class
 from clang_ast import clang_command, gcc_include_dirs, normalized, ROOT
 from scalar_stl import walk
 from scalar_ir import TYPES
+from class_templates import TemplateInstance, collect_template_record
 from scalar_assert import verify_scalar_asserts
 
 OPERATIONS = {'size', 'reserve', 'operator[]', 'begin', 'end', 'assign', 'emplace_back', 'push_back', 'erase'}
@@ -67,7 +68,7 @@ def pinned_includes(includes):
 
 def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, construction_stages=False,
                      copy_class=None, copy_records=None, class_callers=None, copy_assignment=False, move_kind=None,
-                     class_destruction=False):
+                     class_destruction=False, template_instance=None):
     source=Path(source).resolve(strict=True)
     if not isinstance(copy_assignment,bool) or copy_assignment and copy_class is None:
         raise ValueError('assignment witness requires a class materialization')
@@ -79,6 +80,12 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
     if copy_class is not None and (not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:::[A-Za-z_][A-Za-z_0-9]*)*',copy_class)
                                    or not isinstance(copy_records,list) or copy_records or construction_stages):
         raise ValueError('copy witness requires a qualified identifier, record collector and no construction stages')
+    destructor_name=copy_class.split('::')[-1] if copy_class is not None else None
+    if template_instance is not None:
+        if not isinstance(template_instance,TemplateInstance) or copy_class is None:
+            raise ValueError('template instance requires a class materialization')
+        copy_class=template_instance.target(copy_class)
+        witness_digest=hashlib.sha256(template_instance.witness.read_bytes()).hexdigest()
     copy_digest=hashlib.sha256(source.read_bytes()).hexdigest() if copy_class is not None else None
     if class_callers is not None and (copy_class is None or not isinstance(class_callers,list) or class_callers):
         raise ValueError('class callers require a copy witness and an empty collector')
@@ -101,7 +108,7 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
             nonce=uuid.uuid4().hex
             if class_destruction:
                 witness.write_text('#include <vector>\nnamespace codex_copy_audit_'+nonce+' { void witness_'+nonce+'(::'+copy_class+
-                                   '* object_'+nonce+') { object_'+nonce+'->~'+copy_class.split('::')[-1]+'(); } }\n')
+                                   '* object_'+nonce+') { object_'+nonce+'->~'+destructor_name+'(); } }\n')
             elif move_kind is not None:
                 prefix='namespace codex_copy_audit_'+nonce+' { void witness_'+nonce+'(::'+copy_class
                 if move_kind == 'construct':
@@ -117,6 +124,10 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
             else:
                 witness.write_text('namespace codex_copy_audit_'+nonce+' { void witness_'+nonce+'(const ::'+copy_class+
                                    '& source_'+nonce+') { ::'+copy_class+' target_'+nonce+'(source_'+nonce+'); } }\n')
+            if template_instance is not None:
+                alias_namespace='codex_template_audit_'+nonce
+                witness.write_text('namespace '+alias_namespace+' { using Selected = ::'+copy_class+'; }\n'+
+                                   witness.read_text()+'\n#include "'+str(template_instance.witness)+'"\n')
             inputs=['-include',str(source),str(witness)]
         profile_file = Path(directory)/'includes.json'
         include_flags = ['-Xclang','-header-include-file','-Xclang',str(profile_file),
@@ -129,8 +140,12 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
         if copy_class is None:
             functions=direct_functions(output,source,construction_stages=construction_stages)
         else:
-            copy_records.extend(forced_class_records(output,source,copy_class))
+            copy_records.extend(collect_template_record(output,source,copy_class,alias_namespace,witness)
+                                if template_instance is not None else forced_class_records(output,source,copy_class))
             functions=[]
+            if template_instance is not None and callees is not None:
+                output.seek(0)
+                callees.extend(forced_source_functions(output,source))
             if class_callers is not None:
                 output.seek(0)
                 class_callers.extend(forced_source_functions(output,source))
@@ -141,7 +156,7 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
         for raw in root_objects(output):
             header=node_header(raw)
             current_file=header.get('loc',{}).get('file',current_file)
-            if callees is not None and header.get('kind')=='NamespaceDecl' and header.get('name')=='cp':
+            if template_instance is None and callees is not None and header.get('kind')=='NamespaceDecl' and header.get('name')=='cp':
                 # Callee candidates share this dump's declaration IDs; any user header may define them.
                 origin=header.get('loc',{}).get('file',current_file)
                 if origin and not any(Path(origin).resolve().is_relative_to(p) for p in system_dirs):
@@ -168,6 +183,8 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
                 root['_standard_include_profile'] = profile
                 standard.append(root)
         if copy_class is not None:
+            if template_instance is not None and hashlib.sha256(template_instance.witness.read_bytes()).hexdigest()!=witness_digest:
+                raise ValueError('template instantiation witness changed during materialization')
             if hashlib.sha256(source.read_bytes()).hexdigest()!=copy_digest:
                 raise ValueError('copy source changed during materialization')
             dump_id=uuid.uuid4().hex
@@ -175,6 +192,9 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
                 node['_copy_translation_unit']=dump_id
                 node['_copy_source']=str(source)
                 node['_copy_source_sha256']=copy_digest
+                if template_instance is not None:
+                    node['_template_instance_witness']=str(template_instance.witness)
+                    node['_template_instance_witness_sha256']=witness_digest
     return functions,standard
 
 
