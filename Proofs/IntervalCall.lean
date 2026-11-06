@@ -1,3 +1,4 @@
+import Proofs.MonoidCall
 import Proofs.GroupCall
 import Proofs.Generated.Interval
 

@@ -18,6 +18,8 @@
 
 | 2026-11-05 | `library/group.hpp` の `op`・既定構築・return初期化 | 元で通るraw値との `op` が推論失敗し、汎用型のAffine既定構築でコピー回数やe()の構築順が変わる | hidden friendを関数テンプレートへ、委譲構築を直接field初期化へ、波括弧returnを括弧呼出しへ変えていた | 元のhidden friend/委譲/return形式を復元し、既存qualified opも維持。LLだけ型のwitnessでfriend本文を具体化する。持ち込みコードは変更しない | 隔離候補で原本とのevent列比較、raw値/変換proxy/local型と既存C++のUBSan、29生成モデルと同じ仕様の既定構築/新Affine構成子の一般定理を検査済み。正本でもC++/template-first・29モデルのbridgeとPython3.11の共有5testsが成功（一般構成子/friendの固定nanoda3624、生成例2520/2663宣言）。全件gateはhandoff参照 |
 
+| 2026-11-06 | `library/monoid.hpp` の `op`・既定構築 | 原本で使えるraw値とのopを公開版が拒否し、Max/Minがcopy-onlyのTでコンパイル不可 | hidden friendを関数テンプレートへ置換し、max/minの値コピーをコピー代入へ変更していた。委譲構築も直接field初期化へ変更 | 原本のhidden friend・委譲構築・generic max/minとADLを復元。既存qualified opも維持し、LLのtype-only witnessでfriend本体を具体化。原本は変更しない | 隔離候補で暗黙変換/copy-only/qualifiedのC++/UBSan、15生成モデルと原本モデルの全program/callFuel一致、固定nanoda3676宣言を確認。正本のC++/ASan/UBSan/template-first、原本イベント列比較、fresh bridge、公開定理の固定nanoda3668宣言、変更前22定理型の互換証明3696宣言も成功。固定マニフェストをレビュー更新し、公開59/共有239/52299宣言監査/Lean再検査/固定nanoda49153宣言/59header ZIPの全件gateも成功。CIと配布の最新状態はhandoff参照 |
+
 ## 付記（直したのではなく、前提に含めたもの）
 
 次は元のコードが持つ性質で、直さずに前提として明記した（`docs/experiments_findings.md`）: `GroupMul::inv()` は整数で `±1` 以外だと 0、`MonoidMul::op` と `CumulativeSum` は符号付きの桁あふれが未定義動作。

@@ -16,6 +16,7 @@ from clang_ast import clang_command, gcc_include_dirs, normalized, ROOT
 from scalar_stl import walk
 from scalar_ir import TYPES
 from class_templates import TemplateInstance, collect_template_record
+from scalar_choose import lower_scalar_choices
 from scalar_assert import verify_scalar_asserts
 
 OPERATIONS = {'size', 'reserve', 'operator[]', 'begin', 'end', 'assign', 'emplace_back', 'push_back', 'erase'}
@@ -177,7 +178,9 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
                     if template.get('kind')=='FunctionTemplateDecl' and template.get('name') in ALGORITHMS:
                         sorts.update(c['id'] for c in template.get('inner',[]) if c.get('kind')=='FunctionDecl')
             if (b'"name": "vector"' in raw or b'"name": "__normal_iterator"' in raw
-                    or b'"name": "numeric_limits"' in raw or Path(origin).name=='vector.tcc'):
+                    or b'"name": "numeric_limits"' in raw or Path(origin).name=='vector.tcc'
+                    or Path(origin).name=='stl_algobase.h' and
+                       (b'"name": "min"' in raw or b'"name": "max"' in raw)):
                 root=json.loads(raw)
                 if origin:root.setdefault('loc',{})['file']=origin
                 root['_standard_include_profile'] = profile
@@ -494,5 +497,9 @@ def audit_vector_nodes(source,functions,roots,include_dirs=(),sorts=(),*,copy_as
             call['verifiedVectorElement']=element
             records.append({'function':function.get('name'),'operation':operation,'element':element,
                             'callee_id':identifier,'pattern_id':method['TemplateInstantiationPattern']})
-    return {'coverage':'callee_identity_only','operations':records,'functions':functions,
+    functions,scalar_choices=lower_scalar_choices(functions,roots)
+    result={'coverage':'callee_identity_only','operations':records,'functions':functions,
             'vector_types':sorted(name for name,element in candidates.items() if supported_element(element))}
+    if scalar_choices:
+        result['scalar_choices']=scalar_choices
+    return result

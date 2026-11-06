@@ -1,4 +1,4 @@
-import Proofs.MonoidCall
+import Proofs.MonoidCallCore
 import Proofs.Generated.Group
 
 namespace Proofs.GroupCall
@@ -8,7 +8,7 @@ open Proofs.CppNestedSim Proofs.CppNestedEval Proofs.CppNestedStmt Proofs.CppNes
 open Proofs.CppNestedConstruct Proofs.CppNestedHoare Proofs.CppNestedScope Proofs.CppNestedCall
 open Proofs.DoublingNested Proofs.DoublingPrologue Proofs.DoublingCall Proofs.QuotientFrame
 open Proofs.ScalarCall Proofs.StraightLine Proofs.ScalarStraight Proofs.IntSim Proofs.ModIntCall
-open Proofs.ModIntExec Proofs.PowModStep Proofs.PexecKit Proofs.QuotientSearch Proofs.ExtremaCall Proofs.MonoidCall
+open Proofs.ModIntExec Proofs.PowModStep Proofs.PexecKit Proofs.QuotientSearch Proofs.ExtremaCall Proofs.MonoidCallCore
 open Proofs.CppState (Cell)
 
 -- The callee state: the caller's reserved memory `P`, the reference bindings `R`, then writable locals `L`.

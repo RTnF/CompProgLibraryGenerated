@@ -4,6 +4,14 @@
 
 ## 再開時に最初に確認する状態
 
+- **54da026のリリース手順完了:** [CI42154367529](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42154367529) attempt1のverify-public/release-headersはsuccess。実job127684867148のAPIログで52274宣言監査/Mathlib778module範囲/full fresh Lean replay/固定nanoda49128宣言を確認した。STL契約依存2定理は別区分。headers tag/bodyは54da0269fd745b6642178ded99e4d56472d65f81に一致、公開asset715969666（55779bytes）の全59header byteもcommitと一致し、ZIP SHA256は09356f4777cc6fac6636e179bd5c45f6f684b85d8b431682ebfad013a451c939。証拠はtemplate_integration_20261106/gate/{ci_api_receipt,ci_audit_receipt,published_receipt}.jsonとci_job_54da026_api.txt。watch37114と配布確認49514は終了0回収済み、再pollしない。先行の配布確認23738はCIのfull-replayログ形式を取り違えた確認scriptのassertで終了1となり、parserを修正して最終49514で成功した（CI失敗ではない）。54da026後のMonoid/std::min/max追加は未commitでこの公開には含まれない。全137件の検証目標は未達・active。
+
+- **ローカル次batchのMonoid追加は54da026へ含まれない:** 9比較で公開側の暗黙変換/copy-only Tの縮小を再現し、原本Mulの4モデル/一般既定構築post70を固定nanoda3588宣言で確認。登録回帰1methodは実29114終了0。公開CPP未修正、candidateのruntime if constexprは現frontendが拒否する。新規差分のgate/機密検査は未実行。詳細は全体handoff冒頭、54da026のCI監視は実37114を継続する。
+
+- **54da026を通常push済み、新CIを監視中:** 実41391は終了0、origin/main追跡参照も54da026へ更新。APIで対象SHA完全一致の[CI42154367529](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42154367529)がin_progressと確認し、実37114で60秒間隔のgh run watchを実行中。次は同handleをpollし、対象CI/release/配布ZIPまで確認する。証拠はtemplate_integration_20261106/gate/{push_receipt,ci_api_receipt}.json。下記のpush承認待ちは過去の記録であり同じpushを繰り返さない。このpost-commit記録と次のMonoid修正は54da026へ含まれない。全137件の目標は未達・active。
+
+- **54da026をcommit済み、push承認待ち（2026-11-06）:** 全件gateと最新機密検査を通した19ファイルをcommitし、全1936 committed blobが走査treeと一致。HEADは54da0269fd745b6642178ded99e4d56472d65f81、親は96ecd58。通常pushの手動承認後、このSHAのCI/release/配布ZIPまで確認する。まだpush/新CIは未確認。このpost-commit追記はローカル記録であり、当該commitへ含まれない。証拠はtemplate_integration_20261106/gate/commit_receipt.json。全137件は未達。
+
 - **96ecd58後の原本template統合は全件gate成功・未commit（2026-11-06）:** 実61257は終了0回収済み、再pollしない。CPython3.11.3/offline/jobs1/7200秒でC++59成功cache/bridge59今回実行/共有238（235今回実行/3cache）、52274宣言監査/Mathlib778module範囲/固定nanoda49128宣言、59header ZIPが成功。unchanged axiom定義とLean replayは照合済みcache（変更module0）でありfresh全module replayとはしない。STL sort契約依存2定理は別区分。all4835.601秒、1934入力hash不変。証拠は`.cache/wip/template_integration_20261106/gate/final_gate_receipt.json`。次は最新全tree機密走査とstage/commit blob照合→commit→手動承認付きpush→新SHAのCI/releaseを確認する。旧96ecd58のCI/release成功を現差分の公開完了に使わない。全137件は未達。
 
 - **今回の機密検査は未分類0:** 最新19変更ファイルの差分/変更前後は検出0、全公開予定1936ファイルの1件は既知のrowKey公開仕様digestとしてsource/定義hash/行/値を照合した誤検出。公式checksum照合済みGitleaks8.30.1/offline/既定ルール/ignore・inline allow無効、合成対照成功。この記録を含む再走査とstage/commit treeの全blob照合を行う。証拠はtemplate_integration_20261106/gate/release_secrets/secret_scan.json。MEMORY.md/cacheは公開しない。
@@ -181,3 +189,29 @@
 再pollしない: 全件17394/96035/72559、CI watch27532/7099/36152、log取得46586/95011/24083、診断29284/11922/62549/8847/48438/2871/95008/28181、初回宣言比較28178、最新診断35752、再開後の26318/66144/32940/34348/70620/28659/7091/13694/12357/78832/64320/31792/48174/17009/64129/46153/51873/1691/93799/20024/87676。全件57874（時間切れ1）、51437（中断130）、56399（成功0）も終了済み。再pollしない。
 
 古い段階の「稼働中」記述より、この文書の最新状態を優先する。
+
+
+- **原本MonoidMax/Minの登録回帰が成功（未commit）:** `experiments/library/cpp/algebraic_structure/monoid.hpp`はhash266316533145db3cf6cb764e82c5e625d7fa621a6a398563c2cf1d4f9e3609d7のまま、各LL4モデルを共通入口で再生成。opは任意typed caller/両引数aliasを許して正しいmax/min・停止・元memory保持・ScalarPost2 0 100、既定構築は各端点・post0 70、値構築/eは既存モデル一致を証明した。実16674は終了0、1test/65.172秒、C++/UBSanと固定nanoda3634宣言も成功。tests/imports/original_monoid_{max,min}.cppとtests/lean/original_monoid_select.leanを既存test_original_template_classes.pyへ登録。最初の51610は生成Lean結合時の途中importで終了1となり、importを先頭へ集約して再実行成功。証拠は`.cache/wip/scalar_choose_20261106/original_minmax/{selection_exec_receipt,registered_selection_receipt}.json`。scalar_chooseの32/64 bit・alias・拒否境界5testsは前回16994終了0/28.389秒/固定nanoda2563宣言。対応構文と信頼境界はdocs/scalar_stl_contracts.mdへ追記。台帳137原本hash/coverage照合も成功。任意T・完全object/lifetime・公開CPPのAPI修正は未完了、lean_proved/publishedはfalseを維持する。最新機密検査後に編集したため、次のcommit前に再走査する。
+
+
+- **もう一方の原本MonoidMulも登録回帰成功:** 実68214は終了0・1test/42.615秒・C++/UBSanと固定nanoda3588宣言成功。legacy原本に加え `experiments/library/cpp/algebraic_structure/monoid.hpp` からもLL4モデルを再生成し、値構築/e/opの既存モデル一致と委譲defaultの任意caller/post0 70を確認した。共通check_monoid_mulを原本2系列の個別testから呼ぶ。証拠はscalar_choose_20261106/original_minmax/registered_library_mul_receipt.json。原本3クラスのLL有限具体化は登録したが任意T/完全object/lifetime/公開API復元は残件であり、137全件目標は未達・active。この更新を含む差分の機密再検査は `.cache/wip/scalar_choose_20261106/diff_secret_scan/secret_scan.json` のbase/manifestと照合する。正本公開CPP・commit/pushは今回変更していない。
+
+
+- **正本Monoidの関連検査は終了成功:** 実71599は終了0、scalar_choices5tests/27.645秒、原本7tests/210.058秒、monoid bridge/7.150秒が成功し、公開12 correct定理・3friend一致・共通補題の固定nanoda3668宣言も成功。証拠はmonoid_original_review_20261106/public_related/{receipt.json,*.log}。実48943は終了0、変更前の22 named theoremの前提・結論をそのまま要求する互換証明も固定nanoda3696宣言で成功（models/compatibility_receipt.json）。初回54900は隔離互換証明のnamespace不足で停止しopen Proofsを加えた。旧max_body/min_bodyは変更された生成bodyのshape定理として比較から除外する。公開C++/ASan/UBSan/template-firstの実61408も終了0。現在は実19602で固定マニフェストのレビュー材料を作成中。同directoryのreview_contract.pyが旧environmentと固定hash照合→独立screened build→新environmentをfile出力→小さいfingerprint表で差分抽出する。全JSONをメモリに同時保持せず、固定specはまだ変更しない。次は同handleをpollしてcontract_review/review.jsonを確認し、変更を説明できる定義/内部rootだけを反映して全件gateへ進む。全137件目標は未達、commit/pushは未実行。
+
+
+- **Monoidの固定仕様マニフェストをレビューして更新済み:** 実14284は終了0、独立screened build1791 jobs/24.4秒と新environment採取が成功。旧environmentは旧固定6176宣言hashと全件一致した。既存変更10件は生成default3/op2、内部max_body/min_body2、同値なCore転送のbT/selBodyとGroup.nzの3件に限定。元の22 named theorem型は固定nanoda3696宣言で保持を確認済み。13 compiler生成rootのCoreへの移動は、binder名だけを除きCore namespaceを対応させた命題Exprが全件一致（実40331終了0、relocated_auxiliary_roots.json）。新規root8/旧補助root13移動でroot2486→2481、閉包6176→6178。公開定理・許可公理・契約や検査規則を緩めず、確認したnew_statements.jsonだけをverification/statements.jsonへ反映した。証拠はmonoid_original_review_20261106/contract_review/{review,relocated_auxiliary_roots}.jsonと新旧environment/manifest。最初19602はIntervalCallの間接importに依存して失敗し、MonoidCallの明示import1行を追加して全件buildを成功させた。
+
+- **次の全件gate準備:** monoid_original_review_20261106/gate/check.pyにinventory→公開全59/共有239/証明監査→header package/archiveの直列実行を準備。N=7200秒/jobs1/offline/nice19/ionice3、入力hashを前後で照合し、handoff2と公開しないMEMORY.mdを検証入力manifestから除外する。現在のローカルPythonは3.12.3（過去の3.11.3 runtimeは見つからず）、CIはgcc13.3-bookwormのPython3.11系なので、push後は対象SHAの実CI結果まで確認する。旧54da026のgateを今回の成功とは扱わない。全件gate後に必ず機密再走査→scan/index/commit blob一致→通常pushの毎回手動承認→新SHAのCI/release/配布ZIPを照合する。全137原本目標は未達・active。
+
+
+- **最新全件gateを開始、実86819が稼働中:** `.cache/wip/monoid_original_review_20261106/gate/check.py`をoffline/nice19/ionice3/Python3.12.3/jobs1/7200秒で開始し、inventoryは終了0/137原本hash照合成功、allへ進んだ。次ターンは同handleをpollし、gate/{checks_state,input_manifest}.jsonとall.txtを確認する。新しいgateを重複起動せず、検証中は入力を編集しない（handoff2だけ入力除外）。公開59/共有239/独立buildと固定公理・仕様監査/Lean replay/固定nanoda/配布ZIPのすべての終了結果を確認するまで成功やrelease完了とはしない。
+
+- **gate開始直前の32差分の機密再検査は通過:** 実24327は終了0。差分0、変更前後全文の2件は変更対象に加わったverification/statements.jsonの旧版/新版にある同じ既知公開digest、全treeの1件も同digestとして、各版のsource hash・定義source hash・行・値を厳密照合し未分類0。MEMORY.mdは別走査で0、公開対象外。初回13721はbefore_afterへの既知digest分類が未実装で停止し、HEAD旧版と新版の厳密な別reviewを追加して再検査成功（ignore/inline allowは引き続き無効）。証拠はscalar_choose_20261106/diff_secret_scan/{secret_scan,reviewed_false_positive,reviewed_false_positive_before}.json。本記録を含めた機密最終再走査は全件gate成功後に行う。commit/pushは未実行、137全原本目標は未達・active。
+
+
+- **最新全件gate86819は終了0回収済み（再pollしない）:** inventory/all/package/archiveの全工程が成功。Python3.12.3/offline/jobs1/7200秒、all5266.488秒/全体5274.191秒。検査中の1944入力hashは全件不変。C++59は58今回実行/1成功cache照合、bridge59と共有239は今回すべて実行。独立screened build、52299宣言の固定仕様・定義・公理依存監査、Mathlib778moduleの監査範囲、Lean再検査11 changed modules/1 covering prefix、固定nanoda49153宣言が成功。許可公理定義はhash不変を照合して既存成功結果を再利用し、STL sort契約依存2定理は別区分。59header ZIPの内容/コンパイルも成功し、55630bytes/SHA256 3eaa84cbe59d59d6c3117cc2072056439a3e8c81182ea837171119a13261e6d4。証拠はmonoid_original_review_20261106/gate/{checks_state,final_gate_receipt,input_manifest}.jsonとall.txt/archive.txt。
+
+- **gate後は結果反映の4文書だけ更新:** docs/agent/fixes.md、docs/experiments_findings.md、docs/experiments_status.md、docs/verification_inventory.jsonの「gate待ち」を成功へ更新し、任意T/完全object/lifetimeの未完了状態は保持した。post_gate_status_addendum.jsonでこの4文書だけのhash差と、code/model/proof/test/metadataが検査入力と一致することを確認。inventoryの137原本hash/依存/参照照合も再実行成功。handoff2は元からgate入力の除外対象。次はこれらの最新差分を機密走査し、走査manifestとindex/commit全blobを一致させてcommit、ルールに従う毎回手動承認付きpush、新SHAの実CI/release/ZIPを確認する。現在は未commit・未push、137全原本目標は未達・active。
+
+- **次の原本monoid_lazyレビューを隔離準備:** `.cache/wip/monoid_lazy_original_review_20261106/{review.json,copy_effects.cpp,identity.cpp}`へ原本/公開source hashと2nativeケースを保存した。入れ子型/e/id/applyがflat APIへ変わり、原本composeの値引数が公開const参照とT再構築へ変わったことをソースで確認した。copy回数やnative成否はまだ未測定なのでreview.jsonのcpp_cases_executed/lean_verifiedはfalse。現gate86819のterminal回収後にnative比較を行い、必要な構文の一般拡張を優先する。tracked CPP/docsの検証入力は今回変更せず、原本全137件の目標は未達・active。

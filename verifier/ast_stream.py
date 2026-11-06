@@ -629,6 +629,15 @@ def direct_functions(stream, source, *, construction_stages=False):
     def compile_only_declaration(node):
         kind = node.get('kind')
         children = node.get('inner', [])
+        # These local using declarations affect lookup only. Clang has already
+        # resolved each call; scalar_choose separately audits std callee identity.
+        if kind == 'UsingDecl':
+            return not children and node.get('name') in ('std::min', 'std::max')
+        if kind == 'UsingShadowDecl':
+            target = node.get('target', {})
+            return (not children and node.get('isImplicit') is True
+                    and target.get('kind') == 'FunctionTemplateDecl'
+                    and target.get('name') in ('min', 'max'))
         if kind == 'StaticAssertDecl':
             return True
         if kind in ('TypeAliasDecl', 'TypedefDecl'):

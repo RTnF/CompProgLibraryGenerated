@@ -557,337 +557,505 @@
           "kind": "ClassTemplateDecl",
           "line": 4,
           "declaration": "MonoidMul",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
           "line": 4,
           "declaration": "struct MonoidMul definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 5,
           "declaration": "referenced x 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 6,
           "declaration": "MonoidMul<T> 'void (T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 7,
           "declaration": "MonoidMul<T> 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 8,
           "declaration": "referenced e 'MonoidMul<T> ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 9,
           "declaration": "friend_undeclared op 'MonoidMul<T> (const MonoidMul<T> &, const MonoidMul<T> &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
+          ]
         },
         {
           "kind": "ClassTemplateDecl",
           "line": 14,
           "declaration": "MonoidMax",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
           "line": 14,
           "declaration": "struct MonoidMax definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 15,
           "declaration": "referenced x 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 16,
           "declaration": "MonoidMax<T> 'void (T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 17,
           "declaration": "MonoidMax<T> 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 18,
           "declaration": "referenced e 'MonoidMax<T> ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 19,
           "declaration": "friend_undeclared op 'MonoidMax<T> (const MonoidMax<T> &, const MonoidMax<T> &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "ClassTemplateDecl",
           "line": 24,
           "declaration": "MonoidMin",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
           "line": 24,
           "declaration": "struct MonoidMin definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 25,
           "declaration": "referenced x 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 26,
           "declaration": "MonoidMin<T> 'void (T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 27,
           "declaration": "MonoidMin<T> 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 28,
           "declaration": "referenced e 'MonoidMin<T> ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 29,
           "declaration": "friend_undeclared op 'MonoidMin<T> (const MonoidMin<T> &, const MonoidMin<T> &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_select.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
+          ]
         }
       ],
       "declaration_scan": {
@@ -904,7 +1072,7 @@
       "ignored_driver": false,
       "verification_target": null,
       "status": {
-        "review": "pending",
+        "review": "partial",
         "bug": "unknown",
         "cpp_tested": false,
         "common_translator": false,
@@ -921,7 +1089,20 @@
         "experiments/library3/cpp/AlgebraicStructure/Group.hpp",
         "experiments/library3/cpp/AlgebraicStructure/Monoid.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "tests/test_original_template_classes.py",
+        "tests/imports/original_monoid_max.cpp",
+        "tests/imports/original_monoid_min.cpp",
+        "tests/lean/original_monoid_select.lean",
+        "docs/original_template_classes.md",
+        "docs/scalar_stl_contracts.md",
+        "tests/imports/original_monoid_mul.cpp",
+        "tests/lean/original_monoid_mul.lean"
+      ],
+      "review_notes": [
+        "2026-11-06: 原本MonoidMax/Min<long long>各4モデルを共通変換器から生成。std::max/minの同一TU宣言ID・primary・具体化bodyをpinned標準実装と照合し、即時value消費を既存分岐へlowerする。一般callerのop結果・停止・元memory保持・ScalarPost2 0 100と既定構築の各端点・ScalarPost2 0 70、値構築/eの既存モデル一致を独立kernelで確認。有限具体化に限り、原本のAPI/任意Tを変更していない。MonoidMulもこの原本からLL4モデルを再生成し、値構築/e/opの既存モデル一致と委譲defaultの任意caller/post0 70をLean/固定nanoda3588宣言で確認した。公開CPPはhidden friend/委譲構築/generic max/minとADLを復元し、copy-only型/暗黙変換/qualifiedのC++/ASan/UBSan/template-firstと既存定理のLeanビルドが成功。公開版の新モデル全件gateは成功。任意T・完全object/lifetimeは未完了。lean_proved/publishedはfalseを維持。"
+      ]
     },
     {
       "source": "experiments/library/cpp/algebraic_structure/monoid_lazy.hpp",
@@ -22942,113 +23123,169 @@
           "kind": "ClassTemplateDecl",
           "line": 5,
           "declaration": "MonoidMul",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
           "line": 5,
           "declaration": "struct MonoidMul definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 6,
           "declaration": "referenced x 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 7,
           "declaration": "MonoidMul<T> 'void (T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 8,
           "declaration": "MonoidMul<T> 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 9,
           "declaration": "referenced e 'MonoidMul<T> ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 10,
           "declaration": "friend_undeclared op 'MonoidMul<T> (const MonoidMul<T> &, const MonoidMul<T> &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_template_classes.py",
+            "tests/lean/original_monoid_mul.lean",
+            "docs/original_template_classes.md"
+          ],
+          "review_notes": [
+            "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
+          ]
         }
       ],
       "declaration_scan": {
@@ -23063,12 +23300,12 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": null,
+      "verification_target": "tests/test_original_template_classes.py",
       "status": {
-        "review": "pending",
+        "review": "partial",
         "bug": "unknown",
-        "cpp_tested": false,
-        "common_translator": false,
+        "cpp_tested": true,
+        "common_translator": true,
         "lean_proved": false,
         "include_verified": false,
         "published": false
@@ -23080,7 +23317,18 @@
         "experiments/library/cpp/algebraic_structure/monoid_lazy.hpp",
         "experiments/library3/cpp/AlgebraicStructure/Group.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "verifier/template_class_ir.py",
+        "tests/test_original_template_classes.py",
+        "tests/imports/original_monoid_mul.cpp",
+        "tests/lean/original_monoid_mul.lean",
+        "docs/original_template_classes.md",
+        "docs/experiments_findings.md"
+      ],
+      "review_notes": [
+        "2026-11-06: 原本MonoidMul<long long>の4モデルを共通変換器で生成。値構築/e/opは既存モデルと全program/callFuel一致、元の委譲による既定構築は任意typed callerで結果1・停止・元memory保持・ScalarPost2 0 70をLean/固定nanoda3588宣言で確認。原本の型/APIは変更していない。公開側がhidden friendの暗黙変換を失う差はnativeで再現後、正本CPPで復元済み。公開版の新モデル全件gateは成功。任意T・全caller AST・完全object/lifetimeは未完了で、file/declaration全体のlean_proved/publishedはfalseを保持する。"
+      ]
     },
     {
       "source": "experiments/library3/cpp/Array/CumulativeSum.hpp",

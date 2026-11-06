@@ -1163,3 +1163,4 @@ import Proofs.BeatsReceiverCalls
 
 import Proofs.CppCallUnitFrame
 import Proofs.BeatsReceiverRestore
+import Proofs.MonoidCallCore

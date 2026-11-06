@@ -9,7 +9,7 @@
 | 元ヘッダー | 状況 | 公開部品／残りの理由 |
 | --- | --- | --- |
 | algebraic_structure/group.hpp | 一部 | `group`。2026-11-05にhidden friend・元の委譲構築/returnを復元し、LL構成子のfieldモデルと一般定理を追加。統合後の全件検証中。任意Tや完全なobject/lifetime ASTの証明は未完了 |
-| algebraic_structure/monoid.hpp | 済 | `monoid` |
+| algebraic_structure/monoid.hpp | 一部 | `monoid`。公開版のhidden friend暗黙変換とcopy-only Tの制約違反は2026-11-06に再現し、正本C++で復元。原本Mul/Max/MinのLL各4モデルを生成し、既存モデル一致および一般callerのop・既定構築と資源上界を独立kernelで確認。公開版の新モデルの全件gateは成功。任意T/完全object/lifetimeと原本全体の検証は未完了（docs/original_template_classes.md、docs/experiments_findings.md） |
 | algebraic_structure/monoid_lazy.hpp | 済 | `monoid_lazy` |
 | array/cumulative_sum.hpp | 一部 | `cumulative_sum`（クラス `CumulativeSum<T>` と `CumulativeSum2D<T>`） |
 | array/doubling.hpp | 済 | `doubling`, `bit_width_u64` |
@@ -58,7 +58,7 @@
 | --- | --- | --- |
 | AlgebraicStructure/Group.hpp | `library/group.hpp` | 一部。旧版のpublic field `x/a/b` は公開版へ未復元。原本を変更せずLLの15モデルを生成する共通入口と独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。任意Tと完全object/lifetimeは未完了。`GroupSum<double>::inv` は旧版の `e().x-x` と公開版の単項minusで正の0の符号が異なる |
 | AlgebraicStructure/Mapping.hpp（`Affine<T>`） | `library/group.hpp` の `GroupAffine` | 一部。原本のpublic field・ide/compose・値渡しapplyを保持し、LLの12モデルとapplyのLL/intに一般callerの証明・独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。元APIの公開版への統合、任意T/U、完全object/lifetimeは未完了。`Affine<long long>(2,1).apply(0.5)` は旧版2・公開版1で、doubleはC++回帰のみ |
-| AlgebraicStructure/Monoid.hpp | `library/monoid.hpp` | 統合済み |
+| AlgebraicStructure/Monoid.hpp | `library/monoid.hpp` | 一部。原本MonoidMulのLL具体化4モデルを生成し、既定構築の一般callerと他3モデルの一致を独立kernelで確認。原本hidden friendの暗黙変換は公開C++で復元。公開版の全件gateは成功。任意T・完全object/lifetimeは未完了 |
 | Array/CumulativeSum.hpp | `library/cumulative_sum.hpp` | 統合済み（`CumulativeSum2D` を含む） |
 | Array/SortUtil.hpp | `library/sort_util.hpp`, `search_util.hpp` | 統合済み。`arg_sort` 系は未（ラムダ比較の `stable_sort`） |
 | Geometry/Point.hpp | なし | 未（`double`、`atan2` 系の偏角ソート） |

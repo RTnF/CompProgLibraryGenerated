@@ -4,6 +4,26 @@
 #include <random>
 #include <vector>
 
+struct CopyOnly {
+    int value;
+    explicit CopyOnly(int n) : value(n) {}
+    CopyOnly(const CopyOnly&) = default;
+    CopyOnly& operator=(const CopyOnly&) = delete;
+    friend bool operator<(const CopyOnly& a, const CopyOnly& b) { return a.value < b.value; }
+};
+
+namespace custom_choice {
+struct Value {
+    int value;
+    explicit Value(int x) : value(x) {}
+    Value(const Value&) = default;
+    Value& operator=(const Value&) = delete;
+};
+// ADL must retain the original custom selection, including qualified cp::op.
+const Value& max(const Value& a, const Value&) { return a; }
+const Value& min(const Value&, const Value& b) { return b; }
+}
+
 int main() {
     using MonoidMax = cp::MonoidMax<long long>;
     using MonoidMin = cp::MonoidMin<long long>;
@@ -41,5 +61,21 @@ int main() {
     // the element type is a template parameter
     assert(cp::MonoidMax<int>::e().x == INT_MIN && cp::MonoidMin<unsigned>::e().x == 0xFFFFFFFFu);
     assert(op(cp::MonoidMax<int>(3), cp::MonoidMax<int>(8)).x == 8 && op(cp::MonoidMul<double>(1.5), cp::MonoidMul<double>(4)).x == 6.0);
+    // Hidden friends accept conversions in either argument position.
+    assert(op(cp::MonoidMul<int>(2),3).x == 6 && op(3,cp::MonoidMul<int>(2)).x == 6);
+    assert(op(cp::MonoidMax<int>(2),3).x == 3 && op(3,cp::MonoidMax<int>(2)).x == 3);
+    assert(op(cp::MonoidMin<int>(2),3).x == 2 && op(3,cp::MonoidMin<int>(2)).x == 2);
+    cp::MonoidMax<CopyOnly> low(CopyOnly(2)), high(CopyOnly(7));
+    cp::MonoidMin<CopyOnly> first(CopyOnly(7)), second(CopyOnly(2));
+    assert(op(low,high).x.value == 7 && cp::op(low,high).x.value == 7);
+    assert(op(first,second).x.value == 2 && cp::op(first,second).x.value == 2);
+    assert(cp::op(MonoidMul(2),MonoidMul(3)).x == 6);
+    assert(cp::op(MonoidMax(2),MonoidMax(7)).x == 7);
+    assert(cp::op(MonoidMin(7),MonoidMin(2)).x == 2);
+    using V = custom_choice::Value;
+    cp::MonoidMax<V> va(V(2)), vb(V(7));
+    cp::MonoidMin<V> vc(V(7)), vd(V(2));
+    assert(op(va,vb).x.value == 2 && cp::op(va,vb).x.value == 2);
+    assert(op(vc,vd).x.value == 2 && cp::op(vc,vd).x.value == 2);
     return 0;
 }

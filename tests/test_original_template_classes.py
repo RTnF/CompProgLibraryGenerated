@@ -34,7 +34,7 @@ class OriginalTemplateTests(unittest.TestCase):
         self.assertFalse(coverage['generic_types_verified'])
         self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
         roots = []
-        proof = 'import Proofs.GroupCall\nimport Proofs.CppTargetCast\n'+emit_lean(ir, 'Original_'+case)
+        proof = 'import Proofs.MonoidCall\nimport Proofs.CppTargetCast\n'+emit_lean(ir, 'Original_'+case)
         namespace = 'OriginalEquivalence_'+case
         proof += '\nnamespace '+namespace+'\nopen Proofs.CppNestedProgram Proofs.CppNestedCall\n'
         if case == 'sum':
@@ -77,6 +77,93 @@ class OriginalTemplateTests(unittest.TestCase):
 
     def test_original_sum(self):
         self.check_case('sum','GroupSum','Group.hpp',5,'0 -4 7 9')
+
+    def check_monoid_mul(self, source, include):
+        witness = ROOT/'tests/imports/original_monoid_mul.cpp'
+        includes = [include]
+        before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in (source, witness)}
+        ir, coverage = lower_template_class(source, 'MonoidMul', TemplateInstance(('long long',), witness), includes)
+        self.assertEqual(len(ir['functions']), 4)
+        self.assertEqual(coverage['source_sha256'], before[source])
+        self.assertEqual(coverage['witness_sha256'], before[witness])
+        self.assertFalse(coverage['generic_types_verified'])
+        self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
+        proof = 'import Proofs.MonoidCall\n'+emit_lean(ir, 'Original_monoid_mul')
+        proof += (ROOT/'tests/lean/original_monoid_mul.lean').read_text()
+        roots = ['OriginalMonoidMulAudit.'+name for name in
+                 ('new0','call_new0','e','call_e','op','call_op','default_correct')]
+        with tempfile.TemporaryDirectory(prefix='original-monoid-mul-') as directory:
+            directory = Path(directory)
+            scalar_checks.ScalarDelegationTests().kernel(directory, 'OriginalMonoidMulCheck', roots, proof)
+            executable = directory/'native'
+            subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined','-fno-sanitize-recover=all',
+                '-I',str(includes[0]),'-include',str(source),str(witness),'-o',str(executable)], check=True)
+            result = subprocess.run([str(executable)], check=True, capture_output=True, text=True)
+            self.assertEqual(result.stdout, '1 12 9\n')
+        for path, digest in before.items():
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
+
+    def test_original_monoid_mul(self):
+        self.check_monoid_mul(ROOT/'experiments/library3/cpp/AlgebraicStructure/Monoid.hpp',
+                              ROOT/'experiments/library3/cpp')
+
+    def test_original_library_monoid_mul(self):
+        self.check_monoid_mul(ROOT/'experiments/library/cpp/algebraic_structure/monoid.hpp',
+                              ROOT/'experiments/library/cpp')
+
+    def test_monoid_api_events(self):
+        witness = ROOT/'tests/imports/monoid_api_events.cpp'
+        sources = [ROOT/'experiments/library/cpp/algebraic_structure/monoid.hpp',
+                   ROOT/'library/monoid.hpp']
+        before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in [witness,*sources]}
+        outputs = []
+        with tempfile.TemporaryDirectory(prefix='monoid-api-events-') as directory:
+            for index, source in enumerate(sources):
+                executable = Path(directory)/str(index)
+                command = ['g++','-std=c++17','-O1','-fsanitize=undefined','-fno-sanitize-recover=all']
+                if index == 0:
+                    command += ['-I',str(ROOT/'experiments/library/cpp')]
+                else:
+                    command += ['-DPUBLIC_MONOID']
+                subprocess.run([*command,'-include',str(source),str(witness),'-o',str(executable)],check=True)
+                ran = subprocess.run([str(executable)],check=True,capture_output=True,text=True)
+                outputs.append(ran.stdout)
+        self.assertEqual(len(outputs[0].splitlines()),2)
+        self.assertEqual(outputs[1],outputs[0])
+        for path, digest in before.items():
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+
+    def test_original_monoid_selectors(self):
+        source = ROOT/'experiments/library/cpp/algebraic_structure/monoid.hpp'
+        includes = [ROOT/'experiments/library/cpp']
+        proof = 'import Proofs.MonoidCall\n'
+        before = {source: hashlib.sha256(source.read_bytes()).hexdigest()}
+        with tempfile.TemporaryDirectory(prefix='original-monoid-select-') as directory:
+            directory = Path(directory)
+            for case, name in [('max','MonoidMax'),('min','MonoidMin')]:
+                witness = ROOT/'tests/imports'/('original_monoid_'+case+'.cpp')
+                before[witness] = hashlib.sha256(witness.read_bytes()).hexdigest()
+                ir, coverage = lower_template_class(source, name,
+                    TemplateInstance(('long long',), witness), includes)
+                self.assertEqual(len(ir['functions']), 4)
+                self.assertEqual(coverage['source_sha256'], before[source])
+                self.assertEqual(coverage['witness_sha256'], before[witness])
+                self.assertFalse(coverage['generic_types_verified'])
+                self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
+                emitted = emit_lean(ir, 'Original_'+case)
+                proof += '\n'.join(line for line in emitted.splitlines() if not line.startswith('import '))+'\n'
+                executable = directory/('native_'+case)
+                subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined','-fno-sanitize-recover=all',
+                    '-I',str(includes[0]),'-include',str(source),str(witness),'-o',str(executable)], check=True)
+                result = subprocess.run([str(executable)], check=True, capture_output=True, text=True)
+                self.assertEqual(result.stdout, 'ok\n')
+            proof += (ROOT/'tests/lean/original_monoid_select.lean').read_text()
+            roots = ['OriginalSelectionAudit.'+name for name in
+                     ('max_body','min_body','copied_sel_exec','max_op_correct','min_op_correct',
+                      'max_new0','min_new0','max_e','min_e','max_default_correct','min_default_correct')]
+            scalar_checks.ScalarDelegationTests().kernel(directory,'OriginalMonoidSelectCheck',roots,proof)
+        for path, digest in before.items():
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), digest)
 
     def test_original_affine_group(self):
         self.check_case('group_affine','GroupAffine','Group.hpp',10,'1 0 6 7 1 -4')

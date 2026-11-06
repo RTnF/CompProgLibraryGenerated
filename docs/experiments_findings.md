@@ -50,3 +50,11 @@ GCC 13.3.0/C++17/offlineでの再現とログは`.cache/wip/group_api_review_202
 GCC13.3.0/C++17で旧版と公開版を直接比較した。旧Groupのpublic field `x/a/b` への書込みは旧版でコンパイル・実行成功、公開版はコンパイル失敗。旧Mappingの `Affine<long long>(2,1).apply(0.5)` は2、公開GroupAffineは引数をlong longへ変換して1。旧GroupSum<double>の正の0の逆元は `e().x-x` により正の0だが、公開版の単項minusでは負の0になる。証拠は `.cache/wip/group_legacy_api_review_20261105/receipt.json` と各CPP/log。元ソースの不具合と断定せず、公開側が旧API/汎用性を保持していない未解消差として台帳を訂正した。
 
 全137件の検証では、元のpublic field・異型Uのapply・値渡し・ide/compose・演算の定義を維持して扱う必要がある。単一の整数具体化やgetterへの置換で旧版検証完了とはしない。独立したnamespaceの元APIを共通変換器と証明で扱う対応も含め、解消まで未完了。
+
+## 2026-11-06: Monoidの公開側で暗黙変換と型の制約が縮小（正本修正・全件gate成功、CI反映前）
+
+GCC13.3.0/C++17で比較し、`op(MonoidMul<int>(2), 3)`と逆順は原本2系列でコンパイル・実行成功、修正前の公開版は関数テンプレートの型推論でコンパイル失敗した。原本の非テンプレートhidden friendをnamespaceの関数テンプレートへ置き換えたため、モノイドへ暗黙変換できる引数を受け付けなくなっている。
+
+コピー構築はできるがコピー代入を削除した型でも、原本のMonoidMax/Minは成功し、修正前の公開版は`r.x = b.x`でコンパイル失敗した。元のstd::max/minで選んだ値をコピーする実装には不要だった代入演算を追加し、Tの制約を狭めている。
+
+証拠は`.cache/wip/monoid_original_review_20261106/native_api_receipt.json`と各compile/runログ。9比較で原本の成功、公開版の想定した診断、隔離候補の成功、既存qualified呼出しの保持を確認した。原本は変更していない。候補のC++成功だけでモデル生成・Lean証明の完了とはしない。正本へhidden friendと元の委譲構築、generic Tのmax/min・ADLを復元した。公開C++/ASan/UBSan/template-firstは成功し、既存公開定理のLeanビルドも成功。独立kernel・全件gateの最新状態はhandoffを参照し、任意Tと完全object/lifetimeの検証は部分対応を維持する。

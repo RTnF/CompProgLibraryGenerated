@@ -32,3 +32,24 @@ python3 tools/check_public.py
 ```
 
 include 先の関数内の swap も検査対象とする。位置を定義元の実ファイルで解決し、Clang VFS overlay で検査式を挿入する。コンパイル対象は元の翻訳単位であり、include 前に定義された特殊化やマクロ、相対 include の文脈を保持する。`tests/test_scalar_swap_ir.py` は相対パスの依存ヘッダ、値引数の内部呼び出しと生成 Lean の結果、include 元の特殊化と依存ヘッダ内の同名関数の拒否を確認する。4検査が成功した。
+
+## min/max の参照結果を整数値へコピーする場合
+
+`verifier/scalar_choose.py` は、固定GCCの `bits/stl_algobase.h` に由来する二引数
+`std::min/max` の具体化を同じ翻訳単位の宣言ID・TemplateInstantiationPatternで照合する。
+同じ型の別TUで生成した標準実装と、primaryおよび具体化された本体の正規化ASTが
+一致することも要求する。名前だけで契約を選ばず、利用者の特殊化と改変された本体を拒否する。
+
+対応するのは同一の32/64 bit組み込み符号付き・符号なし整数型の単純なlvalue二つと、
+返却された参照を直ちにLValueToRValueで値にする場合である。localな`using std::min/max`はClangの名前解決後に取り除く。元の本体の比較式と
+返却先を確認して比較式を取り出し、最初の値を局所へコピーし、条件を満たすときだけ
+二番目の値をコピーする関数を既存のinlinerへ渡す。同じセルを参照していてもよい。
+参照の持出し、volatile、bool、浮動小数、ユーザー定義型、比較関数付きoverload、
+一時値や副作用を持つ引数には対応しない。条件付き評価とループ条件は既存inlinerの制約を保つ。
+
+新しいLean公理やstd契約公理は追加せず、生成された比較・宣言・分岐・代入の意味で検査する。
+C++からIRへの対応およびコンパイラと標準ヘッダの正しさは既存の信頼境界に含む。
+`tests/test_scalar_choose.py` は符号付き・符号なし32/64 bit境界値、alias値の保存、
+参照持出し・副作用・条件付き評価の拒否、通常の同名関数の区別、特殊化とAST改変の拒否を検査する。
+原本MonoidMax/Minの任意のlong long値についての結果・停止・callerメモリ保持・
+定数時間と追加領域上界は `tests/lean/original_monoid_select.lean` で扱う。
