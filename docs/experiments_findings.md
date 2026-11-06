@@ -58,3 +58,24 @@ GCC13.3.0/C++17で比較し、`op(MonoidMul<int>(2), 3)`と逆順は原本2系�
 コピー構築はできるがコピー代入を削除した型でも、原本のMonoidMax/Minは成功し、修正前の公開版は`r.x = b.x`でコンパイル失敗した。元のstd::max/minで選んだ値をコピーする実装には不要だった代入演算を追加し、Tの制約を狭めている。
 
 証拠は`.cache/wip/monoid_original_review_20261106/native_api_receipt.json`と各compile/runログ。9比較で原本の成功、公開版の想定した診断、隔離候補の成功、既存qualified呼出しの保持を確認した。原本は変更していない。候補のC++成功だけでモデル生成・Lean証明の完了とはしない。正本へhidden friendと元の委譲構築、generic Tのmax/min・ADLを復元した。公開C++/ASan/UBSan/template-firstは成功し、既存公開定理のLeanビルドも成功。独立kernel・全件gateの最新状態はhandoffを参照し、任意Tと完全object/lifetimeの検証は部分対応を維持する。
+
+## 2026-11-06: monoid_lazyの原本APIとコピー効果の差（未修正）
+
+原本`RangeAddRangeMaxMin<long long>::RangeAdd::id()`はC++/UBSanで成功するが、
+対応する公開`cp::RangeAdd<long long>::id()`はメンバーが存在せずコンパイルできない。
+原本の4 outer classとnested class、static e/id、member applyは、公開側ではflatな3クラスと
+別のmember名になっている（入れ子の型の不足はソースでも確認した）。
+
+`RangeSetRangeMaxMin<Observed>::RangeSet`のcomposeは2引数を値渡しし、選んだ引数を返す。
+公開`cp::RangeSet<Observed>`はconst参照で受け、Tとflagから作り直す。
+コピー構築をカウンタで観測する型で比較すると、同じ入力に対し結果vはともに2だが、
+原本のコピー回数3に対して公開側は2となった。元にあるコピーの副作用を保持していない。
+原本・公開CPPはこの調査では変更していない。修正済みとしてfixesへは載せない。
+
+GCC13.3.0/C++17/UBSan/offlineの4比較の証拠は
+`.cache/wip/monoid_lazy_original_review_20261106/native_api_receipt.json`とcompile/runログ。
+`identity.cpp`と`copy_effects.cpp`を同じdirectoryに保存した。
+現状の共通入口はnested非template型の選択とrecord型のmember template引数を扱えない。
+型要求を構造化し、同じTUのalias/nested/outer/primary IDと元sourceへの帰属を照合する拡張を進める。
+LLの既存flatモデルの成功で元の全APIや任意Tの検証完了とはしない。
+この調査は322c987後のローカル変更で、そのCI/リリースに含まれない。

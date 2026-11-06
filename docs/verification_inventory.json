@@ -1121,17 +1121,23 @@
           "kind": "ClassTemplateDecl",
           "line": 6,
           "declaration": "RangeAddRangeMaxMin",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "docs/experiments_findings.md"
+          ],
+          "review_notes": [
+            "idのAPIとRangeSet composeのコピー観測の局所比較。fileのreview_notesを参照。全機能の証明済みとはしない。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
@@ -1153,97 +1159,133 @@
           "kind": "CXXRecordDecl",
           "line": 7,
           "declaration": "struct RangeMax definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 8,
           "declaration": "x 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 9,
           "declaration": "RangeMax 'void (T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 10,
           "declaration": "RangeMax 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 11,
           "declaration": "referenced e 'RangeMax ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 12,
           "declaration": "friend_undeclared op 'RangeMax (const RangeMax &, const RangeMax &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
@@ -1393,65 +1435,91 @@
           "kind": "CXXMethodDecl",
           "line": 28,
           "declaration": "id 'RangeAdd ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "docs/experiments_findings.md",
+            "tests/test_nested_templates.py"
+          ],
+          "review_notes": [
+            "idのAPIとRangeSet composeのコピー観測の局所比較。fileのreview_notesを参照。全機能の証明済みとはしない。",
+            "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 29,
           "declaration": "friend_undeclared compose 'RangeAdd (RangeAdd, RangeAdd)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "FunctionTemplateDecl",
           "line": 32,
           "declaration": "apply",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 32,
           "declaration": "apply 'M (M)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "ClassTemplateDecl",
@@ -1505,113 +1573,155 @@
           "kind": "FieldDecl",
           "line": 38,
           "declaration": "x 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 39,
           "declaration": "size 'int'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 40,
           "declaration": "RangeSum 'void (T, int)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 41,
           "declaration": "RangeSum 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 42,
           "declaration": "referenced e 'RangeSum ()' static implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 43,
           "declaration": "friend_undeclared op 'RangeSum (const RangeSum &, const RangeSum &)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
           "line": 47,
           "declaration": "struct RangeAdd definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "review_notes": [
+            "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
+          ],
+          "evidence": [
+            "tests/test_nested_templates.py"
+          ]
         },
         {
           "kind": "FieldDecl",
@@ -1697,17 +1807,23 @@
           "kind": "ClassTemplateDecl",
           "line": 58,
           "declaration": "RangeSetRangeMaxMin",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "docs/experiments_findings.md"
+          ],
+          "review_notes": [
+            "idのAPIとRangeSet composeのコピー観測の局所比較。fileのreview_notesを参照。全機能の証明済みとはしない。"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
@@ -2017,17 +2133,23 @@
           "kind": "FunctionDecl",
           "line": 83,
           "declaration": "friend_undeclared compose 'RangeSet (RangeSet, RangeSet)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "docs/experiments_findings.md"
+          ],
+          "review_notes": [
+            "idのAPIとRangeSet composeのコピー観測の局所比較。fileのreview_notesを参照。全機能の証明済みとはしない。"
+          ]
         },
         {
           "kind": "FunctionTemplateDecl",
@@ -2348,7 +2470,7 @@
       "ignored_driver": false,
       "verification_target": null,
       "status": {
-        "review": "pending",
+        "review": "partial",
         "bug": "unknown",
         "cpp_tested": false,
         "common_translator": false,
@@ -2371,7 +2493,22 @@
         "experiments/library3/cpp/AlgebraicStructure/Mapping.hpp",
         "experiments/library3/cpp/AlgebraicStructure/Monoid.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "docs/monoid_lazy.md",
+        "docs/experiments_findings.md",
+        "docs/original_template_classes.md",
+        "tests/test_nested_templates.py",
+        "tests/lean/original_nested_max.lean",
+        "tests/lean/original_nested_sum.lean",
+        "tests/lean/original_record_apply.lean",
+        "tests/imports/original_record_apply.cpp"
+      ],
+      "review_notes": [
+        "2026-11-06: GCC13.3/C++17/UBSanで4比較。原本RangeAddRangeMaxMin<long long>::RangeAdd::id()は成功し、公開flat RangeAddのidは存在せず拒否。原本RangeSet composeは値引数と返却でcopy observerが3回、公開const参照/再構築は2回で同じ値2に対して効果が異なる。原本CPPは変更していない。nested型/static e/id/member apply、値渡し、任意T/全object lifetimeの対応は未完了。nativeの局所確認だけで全declのcpp_tested/lean_proved/publishedをtrueにしない。証拠はdocs/experiments_findings.mdの調査節とローカルnative_api_receipt.json。",
+        "2026-11-07: 元CPP未変更でRangeAddRangeMaxMin<long long>::RangeMaxの4モデルとRangeAddRangeSum<long long>::RangeSumの8fieldモデルを共通nested入口から再生成。任意callerの結果/停止/元メモリ保持/資源上界を登録回帰で検査し、固定nanodaはそれぞれ3652/3600依存宣言。RangeSumはlong long/intの混在値引数を両方評価し、opの既存モデル/任意fuel callFuel一致を確認。任意T、完全object/lifetime、残るaction/applyは未完了で、file全体の検証済みフラグはfalseのまま。",
+        "2026-11-07: 同一TUでRangeAdd/RangeMax/RangeMinを別record IDのまま選び、record型member引数はRecordArgumentの選択ID・元source hash・generic member pattern IDを照合。原本から13モデル生成、非const receiver/値引数のapply2種の一般結果x+v・停止・メモリ保持・post100と10プログラム/callFuel一致の26rootsを固定nanoda3606宣言で確認。12 provenance負例/schema/nativeも登録テスト成功。composeの一般証明、複数field record引数、任意T/完全object lifetimeは未完了。公開CPPのAPI/コピー差は未修正。"
+      ]
     },
     {
       "source": "experiments/library/cpp/array/cumulative_sum.hpp",

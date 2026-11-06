@@ -69,7 +69,7 @@ def pinned_includes(includes):
 
 def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, construction_stages=False,
                      copy_class=None, copy_records=None, class_callers=None, copy_assignment=False, move_kind=None,
-                     class_destruction=False, template_instance=None):
+                     class_destruction=False, template_instance=None, companion_instances=()):
     source=Path(source).resolve(strict=True)
     if not isinstance(copy_assignment,bool) or copy_assignment and copy_class is None:
         raise ValueError('assignment witness requires a class materialization')
@@ -87,6 +87,17 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
             raise ValueError('template instance requires a class materialization')
         copy_class=template_instance.target(copy_class)
         witness_digest=hashlib.sha256(template_instance.witness.read_bytes()).hexdigest()
+    if not isinstance(companion_instances, tuple) or companion_instances and template_instance is None:
+        raise ValueError('companion instances require one controlled template witness')
+    companion_targets = []
+    for item in companion_instances:
+        if (not isinstance(item, tuple) or len(item) != 2 or not isinstance(item[1], TemplateInstance)
+                or item[1].witness != template_instance.witness):
+            raise ValueError('companions require structured types and the same witness')
+        target = item[1].target(item[0])
+        if target in [copy_class, *companion_targets]:
+            raise ValueError('duplicate selected template type')
+        companion_targets.append(target)
     copy_digest=hashlib.sha256(source.read_bytes()).hexdigest() if copy_class is not None else None
     if class_callers is not None and (copy_class is None or not isinstance(class_callers,list) or class_callers):
         raise ValueError('class callers require a copy witness and an empty collector')
@@ -127,8 +138,10 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
                                    '& source_'+nonce+') { ::'+copy_class+' target_'+nonce+'(source_'+nonce+'); } }\n')
             if template_instance is not None:
                 alias_namespace='codex_template_audit_'+nonce
-                witness.write_text('namespace '+alias_namespace+' { using Selected = ::'+copy_class+'; }\n'+
-                                   witness.read_text()+'\n#include "'+str(template_instance.witness)+'"\n')
+                aliases = 'namespace '+alias_namespace+' { using Selected = ::'+copy_class+'; }\n'
+                for index, target in enumerate(companion_targets):
+                    aliases += 'namespace '+alias_namespace+'_companion_'+str(index)+' { using Selected = ::'+target+'; }\n'
+                witness.write_text(aliases+witness.read_text()+'\n#include "'+str(template_instance.witness)+'"\n')
             inputs=['-include',str(source),str(witness)]
         profile_file = Path(directory)/'includes.json'
         include_flags = ['-Xclang','-header-include-file','-Xclang',str(profile_file),
@@ -143,6 +156,13 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
         else:
             copy_records.extend(collect_template_record(output,source,copy_class,alias_namespace,witness)
                                 if template_instance is not None else forced_class_records(output,source,copy_class))
+            for index, target in enumerate(companion_targets):
+                output.seek(0)
+                copy_records.extend(collect_template_record(output, source, target,
+                    alias_namespace+'_companion_'+str(index), witness))
+            identifiers = [record['id'] for record in copy_records]
+            if len(identifiers) != len(set(identifiers)):
+                raise ValueError('selected template records must have distinct identities')
             functions=[]
             if template_instance is not None and callees is not None:
                 output.seek(0)

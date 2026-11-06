@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | algebraic_structure/group.hpp | 一部 | `group`。2026-11-05にhidden friend・元の委譲構築/returnを復元し、LL構成子のfieldモデルと一般定理を追加。統合後の全件検証中。任意Tや完全なobject/lifetime ASTの証明は未完了 |
 | algebraic_structure/monoid.hpp | 一部 | `monoid`。公開版のhidden friend暗黙変換とcopy-only Tの制約違反は2026-11-06に再現し、正本C++で復元。原本Mul/Max/MinのLL各4モデルを生成し、既存モデル一致および一般callerのop・既定構築と資源上界を独立kernelで確認。公開版の新モデルの全件gateは成功。任意T/完全object/lifetimeと原本全体の検証は未完了（docs/original_template_classes.md、docs/experiments_findings.md） |
-| algebraic_structure/monoid_lazy.hpp | 済 | `monoid_lazy` |
+| algebraic_structure/monoid_lazy.hpp | 一部 | `monoid_lazy`のflat APIのみ。2026-11-06に原本のstatic idが公開側にないことと、RangeSet composeの値渡しをconst参照へ変えたためコピー効果が異なることをnative比較で確認。nested型/e/id/applyと元のコピー意味を保つ検証・復元が未完了（docs/experiments_findings.md） |
 | array/cumulative_sum.hpp | 一部 | `cumulative_sum`（クラス `CumulativeSum<T>` と `CumulativeSum2D<T>`） |
 | array/doubling.hpp | 済 | `doubling`, `bit_width_u64` |
 | array/element_count.hpp | 一部 | `run_length`（出力は呼び出し側が用意した 2 本の vector） |

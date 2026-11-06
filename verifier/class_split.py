@@ -16,7 +16,7 @@ import copy
 import re
 
 from class_lowering import (SCALAR_FIELD_TYPES, function_name, validate_scalar_value_record,
-                            constructor_body_may_change_state)
+                            constructor_body_may_change_state, nested_type_pattern)
 
 SKIP_WRAPPERS = ('ExprWithCleanups', 'ImplicitCastExpr', 'CXXFunctionalCastExpr', 'MaterializeTemporaryExpr',
                  'CXXBindTemporaryExpr', 'ParenExpr')
@@ -39,12 +39,16 @@ class SplitClass:
         self.display = display
         self.fields = [c for c in record.get('inner', []) if c.get('kind') == 'FieldDecl']
         validate_scalar_value_record(record, self.fields)
-        self.pattern = re.compile(r'(?<![A-Za-z0-9_])(?:cp::)?' + re.escape(display) + r'(?![A-Za-z0-9_<])')
+        self.pattern = nested_type_pattern(record, display) or re.compile(
+            r'(?<![A-Za-z0-9_])(?:cp::)?' + re.escape(display) + r'(?![A-Za-z0-9_<])')
         self.constructors = {}
         self.raw_constructors = {}
         self.constructor_nodes = {}
         self.delegating = set()
         self.value_types = {display}
+        origin = record.get('_template_witness_origin', {})
+        if origin.get('nested_members'):
+            self.value_types.update((origin['requested'], '::'+origin['requested']))
         self.factories = {n['id']:n for n in record.get('inner',[]) if n.get('kind') == 'CXXMethodDecl'
                           and n.get('storageClass') == 'static'
                           and any(c.get('kind') == 'CompoundStmt' for c in n.get('inner',[]))}

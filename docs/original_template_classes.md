@@ -37,3 +37,58 @@ C++ object/lifetimeを検証済みとするフラグはfalseのままにする�
 完全なobject/lifetime、copy/move/assignmentと混在操作の意味・総資源である。
 各fieldモデルの独立した証明を、複数fieldを一度に評価する原オブジェクト全体の証明へ
 拡大しない。C++の元APIを狭めず、台帳は部分検証のままとする。
+
+## 入れ子型の有限具体化
+
+`TemplateInstance(('long long',), witness, nested_members=('RangeMax',))` を
+`lower_template_class` の `RangeAddRangeMaxMin` に渡すと、原本
+`experiments/library/cpp/algebraic_structure/monoid_lazy.hpp` の
+`RangeAddRangeMaxMin<long long>::RangeMax` を選択する。
+`nested_members` はkeyword-onlyの識別子tupleで、既定の空tupleでは従来の外側型を選ぶ。
+型や整数の引数は外側templateへ渡し、非templateの入れ子recordを順に辿る。
+
+同一Clang TUでcontrolled aliasの参照ID、入れ子recordと親recordのID、
+外側specializationとprimaryのIDを結ぶ。各段のTemplateInstantiationPatternが
+対応するgeneric定義のIDを指すことと、全定義が元forced sourceに帰属することを要求する。
+型の消去では選択した完全修飾名とinjected class名を区別し、別namespaceや
+グローバルの同名型を部分一致で消去しない。coverageに実際のnested pathと選択型を記録する。
+
+`tests/test_nested_templates.py` が生成し直す4モデルについて、
+`tests/lean/original_nested_max.lean` は既存MonoidMaxモデルとの全プログラム一致、
+任意fuel/caller/argumentsのcallFuel一致、元と同じ前提・結果・停止・メモリ保持・
+資源上界を検査する。原本CPPのAPIと型は変更しない。
+この有限具体化はmonoid_lazy全体の検証完了ではない。複数fieldを持つrecord型のmember template引数、
+条件付きrecord返却、任意Tやコピー効果を含む完全なobject/lifetimeは残件である。
+
+原本 `RangeAddRangeSum<long long>::RangeSum` の8fieldモデルは
+`tests/lean/original_nested_sum.lean` で検査する。`x` はlong long、`size`はintのまま、
+両方の値引数を評価・束縛してから構築結果を返すこと、単位元と委譲defaultの両fieldが0、
+opの2プログラムと任意fuelのcallFuelが既存モデルに一致することを示す。
+任意の型付きcallerに対して停止・元メモリ保持・構築の`ScalarPost2 ... 70`を確認し、
+opは既存と同じ中間加算が各型範囲内という前提と上界72を保持する。
+各fieldを別々に検査することを、原object全体の同時構築・寿命の検証とは扱わない。
+
+## record型のmember template引数
+
+`lower_template_class` の `companion_instances` へ、同じwitnessを持つ
+`(qualified_class, TemplateInstance)` のtupleを渡す。receiverを0、companionを1以降とする
+`RecordArgument(index)`を `member_instances={'apply': [(RecordArgument(1),), ...]}` に指定する。
+各型のcontrolled aliasを同じClang TUで生成し、source/primary/nestedの帰属と宣言IDを検査する。
+実体化memberの本体も、元sourceのgeneric method pattern IDへの対応と定義位置を検査する。
+actual TemplateArgumentのRecordType.decl.idが選択recordのIDに一致することを必須にし、
+生のC++型文字列、異なるTU/source、未選択record、重複した選択を拒否する。
+現在のcompanion経路は各recordが単一scalar fieldである場合を扱う。
+モデル名や短い型名が衝突する場合は、scopeを区別できる経路まで拒否する。
+
+原本 `RangeAddRangeMaxMin<long long>` のRangeAdd/RangeMax/RangeMinから13モデルを生成する。
+`tests/lean/original_record_apply.lean` は非const receiverを保ったapply2種について、
+書込み可能なreceiver bindingと型の値域条件の下で、任意のscalar値引数の結果`x+v`、
+停止、元メモリ保持、`ScalarPost2 caller Sinit res (1+e.nodes) 100 ...`を確認する。
+同じプログラム/callFuelの一致も確認するが、元C++の別々の型をaliasで同一化しない。
+copy/move/destructorの非自明な効果はtrivial-record監査が拒否し、
+任意Tと完全なobject/lifetimeの検証済みフラグはfalseを維持する。
+
+回帰には別namespaceのflat `Box`/`OtherBox` の5モデル生成とnative/UBSan、
+witness側の明示的member specializationで結果を10から106に変えた例の拒否も含む。
+特殊化本体が選択record内に実体化されていない場合は未具体化として拒否し、
+本体がある場合もgeneric pattern IDと定義位置の一致を要求する。

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from ast_stream import _display_name, _function_class_name
 from class_templates import TemplateInstance, instantiate_members, require_method_bodies
-from class_lowering import ErasedClass, build_functions, erase_functions
+from class_lowering import ErasedClass, build_functions, erase_functions, selected_type_pattern
 from class_split import SplitClass, split_functions
 from inline_ast import inline_functions
 from nested_ir import NestedBody, ValueCalls, apply_conversion_policy
@@ -17,7 +17,7 @@ from vector_stl import audit_vector_nodes, translation_unit
 
 
 def lower_template_class(source, qualified, instance, include_dirs=(), *,
-                         member_instances=None, signed_conversion='checked'):
+                         member_instances=None, signed_conversion='checked', companion_instances=()):
     if not isinstance(instance, TemplateInstance):
         raise ValueError('a structured template instance is required')
     source = Path(source).resolve(strict=True)
@@ -25,14 +25,33 @@ def lower_template_class(source, qualified, instance, include_dirs=(), *,
     before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in (source, instance.witness)}
     records, callees = [], []
     _, standard = translation_unit(source, include_dirs, callees=callees,
-        copy_class=qualified, copy_records=records, template_instance=instance)
-    if len(records) != 1:
-        raise ValueError('exactly one source-owned class template instance required')
-    record, ledger = instantiate_members(records[0], {} if member_instances is None else member_instances)
+        copy_class=qualified, copy_records=records, template_instance=instance,
+        companion_instances=companion_instances)
+    if len(records) != 1+len(companion_instances):
+        raise ValueError('one source-owned class template instance per request required')
+    record, ledger = instantiate_members(records[0], {} if member_instances is None else member_instances,
+        record_arguments=records)
     require_method_bodies(record)
     fields = [node for node in record.get('inner', []) if node.get('kind') == 'FieldDecl']
     friends = [node for node in record.get('inner', []) if node.get('kind') == 'FriendDecl']
-    if len(fields) == 1:
+    if companion_instances:
+        selected = [record, *records[1:]]
+        displays = [_display_name(item) for item in selected]
+        names = [_function_class_name(item) for item in selected]
+        if len(displays) != len(set(displays)) or len(names) != len(set(names)):
+            raise ValueError('companion classes require distinct scoped model names')
+        classes, functions = [], []
+        for item in selected:
+            require_method_bodies(item)
+            cls = ErasedClass(item, _function_class_name(item), _display_name(item))
+            cls.pattern = selected_type_pattern(item, cls.display)
+            if cls.pattern is None:
+                raise ValueError('companion type requires audited source provenance')
+            classes.append(cls)
+            functions.extend(build_functions(cls, source,
+                [n for n in item.get('inner', []) if n.get('kind') == 'FriendDecl']))
+        functions = erase_functions(classes, functions)
+    elif len(fields) == 1:
         cls = ErasedClass(record, _function_class_name(record), _display_name(record))
         functions = erase_functions([cls], build_functions(cls, source, friends))
     elif len(fields) > 1:
@@ -70,4 +89,11 @@ def lower_template_class(source, qualified, instance, include_dirs=(), *,
         member_instances=[dict(source_name=item['source_name'], type_arguments=item['type_arguments'])
                           for item in ledger], models=[p['name'] for p in programs],
         generic_types_verified=False, full_cpp_object_lifetime_verified=False)
+    origin = record.get('_template_witness_origin', {})
+    if origin.get('nested_members'):
+        coverage['nested_members'] = list(origin['nested_members'])
+        coverage['selected_type'] = origin['requested']
+    if companion_instances:
+        coverage['companions'] = [dict(qualified_class=q, arguments=list(i.arguments),
+            nested_members=list(i.nested_members), selected_type=i.target(q)) for q, i in companion_instances]
     return ir, coverage

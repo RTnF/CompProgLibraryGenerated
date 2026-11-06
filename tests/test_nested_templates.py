@@ -1,0 +1,309 @@
+"""Check original nested template types without editing their C++ API.
+
+Finite long-long instance proofs do not establish arbitrary-T/object-lifetime coverage.
+"""
+import copy
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path[:0] = [str(ROOT/'tests'), str(ROOT/'verifier'), str(ROOT/'tools')]
+from ast_stream import node_header, root_objects
+from class_templates import TemplateInstance, RecordArgument, instantiate_members
+from class_lowering import ErasedClass
+from nested_templates import select_nested_records
+from template_class_ir import lower_template_class
+from nested_ir import emit_lean
+from offline import disable_network
+import test_scalar_class_delegation as scalar_checks
+
+results = []
+def walk(node):
+    yield node
+    for child in node.get('inner', []):
+        yield from walk(child)
+
+def check_collect(stream, original, requested, alias_namespace, witness):
+    roots = [json.loads(raw) for raw in root_objects(stream)
+             if node_header(raw).get('name') in {'RangeAddRangeMaxMin',alias_namespace}]
+    selected = select_nested_records(roots, original, requested, alias_namespace, witness)
+    origin = selected[0]['_template_witness_origin']
+
+    def nodes(rs):
+        return {n['id']: n for r in rs for n in walk(r) if 'id' in n}
+
+    def parts(rs):
+        ns = nodes(rs)
+        actual = ns[origin['record_id']]
+        outer = ns[origin['outer_record_id']]
+        primary = ns[origin['primary_id']]
+        generic = ns[outer['TemplateInstantiationPattern']]
+        alias = next(n for n in ns.values() if n.get('kind')=='TypeAliasDecl' and n.get('name')=='Selected')
+        ref = next(n for n in walk(alias) if n.get('kind')=='RecordType')
+        return ns, actual, outer, primary, generic, alias, ref
+
+    def alias_outer(rs):
+        ns,a,o,p,g,al,ref = parts(rs)
+        ref['decl']['id'] = o['id']
+
+    def sibling_pattern(rs):
+        ns,a,o,p,g,al,ref = parts(rs)
+        sibling = next(c for c in g['inner'] if c.get('name')=='RangeMin' and c.get('completeDefinition'))
+        a['TemplateInstantiationPattern'] = sibling['id']
+
+    def outer_pattern(rs):
+        parts(rs)[2]['TemplateInstantiationPattern'] = 'missing-primary'
+
+    def foreign_definition(rs):
+        parts(rs)[1]['loc']['file'] = str(witness)
+
+    def macro_pattern(rs):
+        ns,a,o,p,g,al,ref = parts(rs)
+        ns[a['TemplateInstantiationPattern']]['loc']['expansionLoc'] = {'file':str(original)}
+
+    def alias_in_source(rs):
+        parts(rs)[5]['loc']['file'] = str(original)
+
+    def wrong_parent(rs):
+        ns,a,o,p,g,al,ref = parts(rs)
+        o['inner'] = [c for c in o['inner'] if c.get('id')!=a['id']]
+        g['inner'].append(a)
+
+    def wrong_spelling(rs):
+        parts(rs)[6]['type']['qualType'] = '::Other<long long>::RangeMax'
+
+    def duplicate_record(rs):
+        ns,a,o,p,g,al,ref = parts(rs)
+        o['inner'].append(copy.deepcopy(a))
+
+    def no_primary_owner(rs):
+        ns,a,o,p,g,al,ref = parts(rs)
+        p['inner'] = [c for c in p['inner'] if c.get('id')!=o['id']]
+        rs.append(o)
+
+    def wrong_root_name(rs):
+        parts(rs)[2]['name'] = 'Other'
+
+    for name, mutation in [('alias_outer',alias_outer),('sibling_pattern',sibling_pattern),
+            ('outer_pattern',outer_pattern),('foreign_definition',foreign_definition),
+            ('macro_pattern',macro_pattern),('alias_in_source',alias_in_source),
+            ('wrong_parent',wrong_parent),('wrong_spelling',wrong_spelling),
+            ('duplicate_record',duplicate_record),('no_primary_owner',no_primary_owner),
+            ('wrong_root_name',wrong_root_name)]:
+        altered = copy.deepcopy(roots)
+        mutation(altered)
+        try:
+            select_nested_records(altered, original, requested, alias_namespace, witness)
+        except ValueError as error:
+            results.append(dict(case=name,status='rejected',reason=str(error)))
+        else:
+            raise AssertionError('accepted mutation '+name)
+    cls = ErasedClass(selected[0], 'NestedRangeMax', 'RangeMax')
+    for spelling in ['Other::RangeMax','::RangeMax','OtherRangeMax','RangeMaxExtra',
+                     'Other<long long>::RangeMax',requested+'::Child']:
+        assert cls.erase_text(spelling)==spelling, spelling
+    assert cls.erase_text('const ::'+requested+' &')=='const long long &'
+    assert cls.erase_text('const RangeMax &')=='const long long &'
+    return selected
+
+class NestedTemplateTests(unittest.TestCase):
+    def test_original_nested_max(self):
+        source = ROOT/'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp'
+        witness = ROOT/'tests/imports/original_nested_max.cpp'
+        before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in (source,witness)}
+        instance = TemplateInstance(('long long',), witness, nested_members=('RangeMax',))
+        ir, coverage = lower_template_class(source,'RangeAddRangeMaxMin',instance,
+                                            [ROOT/'experiments/library/cpp'])
+        self.assertEqual(len(ir['functions']),4)
+        self.assertEqual(coverage['nested_members'],['RangeMax'])
+        self.assertEqual(coverage['selected_type'],'RangeAddRangeMaxMin<long long>::RangeMax')
+        self.assertEqual(coverage['source_sha256'],before[source])
+        self.assertEqual(coverage['witness_sha256'],before[witness])
+        self.assertFalse(coverage['generic_types_verified'])
+        self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
+        proof = 'import Proofs.MonoidCall\n'+emit_lean(ir,'OriginalNestedMax')
+        proof += (ROOT/'tests/lean/original_nested_max.lean').read_text()
+        roots = ['NestedMaxAudit.'+name for name in
+                 ('new0','call_new0','new1','call_new1','e','call_e','op','call_op',
+                  'default_correct','new_correct','e_correct','op_correct')]
+        with tempfile.TemporaryDirectory(prefix='original-nested-max-') as tmp:
+            directory=Path(tmp)
+            scalar_checks.ScalarDelegationTests().kernel(directory,'NestedMaxCheck',roots,proof)
+            exe=directory/'native'
+            subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined',
+                '-fno-sanitize-recover=all','-I',str(ROOT/'experiments/library/cpp'),
+                '-include',str(source),str(witness),'-o',str(exe)],check=True,timeout=60)
+            subprocess.run([str(exe)],check=True,timeout=10)
+        results.clear()
+        with patch('class_templates.collect_nested_template_record',check_collect):
+            guarded, _ = lower_template_class(source,'RangeAddRangeMaxMin',instance,
+                                              [ROOT/'experiments/library/cpp'])
+        self.assertEqual(guarded,ir)
+        self.assertEqual(len(results),11)
+        for path,digest in before.items():
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+
+    def test_nested_depth_and_split_fields(self):
+        cases = [
+            (ROOT/'tests/imports/nested_depth.hpp',ROOT/'tests/imports/nested_depth.cpp',
+             'other::Outer',('long long','3'),('Middle','Leaf'),3,[]),
+            (ROOT/'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp',
+             ROOT/'tests/imports/original_nested_sum.cpp','RangeAddRangeSum',
+             ('long long',),('RangeSum',),8,[ROOT/'experiments/library/cpp'])]
+        for source,witness,qualified,args,members,count,includes in cases:
+            with self.subTest(qualified=qualified), tempfile.TemporaryDirectory(prefix='nested-split-') as tmp:
+                before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in (source,witness)}
+                instance = TemplateInstance(args,witness,nested_members=members)
+                ir, coverage = lower_template_class(source,qualified,instance,includes)
+                self.assertEqual(len(ir['functions']),count)
+                if qualified == 'RangeAddRangeSum':
+                    proof = 'import Proofs.MonoidLazyCall\n'+emit_lean(ir,'OriginalNestedSum')
+                    proof += (ROOT/'tests/lean/original_nested_sum.lean').read_text()
+                    roots = ['NestedSumAudit.'+name for name in
+                             ('prepare_values2t','value2t_correct','const_t_correct',
+                              'e_x_correct','e_size_correct','new1_x_correct','new1_size_correct',
+                              'new_x_correct','new_size_correct','op_x_program','op_x_call',
+                              'op_x_correct','op_size_program','op_size_call','op_size_correct')]
+                    scalar_checks.ScalarDelegationTests().kernel(Path(tmp),'NestedSumCheck',roots,proof)
+                self.assertEqual(coverage['nested_members'],list(members))
+                self.assertEqual(coverage['selected_type'],instance.target(qualified))
+                self.assertFalse(coverage['generic_types_verified'])
+                self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
+                exe=Path(tmp)/'native'
+                command=['g++','-std=c++17','-O1','-fsanitize=undefined','-fno-sanitize-recover=all']
+                for include in includes:
+                    command += ['-I',str(include)]
+                subprocess.run([*command,'-include',str(source),str(witness),'-o',str(exe)],
+                               check=True,timeout=60)
+                subprocess.run([str(exe)],check=True,timeout=10)
+                for path,digest in before.items():
+                    self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+
+    def test_record_member_arguments(self):
+        source=ROOT/'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp'
+        witness=ROOT/'tests/imports/original_record_apply.cpp'
+        main=TemplateInstance(('long long',),witness,nested_members=('RangeAdd',))
+        companions=tuple(('RangeAddRangeMaxMin',TemplateInstance(('long long',),witness,
+            nested_members=(name,))) for name in ['RangeMax','RangeMin'])
+        requested={'apply':[(RecordArgument(1),),(RecordArgument(2),)]}
+        before={p:hashlib.sha256(p.read_bytes()).hexdigest() for p in (source,witness)}
+        negative=[]
+        def checked_members(record, schema, *, record_arguments):
+            def reject(name, change=None, request=None):
+                copied=copy.deepcopy([record,*record_arguments])
+                r,context=copied[0],copied[1:]
+                if change is not None:
+                    change(r,context)
+                with self.subTest(case=name), self.assertRaises(ValueError):
+                    instantiate_members(r,schema if request is None else request,record_arguments=context)
+                negative.append(name)
+            def argument(r):
+                template=next(n for n in r['inner'] if n.get('kind')=='FunctionTemplateDecl')
+                method=next(n for n in template['inner'] if any(c.get('kind')=='TemplateArgument' for c in n.get('inner',[])))
+                return next(n for n in method['inner'] if n.get('kind')=='TemplateArgument')
+            reject('wrong record ID',lambda r,c: argument(r)['inner'][0]['decl'].update(id=c[2]['id']))
+            reject('missing RecordType',lambda r,c: argument(r).update(inner=[]))
+            reject('wrong RecordType spelling',lambda r,c: argument(r)['inner'][0]['type'].update(qualType='Other'))
+            reject('foreign TU',lambda r,c: c[1].update(_copy_translation_unit='foreign'))
+            reject('wrong source hash',lambda r,c: c[1].update(_copy_source_sha256='changed'))
+            reject('foreign source',lambda r,c: c[1].update(_copy_source='foreign.hpp'))
+            reject('wrong provenance ID',lambda r,c: c[1]['_template_witness_origin'].update(record_id='other'))
+            def selected_method(r):
+                template=next(n for n in r['inner'] if n.get('kind')=='FunctionTemplateDecl')
+                return next(n for n in template['inner'] if any(c.get('kind')=='TemplateArgument' for c in n.get('inner',[])))
+            reject('foreign member body',lambda r,c: selected_method(r)['loc'].update(file=str(witness)))
+            reject('wrong member pattern',lambda r,c: selected_method(r).update(TemplateInstantiationPattern='foreign'))
+            reject('unselected record',request={'apply':[(RecordArgument(99),)]})
+            reject('uninstantiated self argument',request={'apply':[(RecordArgument(0),)]})
+            reject('raw C++ spelling',request={'apply':[(companions[0][1].target(companions[0][0]),)]})
+            return instantiate_members(record,schema,record_arguments=record_arguments)
+        with patch('template_class_ir.instantiate_members',checked_members):
+            ir,coverage=lower_template_class(source,'RangeAddRangeMaxMin',main,
+                [ROOT/'experiments/library/cpp'],companion_instances=companions,member_instances=requested)
+        self.assertEqual(len(negative),12)
+        self.assertEqual(len(ir['functions']),13)
+        self.assertEqual(coverage['source_sha256'],before[source])
+        self.assertEqual(coverage['witness_sha256'],before[witness])
+        self.assertEqual([c['selected_type'] for c in coverage['companions']],
+                         [i.target(q) for q,i in companions])
+        self.assertEqual(coverage['member_instances'],[dict(source_name='apply',type_arguments=[i.target(q)]) for q,i in companions])
+        self.assertFalse(coverage['generic_types_verified'])
+        self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
+        proof='import Proofs.MonoidLazyCall\n'+emit_lean(ir,'OriginalRecordApply')
+        proof+=(ROOT/'tests/lean/original_record_apply.lean').read_text()
+        names=['prep_mutable_value','add_exec','apply_same','apply_call','apply_correct','apply_min_correct']
+        for name in ['add_new','add_id',*[c+'_'+op for c in ['max','min'] for op in ['new0','new1','e','op']]]:
+            names.extend([name,'call_'+name])
+        with tempfile.TemporaryDirectory(prefix='original-record-apply-') as tmp:
+            scalar_checks.ScalarDelegationTests().kernel(Path(tmp),'RecordApplyCheck',
+                ['RecordApplyAudit.'+name for name in names],proof)
+            exe=Path(tmp)/'native'
+            subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined','-fno-sanitize-recover=all',
+                '-I',str(ROOT/'experiments/library/cpp'),'-include',str(source),str(witness),'-o',str(exe)],
+                check=True,timeout=60)
+            subprocess.run([str(exe)],check=True,timeout=10)
+        for path,digest in before.items():
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+
+    def test_companion_scope_and_foreign_member(self):
+        cases=[(ROOT/'tests/imports/flat_companions.hpp',ROOT/'tests/imports/flat_companions.cpp',
+                'other::Action',(),['other::Box','other::OtherBox'],None),
+               (ROOT/'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp',
+                ROOT/'tests/imports/record_apply_specialized.cpp','RangeAddRangeMaxMin',('RangeAdd',),
+                ['RangeMax','RangeMin'],'foreign')]
+        for source,witness,qualified,members,names,mode in cases:
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory(prefix='companion-scope-') as tmp:
+                before={p:hashlib.sha256(p.read_bytes()).hexdigest() for p in (source,witness)}
+                main=TemplateInstance(('long long',),witness,nested_members=members)
+                companions=tuple((name if mode is None else qualified,
+                    TemplateInstance(('long long',),witness,nested_members=() if mode is None else (name,)))
+                    for name in names)
+                arguments=dict(companion_instances=companions,
+                               member_instances={'apply':[(RecordArgument(1),),(RecordArgument(2),)]})
+                if mode is None:
+                    ir,coverage=lower_template_class(source,qualified,main,**arguments)
+                    self.assertEqual(len(ir['functions']),5)
+                    self.assertEqual([x['selected_type'] for x in coverage['companions']],
+                                     [i.target(q) for q,i in companions])
+                else:
+                    with self.assertRaisesRegex(ValueError,
+                            'requested member specialization is not instantiated|member specialization must derive from the original source pattern'):
+                        lower_template_class(source,qualified,main,[ROOT/'experiments/library/cpp'],**arguments)
+                exe=Path(tmp)/'native'
+                subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined','-fno-sanitize-recover=all',
+                    '-I',str(ROOT/'experiments/library/cpp'),'-include',str(source),str(witness),'-o',str(exe)],
+                    check=True,timeout=60)
+                subprocess.run([str(exe)],check=True,timeout=10)
+                for path,digest in before.items():
+                    self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+
+    def test_structured_path(self):
+        witness=ROOT/'tests/imports/original_nested_max.cpp'
+        self.assertEqual(TemplateInstance(('long long',),witness).target('Root'),'Root<long long>')
+        for members in [('RangeMax<int>',),('RangeMax;int injected',),['RangeMax'],(7,)]:
+            with self.subTest(members=members), self.assertRaises(ValueError):
+                TemplateInstance(('long long',),witness,nested_members=members)
+        for index in [-1,True,'1']:
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                RecordArgument(index)
+        source=ROOT/'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp'
+        main=TemplateInstance(('long long',),witness,nested_members=('RangeMax',))
+        for companions in [[],(('RangeAddRangeMaxMin',main),),
+                           (('RangeAddRangeMaxMin',TemplateInstance(('long long',),
+                            ROOT/'tests/imports/original_record_apply.cpp',nested_members=('RangeMin',))),)]:
+            with self.subTest(companions=companions), self.assertRaises(ValueError):
+                lower_template_class(source,'RangeAddRangeMaxMin',main,companion_instances=companions)
+        with self.assertRaises(TypeError):
+            TemplateInstance(('long long',),witness,('RangeMax',))
+        with self.assertRaises(ValueError):
+            TemplateInstance(('long long',),witness,nested_members=('RangeMax',)).target('Root;bad')
+
+if __name__ == '__main__':
+    disable_network()
+    unittest.main()

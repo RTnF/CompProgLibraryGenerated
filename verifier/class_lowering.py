@@ -77,6 +77,23 @@ def spellings(record, qualified_name):
     return sorted({qualified_name, qualified_name.removeprefix('cp::')}, key=len, reverse=True)
 
 
+def selected_type_pattern(record, display):
+    origin = record.get('_template_witness_origin', {})
+    if not origin.get('requested'):
+        return None
+    # The injected name is local to the selected class. A leading :: belongs
+    # only to the complete type, never to an unrelated global namesake.
+    full = origin['requested']
+    return re.compile(r'(?<![A-Za-z_0-9:])(?:(?:::)?'+re.escape(full)+'|'+
+                      re.escape(display)+r')(?![A-Za-z_0-9<:])')
+
+
+def nested_type_pattern(record, display):
+    if not record.get('_template_witness_origin', {}).get('nested_members'):
+        return None
+    return selected_type_pattern(record, display)
+
+
 class ErasedClass:
     def __init__(self, record, class_name, display):
         self.record = record
@@ -108,7 +125,7 @@ class ErasedClass:
                     scan(value)
         scan(record.get('inner', []))
         self.parameter_names = [names[i] for i in sorted(names)]
-        self.pattern = re.compile(r'(?:cp::)?' + re.escape(display))
+        self.pattern = nested_type_pattern(record, display) or re.compile(r'(?:cp::)?' + re.escape(display))
         self.methods = {}      # method id -> function
         self.constructors = {}  # constructor signature -> function
         self.friends = {}       # function id -> function
