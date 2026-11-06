@@ -138,4 +138,3 @@ def collect_nested_template_record(stream, source, requested, alias_namespace, w
     roots = [json.loads(raw) for raw in root_objects(stream)
              if node_header(raw).get('name') in {first,alias_namespace}]
     return select_nested_records(roots, source, requested, alias_namespace, witness)
-

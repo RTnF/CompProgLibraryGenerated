@@ -51,7 +51,7 @@ theorem prep_mutable_value (caller : NState) (params : List CppVectorBindings.Pa
     simp [resolve,hty1,ran1]
   refine ⟨q1,?_,?_⟩
   · have g1 := good1.2.2.1
-    
+
     simp only [NState.charge, NState.observe, CppState.State.observe] at *
     omega
   rw [hp]
