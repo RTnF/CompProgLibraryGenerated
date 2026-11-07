@@ -94,6 +94,20 @@ def nested_type_pattern(record, display):
     return selected_type_pattern(record, display)
 
 
+def scalar_record_type(info, pattern):
+    """Recognize the record itself with top-level const/reference qualifiers.
+
+    A pointer, array, function or container containing that spelling is a
+    different C++ type and cannot use the record's scalar-value ABI.
+    """
+    if not isinstance(info, dict):
+        return False
+    text = info.get('desugaredQualType', info.get('qualType', '')).strip()
+    text = re.sub(r'\s*&&?$', '', text).strip()
+    text = text.removeprefix('const ').removesuffix(' const').strip()
+    return pattern.fullmatch(text) is not None
+
+
 class ErasedClass:
     def __init__(self, record, class_name, display):
         self.record = record
@@ -125,7 +139,7 @@ class ErasedClass:
                     scan(value)
         scan(record.get('inner', []))
         self.parameter_names = [names[i] for i in sorted(names)]
-        self.pattern = nested_type_pattern(record, display) or re.compile(r'(?:cp::)?' + re.escape(display))
+        self.pattern = selected_type_pattern(record, display) or re.compile(r'(?:cp::)?' + re.escape(display))
         self.methods = {}      # method id -> function
         self.constructors = {}  # constructor signature -> function
         self.friends = {}       # function id -> function
@@ -168,11 +182,15 @@ class Eraser:
         return any(erased.pattern.search(text or '') for erased in self.classes)
 
     def class_of_type(self, info):
-        text = info.get('desugaredQualType', info.get('qualType', '')) if isinstance(info, dict) else ''
         for erased in self.classes:
-            if erased.pattern.search(text):
+            if scalar_record_type(info, erased.pattern):
                 return erased
         return None
+
+    def require_value_type(self, info):
+        text = info.get('desugaredQualType', info.get('qualType', ''))
+        if self.mentions_class(text) and self.class_of_type(info) is None:
+            raise ValueError('compound types containing an erased record are not supported')
 
     def field_ids(self):
         return {erased.field['id'] for erased in self.classes}
@@ -184,6 +202,8 @@ class Eraser:
             return node
         kind = node.get('kind')
         children = node.get('inner', [])
+        if kind == 'VarDecl':
+            self.require_value_type(node.get('type', {}))
         if kind == 'ExprWithCleanups':
             # Drop only the envelope of known trivial record materializations;
             # keep every child expression and reject destruction/cleanup effects.
@@ -335,6 +355,10 @@ def build_functions(erased, source, friends):
         bodies = [c for c in member.get('inner', []) if c.get('kind') == 'CompoundStmt']
         if kind == 'CXXMethodDecl' and len(bodies) == 1:
             signature = member['type']['qualType']
+            return_type = re.sub(r'\s*\(.*$', '', signature).strip()
+            if erased.pattern.search(return_type) and not scalar_record_type(
+                    {'qualType': return_type}, erased.pattern):
+                raise ValueError('compound types containing an erased record are not supported')
             constant = signature.endswith(' const')
             static = member.get('storageClass') == 'static'
             reference = ('const ' if constant else '') + erased.field_type + ' &'
@@ -448,6 +472,11 @@ def erase_functions(erased_classes, functions):
             result.append(function)  # a template declaration without instances is not lowered
             continue
         this_parameter = function.get('_this')
+        for parameter in function.get('inner', []):
+            if parameter.get('kind') == 'ParmVarDecl':
+                eraser.require_value_type(parameter.get('type', {}))
+        return_type = re.sub(r'\s*\(.*$', '', function['type']['qualType']).strip()
+        eraser.require_value_type({'qualType': return_type})
         rewritten = dict(function)
         rewritten['inner'] = [eraser.transform(c, this_parameter) if c.get('kind') != 'ParmVarDecl'
                               else dict(c, type=erase_type_info(c['type'], erased_classes))

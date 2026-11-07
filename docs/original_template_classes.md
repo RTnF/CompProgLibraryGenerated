@@ -77,7 +77,7 @@ opは既存と同じ中間加算が各型範囲内という前提と上界72を�
 実体化memberの本体も、元sourceのgeneric method pattern IDへの対応と定義位置を検査する。
 actual TemplateArgumentのRecordType.decl.idが選択recordのIDに一致することを必須にし、
 生のC++型文字列、異なるTU/source、未選択record、重複した選択を拒否する。
-現在のcompanion経路は各recordが単一scalar fieldである場合を扱う。
+companion経路は単一scalar fieldと複数scalar fieldのrecordの混在を扱う。
 モデル名や短い型名が衝突する場合は、scopeを区別できる経路まで拒否する。
 
 原本 `RangeAddRangeMaxMin<long long>` のRangeAdd/RangeMax/RangeMinから13モデルを生成する。
@@ -92,3 +92,43 @@ copy/move/destructorの非自明な効果はtrivial-record監査が拒否し、
 witness側の明示的member specializationで結果を10から106に変えた例の拒否も含む。
 特殊化本体が選択record内に実体化されていない場合は未具体化として拒否し、
 本体がある場合もgeneric pattern IDと定義位置の一致を要求する。
+
+## companion内の複数fieldとコピー返却
+
+`RangeAddRangeSum<long long>` のRangeAdd/RangeSumを同じcompanion bundleに選ぶと、
+元のクラスを分割せず13モデルを生成する。複数fieldを返す構築では、すべてのprimitive値引数を
+一度だけ局所変数へ評価し、全fieldを宣言順で初期化してから結果を投影する。
+先に初期化したfieldへの参照はその局所変数へ対応付け、初期化前fieldの参照を拒否する。
+副作用を伴う構築式や独自copy/move/destructorなど、値消去で扱えない効果は拒否する。
+
+`tests/lean/original_mixed_add_sum.lean` は13モデルの一般caller定理を登録する。
+両投影で積と和の型範囲を要求し、値渡しcompose・非const receiver・負のint sizeを保持する。
+prepareからcallの返却までの結果、停止、元callerメモリ保持、work/space上界を確認する。
+
+`RangeSetRangeSum<long long>` は18モデルを生成する。返す値が同じrecordのtrivial copy/moveで
+ある場合は、元recordの暗黙構成子の署名とparameterの全field IDを確認し、全fieldを読んで投影する。
+条件付きcopyは条件を一度評価し、選択したbranchだけを実行する。`return x` より前の
+値引数fieldへの書込みも保つ。`tests/lean/original_mixed_set_sum_samples.lean` は全18モデルを覆う
+38の有限事例を持ち、noop両分岐、負/零size、危険な積をnoop時に評価しないこと、更新時の
+overflowを両投影が拒否することを確認する。RangeSumの8モデルは全NProgramの一致を示してAdd版の一般caller定理を共有し、RangeSetの既定構築/idの4モデルも任意の有効callerについて結果・停止・元メモリ保持・資源上界を示す。値構築・compose・applyの6モデルの一般caller証明は残る。
+
+これらの再生成・Lean/固定nanoda・C++/UBSan・独自copy/move/destructor等の拒否検査は
+`tests/test_nested_templates.py` に登録する。原本のAPIとソースは変更しない。
+companionを使わない既存の複数field経路は、既存証明のプログラムを維持しており、
+他fieldの評価を含む新経路への移行と証明が残る。各投影の成功を原object全体の同時評価、
+完全な寿命、総費用の証明とは扱わない。任意T/完全object lifetimeのフラグはfalseを維持する。
+
+## record自身と複合型の区別
+
+scalarの値消去・複数field分割が受け付けるのは、選択したrecord自身とトップレベルの
+const・参照修飾である。`Probe *`、`vector<Probe>`、`Probe (&)[2]`、関数ポインタなどを
+record自身として扱わない。desugared typeの全体を照合し、recordを含む未対応の複合型は
+引数・返却型・値消去する局所宣言の境界で拒否する。単一fieldのmethodの返却型は、
+署名を書き換える前にも検査する。複合型への対応を追加するときは、元のABIと対応する
+評価器・証明が必要であり、unused引数でもscalar fieldへ読み替えてはいけない。
+
+`test_record_value_type_boundaries` は単一/複数fieldとpointer/vector/array/function pointerの
+引数、pointer/vectorの返却型とpointer/vector/arrayの局所宣言を組み合わせた18の有効なC++ fixtureをnative/UBSanで確認し、
+変換器が意図した複合型境界で拒否することを検査する。const・参照の通常recordも認識する。
+
+共有証明は `tests/lean/scalar_record_copy_fields.lean` と `original_mixed_set_sum_callers.lean` に置く。両fieldのtyped評価とコピー後のscope終了による元メモリ/束縛の復元も一般化して確認する。この共有はfieldモデルのNProgram同一性であり、元の別々のC++ record型を同一化する変更ではない。

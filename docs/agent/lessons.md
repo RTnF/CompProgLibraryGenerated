@@ -1,5 +1,11 @@
 # 作業上の教訓
 
+## 2026-11-07: record名を含む型をrecord自身として消去しない
+
+- 型名の正規表現searchでclass membershipを判定すると、unusedな `Probe *`、`vector<Probe>`、配列参照の引数をscalar fieldに変換できてしまう。原本CPP/native/UBSanが成功する3例で、生成ABIの誤りを再現した。全件gateの成功は未登録の型境界の証拠にならない。
+- canonical/desugared typeの全体を、record自身と許可したトップレベルconst/参照修飾に限定して照合する。引数だけでなく返却型と局所宣言も検査し、methodの返却署名は型名を書き換える前に検査する。pointer/vector/array/function pointer、複合返却型/局所宣言と単一/複数fieldの18ケースを登録した。
+- 拒否テストは意図した境界へ到達させる。pointer/vector返却のfixtureがconstructorを使わないと、未具体化のconstructor本体による先行拒否になった。witnessでconstructorも具体化し、拒否理由を固定して検査する。既存の意味対応やCPPのAPIを狭めてテストへ合わせない。
+
 ## 2026-11-05: scalar消去はhelperの寿命と初期化順も検査する
 
 - 委譲先のクラスだけtrivial copy/dtorを確認しても、factory内の別helperの独自copy/dtorは消せてしまった。1bitのfieldも格納幅を省くと、C++の-1をモデルが1として受理した。C++実行と生成モデルの `by decide +kernel` /固定nanoda2523宣言で不一致を確認した。

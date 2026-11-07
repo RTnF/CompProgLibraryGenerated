@@ -16,7 +16,7 @@ import copy
 import re
 
 from class_lowering import (SCALAR_FIELD_TYPES, function_name, validate_scalar_value_record,
-                            constructor_body_may_change_state, nested_type_pattern)
+                            constructor_body_may_change_state, nested_type_pattern, scalar_record_type)
 
 SKIP_WRAPPERS = ('ExprWithCleanups', 'ImplicitCastExpr', 'CXXFunctionalCastExpr', 'MaterializeTemporaryExpr',
                  'CXXBindTemporaryExpr', 'ParenExpr')
@@ -33,10 +33,11 @@ def is_split_candidate(record):
 
 
 class SplitClass:
-    def __init__(self, record, class_name, display):
+    def __init__(self, record, class_name, display, *, strict_returns=False):
         self.record = record
         self.class_name = class_name
         self.display = display
+        self.strict_returns = strict_returns
         self.fields = [c for c in record.get('inner', []) if c.get('kind') == 'FieldDecl']
         validate_scalar_value_record(record, self.fields)
         self.pattern = nested_type_pattern(record, display) or re.compile(
@@ -178,7 +179,7 @@ class SplitClass:
 
     def constructor_functions(self):
         """Expose each constructor's fields when delegation is present."""
-        if not self.delegating:
+        if not self.delegating and not self.strict_returns:
             return []
         results = []
         for number,(signature,member) in enumerate(self.constructor_nodes.items()):
@@ -202,8 +203,7 @@ class SplitClass:
         return bool(self.pattern.search(text or ''))
 
     def is_class_type(self, info):
-        text = info.get('desugaredQualType', info.get('qualType', '')) if isinstance(info, dict) else ''
-        return self.mentions(text)
+        return scalar_record_type(info, self.pattern)
 
 
 def strip(node):
@@ -259,6 +259,11 @@ class Splitter:
             return node
         kind = node.get('kind')
         children = node.get('inner', [])
+        if kind == 'VarDecl':
+            info = node.get('type', {})
+            text = info.get('desugaredQualType', info.get('qualType', ''))
+            if self.class_of(info) is None and any(c.mentions(text) for c in self.classes):
+                raise ValueError('compound types containing a split record are not supported')
         if kind == 'ReturnStmt' and self.return_hook is not None:
             return self.return_hook(node, params)
         if kind == 'MemberExpr' and node.get('referencedMemberDecl') in self.by_field and len(children) == 1:
@@ -356,6 +361,10 @@ def split_one(splitter, owner, declaration, has_this, source):
             continue
         cls = splitter.class_of(child.get('type', {}))
         if cls is None:
+            info = child.get('type', {})
+            text = info.get('desugaredQualType', info.get('qualType', ''))
+            if any(c.mentions(text) for c in splitter.classes):
+                raise ValueError('compound types containing a split record are not supported')
             new_parameters.append(child)
             continue
         text = child['type']['qualType']
@@ -376,6 +385,8 @@ def split_one(splitter, owner, declaration, has_this, source):
     result_class = splitter.class_of({'qualType': return_text})
     results = []
     if result_class is None:
+        if any(c.mentions(return_text) for c in splitter.classes):
+            raise ValueError('compound types containing a split record are not supported')
         body = splitter.rewrite(bodies[0], params)
         function = {k: v for k, v in declaration.items() if k not in ('inner', 'storageClass')}
         function['kind'] = 'FunctionDecl'
@@ -390,6 +401,9 @@ def split_one(splitter, owner, declaration, has_this, source):
     # per field whose returns give that field's initialiser (after the constructor body's statements).
     for field in result_class.fields:
         def hook(node, params_, field=field):
+            if result_class.strict_returns:
+                from strict_scalar_return import strict_return
+                return strict_return(splitter, result_class, declaration, node, params_, field)
             if not node.get('inner'):
                 raise ValueError('a function returning a split class must return a value')
             value = strip(node['inner'][0])

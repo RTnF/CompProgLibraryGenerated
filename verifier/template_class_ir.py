@@ -14,6 +14,7 @@ from inline_ast import inline_functions
 from nested_ir import NestedBody, ValueCalls, apply_conversion_policy
 from vector_bindings import bindings_from_audit
 from vector_stl import audit_vector_nodes, translation_unit
+from mixed_scalar_functions import mixed_scalar_functions
 
 
 def lower_template_class(source, qualified, instance, include_dirs=(), *,
@@ -35,22 +36,7 @@ def lower_template_class(source, qualified, instance, include_dirs=(), *,
     fields = [node for node in record.get('inner', []) if node.get('kind') == 'FieldDecl']
     friends = [node for node in record.get('inner', []) if node.get('kind') == 'FriendDecl']
     if companion_instances:
-        selected = [record, *records[1:]]
-        displays = [_display_name(item) for item in selected]
-        names = [_function_class_name(item) for item in selected]
-        if len(displays) != len(set(displays)) or len(names) != len(set(names)):
-            raise ValueError('companion classes require distinct scoped model names')
-        classes, functions = [], []
-        for item in selected:
-            require_method_bodies(item)
-            cls = ErasedClass(item, _function_class_name(item), _display_name(item))
-            cls.pattern = selected_type_pattern(item, cls.display)
-            if cls.pattern is None:
-                raise ValueError('companion type requires audited source provenance')
-            classes.append(cls)
-            functions.extend(build_functions(cls, source,
-                [n for n in item.get('inner', []) if n.get('kind') == 'FriendDecl']))
-        functions = erase_functions(classes, functions)
+        functions = mixed_scalar_functions([record, *records[1:]], source)
     elif len(fields) == 1:
         cls = ErasedClass(record, _function_class_name(record), _display_name(record))
         functions = erase_functions([cls], build_functions(cls, source, friends))

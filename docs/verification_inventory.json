@@ -2502,12 +2502,24 @@
         "tests/lean/original_nested_max.lean",
         "tests/lean/original_nested_sum.lean",
         "tests/lean/original_record_apply.lean",
-        "tests/imports/original_record_apply.cpp"
+        "tests/imports/original_record_apply.cpp",
+        "tests/lean/original_mixed_add_sum.lean",
+        "tests/lean/original_mixed_set_sum_samples.lean",
+        "tests/lean/scalar_record_copy_fields.lean",
+        "tests/lean/original_mixed_set_sum_callers.lean"
       ],
       "review_notes": [
         "2026-11-06: GCC13.3/C++17/UBSanで4比較。原本RangeAddRangeMaxMin<long long>::RangeAdd::id()は成功し、公開flat RangeAddのidは存在せず拒否。原本RangeSet composeは値引数と返却でcopy observerが3回、公開const参照/再構築は2回で同じ値2に対して効果が異なる。原本CPPは変更していない。nested型/static e/id/member apply、値渡し、任意T/全object lifetimeの対応は未完了。nativeの局所確認だけで全declのcpp_tested/lean_proved/publishedをtrueにしない。証拠はdocs/experiments_findings.mdの調査節とローカルnative_api_receipt.json。",
         "2026-11-07: 元CPP未変更でRangeAddRangeMaxMin<long long>::RangeMaxの4モデルとRangeAddRangeSum<long long>::RangeSumの8fieldモデルを共通nested入口から再生成。任意callerの結果/停止/元メモリ保持/資源上界を登録回帰で検査し、固定nanodaはそれぞれ3652/3600依存宣言。RangeSumはlong long/intの混在値引数を両方評価し、opの既存モデル/任意fuel callFuel一致を確認。任意T、完全object/lifetime、残るaction/applyは未完了で、file全体の検証済みフラグはfalseのまま。",
-        "2026-11-07: 同一TUでRangeAdd/RangeMax/RangeMinを別record IDのまま選び、record型member引数はRecordArgumentの選択ID・元source hash・generic member pattern IDを照合。原本から13モデル生成、非const receiver/値引数のapply2種の一般結果x+v・停止・メモリ保持・post100と10プログラム/callFuel一致の26rootsを固定nanoda3606宣言で確認。12 provenance負例/schema/nativeも登録テスト成功。composeの一般証明、複数field record引数、任意T/完全object lifetimeは未完了。公開CPPのAPI/コピー差は未修正。"
+        "2026-11-07: 同一TUでRangeAdd/RangeMax/RangeMinを別record IDのまま選び、record型member引数はRecordArgumentの選択ID・元source hash・generic member pattern IDを照合。原本から13モデル生成、非const receiver/値引数のapply2種の一般結果x+v・停止・メモリ保持・post100と10プログラム/callFuel一致の26rootsを固定nanoda3606宣言で確認。12 provenance負例/schema/nativeも登録テスト成功。composeの一般証明、複数field record引数、任意T/完全object lifetimeは未完了。公開CPPのAPI/コピー差は未修正。",
+        "2026-11-07: 隔離mixed候補で原本RangeAddRangeSumの13モデル/nativeを確認。中間乗算がoverflowする入力でxモデル拒否/sizeモデル成功となる投影の限界を固定nanoda1973宣言で確認した。全引数/field評価を保つstrict候補は両field拒否と通常入力19/4を1978宣言で確認。ただし正本未統合・一般caller/総資源証明未完了。full-file flagsはfalseのまま。docs/experiments_findings.mdの複数field節を参照。",
+        "2026-11-07: strict候補のapply2モデルを一般callerのprepare/callFuel/結果・停止・元メモリ保持・post100まで固定nanoda3580宣言で確認。本体の全field評価補題は2222宣言。field内除算失敗/宣言順/未初期化読取り拒否の3ケース・16rootsは2008宣言とnativeで確認し、原本13モデルのbyte不変を照合。まだ未統合で全13モデルの一般証明は未完了、full flagsはfalseのまま。",
+        "2026-11-07: 私的strict mixed候補から原本RangeAddRangeSum<long long>の13モデルを再生成し、全field評価モデルとのbyte一致と全モデルの一般caller証明を確認。結果/停止/元メモリ保持/work・space上界、値渡しcompose/非const receiver/負sizeを保持。固定nanoda3673宣言/実48190終了0。証拠 .cache/wip/monoid_lazy_original_review_20261106/strict_mixed_complete_{receipt,inputs}.json。正本未統合、任意T/完全object lifetime/単一object費用対応は未証明でfile flagsは拡大しない。",
+        "2026-11-07: 私的copy_return候補で原本RangeSetRangeSum<long long>の18モデル生成/native成功、全18を覆う38有限事例を固定nanoda2062宣言で検査。noop全branch/負・零size/危険な積の非評価/両投影のoverflow拒否が原本と一致。証拠 .cache/wip/monoid_lazy_original_review_20261106/copy_return_{set_sum,samples}_receipt.json。一般caller/任意T/完全object lifetime、拒否境界回帰/正本統合は未完了、full flagsを拡大しない。 追加で実65386終了0にて既存13モデルbyte不変/native成功、実87108終了0にて独自copy/move/dtor・ローカルobjectの4拒否境界を確認。一般caller/正本統合は引き続き未完了。",
+        "2026-11-07: mixed_scalar_functions/strict_scalar_returnを正本companion経路へ統合。tests/test_nested_templates.pyへ13モデルの一般caller証明、18モデルの38事例、4拒否境界、初期化順/他fieldゼロ除算/forward read拒否を登録。実80528終了0/8tests・固定nanoda3673/2062等、実62213終了0/追加1test・2008宣言。証拠 tests/lean/original_mixed_{add_sum,set_sum_samples}.lean と .cache/wip/mixed_records_integrated_20261107/focused_receipt.json。原本API未変更。Setの一般caller・非companion旧投影の移行・任意T・完全object lifetimeは未完了、全件gateはこれから、file flagsは拡大しない。",
+        "2026-11-07: source-owned record名を含むpointer/vector/array等をrecord自身と誤判定するABI境界を再現し、全型一致/const・参照限定と複合型の拒否へ修正。単一/複数field×12 native/UBSan・意図した拒否が実66787終了0。tests/test_nested_templates.pyのtest_record_value_type_boundariesと .cache/wip/record_type_boundary_fix_20261107/boundary_receipt.jsonが根拠。旧gate44736成功は修正前であり、修正後の全件検査は必要。原本CPPとfull flagsは未変更。",
+        "2026-11-07: compound局所宣言を含む18境界回帰は実60213終了0。Set版RangeSum8モデルのNProgram同一性から一般caller定理を共有し、RangeSet既定構築/id4モデルと汎用2fieldコピー/scope復元も実74872終了0・固定nanoda3649宣言で確認。正本のscalar_record_copy_fields.lean/original_mixed_set_sum_callers.leanへ移して登録検査中。残るSet値構築/compose/apply6モデル、任意T/完全object lifetime/全137は未完了、file full flagsは拡大しない。",
+        "2026-11-07: 正本Set/Sumの登録検査が実45891終了0・固定nanoda3731宣言で成功。全18モデルの38事例と12一般callerモデル、汎用2fieldコピー/scope復元を同時確認。registered_set_sum_receipt.jsonが根拠。残る値構築/compose/apply6モデルと任意T/完全object lifetime/全137目標は未達、full flagsは拡大しない。"
       ]
     },
     {
