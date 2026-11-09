@@ -21,7 +21,7 @@ template<class T = long long> struct MonoidMul {
     }
 };
 template<class T> MonoidMul<T> op(const MonoidMul<T>& a, const MonoidMul<T>& b) {
-    if constexpr (std::is_same_v<T, long long>) {
+    if constexpr (std::is_same_v<T, long long> || std::is_same_v<T, int>) {
         MonoidMul<T> op(const MonoidMul<T>&, const MonoidMul<T>&);
         using Function = MonoidMul<T> (*)(const MonoidMul<T>&, const MonoidMul<T>&);
         using ForceOp = std::integral_constant<Function, static_cast<Function>(&op)>;
@@ -43,7 +43,7 @@ template<class T = long long> struct MonoidMax {
     }
 };
 template<class T> MonoidMax<T> op(const MonoidMax<T>& a, const MonoidMax<T>& b) {
-    if constexpr (std::is_same_v<T, long long>) {
+    if constexpr (std::is_same_v<T, long long> || std::is_same_v<T, int>) {
         MonoidMax<T> op(const MonoidMax<T>&, const MonoidMax<T>&);
         using Function = MonoidMax<T> (*)(const MonoidMax<T>&, const MonoidMax<T>&);
         using ForceOp = std::integral_constant<Function, static_cast<Function>(&op)>;
@@ -66,7 +66,7 @@ template<class T = long long> struct MonoidMin {
     }
 };
 template<class T> MonoidMin<T> op(const MonoidMin<T>& a, const MonoidMin<T>& b) {
-    if constexpr (std::is_same_v<T, long long>) {
+    if constexpr (std::is_same_v<T, long long> || std::is_same_v<T, int>) {
         MonoidMin<T> op(const MonoidMin<T>&, const MonoidMin<T>&);
         using Function = MonoidMin<T> (*)(const MonoidMin<T>&, const MonoidMin<T>&);
         using ForceOp = std::integral_constant<Function, static_cast<Function>(&op)>;
@@ -82,4 +82,10 @@ template struct MonoidMax<long long>;
 template MonoidMax<long long> op(const MonoidMax<long long>&, const MonoidMax<long long>&);
 template struct MonoidMin<long long>;
 template MonoidMin<long long> op(const MonoidMin<long long>&, const MonoidMin<long long>&);
+template struct MonoidMul<int>;
+template MonoidMul<int> op(const MonoidMul<int>&, const MonoidMul<int>&);
+template struct MonoidMax<int>;
+template MonoidMax<int> op(const MonoidMax<int>&, const MonoidMax<int>&);
+template struct MonoidMin<int>;
+template MonoidMin<int> op(const MonoidMin<int>&, const MonoidMin<int>&);
 } // namespace cp

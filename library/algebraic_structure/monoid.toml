@@ -10,5 +10,5 @@ tests = ["tests/monoid.cpp", "tests/monoid_floating_identity.cpp"]
 sanitizers = true
 spec = "docs/monoid.md"
 standard = "c++17"
-source_sha256 = "58fca26c215d3e15642a468b626d7ee955cef0e33b9fdd39eb3895e55d7dee1d"
-public_declarations = ["ClassTemplateDecl:MonoidMax", "ClassTemplateDecl:MonoidMin", "ClassTemplateDecl:MonoidMul", "ClassTemplateSpecializationDecl:MonoidMax<long long>", "ClassTemplateSpecializationDecl:MonoidMin<long long>", "ClassTemplateSpecializationDecl:MonoidMul<long long>", "FunctionTemplateDecl:op<MonoidMax>", "FunctionTemplateDecl:op<MonoidMin>", "FunctionTemplateDecl:op<MonoidMul>"]
+source_sha256 = "22a98f5329b95820bda00210fbccc50632fd582f8284e383b0ccb030d9c2fdca"
+public_declarations = ["ClassTemplateDecl:MonoidMax", "ClassTemplateDecl:MonoidMin", "ClassTemplateDecl:MonoidMul", "ClassTemplateSpecializationDecl:MonoidMax<int>", "ClassTemplateSpecializationDecl:MonoidMax<long long>", "ClassTemplateSpecializationDecl:MonoidMin<int>", "ClassTemplateSpecializationDecl:MonoidMin<long long>", "ClassTemplateSpecializationDecl:MonoidMul<int>", "ClassTemplateSpecializationDecl:MonoidMul<long long>", "FunctionTemplateDecl:op<MonoidMax>", "FunctionTemplateDecl:op<MonoidMin>", "FunctionTemplateDecl:op<MonoidMul>"]

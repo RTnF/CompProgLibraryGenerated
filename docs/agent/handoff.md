@@ -61,7 +61,7 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 | 原本 | 進捗 | 懸念・残件 |
 | --- | --- | --- |
 | `L/algebraic_structure/group.hpp` | 完了（整数具体化 long long・int） | 2026-11-09 intを追加、全定理を証明、全件gate成功。浮動小数Tは基盤整備後 |
-| `L/algebraic_structure/monoid.hpp` | 部分 | 公開APIを復元しLLモデル/一般caller・浮動小数単位元のC++回帰済み。任意T/浮動小数のLean・lifetimeは未 |
+| `L/algebraic_structure/monoid.hpp` | 完了（整数具体化 long long・int） | 2026-11-09 intを追加し全定理証明、全件gate成功。浮動小数TはC++回帰のみ、Leanは基盤整備後 |
 | `L/algebraic_structure/monoid_lazy.hpp` | 進行中 | Sum applyの任意caller接続済み。MaxMin apply<M>はLL全入力（Addは加算範囲内）・任意caller接続まで。元API候補はexperimentalにあり、任意T/M・lifetime・公開切替は未 |
 | `L/array/cumulative_sum.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/array/doubling.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |

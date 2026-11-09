@@ -24,7 +24,27 @@ const Value& max(const Value& a, const Value&) { return a; }
 const Value& min(const Value&, const Value& b) { return b; }
 }
 
+// The int instances are verified like the long long ones; check them against direct computation.
+static void check_int_instances() {
+    using Max = cp::MonoidMax<int>;
+    using Min = cp::MonoidMin<int>;
+    using Mul = cp::MonoidMul<int>;
+    assert(Mul().x == 1 && Max().x == INT_MIN && Min().x == INT_MAX);
+    assert(Mul::e().x == 1 && Max::e().x == INT_MIN && Min::e().x == INT_MAX);
+    const int values[] = {INT_MIN, INT_MIN + 1, -46341, -2, -1, 0, 1, 2, 3, 46340, INT_MAX - 1, INT_MAX};
+    for (int a : values)
+        for (int b : values) {
+            assert(op(Max(a), Max(b)).x == (a < b ? b : a));
+            assert(op(Min(a), Min(b)).x == (b < a ? b : a));
+            long long product = (long long)a * b;
+            if (product >= INT_MIN && product <= INT_MAX) {
+                assert(op(Mul(a), Mul(b)).x == (int)product);
+            }
+        }
+}
+
 int main() {
+    check_int_instances();
     using MonoidMax = cp::MonoidMax<long long>;
     using MonoidMin = cp::MonoidMin<long long>;
     using MonoidMul = cp::MonoidMul<long long>;
