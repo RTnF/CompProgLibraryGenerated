@@ -1170,3 +1170,4 @@ import Proofs.CppScalarContents
 import Proofs.CppScalarValuePrepare
 import Proofs.GenericCall
 import Proofs.GenericLazy
+import Proofs.GenericExtrema

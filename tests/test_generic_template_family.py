@@ -14,16 +14,22 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(ROOT / 'tests'), str(ROOT / 'verifier'), str(ROOT / 'tools')]
+import class_copy_layout as layout
+from class_templates import TemplateInstance
 from nested_ir import lower_source, emit_lean
 from test_scalar_ir import lean_environment
 from offline import disable_network
 
+ORIGINAL = ROOT / 'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp'
 HEADER = ROOT / 'library/algebraic_structure/monoid_lazy.hpp'
 # (C++ type, name fragment used by the generator, Lean Ty literal)
 TYPES = [('long long', 'long_long', '⟨64, true, false⟩'),
          ('int', 'int', '⟨32, true, false⟩'),
-         ('unsigned', 'unsigned_int', '⟨32, false, false⟩'),
+         ('unsigned int', 'unsigned_int', '⟨32, false, false⟩'),
          ('unsigned long long', 'unsigned_long_long', '⟨64, false, false⟩')]
+# Each class-layout generation costs ~30 s, so extrema use one signed and one unsigned type of
+# different widths (the type-dependent parts are signedness and width).
+EXTREMA_TYPES = [t for t in TYPES if t[0] in ('int', 'unsigned long long')]
 FAMILY = [('compose_RangeAdd_{s}', 'Proofs.GenericCall.composeAdd'),
           ('RangeSum_{s}_op_x', 'Proofs.GenericLazy.sumOpX'),
           ('RangeSet_{s}_compose_v', 'Proofs.GenericLazy.setComposeV'),
@@ -36,7 +42,40 @@ FAMILY = [('compose_RangeAdd_{s}', 'Proofs.GenericCall.composeAdd'),
           ('RangeAdd_{s}_applySumX', 'Proofs.GenericLazy.addApplySum')]
 
 
+
 class GenericTemplateFamilyTests(unittest.TestCase):
+    def test_original_extrema_op_equals_the_ty_selection_family(self):
+        """Original `RangeMax`/`RangeMin` friend `op` for both families and every T."""
+        disable_network()
+        parts, checks, imports = [], [], []
+        with tempfile.TemporaryDirectory(prefix='generic-extrema-') as directory:
+            count = 0
+            for family, witness in [('RangeAddRangeMaxMin', 'original_mixed_add_extrema.cpp'),
+                                    ('RangeSetRangeMaxMin', 'original_mixed_set_extrema.cpp')]:
+                text = (ROOT / 'tests/imports' / witness).read_text()
+                for cpp, _, ty in EXTREMA_TYPES:
+                    path = Path(directory) / f'{count}_{witness}'
+                    path.write_text(text.replace('long long', cpp))
+                    for kind, indices in [('RangeMax', '0 1'), ('RangeMin', '1 0')]:
+                        instance = TemplateInstance((cpp,), path, nested_members=(kind,))
+                        generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalExtremaObject',
+                            [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
+                            friend_exports=True, template_instance=instance)
+                        namespace = f'Ext{count}'
+                        count += 1
+                        lines = generated.replace('OriginalExtremaObject', namespace).split('\n')
+                        imports = imports or [line for line in lines if line.startswith('import')]
+                        parts.append('\n'.join(line for line in lines if not line.startswith('import')))
+                        checks.append(f'example : {namespace}.«{kind}_factory_op».body = '
+                                      f'Proofs.GenericExtrema.selectionBody {ty} {indices} := rfl')
+            lean = Path(directory) / 'extrema.lean'
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericExtrema\nopen Proofs.CppScalar\n' +
+                            '\n'.join(parts) + '\n' + '\n'.join(checks) + '\n')
+            lake, env = lean_environment()
+            result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
+                                    capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout[:3000] + result.stderr[:3000])
+
     def test_generated_programs_equal_the_ty_family(self):
         disable_network()
         source = HEADER.read_text()
