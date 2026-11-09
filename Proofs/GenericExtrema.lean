@@ -141,4 +141,97 @@ theorem selected_min (x y : Int) : (if y < x then y else x) = min x y := by
   rw [Int.min_def]
   split <;> split <;> omega
 
+/-- Body of `e()` for `RangeMax`/`RangeMin`: `T lit = ...; T x = lit; { }`. -/
+abbrev identBody (ty : Ty) (v : Int) : Command :=
+  .sequence (.primitive (.declare ty true (.literal ty v)))
+    (.sequence (.primitive (.declare ty true (.variable ty 0))) (.sequence (.scope Sk) Sk))
+
+/-- Body of the default constructor: as `identBody`, then one more copy. -/
+abbrev ctorBody (ty : Ty) (v : Int) : Command :=
+  .sequence (.primitive (.declare ty true (.literal ty v)))
+    (.sequence (.primitive (.declare ty true (.variable ty 0)))
+      (.sequence (.scope Sk) (.sequence (.primitive (.declare ty true (.variable ty 1))) Sk)))
+
+theorem ident_exec (ty : Ty) (P : List Cell) (v : Int) (hv : ty.valid v = true) :
+    ∃ r, pexec 1 (identBody ty v) (ws P [] []) = some r ∧ r.ret = none ∧ r.cost ≤ 40 ∧
+      r.need ≤ P.length + 16 ∧ r.ps = ws P [] [⟨ty,v⟩,⟨ty,v⟩] := by
+  let R : List CppState.Binding := []
+  have d0 : (NExpr.literal ty v).denote (penv (ws P R [])) = some v := by
+    rw [den_literal, if_pos hv]
+  have s1 := ws_declare P R [] ty (.literal ty v) v d0 (convG ty _ hv)
+  have q1 := (pexec_prim 1 _ _).trans s1
+  have e1 : penv (ws P R [⟨ty,v⟩]) (R.length + 0) ty = some v := ws_env_loc P R [⟨ty,v⟩] 0 ⟨ty,v⟩ ty rfl rfl hv
+  have s2 := ws_declare P R [⟨ty,v⟩] ty (.variable ty (R.length + 0)) v (by rw [den_variable]; exact e1) (convG ty _ hv)
+  have q2 := (pexec_prim 1 _ _).trans s2
+  have sc0 := pexec_scope 1 Sk (ws P R ([⟨ty,v⟩] ++ [⟨ty,v⟩])) _ (pexec_skip 1 _)
+  have sc : pexec 1 (.scope Sk) (ws P R ([⟨ty,v⟩] ++ [⟨ty,v⟩])) = some ⟨ws P R ([⟨ty,v⟩] ++ [⟨ty,v⟩]),none,1,P.length+4⟩ := by
+    simp only [List.take_length] at sc0
+    simpa [ws,R,Nat.add_assoc] using sc0
+  have qr := seq_some sc rfl (pexec_skip 1 _)
+  have q2r := seq_some q2 rfl qr
+  have qall := seq_some q1 rfl q2r
+  refine ⟨_,qall,rfl,?_,?_,?_⟩
+  · simp [NExpr.nodes]
+  · simp [NExpr.nodes,ws,R]
+  · simp [ws,R]
+
+theorem ctor_exec (ty : Ty) (P : List Cell) (v : Int) (hv : ty.valid v = true) :
+    ∃ r, pexec 1 (ctorBody ty v) (ws P [] []) = some r ∧ r.ret = none ∧ r.cost ≤ 40 ∧
+      r.need ≤ P.length + 16 ∧ r.ps = ws P [] [⟨ty,v⟩,⟨ty,v⟩,⟨ty,v⟩] := by
+  let R : List CppState.Binding := []
+  have d0 : (NExpr.literal ty v).denote (penv (ws P R [])) = some v := by
+    rw [den_literal, if_pos hv]
+  have s1 := ws_declare P R [] ty (.literal ty v) v d0 (convG ty _ hv)
+  have q1 := (pexec_prim 1 _ _).trans s1
+  have e1 : penv (ws P R [⟨ty,v⟩]) (R.length + 0) ty = some v := ws_env_loc P R [⟨ty,v⟩] 0 ⟨ty,v⟩ ty rfl rfl hv
+  have s2 := ws_declare P R [⟨ty,v⟩] ty (.variable ty (R.length + 0)) v (by rw [den_variable]; exact e1) (convG ty _ hv)
+  have q2 := (pexec_prim 1 _ _).trans s2
+  have sc0 := pexec_scope 1 Sk (ws P R ([⟨ty,v⟩] ++ [⟨ty,v⟩])) _ (pexec_skip 1 _)
+  have sc : pexec 1 (.scope Sk) (ws P R ([⟨ty,v⟩] ++ [⟨ty,v⟩])) = some ⟨ws P R ([⟨ty,v⟩] ++ [⟨ty,v⟩]),none,1,P.length+4⟩ := by
+    simp only [List.take_length] at sc0
+    simpa [ws,R,Nat.add_assoc] using sc0
+  have e3 : penv (ws P R ([⟨ty,v⟩] ++ [⟨ty,v⟩])) (R.length + 1) ty = some v :=
+    ws_env_loc P R ([⟨ty,v⟩] ++ [⟨ty,v⟩]) 1 ⟨ty,v⟩ ty rfl rfl hv
+  have s3 := ws_declare P R ([⟨ty,v⟩] ++ [⟨ty,v⟩]) ty (.variable ty (R.length + 1)) v (by rw [den_variable]; exact e3) (convG ty _ hv)
+  have q3 := (pexec_prim 1 _ _).trans s3
+  have q3r := seq_some q3 rfl (pexec_skip 1 _)
+  have qsr := seq_some sc rfl q3r
+  have q2r := seq_some q2 rfl qsr
+  have qall := seq_some q1 rfl q2r
+  refine ⟨_,qall,rfl,?_,?_,?_⟩
+  · simp [NExpr.nodes]
+  · simp [NExpr.nodes,ws,R]
+  · simp [ws,R]
+
+/-- `std::numeric_limits<T>::lowest()`/`max()` for a non-bool integer type. -/
+def lowestV (ty : Ty) : Int := if ty.signed then -(2 ^ (ty.width - 1)) else 0
+def highestV (ty : Ty) : Int := if ty.signed then 2 ^ (ty.width - 1) - 1 else 2 ^ ty.width - 1
+
+theorem lowestV_valid (ty : Ty) (hb : ty.boolean = false) : ty.valid (lowestV ty) = true := by
+  unfold lowestV Ty.valid
+  by_cases hs : ty.signed = true
+  · have h : (0:Int) < 2 ^ (ty.width - 1) := Int.pow_pos (by decide)
+    simp [hb, hs]
+    omega
+  · have hs' : ty.signed = false := by simpa using hs
+    have h : (0:Int) < 2 ^ ty.width := Int.pow_pos (by decide)
+    simp [hb, hs']
+    omega
+
+theorem highestV_valid (ty : Ty) (hb : ty.boolean = false) : ty.valid (highestV ty) = true := by
+  unfold highestV Ty.valid
+  by_cases hs : ty.signed = true
+  · have h : (0:Int) < 2 ^ (ty.width - 1) := Int.pow_pos (by decide)
+    simp [hb, hs]
+    omega
+  · have hs' : ty.signed = false := by simpa using hs
+    have h : (0:Int) < 2 ^ ty.width := Int.pow_pos (by decide)
+    simp [hb, hs']
+    omega
+
+example : lowestV ⟨32, true, false⟩ = -2147483648 := rfl
+example : highestV ⟨32, true, false⟩ = 2147483647 := rfl
+example : lowestV ⟨64, false, false⟩ = 0 := rfl
+example : highestV ⟨64, false, false⟩ = 18446744073709551615 := rfl
+
 end Proofs.GenericExtrema

@@ -22,12 +22,12 @@ open Proofs.Mod61Body
 
 def gProgram (ty : Ty) (li ri : Nat) : NProgram :=
   ⟨[.scalar ty true false, .scalar ty true false], .unit, Proofs.GenericExtrema.selectionBody ty li ri⟩
-def gFields (ty : Ty) : List Proofs.CppConstructorFinish.ScalarField := [⟨5,ty⟩]
+def gFields (ty : Ty) (slot : Nat) : List Proofs.CppConstructorFinish.ScalarField := [⟨slot,ty⟩]
 def gPerm (ty : Ty) (targetConst : Bool) : List (Proofs.CppScalar.Ty × Bool) := [(ty,(true && (!targetConst || false)))]
 def gExpected (li ri : Nat) (x y : Int) : Int := if (if li = 0 then x else y) < (if ri = 0 then x else y) then y else x
 def gView (ty : Ty) (li ri : Nat) (fuel : Nat) (caller : NState) (arguments : List NArgument) (targetConst : Bool) :
     Proofs.CppLoop.Outcome (NState × Proofs.CppConstructorMultiFinish.ObjectRef) :=
-  MemberView.constructViewFuel (gProgram ty li ri) fuel caller arguments [] (gFields ty)
+  MemberView.constructViewFuel (gProgram ty li ri) fuel caller arguments [] (gFields ty 5)
     (vectorPermissions targetConst) (gPerm ty targetConst)
 def gCombine (ty : Ty) (li ri : Nat) (fuel : Nat) (caller : NState)
     (objects : List Proofs.CppConstructorMultiFinish.ObjectRef) (targetConst : Bool) :
@@ -38,8 +38,15 @@ def gCombine (ty : Ty) (li ri : Nat) (fuel : Nat) (caller : NState)
 
 variable {ty : Ty} {li ri : Nat}
 
+def gNullary (ty : Ty) (body : Command) : NProgram := ⟨[], .unit, body⟩
+def gNullaryView (ty : Ty) (body : Command) (slot : Nat) (fuel : Nat) (caller : NState)
+    (arguments : List NArgument) (targetConst : Bool) :
+    Proofs.CppLoop.Outcome (NState × Proofs.CppConstructorMultiFinish.ObjectRef) :=
+  MemberView.constructViewFuel (gNullary ty body) fuel caller arguments [] (gFields ty slot)
+    (vectorPermissions targetConst) (gPerm ty targetConst)
+
 def inputs (a b : Nat) : List CppState.Binding := [⟨a,false⟩,⟨b,false⟩]
-def fields (ty : Ty) (x : Int) : List Cell := List.replicate 4 ⟨ty,x⟩
+def fields (ty : Ty) (nl : Nat) (x : Int) : List Cell := List.replicate nl ⟨ty,x⟩
 
 theorem caller_cell (caller : NState) (slot : Nat) (ty : Ty) (binding : CppState.Binding) (v : Int)
     (found : caller.scalarCell slot ty = some (binding,⟨ty,v⟩)) :
@@ -54,46 +61,40 @@ def scalarBound (caller initial : NState) : Nat :=
 def storageBound (caller : NState) : Nat :=
   max caller.frame.state.storage.peak caller.frame.state.liveSpace
 
-def fieldBindings (P : List Cell) : List CppState.Binding :=
-  (List.range 4).map fun i => ⟨P.length+i,true⟩
+def fieldBindings (nl : Nat) (P : List Cell) : List CppState.Binding :=
+  (List.range nl).map fun i => ⟨P.length+i,true⟩
 
-structure StageState (ty : Ty) (caller initial callee : NState) (a b : Nat) (x : Int) : Prop where
+structure StageState (ty : Ty) (ins : List CppState.Binding) (nl : Nat) (caller initial callee : NState) (x : Int) : Prop where
   scalar : QS callee [] caller.scalars.baseMemory (caller.scope+1)
-    (callerP caller ++ fields ty x) (inputs a b ++ fieldBindings (callerP caller)) (ssl 6)
+    (callerP caller ++ fields ty nl x) (ins ++ fieldBindings nl (callerP caller)) (ssl (ins.length+nl))
   frame : FA callee.frame caller.frame.state.liveSpace caller.frame.state.storage.work
     (caller.scope+1) caller.frame.state.storage.objects.length
   counters : Cq (scalarBound caller initial) (storageBound caller) (caller.scalars.work+45) callee
   contents : CppScalarContents.Contents caller.frame callee.frame
   xValid : ty.valid x = true
 
-theorem stage_ready (hij : (li = 0 ∧ ri = 1) ∨ (li = 1 ∧ ri = 0)) (caller : NState) (s1 s2 : Nat)
-    (b1 b2 : CppState.Binding) (x y : Int)
-    (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,x⟩)) (c2 : caller.scalarCell s2 ty = some (b2,⟨ty,y⟩))
+theorem stage_of_exec (prog : NProgram) (ins : List CppState.Binding) (nl : Nat) (x : Int)
+    (hx : ty.valid x = true) (caller initial : NState) (args : List NArgument)
+    (prepared : prepare caller prog.parameters args = some initial)
+    (hslots : initial.slots = ssl ins.length) (mem : initial.scalars.memory = callerP caller)
+    (bindings : initial.scalars.bindings = ins) (bas : initial.scalars.baseMemory = caller.scalars.baseMemory)
+    (scope : initial.scope = caller.scope+1)
+    (frame : initial.frame = ⟨caller.frame.state,caller.frame.rootWritable,[]⟩)
+    (work : initial.scalars.work ≤ caller.scalars.work+5)
+    (peak : caller.scalars.peak ≤ initial.scalars.peak)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner scope, caller.frame.state.forest.context owner = some scope → scope ≤ caller.scope)
-    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
-    ∃ initial fuel callee,
-      prepare caller (gProgram ty li ri).parameters [.scalarReference s1,.scalarReference s2] = some initial ∧
-      runFuel fuel (gProgram ty li ri).body initial = .finished ⟨callee,none,false⟩ ∧
-      StageState ty caller initial callee b1.address b2.address ((gExpected li ri) x y) := by
-  obtain ⟨initial,prepared,slots,mem,bindings,bas,scope,frame,work,peak⟩ :=
-    prep_ref2 caller (gProgram ty li ri).parameters ty false false rfl s1 s2 b1 b2 x y c1 c2 (by simp) (by simp) valid
-  obtain ⟨p0,hx⟩ := caller_cell caller s1 ty b1 x c1
-  obtain ⟨p1,hy⟩ := caller_cell caller s2 ty b2 y c2
-  have hv : ty.valid ((gExpected li ri) x y) = true := by
-    unfold gExpected
-    by_cases h : (if li = 0 then x else y) < (if ri = 0 then x else y)
-    · rw [ite_eq_left h]; exact hy
-    · rw [ite_eq_right h]; exact hx
-  obtain ⟨rr,ran0,ret,cost,need,ps0⟩ := Proofs.GenericExtrema.selection_exec ty li ri hij (callerP caller)
-    b1.address b2.address x y hx hy p0 p1
-  have ran : pexec 1 (gProgram ty li ri).body ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩]⟩ = some rr := ran0
-  have ps : rr.ps = Proofs.GroupCall.ws (callerP caller) [⟨b1.address,false⟩,⟨b2.address,false⟩] (List.replicate 4 ⟨ty,gExpected li ri x y⟩) := by
-    rw [ps0]; rfl
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length)
+    (hsc : Scalar prog.body = true) (hal : CppScalarContents.Allowed prog.body = true)
+    (hins : ins.length ≤ 2) (hnl : nl ≤ 4)
+    (rr : PR) (ran : pexec 1 prog.body ⟨callerP caller,ins⟩ = some rr)
+    (ret : rr.ret = none) (cost : rr.cost ≤ 40) (need : rr.need ≤ (callerP caller).length+16)
+    (ps : rr.ps = Proofs.GroupCall.ws (callerP caller) ins (List.replicate nl ⟨ty,x⟩)) :
+    ∃ fuel callee, runFuel fuel prog.body initial = .finished ⟨callee,none,false⟩ ∧
+      StageState ty ins nl caller initial callee x := by
   have qs : QS initial [] caller.scalars.baseMemory (caller.scope+1) (callerP caller)
-      (inputs b1.address b2.address) (ssl 2) := by
-    refine ⟨by simpa [ssl,List.range_succ] using slots,mem,bindings,bas,scope⟩
+      ins (ssl ins.length) := ⟨hslots,mem,bindings,bas,scope⟩
   have fa : FA initial.frame caller.frame.state.liveSpace caller.frame.state.storage.work
       (caller.scope+1) caller.frame.state.storage.objects.length := by
     refine ⟨by rw [frame]; exact valid,by rw [frame]; exact lengths,by rw [frame],by rw [frame],?_,by rw [frame],by rw [frame]⟩
@@ -110,7 +111,7 @@ theorem stage_ready (hij : (li = 0 ∧ ri = 1) ∨ (li = 1 ∧ ri = 0)) (caller 
     · change initial.peak ≤ scalarBound caller initial+storageBound caller
       unfold scalarBound; omega
   have hbase : caller.scalars.baseMemory ≤ (callerP caller).length := by simp [callerP]; omega
-  have run := sound (gProgram ty li ri).body (by simp [gProgram, Proofs.GenericExtrema.selectionBody, Scalar, NExpr.scalarOnly]) 1 _ rr ran
+  have run := sound prog.body hsc 1 _ rr ran
     (L0:=caller.frame.state.liveSpace) (T0:=caller.frame.state.storage.work)
     (N:=caller.frame.state.storage.objects.length) (scq:=caller.scope+1)
     (SPB:=scalarBound caller initial) (TPB:=storageBound caller) (W:=initial.scalars.work)
@@ -118,25 +119,57 @@ theorem stage_ready (hij : (li = 0 ∧ ri = 1) ∨ (li = 1 ∧ ri = 0)) (caller 
     (by simp; unfold scalarBound; omega)
     (by unfold scalarBound; omega) (Nat.le_refl _) (by exact Nat.le_max_right _ _)
   obtain ⟨fuel,step,executed,returned,breaking,qsD,faD,cqD⟩ := run
-  have typed : StageState ty caller initial step.state b1.address b2.address ((gExpected li ri) x y) := by
-    refine ⟨?_,faD,?_,?_,hv⟩
+  have typed : StageState ty ins nl caller initial step.state x := by
+    refine ⟨?_,faD,?_,?_,hx⟩
     · rw [ps] at qsD
-      simpa [ws,fields,fieldBindings,ssl,inputs] using qsD
+      simpa [ws,fields,fieldBindings,ssl] using qsD
     · refine ⟨?_,cqD.scalarPeak,cqD.storagePeak,cqD.outerPeak⟩
       have bound := cqD.work
-      rw [work] at bound
       omega
-    · have stable := CppScalarContents.run_stable fuel (gProgram ty li ri).body initial step
-        (by simp [gProgram, Proofs.GenericExtrema.selectionBody, CppScalarContents.Allowed, Proofs.CppScalarFrame.Scalar]) (by intro owner sc found; rw [frame] at found; have h := strict owner sc found; rw [scope]; omega) executed
+    · have stable := CppScalarContents.run_stable fuel prog.body initial step
+        hal (by intro owner sc found; rw [frame] at found; have h := strict owner sc found; rw [scope]; omega) executed
       have initialContents : CppScalarContents.Contents caller.frame initial.frame := by
         rw [frame]; exact ⟨rfl,rfl,rfl,rfl⟩
       exact initialContents.trans stable.contents
-  refine ⟨initial,fuel,step.state,prepared,?_,typed⟩
+  refine ⟨fuel,step.state,?_,typed⟩
   have stepEq : step = ⟨step.state,none,false⟩ := by
     cases step
     simp only [ret,Option.map_none] at returned
     simp_all
   exact executed.trans (congrArg (fun q : NStep => Proofs.CppLoop.Outcome.finished q) stepEq)
+
+
+theorem stage_ready (hij : (li = 0 ∧ ri = 1) ∨ (li = 1 ∧ ri = 0)) (caller : NState) (s1 s2 : Nat)
+    (b1 b2 : CppState.Binding) (x y : Int)
+    (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,x⟩)) (c2 : caller.scalarCell s2 ty = some (b2,⟨ty,y⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner scope, caller.frame.state.forest.context owner = some scope → scope ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ initial fuel callee,
+      prepare caller (gProgram ty li ri).parameters [.scalarReference s1,.scalarReference s2] = some initial ∧
+      runFuel fuel (gProgram ty li ri).body initial = .finished ⟨callee,none,false⟩ ∧
+      StageState ty (inputs b1.address b2.address) 4 caller initial callee ((gExpected li ri) x y) := by
+  obtain ⟨initial,prepared,slots,mem,bindings,bas,scope,frame,work,peak⟩ :=
+    prep_ref2 caller (gProgram ty li ri).parameters ty false false rfl s1 s2 b1 b2 x y c1 c2 (by simp) (by simp) valid
+  obtain ⟨p0,hx⟩ := caller_cell caller s1 ty b1 x c1
+  obtain ⟨p1,hy⟩ := caller_cell caller s2 ty b2 y c2
+  have hv : ty.valid ((gExpected li ri) x y) = true := by
+    unfold gExpected
+    by_cases h : (if li = 0 then x else y) < (if ri = 0 then x else y)
+    · rw [ite_eq_left h]; exact hy
+    · rw [ite_eq_right h]; exact hx
+  obtain ⟨rr,ran0,ret,cost,need,ps0⟩ := Proofs.GenericExtrema.selection_exec ty li ri hij (callerP caller)
+    b1.address b2.address x y hx hy p0 p1
+  have ran : pexec 1 (gProgram ty li ri).body ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩]⟩ = some rr := ran0
+  have ps : rr.ps = Proofs.GroupCall.ws (callerP caller) [⟨b1.address,false⟩,⟨b2.address,false⟩] (List.replicate 4 ⟨ty,gExpected li ri x y⟩) := by
+    rw [ps0]; rfl
+  obtain ⟨fuel,callee,ran',st⟩ := stage_of_exec (gProgram ty li ri) (inputs b1.address b2.address) 4 (gExpected li ri x y) hv
+    caller initial _ prepared (by simpa [inputs,ssl,List.range_succ] using slots) mem bindings bas scope frame (by omega) peak
+    valid lengths strict base (by simp [gProgram, Proofs.GenericExtrema.selectionBody, Scalar, NExpr.scalarOnly])
+    (by simp [gProgram, Proofs.GenericExtrema.selectionBody, CppScalarContents.Allowed, Proofs.CppScalarFrame.Scalar])
+    (by simp [inputs]) (by omega) rr ran ret cost need ps
+  exact ⟨initial,fuel,callee,prepared,ran',st⟩
 
 abbrev cx (ty : Ty) (x : Int) : Cell := ⟨ty,x⟩
 
@@ -166,27 +199,35 @@ structure ExportState (ty : Ty) (x : Int) (caller initial out : NState) (targetC
   contents : CppScalarContents.Contents caller.frame out.frame
   xValid : ty.valid x = true
 
-theorem finish_export (x : Int) (a b : Nat) (caller initial callee : NState) (targetConst : Bool)
-    (ready : StageState ty caller initial callee a b x)
+theorem finish_export (ins : List CppState.Binding) (m : Nat) (x : Int) (caller initial callee : NState) (targetConst : Bool)
+    (ready : StageState ty ins (m+1) caller initial callee x)
     (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
-    MemberView.finishView caller callee [] (gFields ty)
+    MemberView.finishView caller callee [] (gFields ty (ins.length+m))
         [] (gPerm ty targetConst) =
       some (exported ty x caller callee targetConst,Proofs.CppConstructorMultiFinish.reference caller 0 1) ∧
     ExportState ty x caller initial (exported ty x caller callee targetConst) targetConst := by
-  have mem : callee.scalars.memory = callerP caller ++ (fields ty x) := by simpa using ready.scalar.memory
+  have mem : callee.scalars.memory = callerP caller ++ (fields ty (m+1) x) := by simpa using ready.scalar.memory
   have bs := ready.scalar.bindings
   have sl := ready.scalar.slots
-  have c5 : callee.scalarCell 5 ty = some (⟨(callerP caller).length+3,true⟩,(cx ty x)) := by
-    simp [NState.scalarCell,NState.scalarSlot,mem,bs,sl,fieldBindings,fields,inputs,ssl,List.range_succ,cx,ready.xValid]
+  have c5 : callee.scalarCell (ins.length+m) ty = some (⟨(callerP caller).length+m,true⟩,(cx ty x)) := by
+    have hs : callee.scalarSlot (ins.length+m) = some (ins.length+m) := by
+      simp [NState.scalarSlot, sl, ssl]
+    have hb : callee.scalars.bindings[ins.length+m]? = some ⟨(callerP caller).length+m,true⟩ := by
+      rw [bs, List.getElem?_append_right (by omega)]
+      simp [fieldBindings]
+    have hm : callee.scalars.memory[(callerP caller).length+m]? = some ⟨ty,x⟩ := by
+      rw [mem, List.getElem?_append_right (by omega)]
+      simp [fields]
+    simp [NState.scalarCell, hs, hb, hm, cx, ready.xValid]
   have captured : Proofs.CppConstructorFinish.captureAll callee
-      (gFields ty) = some [((cx ty x),true)] := by
-    change Proofs.CppConstructorFinish.captureAll callee [⟨5,ty⟩] = _
+      (gFields ty (ins.length+m)) = some [((cx ty x),true)] := by
+    change Proofs.CppConstructorFinish.captureAll callee [⟨ins.length+m,ty⟩] = _
     simp [Proofs.CppConstructorFinish.captureAll,Proofs.CppConstructorFinish.capture,c5]
   have viewed : Proofs.CppConstructorView.restrictValues [((cx ty x),true)] (gPerm ty targetConst) =
       some (destinationValues ty x targetConst) := by
     cases targetConst <;> simp [Proofs.CppConstructorView.restrictValues, gPerm, destinationValues, cx]
   have takeM : callee.scalars.memory.take caller.scalars.memory.length = caller.scalars.memory := by
-    rw [mem]; exact Proofs.MonoidCallCore.take_P caller (fields ty x)
+    rw [mem]; exact Proofs.MonoidCallCore.take_P caller (fields ty (m+1) x)
   have fits : caller.scalars.memory.length ≤ callee.scalars.memory.length := by
     rw [mem]; simp [callerP]
   have fresh : ∀ owner, callee.frame.state.forest.context owner ≠ some callee.scope := by
@@ -195,7 +236,7 @@ theorem finish_export (x : Int) (a b : Nat) (caller initial callee : NState) (ta
     rw [ready.scalar.scope] at bound
     omega
   have retired := retireScope_fresh callee.frame callee.scope ready.frame.valid fresh
-  have finished : MemberView.finishView caller callee [] (gFields ty)
+  have finished : MemberView.finishView caller callee [] (gFields ty (ins.length+m))
       [] (gPerm ty targetConst) =
         some (exported ty x caller callee targetConst,Proofs.CppConstructorMultiFinish.reference caller 0 1) := by
     unfold MemberView.finishView
@@ -331,10 +372,10 @@ theorem view_export_correct (hij : (li = 0 ∧ ri = 1) ∨ (li = 1 ∧ ri = 0)) 
           .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 1) ∧
       ExportState ty ((gExpected li ri) x y) caller initial out targetConst := by
   obtain ⟨initial,fuel,callee,prepared,ran,ready⟩ := stage_ready hij caller s1 s2 b1 b2 x y c1 c2 valid lengths strict base
-  obtain ⟨fin,post⟩ := finish_export ((gExpected li ri) x y) b1.address b2.address caller initial callee targetConst ready base
+  obtain ⟨fin,post⟩ := finish_export (inputs b1.address b2.address) 3 ((gExpected li ri) x y) caller initial callee targetConst ready base
   refine ⟨initial,fuel,exported ty ((gExpected li ri) x y) caller callee targetConst,prepared,?_,post⟩
   exact MemberView.constructView_of_steps (gProgram ty li ri) fuel caller initial callee _
-    [.scalarReference s1,.scalarReference s2] [] (gFields ty) [] (gPerm ty targetConst)
+    [.scalarReference s1,.scalarReference s2] [] (gFields ty 5) [] (gPerm ty targetConst)
     (Proofs.CppConstructorMultiFinish.reference caller 0 1) none prepared ran (Or.inl rfl) fin
 
 theorem object_export_correct (hij : (li = 0 ∧ ri = 1) ∨ (li = 1 ∧ ri = 0)) (caller : NState) (targetConst : Bool) (s1 s2 : Nat)
@@ -359,6 +400,73 @@ theorem object_export_correct (hij : (li = 0 ∧ ri = 1) ∨ (li = 1 ∧ ri = 0)
     | some arguments => gView ty li ri fuel caller arguments targetConst) = _
   rw [args]
   exact ran
+
+
+/-- `e()` (slot 1, two locals) and the default constructor (slot 2, three locals): a nullary
+    program whose last local is exported; `ready` comes from the executed body. -/
+theorem nullary_export_correct (body : Command) (m : Nat) (v : Int) (hv : ty.valid v = true)
+    (hsc : Scalar body = true) (hal : CppScalarContents.Allowed body = true) (hm : m ≤ 3)
+    (exec : ∀ P : List Cell, ∃ rr, pexec 1 body ⟨P,[]⟩ = some rr ∧ rr.ret = none ∧ rr.cost ≤ 40 ∧
+      rr.need ≤ P.length + 16 ∧ rr.ps = Proofs.GroupCall.ws P [] (List.replicate (m+1) ⟨ty,v⟩))
+    (caller : NState) (targetConst : Bool)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner scope, caller.frame.state.forest.context owner = some scope → scope ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ initial fuel out,
+      prepare caller (gNullary ty body).parameters [] = some initial ∧
+      gNullaryView ty body m fuel caller [] targetConst =
+          .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 1) ∧
+      ExportState ty v caller initial out targetConst := by
+  obtain ⟨initial,prepared,slots,mem,bindings,bas,scope,frame,work,peak⟩ :=
+    prep_none caller (gNullary ty body).parameters rfl valid
+  obtain ⟨rr,ran,ret,cost,need,ps⟩ := exec (callerP caller)
+  obtain ⟨fuel,callee,ran',ready⟩ := stage_of_exec (ty := ty) (gNullary ty body) [] (m+1) v hv caller initial _ prepared
+    (by simpa [ssl] using slots) mem bindings bas scope frame (by omega) peak valid lengths strict base hsc hal
+    (by simp) (by omega) rr ran ret cost need (by simpa using ps)
+  obtain ⟨fin,post⟩ := finish_export [] m v caller initial callee targetConst (by simpa using ready) base
+  refine ⟨initial,fuel,exported ty v caller callee targetConst,prepared,?_,by simpa using post⟩
+  have := MemberView.constructView_of_steps (gNullary ty body) fuel caller initial callee _
+    [] [] (gFields ty m) [] (gPerm ty targetConst)
+    (Proofs.CppConstructorMultiFinish.reference caller 0 1) none prepared ran' (Or.inl rfl) (by simpa using fin)
+  exact this
+
+
+theorem identity_export_correct (v : Int) (hv : ty.valid v = true) (caller : NState) (targetConst : Bool)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner scope, caller.frame.state.forest.context owner = some scope → scope ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ initial fuel out,
+      prepare caller (gNullary ty (Proofs.GenericExtrema.identBody ty v)).parameters [] = some initial ∧
+      gNullaryView ty (Proofs.GenericExtrema.identBody ty v) 1 fuel caller [] targetConst =
+          .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 1) ∧
+      ExportState ty v caller initial out targetConst :=
+  nullary_export_correct (Proofs.GenericExtrema.identBody ty v) 1 v hv
+    (by simp [Scalar, NExpr.scalarOnly]) (by simp [CppScalarContents.Allowed, Proofs.CppScalarFrame.Scalar]) (by omega)
+    (fun P => by
+      obtain ⟨r,ran,ret,cost,need,ps⟩ := Proofs.GenericExtrema.ident_exec ty P v hv
+      rw [Proofs.GroupCall.ws_nil] at ran
+      exact ⟨r,ran,ret,cost,need,ps⟩)
+    caller targetConst valid lengths strict base
+
+theorem default_export_correct (v : Int) (hv : ty.valid v = true) (caller : NState) (targetConst : Bool)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner scope, caller.frame.state.forest.context owner = some scope → scope ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ initial fuel out,
+      prepare caller (gNullary ty (Proofs.GenericExtrema.ctorBody ty v)).parameters [] = some initial ∧
+      gNullaryView ty (Proofs.GenericExtrema.ctorBody ty v) 2 fuel caller [] targetConst =
+          .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 1) ∧
+      ExportState ty v caller initial out targetConst :=
+  nullary_export_correct (Proofs.GenericExtrema.ctorBody ty v) 2 v hv
+    (by simp [Scalar, NExpr.scalarOnly]) (by simp [CppScalarContents.Allowed, Proofs.CppScalarFrame.Scalar]) (by omega)
+    (fun P => by
+      obtain ⟨r,ran,ret,cost,need,ps⟩ := Proofs.GenericExtrema.ctor_exec ty P v hv
+      rw [Proofs.GroupCall.ws_nil] at ran
+      exact ⟨r,ran,ret,cost,need,ps⟩)
+    caller targetConst valid lengths strict base
 
 theorem total_work (x : Int) (caller initial out : NState) (targetConst : Bool)
     (post : ExportState ty x caller initial out targetConst) : out.work ≤ caller.work+47 := by

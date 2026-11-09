@@ -79,6 +79,13 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                                       f'{group}.gView {ty} {indices.split()[0]} {indices.split()[1]} := rfl')
                         checks.append(f'example : {namespace}.«{kind}_factory_op_exportObjectsFuel» = '
                                       f'{group}.gCombine {ty} {indices.split()[0]} {indices.split()[1]} := rfl')
+                        limit = ('Proofs.GenericExtrema.lowestV' if kind == 'RangeMax'
+                                 else 'Proofs.GenericExtrema.highestV') + f' {ty}'
+                        for program, body, slot in [('factory_e', 'identBody', 1), ('construct1', 'ctorBody', 2)]:
+                            generic = f'{group}.gNullary {ty} (Proofs.GenericExtrema.{body} {ty} ({limit}))'
+                            checks.append(f'example : {namespace}.«{kind}_{program}» = {generic} := rfl')
+                            checks.append(f'example : {namespace}.«{kind}_{program}_exportViewFuel» = '
+                                          f'{group}.gNullaryView {ty} (Proofs.GenericExtrema.{body} {ty} ({limit})) {slot} := rfl')
                         checks.extend(f'#print axioms {group}.{name}' for name in names)
             lean = Path(directory) / 'extrema.lean'
             lean.write_text('\n'.join(imports) + '\nimport Proofs.MonoidLazyCall\nimport Proofs.CppScalarContents\nimport Proofs.GenericExtrema\nopen Proofs.CppScalar\n' +
@@ -89,7 +96,14 @@ class GenericTemplateFamilyTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout[:3000] + result.stderr[:3000])
         self.assertNotIn('sorryAx', result.stdout)
         self.assertNotIn('Lean.ofReduceBool', result.stdout)
-        self.assertIn('depends on axioms: [propext, Classical.choice, Quot.sound]', result.stdout)
+        reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
+        self.assertGreater(len(reports), 100)
+        standard = {'propext', 'Classical.choice', 'Quot.sound'}
+        for line in reports:
+            if line.endswith('does not depend on any axioms'):
+                continue
+            used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
+            self.assertLessEqual(used, standard, line)
 
     def test_generated_programs_equal_the_ty_family(self):
         disable_network()
@@ -113,6 +127,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
             result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
                                     capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
 
 
 if __name__ == '__main__':
