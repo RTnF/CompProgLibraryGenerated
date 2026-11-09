@@ -84,7 +84,7 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 | `L/graph/prim.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/graph/topological_sort.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/graph/warshall_floyd.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
-| `L/interval/interval.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/interval/interval.hpp` | 完了（stream演算子は方針で対象外） | 2026-11-09 `==`/`!=`/`<`/`>`/`<=`/`>=` を追加し一般定理・全件gate成功（commit 171a6bb）。次は `L/interval/interval_union.hpp` など小さい原本から同じ流れ（C++追加→nested_irで生成→Lean定理→statements再生成→全件gate→commit） |
 | `L/interval/interval_union.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/modint/dynamic_modint.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/modint/modint.hpp` | 部分 | 公開ModIntの11モデル/一般証明を更新、bridge/kernel成功。全件gate成功。原本class全API/汎用型の移植は未完 |
