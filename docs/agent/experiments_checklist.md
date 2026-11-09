@@ -10,7 +10,7 @@
 - [x] `experiments/library/cpp/algebraic_structure/monoid.hpp` — 整数型の具体化セット（long long, int）。浮動小数Tは基盤整備後 — aec6ac1
 - [ ] `experiments/library/cpp/algebraic_structure/monoid_lazy.hpp`
 - [ ] `experiments/library/cpp/array/cumulative_sum.hpp`
-- [ ] `experiments/library/cpp/array/doubling.hpp`
+- [x] `experiments/library/cpp/array/doubling.hpp` — 公開版との同値を差分テストで確認、変更点を文書化 — 5ea4269
 - [ ] `experiments/library/cpp/array/element_count.hpp`
 - [ ] `experiments/library/cpp/array/search_util.hpp`
 - [ ] `experiments/library/cpp/array/sort_util.hpp`
