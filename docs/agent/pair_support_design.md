@@ -23,3 +23,18 @@
 
 - 1 の案（`Element.record` か SoA）。
 - ソート契約の範囲（置換＋整列済みを公理にする）。`docs/trust_policy.md` の契約区分で登録し、証明済みと区別する。
+
+## 方式の決定と段階計画（2026-11-10、「続行」の指示を受けて）
+
+方式: 同じ型の `pair<T,T>` は、既存の入れ子 vector（`Element.vector (integer T)`、行が2本）として Lean にモデル化する（`ResultKind`/`Element` の変更は不要）。行0が `first`、行1が `second`。型が違う `pair<T,int>`（`counts`、`element_count`）は、この方式では要素型が合わないため後回しにし、`Element` の拡張か別方式を後で決める。
+
+実測した最初の失敗: `long long first_sum(const std::vector<std::pair<long long,long long>> &v)`（`v[i].first` の読み取りのみ）を `nested_ir.lower_source` に通すと `verifier/vector_stl.py` の `audit_vector_nodes` が `member call must resolve to a pinned std::vector instance` で拒否する。`std::pair<A,A>` の vector が、監査対象の `std::vector` インスタンスとして認められていない。
+
+段階:
+1. 監査（`vector_stl.py`）: `std::vector<std::pair<T,T>>` と `std::pair` の `first/second` メンバー参照を、同一翻訳単位の宣言IDで固定して認める。
+2. IR（`nested_ir.py`）: `v[i].first/second` の読み、`emplace_back(a, b)`（2行へ追加）、`back()`、`empty()`、範囲for＋構造化束縛、`pair` の辞書順 `operator<`。
+3. 並べ替え: `std::sort` を `pair` の vector（2行）へ。結果が置換かつ辞書順に整列済みであることのモデルと、比較回数の既存契約。
+4. 呼出し定理: 2行の入出力（行の長さが等しいことを前提）。
+5. `interval_union_inclusive` の原本形を公開し、`Proofs/IntervalUnion*.lean` の既存の証明を再利用して結果を証明する。
+
+各段階はローカルコミットとして積み、`interval_union.hpp` が全体で完了した時点で、全件ゲートとチェックリストの更新を行う。
