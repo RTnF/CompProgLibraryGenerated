@@ -127,7 +127,7 @@ class NestedBody(Body):
                 # A nested vector parameter: the container's element is a vector of the scalar type.
                 slot, binding = self.binding(node, 'nested')
                 return dict(kind='local', slot=slot, element=dict(vector=binding['element']),
-                            writable=binding['writable'])
+                            writable=binding['writable'], pair=binding.get('pair', False))
             slot, binding = self.binding(node, 'vector')
             return dict(kind='local', slot=slot, element=binding['element'], writable=binding['writable'])
         if (node['kind'] == 'CXXOperatorCallExpr' and node.get('verifiedVectorOperation') == 'operator[]'
@@ -162,10 +162,37 @@ class NestedBody(Body):
 
     # --- expressions -------------------------------------------------
     def extension(self, node, slots):
+        if node.get('verifiedPairField'):
+            # `v[i].first` / `v[i].second` of a vector of std::pair<T, T> (two rows of T, first and second).
+            base = unwrap_lvalue(node['inner'][0])
+            if not (base['kind'] == 'CXXOperatorCallExpr' and base.get('verifiedVectorOperation') == 'operator[]'
+                    and len(base.get('inner', [])) == 3):
+                raise ValueError('pair member access requires a subscripted vector of pairs')
+            parent = self.container(base['inner'][1])
+            if 'vector' not in parent['element']:
+                raise ValueError('pair member access requires a vector of pairs')
+            index = self.expr(base['inner'][2])
+            if index['type'] != UINT64:
+                raise ValueError('vector subscript requires size_type')
+            row = dict(kind='literal', type=UINT64, value=0 if node['verifiedPairField'] == 'first' else 1)
+            element = parent['element']['vector']
+            result = dict(kind='vector_read', type=element, element=element,
+                          container=dict(kind='row', parent=parent, element=element, index=row,
+                                         writable=parent['writable']),
+                          index=index)
+            if scalar_type(node) != result['type']:
+                raise ValueError('pair member type mismatch')
+            return result
         if node.get('verifiedVectorOperation'):
             operation, container, args = self.operation(node)
             element = container['element']
-            if operation == 'size' and not args:
+            if operation == 'size' and not args and container.get('pair'):
+                # The number of pairs is the length of the first row.
+                scalar = element['vector']
+                row = dict(kind='row', parent=container, element=scalar, writable=container['writable'],
+                           index=dict(kind='literal', type=UINT64, value=0))
+                result = dict(kind='vector_size', type=UINT64, element=scalar, container=row)
+            elif operation == 'size' and not args:
                 result = dict(kind='vector_size', type=UINT64, element=element, container=container)
             elif operation == 'operator[]' and len(args) == 1 and 'vector' not in element:
                 result = dict(kind='vector_read', type=element, element=element,

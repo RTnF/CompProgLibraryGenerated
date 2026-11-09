@@ -197,7 +197,7 @@ def translation_unit(source, include_dirs=(), callees=None, sorts=None, *, const
                 for template in json.loads(raw).get('inner',[]):
                     if template.get('kind')=='FunctionTemplateDecl' and template.get('name') in ALGORITHMS:
                         sorts.update(c['id'] for c in template.get('inner',[]) if c.get('kind')=='FunctionDecl')
-            if (b'"name": "vector"' in raw or b'"name": "__normal_iterator"' in raw
+            if (b'"name": "vector"' in raw or b'"name": "__normal_iterator"' in raw or b'"name": "pair"' in raw
                     or b'"name": "numeric_limits"' in raw or Path(origin).name=='vector.tcc'
                     or Path(origin).name=='stl_algobase.h' and
                        (b'"name": "min"' in raw or b'"name": "max"' in raw)):
@@ -240,6 +240,59 @@ def vector_declarations(roots):
     if len(primary)!=1:
         raise ValueError('exactly one pinned std::vector primary declaration required')
     return primary[0],instances
+
+
+def pair_declarations(roots):
+    headers={(Path(directory)/'bits/stl_pair.h').resolve() for directory in gcc_include_dirs()}
+    primary=[]
+    instances=[]
+    for root in roots:
+        if Path(root.get('loc',{}).get('file','')).resolve() not in headers:
+            continue
+        for node in root.get('inner',[]):
+            if node.get('kind')!='ClassTemplateDecl' or node.get('name')!='pair':
+                continue
+            records=[c for c in node.get('inner',[]) if c.get('kind')=='CXXRecordDecl'
+                     and c.get('completeDefinition')]
+            if len(records)!=1:
+                raise ValueError('std::pair primary record is missing or ambiguous')
+            primary.append(records[0])
+            instances.extend(c for c in node.get('inner',[]) if c.get('kind')=='ClassTemplateSpecializationDecl')
+    if len(primary)!=1:
+        raise ValueError('exactly one pinned std::pair primary declaration required')
+    return primary[0],instances
+
+
+@lru_cache(maxsize=1)
+def pristine_pair():
+    with tempfile.TemporaryDirectory(prefix='pair-pristine-') as directory:
+        source=Path(directory)/'standard.cpp'
+        source.write_text('#include <utility>\n')
+        _,roots=translation_unit(source)
+        primary,_=pair_declarations(roots)
+        return trusted_views(roots,primary)
+
+
+def audit_pairs(roots):
+    """Scalar pairs `std::pair<T, T>` of the pristine pinned library: {spelling: element spelling}."""
+    try:
+        primary,instances=pair_declarations(roots)
+    except ValueError:
+        return {},{}
+    if trusted_views(roots,primary)!=pristine_pair():
+        raise ValueError('std::pair primary differs from the pristine pinned library')
+    pairs={}
+    fields={}
+    for instance in instances:
+        arguments=[c.get('type',{}).get('qualType') for c in instance.get('inner',[]) if c.get('kind')=='TemplateArgument']
+        if (instance.get('TemplateInstantiationPattern')==primary['id'] and len(arguments)==2 and
+                arguments[0]==arguments[1] and arguments[0] in TYPES and arguments[0]!='bool'):
+            declared=[c for c in instance.get('inner',[]) if c.get('kind')=='FieldDecl']
+            if [c.get('name') for c in declared]==['first','second']:
+                pairs[f'std::pair<{arguments[0]}, {arguments[1]}>']=arguments[0]
+                for c in declared:
+                    fields[c['id']]=(c['name'],f'std::pair<{arguments[0]}, {arguments[1]}>')
+    return pairs,fields
 
 
 def trusted_views(roots, primary):
@@ -338,6 +391,7 @@ def audit_vector_nodes(source,functions,roots,include_dirs=(),sorts=(),*,copy_as
         if view!=pristine_primary(tuple(profiles[0])):
             raise ValueError('std::vector primary differs from the pristine pinned library')
     audit_iterators(roots)
+    pairs,pair_fields=audit_pairs(roots)
     all_nodes=[node for root in roots for node in walk(root)]
     # A class-template instance must originate in the pristine primary. User
     # full specializations and vector<bool> partial specialization do not.
@@ -352,6 +406,8 @@ def audit_vector_nodes(source,functions,roots,include_dirs=(),sorts=(),*,copy_as
     def supported_element(element, seen=()):
         if element in TYPES:
             return element!='bool'
+        if element in pairs:
+            return True
         return (element in candidates and element not in seen and
                 supported_element(candidates[element],seen+(element,)))
     for instance in instances:
@@ -517,9 +573,18 @@ def audit_vector_nodes(source,functions,roots,include_dirs=(),sorts=(),*,copy_as
             call['verifiedVectorElement']=element
             records.append({'function':function.get('name'),'operation':operation,'element':element,
                             'callee_id':identifier,'pattern_id':method['TemplateInstantiationPattern']})
+    for function in functions:
+        for node in walk(function):
+            if node.get('kind')=='MemberExpr' and node.get('referencedMemberDecl') in pair_fields:
+                if node.get('isArrow'):
+                    raise ValueError('pair member access through a pointer is unsupported')
+                field,spelling=pair_fields[node['referencedMemberDecl']]
+                node['verifiedPairField']=field
+                node['verifiedPairType']=spelling
     functions,scalar_choices=lower_scalar_choices(functions,roots)
     result={'coverage':'callee_identity_only','operations':records,'functions':functions,
-            'vector_types':sorted(name for name,element in candidates.items() if supported_element(element))}
+            'vector_types':sorted(name for name,element in candidates.items() if supported_element(element)),
+            'pair_types':dict(pairs)}
     if scalar_choices:
         result['scalar_choices']=scalar_choices
     return result

@@ -36,7 +36,11 @@ def bindings_from_audit(source, audited, include_dirs=()):
                     raise ValueError('vector parameter must use the audited standard class')
                 nested=re.fullmatch(r'std::vector<(.+)>',element)
                 inner=nested.group(1) if nested else element
-                if nested and element not in audited['vector_types']:
+                pair_element=audited.get('pair_types',{}).get(element)
+                if pair_element is not None:
+                    # A vector of std::pair<T, T> is modelled as two rows of T (first, second) of equal length.
+                    nested=True;inner=pair_element
+                elif nested and element not in audited['vector_types']:
                     raise ValueError('nested vector parameter must use the audited standard class')
                 if inner not in TYPES or inner=='bool':
                     raise ValueError('binding schemas currently require scalar integer vector elements')
@@ -56,9 +60,12 @@ def bindings_from_audit(source, audited, include_dirs=()):
                     f'static_assert(__is_same(decltype({"(("+name+"))" if parameter.get("field") else name}),{constant}::std::vector<{element}> &),'
                     '"vector parameter must be the canonical standard type");\n')
                 probes.append((location['offset']+location['tokLen'],assertion))
-                parameters.append({'kind':'nested' if nested else 'vector',
-                                   'element':{'width':width,'signed':signed,'boolean':boolean},
-                                   'writable':not bool(match.group(1))})
+                entry={'kind':'nested' if nested else 'vector',
+                       'element':{'width':width,'signed':signed,'boolean':boolean},
+                       'writable':not bool(match.group(1))}
+                if pair_element is not None:
+                    entry['pair']=True
+                parameters.append(entry)
             else:
                 scalar=parameter_type(parameter)
                 parameters.append({'kind':'scalar','element':scalar['type'],
