@@ -93,4 +93,22 @@ theorem sortPairs_ok (f : Frame) (a b : Nat) (ty : Ty)
   rw [commitA]
   exact commitB
 
+theorem pairLE_trans (a b c : Int × Int) (h1 : pairLE a b = true) (h2 : pairLE b c = true) : pairLE a c = true := by
+  simp only [pairLE, decide_eq_true_eq] at *
+  omega
+
+theorem pairLE_total (a b : Int × Int) : (pairLE a b || pairLE b a) = true := by
+  simp only [pairLE, Bool.or_eq_true, decide_eq_true_eq]
+  omega
+
+/-- The sorted pairs are in lexicographic order. -/
+theorem sortedPairs_sorted (ps : List (Int × Int)) :
+    (sortedPairs ps).Pairwise (fun p q => pairLE p q = true) := by
+  have := List.pairwise_mergeSort (le := pairLE) pairLE_trans pairLE_total ps
+  simpa [sortedPairs] using this
+
+/-- The sorted pairs are a permutation of the input pairs. -/
+theorem sortedPairs_perm (ps : List (Int × Int)) : (sortedPairs ps).Perm ps := by
+  simpa [sortedPairs] using List.mergeSort_perm ps pairLE
+
 end Proofs.SortPairsFrame
