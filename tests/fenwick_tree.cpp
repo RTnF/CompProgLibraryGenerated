@@ -17,7 +17,81 @@ struct AdditiveWithoutPlus {
     }
 };
 
+namespace original {
+// Verbatim copy of experiments/library/cpp/segment_tree/binary_indexed_tree.hpp (the test is compiled without -I, so the
+// header cannot be included by its own relative include).
+using std::vector;
+using ll = long long;
+/**
+ * @brief Binary Indexed Tree (Fenwick Tree)
+ */
+template <class T = ll> class BinaryIndexedTree {
+  vector<T> tree; // 1-indexed
+public:
+  BinaryIndexedTree() {}
+  BinaryIndexedTree(int n) : tree(n + 1) {}
+  BinaryIndexedTree(const vector<T> &v) : tree(v.size() + 1) {
+    for (int i = 0; i < (int)v.size(); i++) {
+      tree[i + 1] = v[i];
+    }
+    for (int i = 1; i < (int)v.size(); i++) {
+      if (i + (i & -i) < (int)tree.size()) {
+        tree[i + (i & -i)] += tree[i];
+      }
+    }
+  }
+  // sum of A[0, r)
+  T sum(int r) const {
+    T s = 0;
+    for (; r > 0; r -= (r & -r)) {
+      s += tree[r];
+    }
+    return s;
+  }
+  // sum of A[l, r)
+  T sum(int l, int r) const { return sum(r) - sum(l); }
+  // A[i] += val
+  void add(int i, T val) {
+    i++;
+    for (; i < (int)tree.size(); i += (i & -i)) {
+      tree[i] += val;
+    }
+  }
+};
+} // namespace original
+
+// The original BinaryIndexedTree and the published FenwickTree (also reachable under the original name) answer every
+// query identically over random constructions, updates and queries.
+void check_against_original() {
+    std::mt19937_64 random(20261110);
+    for (int round = 0; round < 300; ++round) {
+        const int n = static_cast<int>(random() % 40);
+        std::vector<long long> v(n);
+        for (auto &x : v) x = static_cast<long long>(random() % 2001) - 1000;
+        original::BinaryIndexedTree<long long> expected(v);
+        cp::BinaryIndexedTree<long long> published(v);
+        cp::FenwickTree<long long> renamed(v);
+        for (int step = 0; step < 60; ++step) {
+            if (n > 0 && random() % 2 == 0) {
+                const int i = static_cast<int>(random() % n);
+                const long long delta = static_cast<long long>(random() % 2001) - 1000;
+                expected.add(i, delta);
+                published.add(i, delta);
+                renamed.add(i, delta);
+            }
+            const int l = static_cast<int>(random() % (n + 1));
+            const int r = l + static_cast<int>(random() % (n - l + 1));
+            assert(published.sum(r) == expected.sum(r) && renamed.sum(r) == expected.sum(r));
+            assert(published.sum(l, r) == expected.sum(l, r) && renamed.sum(l, r) == expected.sum(l, r));
+        }
+    }
+    original::BinaryIndexedTree<long long> empty_expected(7);
+    cp::BinaryIndexedTree<long long> empty_published(7);
+    for (int r = 0; r <= 7; ++r) assert(empty_published.sum(r) == empty_expected.sum(r));
+}
+
 int main() {
+    check_against_original();
     cp::FenwickTree<AdditiveWithoutPlus> genericEmpty;
     assert(genericEmpty.sum(0).value == 0);
     cp::FenwickTree<AdditiveWithoutPlus> genericZeros(3);

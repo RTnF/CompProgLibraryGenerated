@@ -57,6 +57,9 @@ public:
   }
 };
 
+// The name of the original class (BinaryIndexedTree), kept for source compatibility.
+template <class T = long long> using BinaryIndexedTree = FenwickTree<T>;
+
 template class FenwickTree<long long>;
 
 } // namespace cp

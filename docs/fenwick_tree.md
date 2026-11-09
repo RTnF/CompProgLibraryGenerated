@@ -44,3 +44,10 @@
 - 構築で作った木と `add` の反復で作った木の等しさ。C++ のテスト `tests/fenwick_tree.cpp` で、サイズ 0〜4097 の乱択配列について確認する。
 
 C++ のテストは `tests/fenwick_tree.cpp` で、素朴な累積和を基準として、長さ 0〜70 の乱数操作、範囲外の `i`、`2^20` 要素の木、全 `(l, r)` の組の区間和、構築子 3 種、`T = int`・`unsigned long long` の具体化を確認する。
+
+## 元の名前と差分テスト（2026-11-10）
+
+元のクラス名 `BinaryIndexedTree` を `template <class T = long long> using BinaryIndexedTree = FenwickTree<T>;` として残した（コードを持たない型の別名で、公開宣言の種別 `TypeAliasTemplateDecl` として登録した）。`tests/fenwick_tree.cpp` の `check_against_original` が、元のクラスの逐語コピー（`original::BinaryIndexedTree`）と公開版（別名・本名の両方）を、乱択の構築・更新・区間和で比較して一致を確認する。
+
+未完了: 検証した具体化は `T = long long` のみ。整数型の具体化セット（`int` を含む）は、`vector<int>` の本体モデルと、要素型 `s64` に固定された `FenwickTreeExec` などの証明の塔が要るため未（`docs/agent/handoff.md` の cumulative_sum の調査と同じ原因）。
+

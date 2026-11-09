@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CLANG_VERSION = "clang version 22.1.4"
 GCC_VERSION = "13.3.0"
 VOLATILE_KEYS = {"id", "loc", "range", "mangledName"}
-PUBLIC_KINDS = {"FunctionDecl", "TypeAliasDecl", "CXXRecordDecl", "EnumDecl", "VarDecl", "ClassTemplateDecl", "FunctionTemplateDecl",
+PUBLIC_KINDS = {"FunctionDecl", "TypeAliasDecl", "TypeAliasTemplateDecl", "CXXRecordDecl", "EnumDecl", "VarDecl", "ClassTemplateDecl", "FunctionTemplateDecl",
                 "ClassTemplateSpecializationDecl"}
 
 

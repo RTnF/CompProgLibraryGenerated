@@ -10,5 +10,5 @@ tests = ["tests/fenwick_tree.cpp"]
 sanitizers = true
 spec = "docs/fenwick_tree.md"
 standard = "c++17"
-source_sha256 = "b6e1924976db63c81429650545062cc65b68df01d373f282c3fcbc0b438819f5"
-public_declarations = ["ClassTemplateDecl:FenwickTree", "ClassTemplateSpecializationDecl:FenwickTree<long long>"]
+source_sha256 = "b30aa0cfdd16c5c8f273eae7da169b204b656804dc796fdbb75dc03bceacde81"
+public_declarations = ["ClassTemplateDecl:FenwickTree", "TypeAliasTemplateDecl:BinaryIndexedTree", "ClassTemplateSpecializationDecl:FenwickTree<long long>"]
