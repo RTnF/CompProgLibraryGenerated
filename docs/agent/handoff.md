@@ -63,7 +63,7 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 | `L/algebraic_structure/group.hpp` | 完了（整数具体化 long long・int） | 2026-11-09 intを追加、全定理を証明、全件gate成功。浮動小数Tは基盤整備後 |
 | `L/algebraic_structure/monoid.hpp` | 完了（整数具体化 long long・int） | 2026-11-09 intを追加し全定理証明、全件gate成功。浮動小数TはC++回帰のみ、Leanは基盤整備後 |
 | `L/algebraic_structure/monoid_lazy.hpp` | 進行中 | Sum applyの任意caller接続済み。MaxMin apply<M>はLL全入力（Addは加算範囲内）・任意caller接続まで。元API候補はexperimentalにあり、任意T/M・lifetime・公開切替は未 |
-| `L/array/cumulative_sum.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/array/cumulative_sum.hpp` | 部分（調査済み） | 2026-11-10: `int` 具体化を足す試験。`verifier/vector_bindings.py` のvector parameter identity probe が1つのテンプレート本体位置にlong long固定の型を埋めるため複数要素型で失敗（同位置のprobeを要素型の論理和にまとめれば生成は成功し、intモデルはll版と型幅以外同一）。ただし証明は `FenwickTreeExec`/`FenwickRangeCall`/`FenwickTreeVecCall`/`MultiVecCallN`/`BellmanFordExec`/`Vector2dSumCall` 等 s64 固定の補題群に依存し、要素型ごとに依存の塔の再証明（または要素型で一般化する大規模リファクタ）が要る。変更は戻した |
 | `L/array/doubling.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/array/element_count.hpp` | 部分 | 候補あり。原本API全体の生成/証明/公開判定は未 |
 | `L/array/search_util.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
