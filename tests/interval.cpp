@@ -24,6 +24,10 @@ int main() {
                     } else {
                         assert(z.start() == lo && z.end() == hi && z.length() == hi - lo && z.is_null() == (lo == hi));
                     }
+                    // comparison operators: lexicographic on (start, end), as the original defaulted <=>
+                    assert((x == y) == (a == c && b == d) && (x != y) == !(a == c && b == d));
+                    assert((x < y) == (a != c ? a < c : (b != d && b < d)));
+                    assert((x > y) == (y < x) && (x <= y) == !(y < x) && (x >= y) == !(x < y));
                     Interval w = y.intersection(x);
                     assert(w.start() == z.start() && w.end() == z.end() && w.is_null() == z.is_null());
                 }

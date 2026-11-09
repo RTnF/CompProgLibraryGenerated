@@ -724,4 +724,240 @@ theorem interval_intersection_is_n_correct (caller : NState) (s1 s2 s3 s4 s5 s6 
       _ = (callerP caller).take caller.scalars.memory.length := by rw [htake]
       _ = caller.scalars.memory := take_callerP caller
 
+
+/-! ### Comparison operators `==`, `!=`, `<`, `>`, `<=`, `>=` (single `return` of an expression over the six fields) -/
+
+theorem interval_cmp_correct (prog : NProgram) (e : NExpr)
+    (hp : prog.parameters = [.scalar s64 true false,.scalar s64 true false,.scalar bl true false,
+      .scalar s64 true false,.scalar s64 true false,.scalar bl true false])
+    (hr : prog.result = ResultKind.scalar bl) (hbody : prog.body = .sequence (.primitive (.ret e)) Sk)
+    (hsc : Scalar prog.body = true) (hnodes : e.nodes ≤ 60)
+    (caller : NState) (s1 s2 s3 s4 s5 s6 : Nat) (b1 b2 b3 b4 b5 b6 : CppState.Binding)
+    (sv ev nv bsv bev bnv : Int)
+    (c1 : caller.scalarCell s1 s64 = some (b1,⟨s64,sv⟩)) (c2 : caller.scalarCell s2 s64 = some (b2,⟨s64,ev⟩))
+    (c3 : caller.scalarCell s3 bl = some (b3,⟨bl,nv⟩)) (c4 : caller.scalarCell s4 s64 = some (b4,⟨s64,bsv⟩))
+    (c5 : caller.scalarCell s5 s64 = some (b5,⟨s64,bev⟩)) (c6 : caller.scalarCell s6 bl = some (b6,⟨bl,bnv⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length)
+    (v : Int) (hv : bl.valid v = true)
+    (hden : ∀ env : Nat → Ty → Option Int, env 0 s64 = some sv → env 1 s64 = some ev → env 2 bl = some nv →
+      env 3 s64 = some bsv → env 4 s64 = some bev → env 5 bl = some bnv → e.denote env = some v) :
+    ∃ Sinit fuel res, prepare caller prog.parameters
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = some Sinit ∧
+      prog.callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = .finished (res,.scalar v) ∧
+      ScalarPost2 caller Sinit res 0 140 caller.scalars.memory := by
+  have g1 := cell_valid caller s1 s64 b1 sv c1
+  have g2 := cell_valid caller s2 s64 b2 ev c2
+  have g3 := cell_valid caller s3 bl b3 nv c3
+  have g4 := cell_valid caller s4 s64 b4 bsv c4
+  have g5 := cell_valid caller s5 s64 b5 bev c5
+  have g6 := cell_valid caller s6 bl b6 bnv c6
+  have p1 := P_cell_ty caller s1 s64 b1 sv c1
+  have p2 := P_cell_ty caller s2 s64 b2 ev c2
+  have p3 := P_cell_ty caller s3 bl b3 nv c3
+  have p4 := P_cell_ty caller s4 s64 b4 bsv c4
+  have p5 := P_cell_ty caller s5 s64 b5 bev c5
+  have p6 := P_cell_ty caller s6 bl b6 bnv c6
+  refine refs6_correct prog bl s64 s64 bl s64 s64 bl hp hr hsc caller s1 s2 s3 s4 s5 s6 b1 b2 b3 b4 b5 b6
+    sv ev nv bsv bev bnv c1 c2 c3 c4 c5 c6 valid lengths strict base 1 v hv 80 ?_
+  intro P hP
+  subst hP
+  have E1 : penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩,⟨b5.address,false⟩,⟨b6.address,false⟩]⟩ 0 s64 = some sv :=
+    penv_old _ 0 s64 ⟨b1.address,false⟩ sv rfl p1 g1
+  have E2 : penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩,⟨b5.address,false⟩,⟨b6.address,false⟩]⟩ 1 s64 = some ev :=
+    penv_old _ 1 s64 ⟨b2.address,false⟩ ev rfl p2 g2
+  have E3 : penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩,⟨b5.address,false⟩,⟨b6.address,false⟩]⟩ 2 bl = some nv :=
+    penv_old _ 2 bl ⟨b3.address,false⟩ nv rfl p3 g3
+  have E4 : penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩,⟨b5.address,false⟩,⟨b6.address,false⟩]⟩ 3 s64 = some bsv :=
+    penv_old _ 3 s64 ⟨b4.address,false⟩ bsv rfl p4 g4
+  have E5 : penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩,⟨b5.address,false⟩,⟨b6.address,false⟩]⟩ 4 s64 = some bev :=
+    penv_old _ 4 s64 ⟨b5.address,false⟩ bev rfl p5 g5
+  have E6 : penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩,⟨b5.address,false⟩,⟨b6.address,false⟩]⟩ 5 bl = some bnv :=
+    penv_old _ 5 bl ⟨b6.address,false⟩ bnv rfl p6 g6
+  have hd := hden _ E1 E2 E3 E4 E5 E6
+  refine ⟨_, by rw [hbody]; exact exec_ret 1 _ e v hd, rfl, ?_, ?_, take_callerP caller⟩
+  · simp; omega
+  · simp; omega
+
+theorem interval_eq_correct (caller : NState) (s1 s2 s3 s4 s5 s6 : Nat) (b1 b2 b3 b4 b5 b6 : CppState.Binding)
+    (sv ev nv bsv bev bnv : Int)
+    (c1 : caller.scalarCell s1 s64 = some (b1,⟨s64,sv⟩)) (c2 : caller.scalarCell s2 s64 = some (b2,⟨s64,ev⟩))
+    (c3 : caller.scalarCell s3 bl = some (b3,⟨bl,nv⟩)) (c4 : caller.scalarCell s4 s64 = some (b4,⟨s64,bsv⟩))
+    (c5 : caller.scalarCell s5 s64 = some (b5,⟨s64,bev⟩)) (c6 : caller.scalarCell s6 bl = some (b6,⟨bl,bnv⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.IntervalInstance.Interval_long_long_eq.parameters
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = some Sinit ∧
+      Proofs.IntervalInstance.Interval_long_long_eq.callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = .finished (res,.scalar (if sv = bsv ∧ ev = bev ∧ nv = bnv then 1 else 0)) ∧
+      ScalarPost2 caller Sinit res 0 140 caller.scalars.memory := by
+  have g3 := cell_valid caller s3 bl b3 nv c3
+  have g6 := cell_valid caller s6 bl b6 bnv c6
+  have hn : nv = 0 ∨ nv = 1 := by simp [bl, Ty.valid] at g3; omega
+  have hm : bnv = 0 ∨ bnv = 1 := by simp [bl, Ty.valid] at g6; omega
+  have hv : bl.valid (if sv = bsv ∧ ev = bev ∧ nv = bnv then 1 else 0) = true := by
+    split <;> simp [bl, Ty.valid]
+  exact interval_cmp_correct _ _ rfl rfl rfl rfl (by decide) caller s1 s2 s3 s4 s5 s6 b1 b2 b3 b4 b5 b6
+    sv ev nv bsv bev bnv c1 c2 c3 c4 c5 c6 valid lengths strict base _ hv (by
+      intro env h0 h1 h2 h3 h4 h5
+      rcases hn with rfl | rfl <;> rcases hm with rfl | rfl <;>
+        by_cases a : sv = bsv <;> by_cases b : ev = bev <;>
+        simp [NExpr.denote, h0, h1, h2, h3, h4, h5, Ty.convert, binaryValue, unaryValue, bl, Ty.valid, a, b, i32] <;> omega)
+
+theorem interval_ne_correct (caller : NState) (s1 s2 s3 s4 s5 s6 : Nat) (b1 b2 b3 b4 b5 b6 : CppState.Binding)
+    (sv ev nv bsv bev bnv : Int)
+    (c1 : caller.scalarCell s1 s64 = some (b1,⟨s64,sv⟩)) (c2 : caller.scalarCell s2 s64 = some (b2,⟨s64,ev⟩))
+    (c3 : caller.scalarCell s3 bl = some (b3,⟨bl,nv⟩)) (c4 : caller.scalarCell s4 s64 = some (b4,⟨s64,bsv⟩))
+    (c5 : caller.scalarCell s5 s64 = some (b5,⟨s64,bev⟩)) (c6 : caller.scalarCell s6 bl = some (b6,⟨bl,bnv⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.IntervalInstance.Interval_long_long_ne.parameters
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = some Sinit ∧
+      Proofs.IntervalInstance.Interval_long_long_ne.callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = .finished (res,.scalar (if sv ≠ bsv ∨ ev ≠ bev ∨ nv ≠ bnv then 1 else 0)) ∧
+      ScalarPost2 caller Sinit res 0 140 caller.scalars.memory := by
+  have g3 := cell_valid caller s3 bl b3 nv c3
+  have g6 := cell_valid caller s6 bl b6 bnv c6
+  have hn : nv = 0 ∨ nv = 1 := by simp [bl, Ty.valid] at g3; omega
+  have hm : bnv = 0 ∨ bnv = 1 := by simp [bl, Ty.valid] at g6; omega
+  have hv : bl.valid (if sv ≠ bsv ∨ ev ≠ bev ∨ nv ≠ bnv then 1 else 0) = true := by
+    split <;> simp [bl, Ty.valid]
+  exact interval_cmp_correct _ _ rfl rfl rfl rfl (by decide) caller s1 s2 s3 s4 s5 s6 b1 b2 b3 b4 b5 b6
+    sv ev nv bsv bev bnv c1 c2 c3 c4 c5 c6 valid lengths strict base _ hv (by
+      intro env h0 h1 h2 h3 h4 h5
+      rcases hn with rfl | rfl <;> rcases hm with rfl | rfl <;>
+        by_cases a : sv = bsv <;> by_cases b : ev = bev <;>
+        simp [NExpr.denote, h0, h1, h2, h3, h4, h5, Ty.convert, binaryValue, unaryValue, bl, Ty.valid, a, b, i32] <;> omega)
+
+theorem interval_lt_correct (caller : NState) (s1 s2 s3 s4 s5 s6 : Nat) (b1 b2 b3 b4 b5 b6 : CppState.Binding)
+    (sv ev nv bsv bev bnv : Int)
+    (c1 : caller.scalarCell s1 s64 = some (b1,⟨s64,sv⟩)) (c2 : caller.scalarCell s2 s64 = some (b2,⟨s64,ev⟩))
+    (c3 : caller.scalarCell s3 bl = some (b3,⟨bl,nv⟩)) (c4 : caller.scalarCell s4 s64 = some (b4,⟨s64,bsv⟩))
+    (c5 : caller.scalarCell s5 s64 = some (b5,⟨s64,bev⟩)) (c6 : caller.scalarCell s6 bl = some (b6,⟨bl,bnv⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.IntervalInstance.Interval_long_long_lt.parameters
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = some Sinit ∧
+      Proofs.IntervalInstance.Interval_long_long_lt.callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = .finished (res,.scalar (if sv < bsv ∨ (sv = bsv ∧ (ev < bev ∨ (ev = bev ∧ nv = 0 ∧ bnv ≠ 0))) then 1 else 0)) ∧
+      ScalarPost2 caller Sinit res 0 140 caller.scalars.memory := by
+  have g3 := cell_valid caller s3 bl b3 nv c3
+  have g6 := cell_valid caller s6 bl b6 bnv c6
+  have hn : nv = 0 ∨ nv = 1 := by simp [bl, Ty.valid] at g3; omega
+  have hm : bnv = 0 ∨ bnv = 1 := by simp [bl, Ty.valid] at g6; omega
+  have hv : bl.valid (if sv < bsv ∨ (sv = bsv ∧ (ev < bev ∨ (ev = bev ∧ nv = 0 ∧ bnv ≠ 0))) then 1 else 0) = true := by
+    split <;> simp [bl, Ty.valid]
+  exact interval_cmp_correct _ _ rfl rfl rfl rfl (by decide) caller s1 s2 s3 s4 s5 s6 b1 b2 b3 b4 b5 b6
+    sv ev nv bsv bev bnv c1 c2 c3 c4 c5 c6 valid lengths strict base _ hv (by
+      intro env h0 h1 h2 h3 h4 h5
+      rcases hn with rfl | rfl <;> rcases hm with rfl | rfl <;>
+        rcases Int.lt_trichotomy sv bsv with a | a | a <;> rcases Int.lt_trichotomy ev bev with b | b | b <;>
+        simp [NExpr.denote, h0, h1, h2, h3, h4, h5, Ty.convert, binaryValue, unaryValue, bl, Ty.valid, i32] <;> (repeat' split) <;> simp_all <;> omega)
+
+theorem interval_gt_correct (caller : NState) (s1 s2 s3 s4 s5 s6 : Nat) (b1 b2 b3 b4 b5 b6 : CppState.Binding)
+    (sv ev nv bsv bev bnv : Int)
+    (c1 : caller.scalarCell s1 s64 = some (b1,⟨s64,sv⟩)) (c2 : caller.scalarCell s2 s64 = some (b2,⟨s64,ev⟩))
+    (c3 : caller.scalarCell s3 bl = some (b3,⟨bl,nv⟩)) (c4 : caller.scalarCell s4 s64 = some (b4,⟨s64,bsv⟩))
+    (c5 : caller.scalarCell s5 s64 = some (b5,⟨s64,bev⟩)) (c6 : caller.scalarCell s6 bl = some (b6,⟨bl,bnv⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.IntervalInstance.Interval_long_long_gt.parameters
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = some Sinit ∧
+      Proofs.IntervalInstance.Interval_long_long_gt.callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = .finished (res,.scalar (if sv > bsv ∨ (sv = bsv ∧ (ev > bev ∨ (ev = bev ∧ nv ≠ 0 ∧ bnv = 0))) then 1 else 0)) ∧
+      ScalarPost2 caller Sinit res 0 140 caller.scalars.memory := by
+  have g3 := cell_valid caller s3 bl b3 nv c3
+  have g6 := cell_valid caller s6 bl b6 bnv c6
+  have hn : nv = 0 ∨ nv = 1 := by simp [bl, Ty.valid] at g3; omega
+  have hm : bnv = 0 ∨ bnv = 1 := by simp [bl, Ty.valid] at g6; omega
+  have hv : bl.valid (if sv > bsv ∨ (sv = bsv ∧ (ev > bev ∨ (ev = bev ∧ nv ≠ 0 ∧ bnv = 0))) then 1 else 0) = true := by
+    split <;> simp [bl, Ty.valid]
+  exact interval_cmp_correct _ _ rfl rfl rfl rfl (by decide) caller s1 s2 s3 s4 s5 s6 b1 b2 b3 b4 b5 b6
+    sv ev nv bsv bev bnv c1 c2 c3 c4 c5 c6 valid lengths strict base _ hv (by
+      intro env h0 h1 h2 h3 h4 h5
+      rcases hn with rfl | rfl <;> rcases hm with rfl | rfl <;>
+        rcases Int.lt_trichotomy sv bsv with a | a | a <;> rcases Int.lt_trichotomy ev bev with b | b | b <;>
+        simp [NExpr.denote, h0, h1, h2, h3, h4, h5, Ty.convert, binaryValue, unaryValue, bl, Ty.valid, i32] <;> (repeat' split) <;> simp_all <;> omega)
+
+set_option maxHeartbeats 1000000 in
+theorem interval_le_correct (caller : NState) (s1 s2 s3 s4 s5 s6 : Nat) (b1 b2 b3 b4 b5 b6 : CppState.Binding)
+    (sv ev nv bsv bev bnv : Int)
+    (c1 : caller.scalarCell s1 s64 = some (b1,⟨s64,sv⟩)) (c2 : caller.scalarCell s2 s64 = some (b2,⟨s64,ev⟩))
+    (c3 : caller.scalarCell s3 bl = some (b3,⟨bl,nv⟩)) (c4 : caller.scalarCell s4 s64 = some (b4,⟨s64,bsv⟩))
+    (c5 : caller.scalarCell s5 s64 = some (b5,⟨s64,bev⟩)) (c6 : caller.scalarCell s6 bl = some (b6,⟨bl,bnv⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.IntervalInstance.Interval_long_long_le.parameters
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = some Sinit ∧
+      Proofs.IntervalInstance.Interval_long_long_le.callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = .finished (res,.scalar (if sv < bsv ∨ (sv = bsv ∧ (ev < bev ∨ (ev = bev ∧ (nv = 0 ∨ bnv ≠ 0)))) then 1 else 0)) ∧
+      ScalarPost2 caller Sinit res 0 140 caller.scalars.memory := by
+  have g3 := cell_valid caller s3 bl b3 nv c3
+  have g6 := cell_valid caller s6 bl b6 bnv c6
+  have hn : nv = 0 ∨ nv = 1 := by simp [bl, Ty.valid] at g3; omega
+  have hm : bnv = 0 ∨ bnv = 1 := by simp [bl, Ty.valid] at g6; omega
+  have hv : bl.valid (if sv < bsv ∨ (sv = bsv ∧ (ev < bev ∨ (ev = bev ∧ (nv = 0 ∨ bnv ≠ 0)))) then 1 else 0) = true := by
+    split <;> simp [bl, Ty.valid]
+  exact interval_cmp_correct _ _ rfl rfl rfl rfl (by decide) caller s1 s2 s3 s4 s5 s6 b1 b2 b3 b4 b5 b6
+    sv ev nv bsv bev bnv c1 c2 c3 c4 c5 c6 valid lengths strict base _ hv (by
+      intro env h0 h1 h2 h3 h4 h5
+      rcases hn with rfl | rfl <;> rcases hm with rfl | rfl <;>
+        rcases Int.lt_trichotomy sv bsv with a | a | a <;> rcases Int.lt_trichotomy ev bev with b | b | b <;>
+        simp [NExpr.denote, h0, h1, h2, h3, h4, h5, Ty.convert, binaryValue, unaryValue, bl, Ty.valid, i32] <;> (repeat' split) <;> simp_all <;> omega)
+
+set_option maxHeartbeats 1000000 in
+theorem interval_ge_correct (caller : NState) (s1 s2 s3 s4 s5 s6 : Nat) (b1 b2 b3 b4 b5 b6 : CppState.Binding)
+    (sv ev nv bsv bev bnv : Int)
+    (c1 : caller.scalarCell s1 s64 = some (b1,⟨s64,sv⟩)) (c2 : caller.scalarCell s2 s64 = some (b2,⟨s64,ev⟩))
+    (c3 : caller.scalarCell s3 bl = some (b3,⟨bl,nv⟩)) (c4 : caller.scalarCell s4 s64 = some (b4,⟨s64,bsv⟩))
+    (c5 : caller.scalarCell s5 s64 = some (b5,⟨s64,bev⟩)) (c6 : caller.scalarCell s6 bl = some (b6,⟨bl,bnv⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller Proofs.IntervalInstance.Interval_long_long_ge.parameters
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = some Sinit ∧
+      Proofs.IntervalInstance.Interval_long_long_ge.callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4,.scalarReference s5,
+          .scalarReference s6] = .finished (res,.scalar (if sv > bsv ∨ (sv = bsv ∧ (ev > bev ∨ (ev = bev ∧ (nv ≠ 0 ∨ bnv = 0)))) then 1 else 0)) ∧
+      ScalarPost2 caller Sinit res 0 140 caller.scalars.memory := by
+  have g3 := cell_valid caller s3 bl b3 nv c3
+  have g6 := cell_valid caller s6 bl b6 bnv c6
+  have hn : nv = 0 ∨ nv = 1 := by simp [bl, Ty.valid] at g3; omega
+  have hm : bnv = 0 ∨ bnv = 1 := by simp [bl, Ty.valid] at g6; omega
+  have hv : bl.valid (if sv > bsv ∨ (sv = bsv ∧ (ev > bev ∨ (ev = bev ∧ (nv ≠ 0 ∨ bnv = 0)))) then 1 else 0) = true := by
+    split <;> simp [bl, Ty.valid]
+  exact interval_cmp_correct _ _ rfl rfl rfl rfl (by decide) caller s1 s2 s3 s4 s5 s6 b1 b2 b3 b4 b5 b6
+    sv ev nv bsv bev bnv c1 c2 c3 c4 c5 c6 valid lengths strict base _ hv (by
+      intro env h0 h1 h2 h3 h4 h5
+      rcases hn with rfl | rfl <;> rcases hm with rfl | rfl <;>
+        rcases Int.lt_trichotomy sv bsv with a | a | a <;> rcases Int.lt_trichotomy ev bev with b | b | b <;>
+        simp [NExpr.denote, h0, h1, h2, h3, h4, h5, Ty.convert, binaryValue, unaryValue, bl, Ty.valid, i32] <;> (repeat' split) <;> simp_all <;> omega)
+
 end Proofs.IntervalCall

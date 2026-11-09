@@ -10,5 +10,5 @@ tests = ["tests/interval.cpp"]
 sanitizers = true
 spec = "docs/interval.md"
 standard = "c++17"
-source_sha256 = "09ed8c594728d0f4ecfd0f66517bb2d06491f20f2b7cf7a83c5a15ed34385753"
+source_sha256 = "36dea1b05f29ec53bf2fc170348e3fa2f8764b12ff7edc21fbcbd8eaa1077133"
 public_declarations = ["ClassTemplateDecl:Interval", "ClassTemplateSpecializationDecl:Interval<long long>"]

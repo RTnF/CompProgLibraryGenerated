@@ -19,6 +19,17 @@ template <class T = long long> struct Interval {
   T end() const { return e; }
   bool is_null() const { return is_n; }
   T length() const { return e - s; }
+  // Lexicographic comparison on (s, e, is_n): the same ordering as the original defaulted operator<=>.
+  bool operator==(const Interval &r) const { return s == r.s && e == r.e && is_n == r.is_n; }
+  bool operator!=(const Interval &r) const { return s != r.s || e != r.e || is_n != r.is_n; }
+  bool operator<(const Interval &r) const { return s < r.s || (s == r.s && (e < r.e || (e == r.e && !is_n && r.is_n))); }
+  bool operator>(const Interval &r) const { return s > r.s || (s == r.s && (e > r.e || (e == r.e && is_n && !r.is_n))); }
+  bool operator<=(const Interval &r) const {
+    return s < r.s || (s == r.s && (e < r.e || (e == r.e && (!is_n || r.is_n))));
+  }
+  bool operator>=(const Interval &r) const {
+    return s > r.s || (s == r.s && (e > r.e || (e == r.e && (is_n || !r.is_n))));
+  }
   // The common part of two intervals; the empty interval [0, 0) if they do not overlap.
   Interval intersection(const Interval &b) const {
     if (b.s >= e || s >= b.e) {

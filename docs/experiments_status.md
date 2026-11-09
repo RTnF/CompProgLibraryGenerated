@@ -27,7 +27,7 @@
 | graph/lowlink.hpp | 一部 | `library/graph/lowlink.hpp`（CSR 配列・反復 DFS。橋と関節点の同値、ord/par/low/sep の仕様と `O(n+m)` の仕事量まで証明。元の「ソート済みの配列を返す」形、`ListGraph` の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の配列を呼び出し側の配列に変更） |
 | graph/prim.hpp | 一部 | `library/graph/prim.hpp`（配列版 CSR、`O(n²+m)`、最小全域森の最適性まで証明。`priority_queue` 版と `ListGraph` の形は未。違反一覧: 元の `O((n+m) log n)`・`ListGraph` を CSR 配列・線形探索に変更） |
 | graph/warshall_floyd.hpp | 一部 | `floyd_warshall`（非負の辺、親の行列は含めない。平らな形と `vector<vector<T>>` の形） |
-| interval/interval.hpp | 済 | `interval` |
+| interval/interval.hpp | 済 | `interval`。2026-11-09に元の既定 `operator<=>` と同じ順序の `==`/`!=`/`<`/`>`/`<=`/`>=` を追加（C++17、単一return式）。生成モデル13関数と一般定理 `interval_{eq,ne,lt,gt,le,ge}_correct`、全件gate（実7336秒、独立kernel49269宣言）成功。入出力演算子は方針（2026-10-12）により対象外 |
 | interval/interval_union.hpp | 一部 | `interval_union`（組を 2 本の vector に分け、結果は呼び出し側の 2 本の vector に書く。挿入ソート `O(n²)`） |
 | modint/dynamic_modint.hpp | 一部 | `dynamic_modint`（演算は関数、法は各値のフィールド） |
 | modint/modint.hpp | 一部 | `modint`, `mod61`, `pow_mod` |
