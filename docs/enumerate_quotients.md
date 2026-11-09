@@ -11,3 +11,14 @@
 共通の入れ子 vector 生成器 (`verifier/nested_ir.py`) が C++ の AST から Lean の本体を生成し、`Proofs/QuotientCall.lean` の `quotients_correct` が全入力について結果・停止・仕事量・追加領域・呼び出し側の不変条件を証明する。数学的な仕様は `Proofs/EnumerateQuotientsMath.lean` (`qlist_spec`) にある。
 
 C++ のテストは `tests/enumerate_quotients.cpp` で、n ≤ 3000 の全件を総当たりの集合と比較し、大きな n（最大 2^42）では昇順・到達可能性・完全性を除算の恒等式で独立に確認する。
+
+## 元のソースからの変更
+
+元の `experiments/library/cpp/number_theory/enumerate_quotients.hpp` のグローバル関数 `vector<ull> enumerate_quotients(ull n)` に対し、公開版は名前空間 `cp` の `std::vector<std::uint64_t> cp::enumerate_quotients(std::uint64_t n)` である（`ull` と `uint64_t` は LP64 で同じ型）。変更は次のとおりで、いずれも元と同じ入力に同じ結果を返す。
+
+- `(k * (k + 1) >= n ? ok : ng) = k;`（条件演算子の左辺値への代入）を `if / else` に書き換えた。
+- 探索の局所変数 `ull k` をループ内の `const` 初期化付き変数にした（元はループ外の未初期化宣言で、毎回代入してから読む）。
+- 結果の `vector` に `reserve(p + ok - 1)` を付けた（要素数は結果と同じ。値には影響しない）。
+- 探索の初期上限を `4294967295` から `4294967296` にした。`n > 2^64 - 2^32` では元は `K` を取り損ねて誤った列を返す不具合で、`docs/agent/fixes.md` に記録済み。対象範囲 `1 <= n <= 2^64 - 2^32` では結果は元と一致する。
+
+`tests/enumerate_quotients.cpp` の `check_against_original` が、元のヘッダー（`::enumerate_quotients`）と公開版を `n <= 3000` の全件、`n < 2^44` の乱択と境界値で比較し、結果が一致することを確認する。
