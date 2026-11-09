@@ -1,6 +1,7 @@
 import Proofs.VecWrite
 
 namespace Proofs.SortPairsFrame
+open Proofs.CppNestedProgram
 open Proofs.CppScalar Proofs.CppVector Proofs.CppVectorStore Proofs.CppVectorOwnership
 open Proofs.CppNestedVectorStore Proofs.CppNestedVectorBindings Proofs.VecWrite
 
@@ -110,5 +111,39 @@ theorem sortedPairs_sorted (ps : List (Int × Int)) :
 /-- The sorted pairs are a permutation of the input pairs. -/
 theorem sortedPairs_perm (ps : List (Int × Int)) : (sortedPairs ps).Perm ps := by
   simpa [sortedPairs] using List.mergeSort_perm ps pairLE
+
+/-- `std::sort` of a vector of pairs as a statement: the two row containers are evaluated in order, both rows are
+resolved, and the frame becomes the one of `sortPairsAll`; the cost is `charge 1 1` after the release. -/
+theorem run_sortPairs (s s1 s2 : NState) (first second : Container) (ty : Ty) (a b : Nat) (fr : Frame)
+    (e1 : first.eval (s.charge 0 (first.nodes+second.nodes+3)) = some (s1,a))
+    (e2 : second.eval s1 = some (s2,b))
+    (sorted : s2.frame.sortPairsAll a b ty = some fr) :
+    (NStmt.sortPairs first second ty).run s =
+      some ⟨((({s2 with frame := fr} : NState).release s).charge 1 1),none,false⟩ := by
+  simp [NStmt.run, e1, e2, sorted]
+
+/-- The effect of the statement on the frame: both rows hold the components of the sorted pairs. -/
+theorem run_sortPairs_frame (s s1 s2 : NState) (first second : Container) (ty : Ty) (a b : Nat)
+    (e1 : first.eval (s.charge 0 (first.nodes+second.nodes+3)) = some (s1,a))
+    (e2 : second.eval s1 = some (s2,b))
+    (bindingA bindingB : Binding) (bufA bufB : Buffer Value) (tagA tagB : Tag)
+    (resolvedA : s2.frame.resolve a (.integer ty) = some (bindingA,bufA))
+    (resolvedB : s2.frame.resolve b (.integer ty) = some (bindingB,bufB))
+    (objectA : s2.frame.object bindingA.owner (.integer ty) = some (bufA,tagA))
+    (objectB : s2.frame.object bindingB.owner (.integer ty) = some (bufB,tagB))
+    (different : bindingA.owner ≠ bindingB.owner)
+    (writableA : bindingA.writable = true) (writableB : bindingB.writable = true)
+    (xs ys : List Int) (hx : bufA.items.mapM Value.intOf = some xs) (hy : bufB.items.mapM Value.intOf = some ys)
+    (hlen : xs.length = ys.length) :
+    ∃ t, (NStmt.sortPairs first second ty).run s = some ⟨t,none,false⟩ ∧
+      t.frame.state = ((s2.frame.updated bindingA.owner bufA (resultA bufA xs ys)).updated bindingB.owner bufB
+        (resultB bufB xs ys)).state ∧
+      t.frame.rootWritable = ((s2.frame.updated bindingA.owner bufA (resultA bufA xs ys)).updated bindingB.owner bufB
+        (resultB bufB xs ys)).rootWritable ∧
+      t.frame.bindings = (((s2.frame.updated bindingA.owner bufA (resultA bufA xs ys)).updated bindingB.owner bufB
+        (resultB bufB xs ys)).bindings).take s.frame.bindings.length := by
+  have sorted := sortPairs_ok s2.frame a b ty bindingA bindingB bufA bufB tagA tagB resolvedA resolvedB objectA objectB
+    different writableA writableB xs ys hx hy hlen
+  refine ⟨_, run_sortPairs s s1 s2 first second ty a b _ e1 e2 sorted, ?_, ?_, ?_⟩ <;> simp [NState.release]
 
 end Proofs.SortPairsFrame
