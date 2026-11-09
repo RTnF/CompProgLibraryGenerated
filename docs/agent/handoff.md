@@ -94,7 +94,7 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 | `L/number_theory/factorize.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
 | `L/number_theory/floor_sum.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/number_theory/is_prime.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
-| `L/random/xorshift.hpp` | 部分（調査済み） | 台帳「済」は過大。公開版は `get()` のみ。2026-11-09の試験で `get_int`/`get_ll`（`get()` をthis呼出し）を足すと共通変換器はモデル生成に成功（`Xor64_get_int` 等、get本体をinline）。残り: 整数2メソッドのLean証明（divrem・u64→int32 cast・ma-mi オーバーフロー前提）と、`get_double`/`get_double(lo,hi)`/`get_normal`（pow/sqrt/log/cos、浮動小数のRat＋誤差予算の基盤が未整備） |
+| `L/random/xorshift.hpp` | 部分（調査済み） | 台帳「済」は過大。公開版は `get()` のみ。2026-11-09の試験で `get_int`/`get_ll`（`get()` をthis呼出し）を足すと共通変換器はモデル生成に成功（`Xor64_get_int` 等、get本体をinline）。残り: 整数2メソッドのLean証明（divrem・u64→int32 cast・ma-mi オーバーフロー前提）と、`get_double`/`get_double(lo,hi)`/`get_normal`（pow/sqrt/log/cos、浮動小数のRat＋誤差予算の基盤が未整備） | 2026-11-10追記: `get_int`/`get_ll` は `signed_conversion = "gcc13.3-lp64-twos-complement"` が必要（`mi < 0` で `.cast` は失敗扱い、`.targetCast` なら正しい）。現状は `tools/public.py` が `state_ir` のみ許可、`verifier/nested_bridge.py` が `lower_source` に方針を渡さない。この2点を拡張すれば `nested_ir` でモデル生成に成功することを確認済み（`Xor64_get_ll` が `.targetCast ⟨64,true,false⟩` を含む）。残り: 参照1個＋値渡し2個の呼出し準備補題、本体の実行・結果（`mi + xnext s % (ma-mi)`）、int版、浮動小数2メソッド。
 | `L/segment_tree/binary_indexed_tree.hpp` | 部分 | 公開Fenwickクラスに構築3種/add/sum2種、+=のみの型を保持。任意T・厳密lifetimeは未 |
 | `L/segment_tree/lazy_segment_tree.hpp` | 部分 | 公開chmin/maxの部分検証。元のobject/全作用/search左右・汎用性は未 |
 | `L/segment_tree/segment_tree.hpp` | 部分 | 公開版は値/静的policyへ変更。元のモノイドobject・search左右・全汎用性の復元は未 |
