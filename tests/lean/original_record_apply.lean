@@ -209,3 +209,62 @@ theorem call_min_op (fuel : Nat) (caller : NState) (args : List NArgument) :
   congrArg (fun p : NProgram => p.callFuel fuel caller args) min_op
 
 end RecordApplyAudit
+
+namespace RecordComposeAudit
+open Proofs
+open Proofs.CppScalar Proofs.CppVector Proofs.CppVectorStore Proofs.CppVectorOwnership
+open Proofs.CppNestedVectorStore Proofs.CppNestedVectorBindings Proofs.CppNestedProgram
+open Proofs.CppNestedSim Proofs.CppNestedEval Proofs.CppNestedStmt Proofs.CppNestedRows
+open Proofs.CppNestedConstruct Proofs.CppNestedHoare Proofs.CppNestedScope Proofs.CppNestedCall
+open Proofs.DoublingNested Proofs.DoublingPrologue Proofs.DoublingCall Proofs.QuotientFrame
+open Proofs.ScalarCall Proofs.StraightLine Proofs.ScalarStraight Proofs.IntSim Proofs.ModIntCall
+open Proofs.ModIntExec Proofs.PowModStep Proofs.PexecKit Proofs.QuotientSearch
+open Proofs.ExtremaCall
+open Proofs.CppState (Cell)
+
+open Proofs.GroupCall
+
+open Proofs.MonoidCall Proofs.ScalarRefsV
+
+theorem compose_correct (caller : NState) (e1 e2 : NExpr) (x y : Int)
+    (hs1 : e1.scalarOnly = true) (hs2 : e2.scalarOnly = true)
+    (ht1 : e1.resultType = s64) (ht2 : e2.resultType = s64)
+    (d1 : e1.denote (envOf caller) = some x) (d2 : e2.denote (envOf caller) = some y)
+    (hx : s64.valid x = true) (hy : s64.valid y = true) (hxy : s64.valid (x+y) = true)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller OriginalRecordApply.RangeAdd_compose.parameters [.value e1,.value e2] = some Sinit ∧
+      OriginalRecordApply.RangeAdd_compose.callFuel fuel caller [.value e1,.value e2] = .finished (res,.scalar (x+y)) ∧
+      ScalarPost2 caller Sinit res (e1.nodes+e2.nodes) 70 caller.scalars.memory := by
+  obtain ⟨q1,q2,g1,g2,Sinit,hprep,sSlots,sMem,sBind,sBase,sScope,sFrame,sWork,sPeak⟩ :=
+    prepare_values2 s64 caller _ rfl e1 e2 x y hs1 hs2 ht1 ht2 d1 d2 valid hx hy
+  let P := callerP caller ++ [(⟨s64,x⟩ : Cell),⟨s64,y⟩]
+  let R : List CppState.Binding := [⟨(callerP caller).length,true⟩,⟨(callerP caller).length+1,true⟩]
+  have e0 : penv (ws P R []) 0 s64 = some x :=
+    ws_env_ref P R [] 0 (callerP caller).length true s64 x rfl (by simp [P]) hx
+  have e1' : penv (ws P R []) 1 s64 = some y :=
+    ws_env_ref P R [] 1 ((callerP caller).length+1) true s64 y rfl (by simp [P]) hy
+  obtain ⟨r,ran,ret,cost,need,mem⟩ := shapeA_exec P R Proofs.GroupCall.addE (x+y) hxy (addE_den _ x y e0 e1' hxy) (by decide)
+  have ran' : pexec 1 OriginalRecordApply.RangeAdd_compose.body ⟨P,R⟩ = some r := by
+    simpa [R,ws_nil,shapeA,Proofs.GroupCall.addE,OriginalRecordApply.RangeAdd_compose] using ran
+  have hlen : P.length = (callerP caller).length+2 := by simp [P]
+  have takeM : P.take caller.scalars.memory.length = caller.scalars.memory := take_P caller _
+  have peak1 := g1.2.2.2.2.1
+  have peak2 := g2.2.2.2.2.1
+  have work1 := g1.2.2.1
+  have work2 := g2.2.2.1
+  have post := call_scalar caller OriginalRecordApply.RangeAdd_compose [.value e1,.value e2] Sinit P R
+    hprep (by rw [sSlots];rfl) sMem sBind sBase sScope sFrame (by omega)
+    (by simp [P,callerP]) (by rw [takeM]) valid lengths strict base (by decide) 1 r ran' (x+y) ret s64 rfl hxy
+    (by simp [P,R] at need ⊢; omega) (by simp [R];omega) (e1.nodes+e2.nodes) 70 (by omega)
+  obtain ⟨fuel,res,hrun,hpost⟩ := post
+  refine ⟨Sinit,fuel,res,hprep,hrun,?_⟩
+  rw [mem] at hpost
+  have takeR : (P ++ [(⟨s64,x+y⟩ : Cell),⟨s64,x+y⟩]).take caller.scalars.memory.length = caller.scalars.memory := by
+    simpa only [P,List.append_assoc] using Proofs.MonoidCallCore.take_P caller
+      ([(⟨s64,x⟩ : Cell),⟨s64,y⟩]++[⟨s64,x+y⟩,⟨s64,x+y⟩])
+  simpa only [takeR] using hpost
+
+end RecordComposeAudit

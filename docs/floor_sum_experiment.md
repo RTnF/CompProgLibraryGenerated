@@ -1,6 +1,6 @@
 # floor_sum の仕様と検証
 
-元の `experiments/library/cpp/number_theory/floor_sum.hpp` は保持する。共通変換器から生成した `Proofs/Generated/FloorSumUnsigned.lean` の全文を `tools/check_floor_sum_model.py` で照合する。部品名やハッシュで手書きモデルを選ばず、元の文・式・型から生成する。このモデルと全入力の関数全体の証明を公開検証に登録する。公開正本は `library/floor_sum_unsigned.hpp`、API は `cp::floor_sum_unsigned` である。元実装と公開実装は共通変換器から同一の Lean モデルを生成する。signed 版の公開正本は `library/floor_sum.hpp`、API は `cp::floor_sum` で、後述の明示したコンパイラ契約下で同じ生成経路を使う。
+元の `experiments/library/cpp/number_theory/floor_sum.hpp` は保持する。共通変換器から生成した `Proofs/Generated/FloorSumUnsigned.lean` の全文を `tools/check_floor_sum_model.py` で照合する。部品名やハッシュで手書きモデルを選ばず、元の文・式・型から生成する。このモデルと全入力の関数全体の証明を公開検証に登録する。公開正本は `library/number_theory/floor_sum_unsigned.hpp`、API は `cp::floor_sum_unsigned` である。元実装と公開実装は共通変換器から同一の Lean モデルを生成する。signed 版の公開正本は `library/number_theory/floor_sum.hpp`、API は `cp::floor_sum` で、後述の明示したコンパイラ契約下で同じ生成経路を使う。
 
 ## 対象とする仕様
 
@@ -134,7 +134,7 @@ python3 tools/check_import_floor_sum_signed.py
 
 ## signed 版の公開仕様と全入力証明
 
-公開正本 `library/floor_sum.hpp` は `safe_mod.hpp` と `floor_sum_unsigned.hpp` を include する。元のグローバル関数を cp 名前空間へ移し、ll/ull を std::int64_t/std::uint64_t に置き換え、inline を付ける。計算と assert は元のまま保持する。呼び出し先も同じ AST に含め、3関数すべてが元ヘッダと同一の `Proofs/Generated/FloorSumSigned.lean` を生成する。メタデータの公開宣言には include で見える2依存関数も含め、依存部品を登録する。
+公開正本 `library/number_theory/floor_sum.hpp` は `safe_mod.hpp` と `floor_sum_unsigned.hpp` を include する。元のグローバル関数を cp 名前空間へ移し、ll/ull を std::int64_t/std::uint64_t に置き換え、inline を付ける。計算と assert は元のまま保持する。呼び出し先も同じ AST に含め、3関数すべてが元ヘッダと同一の `Proofs/Generated/FloorSumSigned.lean` を生成する。メタデータの公開宣言には include で見える2依存関数も含め、依存部品を登録する。
 
 入力は `0 ≤ n < 2^32`、`0 < m < 2^32`、a,b は signed64 の全範囲。`signedSum m a b n` は数学的な床関数による総和である。`FloorSumSignedSpecification.call_correct` は任意の caller メモリについて、生成プログラムが燃料846で正常終了し、その総和を2^64の剰余から signed64 に復号した値を返すことを証明する。caller メモリを保持し、fault/exhausted に到達しない。`call_exact_if_representable` は総和が signed64 に入る場合の厳密な一致を示す。仕事量は4378以下かつ154+132*(log₂(m)+1)以下、追加領域は35以下で、時間O(log m)、追加領域O(1)となる。これは固定幅の抽象操作・セル数の費用であり、実測時間ではない。
 

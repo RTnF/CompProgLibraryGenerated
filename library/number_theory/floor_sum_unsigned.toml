@@ -1,0 +1,14 @@
+name = "floor_sum_unsigned"
+source = "number_theory/floor_sum_unsigned.hpp"
+dependencies = []
+translation = "state_ir"
+lean_namespace = "Proofs.FloorSumUnsignedInstance"
+proof = "Proofs/FloorSumCall.lean"
+model = "Proofs/Generated/FloorSumUnsigned.lean"
+bridge = "verifier/state_bridge.py"
+tests = ["tests/floor_sum_unsigned.cpp"]
+sanitizers = true
+spec = "docs/floor_sum_experiment.md"
+standard = "c++17"
+source_sha256 = "ba0959b78a1cb089ac6df7cd2378a6fd539d7bae01d23e058e8c234b6d9d7844"
+public_declarations = ["FunctionDecl:floor_sum_unsigned"]

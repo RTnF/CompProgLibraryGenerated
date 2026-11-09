@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/tree_lca_same_depth.hpp"
+#include "../library/tree/tree_lca_same_depth.hpp"
 #include <random>
 #include <vector>
 

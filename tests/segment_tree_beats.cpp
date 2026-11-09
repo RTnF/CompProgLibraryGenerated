@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/segment_tree_beats.hpp"
+#include "../library/segment_tree/segment_tree_beats.hpp"
 #include <cassert>
 #include <climits>
 #include <random>

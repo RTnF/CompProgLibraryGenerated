@@ -195,3 +195,269 @@ class_call_irは同じTUの元ParmVarDeclから既定式を保持し、CXXDefaul
 対象は既存の純粋なscalar式とscalar lvalue参照の引数規則に従う。省略時の副作用は黙って捨てず拒否し、明示引数がある場合は未使用の既定式を評価しない。test_class_default_arguments.pyは構築子の全省略/一部省略/明示指定、scalarとvoid method、const receiver、整数変換方針、scope退去、元式と異なる展開式の拒否、副作用の拒否と未使用時の非評価を生成Lean/native UBSanで照合する。
 
 内部this-callを展開するinlinerの既定引数、任意の副作用やglobal objectの評価、implicit default/delegation、move/assignment、vector/class return、一般caller資源、UFの償却計算量は別義務である。既定引数対応を全旧ライブラリ検証完了とは扱わない。
+
+## 監査済みのnested templateからobject構築/copyを生成する
+
+`lower_class_layout` / `emit_class_layout` はkeywordの `template_instance=TemplateInstance(...)` を受け取る。
+rawなC++型文字列を受け付けず、既存のcontrolled alias/nested/outer/primary ID監査で選んだ同一TUのrecordを使う。
+原本のsource hashに加えてwitnessのhashを構築処理の生成終了時にも確認する。
+`member_exports=True` ではvectorが0個のscalar-only recordも宣言順のprofileとして扱い、
+一般のconstructor member exportとMemberCopyの同じ評価器から構築/copyを生成する。
+既定の1vectorプロファイルは維持する。vectorが0個なら未使用のpermission引数に `_` を付け、警告を無効化しない。
+
+`tests/test_template_class_layout.py` は原本 `RangeSetRangeSum<long long>::RangeSet` の2構築と
+2scalar（long longとbool）を生成し、copy元の保持、const元からmutable先へのcopy、readonly先への書込み拒否、
+コピー先だけの更新、scope終了による元状態の復元とcopy先slotの即時無効化をLean/固定nanodaとC++/UBSanで確認する。
+`tests/lean/original_template_object_layout.lean` の9事例に加え、生成されたcopyの一般定理
+`copy_layout_of_fields` / `copy_observers_of_fields` / `copy_values_of_fields` / `copy_positions_of_fields` /
+`copy_work_of_fields` / `copy_space_of_fields` の依存閉包も独立kernelで検査する。
+これらはGood/Sources等の型付き状態の前提下の評価器定理であり、原本全APIのC++実行意味・総費用の証明ではない。
+
+構造化されていない型要求と、AST収集後にwitnessを変えた場合を拒否する。
+原本RangeSumの `RangeSum():RangeSum(e()) {}` は、当初class返却を受けるmove/委譲構築として拒否していた。
+後述のscalar-only/trivialな経路で返却objectを一度構築し、全fieldを移す対応を追加した。
+2つのfield投影を別々に実行する方式では代用しない。
+任意T・member templateの任意M、class返却/委譲/特殊メンバーの寿命と総費用、全class APIのcaller接続は残る。
+メタデータと生成側のgenericTypesVerified/fullObjectLifetimeVerifiedはfalseを維持する。
+
+## scalar fieldの委譲構築
+
+`constructor_delegation.py` は、同じ原recordの構成子signature、factoryの宣言IDと原sourceの位置を照合する。
+対象はbuiltin scalar fieldとtrivial copy/move/destructionを持つrecordである。
+直接委譲では値引数を一度束縛し、移譲先の初期化とbodyを実行してから外側bodyを実行する。
+同recordを値で返すzero-argument static factoryでは、単一のreturnにある構築の全引数と全fieldを評価し、
+factory側の構成子bodyを実行してから全fieldをtargetへ移し、最後に外側の構成子bodyを実行する。
+元のfield宣言順と型を保ち、ctor parameter/localのIDは別のdelegation contextへcloneする。
+factoryの一時領域とtargetはそれぞれfield cellの組として表し、export対象外のscalar cellはstage終了時に回収する。
+C++そのものの正確な特殊メンバーの時点・object identity・総費用の証明はこの生成規則からは主張しない。
+
+`class_method_functions(..., include_constructors=False)` は、既にstageで処理したconstructorをhelper収集で
+再び旧形式へ変換しないために使う。既定値はTrueで、既存のmethod/constructor生成入口は維持する。
+
+追加処理のあるfactory、nontrivialな特殊メンバー、ref引数、引数のruntime side effect、構成子本体の途中return、
+factory一時objectのmember呼出し、vectorやrecord fieldの委譲は未対応として拒否する。
+元のAPIからそれらを削らず、型の汎用性と完全lifetimeのflagはfalseを維持する。
+
+`tests/test_template_class_layout.py` の追加検査は、元RangeSumの7 roots（プログラム全体・移動先layoutのrflを含む）、
+factory/body/chainの5事例、失敗fieldの4事例とC++/UBSanを確認する。
+型付きsourceの全fieldを構築してから移す形を直接照合し、sizeだけが不正な入力でも成功扱いしない。
+nontrivial copy/move/dtor、factory追加処理、ref引数、途中return、一時receiverの未対応も実CPPから監査して拒否する。
+関連16testsは終了0（138.812秒）、固定nanoda2815/2648/3300/3329宣言が成功した。
+
+## RangeSum既定構築の任意caller証明
+
+`tests/lean/original_delegating_constructor_general.lean` は、元CPPから生成したRangeSum既定構築の
+全stageを `body_shape` で対応付け、`raw_exec` で任意の初期memory Pについて本体work14、内部needがP.length+15、
+返却なし、引数・factory返却・移動先を含む6cellを持つことを示す。
+`stage_ready` は既存StraightLine.soundで通常のrunFuelへ接続する。
+`CppScalarContents.run_stable` を併用し、StageState/ExportStateにforest、全buffer内容、baseSpace、rootWritableの保持を含める。
+callerのframeがwell-formedでrootWritable長が合い、所有scopeがcaller.scope以下、scalar baseがmemory内であることを前提とする。
+未使用のcaller cell全件の型有効性は要求せず、元のメモリ内容とcell数・binding数・scopeは任意である。
+
+`finish_export` / `default_construct_correct` は、const/mutableいずれのtargetでも停止し、
+旧memoryの後ろへlong long/intの0を1つずつ、旧binding/slotの後ろへ新fieldだけを追加することを示す。
+有効なframe、旧frame binding、caller.scope、storage object数・live/workを保持する。
+prepare・本体・export込みscalar work増分は18以下。scalar peakはcallerとinitialのpeakおよび
+`callerP.length+12-baseMemory+100`のmaxで、storage/outer peakも既存liveSpace/peakから抑える。
+これらは抽象評価器のcounter/cell上界であり、C++バイト数や実測時間ではない。
+`existing_scalar_read` は任意の既存scalar slotのcellと権限を保持し、`destination_readable` は新2fieldの型・値・権限を示す。
+
+`frame_extension` は旧frameからのExtendsを示し、`existing_vector_resolve` / `existing_vector_read` は
+成功していた既存vector参照の解決と要素値を保持する（borrowed childも既存Extends定理の対象）。
+登録検査はfreshなCPPモデル再生成、既存7 rootsと一般証明10 roots、copyの一般定理、Lean/固定nanoda4198宣言、
+C++/UBSanを合わせて終了0（46.802秒）。証拠は `.cache/wip/scalar_contents_frame_20261107/registered/`。
+source/headerは未変更。値構築など残る一般object caller、任意T/M、
+C++厳密lifetime/identity/総費用、公開API復元と原本全件の検証は引き続き未完了である。
+
+## RangeSum値構築の一般callerとexport
+
+`tests/lean/original_value_constructor_general.lean` は元CPPの `RangeSum(T,int)` を対象とし、
+LL/int具体化で任意の値とcallerについて引数準備から全field構築・exportまでを証明する。
+型が異なる2引数の準備補題は任意のty/tnに対応し、引数はscalar-only式、各値は対応するTy.validを前提とする。
+sizeの非負条件は追加しない。構築前の未使用cellについて一律の有効性も要求しない。
+
+本体はwork4、need callerP.length+11、prepare/body/export込みscalar work増分は
+`e1.nodes+e2.nodes+10` 以下である。既定構築と同じscalar/storage/outer peakの上界を持つ。
+export先のconst/mutable権限、型付き2fieldの値と読取、旧scalar memory/binding/slotと読取、
+vectorの全内容・forest・root権限、旧vectorの参照解決と要素読取を保持する。
+この費用は抽象評価器のcounter/cellであり、C++の厳密なobject寿命やバイト数・実測値を意味しない。
+
+11 rootsを既定構築等と合わせたfresh CPP生成・固定nanoda4261宣言・C++/UBSanの登録検査が成功した。
+C++ではlong longの最小値/-1/0/最大値とintの最小値/-4/0/最大値の16組を検査し、const元からのcopyと元保持も確認した。
+証拠は `.cache/wip/rangesum_value_constructor_20261107/registered/`。
+任意T/M、vector読取等を含む引数、効果付き引数、返却object/一時receiver、C++厳密lifetime/identity/総費用、
+公開API復元、元ファイル全体の移植はまだ未完了である。
+
+## Factory構築bodyの一時receiver
+
+`constructor_delegation.ScalarDelegation` は、factoryの返却objectにmaterializeした全scalar fieldを
+receiver引数としてmethod呼出しへ渡す。同じrecordのmethod宣言IDとsourceを監査し、
+入れ子のmethod呼出しを同じfieldへ接続してから通常のinlinerで展開する。
+共通inlinerでも、展開後のreceiver field引数を現在の実引数へ置換し、
+元の仮引数IDが未束縛のまま次のmethodへ渡る問題を修正した。
+
+未使用の戻り値でもreturn式を評価する。純粋な式という理由で消すと、ゼロ除算や符号付きoverflowを隠すためである。
+`scalar_delegation_receiver.lean` の8 rootsは直接構築とfactory経由の入れ子更新、const getter、
+外側bodyとの分離、既存caller prefix、const先への権限、一時field回収、失敗時のexport拒否を検査する。
+`inline_scalar_conditionals.lean` には捨てられたdivision/incrementの正常値とfaultの4 rootsを追加した。
+参照/ポインタ返却はcall式の型だけでなくmethod宣言で拒否する。再帰、初期化が未完了のreceiver、
+nontrivial特殊メンバー等は対象外。一般T/M、C++厳密lifetime/identity/総費用の完了を意味しない。
+
+thisへの呼出しは元receiverのfield引数を継承する。readonly fieldがhelper ABIでは値引数であっても、
+そのcapture領域は別receiverではない。これにより、構築中の未束縛field IDを修正しつつ、
+既存Beatsモデルで正しく参照しているn/infの元receiverを保つ。
+関連31testsで30成功/Beats model一致1失敗を確認後、この継承を直し、失敗検査を含む
+constructor/receiver/inlineの10testsを再検査して成功（41.939秒、固定nanoda2834/2768宣言）。
+Beatsのconstruction-stageとbodyの既存生成modelは両方byte一致し、生成modelや証明定義は未変更。
+証拠は `.cache/wip/delegation_receiver_20261107/receiver_identity/`。
+関連31件の失敗前の成功と、修正後10件の成功は別の検査記録として扱う。
+
+## Static factoryの全object返却
+
+`emit_class_layout(..., member_exports=True, factory_exports=True)` は、構築だけでなく、
+選択したrecordを値で返すstatic factoryを同じfield capture/exportへ接続する。
+既定はFalseであり、既存のconstructor出力は維持する。
+`class_factory_stages` は元methodの宣言ID・source位置・返却型を確認し、
+単一のreturned constructionについて、構成子引数と全fieldを1回だけmaterializeしてbodyを実行する。
+そのfieldを直接exportし、返却fieldごとにfactoryを評価したり、余分な移動先を再構築したりしない。
+現在はtrivial scalar recordとscalar値引数（defaultなし）に対応する。
+ref返却/引数、追加処理を持つfactory、nontrivial特殊メンバー等は未対応として拒否する。
+
+元RangeSetRangeSum<long long>::RangeSum::e()の `RangeSum_factory_e_exportViewFuel` を生成し、
+`original_factory_export_general.lean` の10 rootsで、通常のwell-formed/scope/base前提の任意callerについて、
+prepare→元CPP由来のbody→全field exportを証明した。
+型付きzero2fieldとconst/mutable権限、旧scalar memory/binding/slotと読取、全vector内容・権限・参照解決・読取、
+scope/object数/live/storage workを保持する。本体work10、need callerP.length+11、
+prepare/body/export込みscalar work増分14以下で、scalar/storage/outer peak上界も持つ。
+これは抽象評価器のcounter/cellであり、C++の厳密なobject identity/lifetimeやバイト数・実測値ではない。
+
+`scalar_factory_exports.lean` の10事例では、引数付きfactory・負値・const先・caller prefix・copy分離・
+囲むscope終了後のfield失効・bodyや未使用構成子引数のゼロ除算時のexport拒否を確認する。
+新経路、元RangeSumの一般caller、既存の委譲構築を合わせた6testsが74.318秒で成功し、
+固定nanoda2868/4315/2834/2648/2815宣言とC++/UBSanの正常・失敗例、入力hash不変を確認した。
+証拠は `.cache/wip/scalar_factory_exports_20261108/registered/`。
+
+unit NProgramはexport前のstageを表す。そのcallFuelのunit結果を、元factoryのclass返却契約として扱わない。
+friend/free functionや一般memberのclass返却、object引数、任意T/M、厳密なC++ lifetime/identity/総費用、
+公開API復元と元ファイル全体の移植は残る。
+
+## Friendの全object返却とrecord参照引数
+
+`friend_exports=True` を `member_exports=True, factory_exports=True` と併用すると、
+選択したrecordを値で返すhidden friendを、全fieldのmaterialize/capture/exportへ接続する。
+既定はFalseとし、未対応のfriendが存在しても従来のstatic factory exportを妨げない。
+現在のrecord引数は同じrecordのlvalue参照を対象とし、constとmutableを保持した全scalar field参照へ変換する。
+MemberExprの元field宣言IDを照合し、record自体のescapeやmember呼出し等はこの経路では拒否する。
+値渡しrecordのcopy/moveを、参照引数に置き換えて対応済みとは扱わない。
+
+引数がrecord参照だけの関数には `*_exportObjectsFuel` を生成する。
+`MemberFactory.referenceArguments` は全ObjectRefのscalar field数・各fieldの型/値/権限とvector field不在を
+caller上で検査してからfield参照を通常のprepareへ渡す。calleeが後で確保するslotは入力として使えない。
+このObjectRefはtyped field viewであり、厳密なclass identityの検証ではない。
+scalar引数とrecord参照が混在する場合のobject用wrapperや、一般のmember/free function返却の接続も残る。
+
+元RangeSetRangeSum<long long>::RangeSumのop(const RangeSum&,const RangeSum&)から
+`RangeSum_factory_op_exportObjectsFuel` を生成した。
+`original_friend_object_return.lean` の11事例で、全結果field、元2object保持、負size、同じobjectのalias入力、
+const結果、両fieldのoverflow時のexport拒否、不足/型違い/未来slot/vector field混入/過剰object/失効済み入力の拒否を確認。
+`original_friend_object_return_general.lean` の3 rootsは、型付き入力と和の有効性の下で任意のP・参照先・入力値に対し、
+元本体のpexecが入力prefixを保持し、x和とsize和を持つ全fieldを作ることを示す。
+本体cost13、need P.length+15。sizeの非負条件や参照先の相異条件は追加しない。
+
+最終4testsは82.481秒で成功。fresh元CPPモデル、固定nanoda3276/4315宣言、C++/UBSan正常と
+両fieldのoverflow、元RangeSumの構築/e()一般caller、拒否境界、入力hash不変を確認した。
+証拠は `.cache/wip/record_factory_arguments_20261108/final/`。
+本節の初回検査時点では任意callerのfriend prepare/run/export一般定理は未追加だった。現在の接続は後続節を参照する。
+任意T/M、値渡しobjectのcopy/move、厳密C++ identity/lifetime/総費用、公開API復元と元ファイル全体の移植も残る。
+
+## Friend呼出し全体の一般証明（Add/Sum・Set/Sum）
+
+`original_friend_object_call.lean` の12 rootsは、元のRangeSum opについて、
+4つのtyped field読取からprepare/body/exportを任意callerへ接続する。
+異なる4型のreadonly参照準備を補題にし、実runFuelの成功を示した後、全fieldのtyped capture/exportへ渡す。
+ObjectRef wrapperについても、2つの完全なtyped field viewを検査して同じ引数列へ接続する。
+必要な前提はcaller frameの有効性・rootWritable長・owner scopeとbase、および各field読取と両和の型有効性である。
+入力のwritable、sizeの非負性、参照先の相異を追加せず、aliasを許す。
+
+ExportStateは、和を持つlong long/intの2fieldとconst/mutable権限、旧memory/binding/slotとscalar読取、
+全vector内容・forest・root権限・参照解決・読取、scope/object数/live/storage workを保持する。
+scalar/storage/outer peakの明示上界と、prepare9＋本体13＋export3による抽象総work増分25以下も示す。
+これを厳密なC++ object identity/lifetimeや総C++実行費用の証明と混同しない。
+
+同じproof fixtureを、RangeAddRangeSum<long long>::RangeSumとRangeSetRangeSum<long long>::RangeSumの
+別々の原本宣言・witnessからfresh生成したモデルへ適用した。
+CPPの2型を同一化する変更やAPIの縮小は行っていない。
+2tests/77.223秒で固定nanoda4086/4086宣言、C++/UBSan正常・alias・負size・constと両fieldのoverflow、
+検査入力hash不変が成功した。証拠は `.cache/wip/friend_object_call_20261108/both_families/`。
+任意T/M、値渡しobjectのcopy/move、厳密C++ identity/lifetime/総費用、他family/一般memberのclass返却、
+公開API復元と原本全体の移植は残る。
+
+## Max/Minの全field返却と標準引数の監査
+
+Add/Set両familyのRangeMax/RangeMinについて、元のdefault/e/opから全fieldのstageを生成する。ConstructorConversionは内側の構築式へ進むためにだけ除去し、選択recordと構成子signatureの照合は維持する。標準関数を含む構成子引数は既存の宣言ID・pristine body監査を通し、最終stageでもnumeric_limits probeとmin/max監査を行う。同名ユーザー関数や偽のnumeric_limitsは許可しない。
+
+`original_extrema_object_general.lean` は任意の入力prefix・参照先・型付き値について、選択した値を全結果fieldへ格納する本体実行、入力prefixとreadonly binding・fresh writable bindingを含む全PSの一致、work≤40とneed≤P.length+16、Int.min/maxとの一致を証明する。4つの元モデルに同じ証明を適用する。有限ケースはdefault/e/両側入力のalias/constと不正参照を検査する。本節追加時は任意callerのprepare/run/export一般定理が未追加だった。現在の接続は後続節を参照する。厳密なobject identity/lifetimeは未完了である。
+
+原本の浮動小数の単位元は別途修正し、非浮動小数の旧APIを保つ。compiler-resolvedなsole if constexprは構成子と通常inlinerの共通処理で選択する。runtime initializerを含む分岐は拒否する。浮動小数のnative回帰はLeanの誤差・無限大の意味論の代用にはしない。最終関連検査の状態はhandoffを参照する。
+
+## Max/Minの任意callerからの全object返却
+
+`original_extrema_object_call.lean` の11 rootsは、readonlyな2つの型付きscalar参照からprepareし、元のMax/Min本体を実行して結果fieldをexportする。参照先の相異や入力のwritableは要求しない。scalarCellから得た型有効性だけで選択結果の型有効性も導く。
+
+呼出し後は既存scalar memory/binding/slotとscalarCell読取、既存vectorの内容・resolve/read、scope/owner/live/storage workを保つ。結果は1つの新cellで、const先ではreadonlyにする。IRの総work増分は47以下（prepare5、本体40以下、export2）、scalar/storage/outer peakも明示する。Add/Set×Max/Minの4原本モデルへ同じ証明を適用する登録検査の最新状態はhandoffを参照する。厳密なC++ class identity/lifetimeや任意Tの形式検証とは区別する。
+
+## trivial record値引数のfield snapshot
+
+`factory_parameters` は同じselected recordの値引数とlvalue参照引数を区別する。trivial copy/move/destruction・scalar field等の既存監査を通った値引数は、宣言順のscalar値仮引数へ展開する。const fieldやconstな値仮引数の制限を保持し、参照引数は従来のtyped参照を使う。nontrivial copyやrvalue参照、デフォルト引数等の未対応境界は拒否する。
+
+値を含むobject wrapperは `MemberFactory.objectArguments` を使い、caller上で全fieldの型・個数・値を検査してliteral値引数をsnapshotする。値引数は元fieldのwritableを要求しない。全snapshotと参照検査を終えてからprepareするため、構築後に出現するslotを入力に使わない。全参照だけの既存wrapperはreferenceArgumentsのままである。
+
+明示的な `Record(...)` のCXXFunctionalCastExprは、ConstructorConversionの場合だけ内側の構築へ進む。選択recordとexact constructor signatureの監査は省略しない。元Add/MaxMin・Add/SumのRangeAdd::composeを全objectモデルへ接続し、mixed value/referenceの2field fixtureも含む固定kernel/native検査の結果はhandoffを参照する。値引数の一般caller定理、record値の条件付き返却や途中更新、任意T、厳密object lifetimeはまだ未完了。
+
+## RangeAddの値引数を使う任意caller
+
+`original_value_add_call.lean` は元Add両系統のcomposeをscalar値引数としてprepareし、加算とfieldコピーの本体から型付きobject exportまで接続する。2つの入力と和がlong longに収まることを前提に、任意のscalar引数式ではwork増分e1.nodes+e2.nodes+12以下、ObjectRef snapshotでは14以下とscalar/storage/outer peakを示す。旧scalar/vectorの値・参照・権限とscope/storage workを保ち、alias・readonly入力とconst結果も許す。CPPの原本や型を制限して証明へ合わせない。
+
+2値prepareの補題は `Proofs/CppScalarValuePrepare.lean` へ共有し、既存RangeSumの同名定理は同じ命題のwrapperとして保持する。両原本からfresh生成した検査と旧RangeSum/mixed値・参照回帰の結果はhandoffを参照する。任意Tや厳密C++ object identity/lifetimeの検証は別の残件である。
+
+## selected recordのimplicit copy/move返却
+
+原本Set composeの `return f.noop ? g : f` は、選んだlvalueをimplicit copy constructorへ渡す。`factory_parameters` はselected recordのexact implicit defaulted copy/moveを監査した場合だけ、引数の全field viewを返却へ渡す。条件をconst boolに一度保存し、各fieldの選択を既存のscalar conditional展開でbranchへ変換してからコピーする。元のfield順・型・const/mutableを保持し、値構成子で作り直してnoop等を上書きしない。直接のcopy/move返却も同じ監査を通す。
+
+全fieldはscalarで、copy/move/destructionはtrivial等の従来監査が必要である。副作用のある条件、入れ子のrecord conditional、parameter view以外からのcopy等は未対応として拒否する。元Set両系統の値snapshot/全flag組合せ・極値・alias/const/id/不正入力を `original_set_object_values.lean`、直接返却を `scalar_record_copy_returns.lean` で検査する。新登録3testsは固定nanoda2821/2828/2828宣言・native/UBSan・入力不変で成功。既存一般callerへの回帰と最新結果はhandoff参照。Setの任意入力/任意caller一般定理や厳密C++ identity/lifetime、任意Tは未完了。
+
+## Set composeの任意入力と任意caller
+
+`original_set_object_general.lean` の4 rootsは、readonly flagの保存を含む元bodyを変更せず、任意prefixと型付き4値に対しwork20/need P.length+21、選択されたv/noopと全PS一致を示す。flag保存後のprefixとbindingを分離し、新しいmutable tempだけをwsへ含める。条件が0ならf、それ以外ならgを選び、両fieldが同じ判定を使う。
+
+`CppScalarValuePrepare.prepare_literals4` は4つのtyped snapshotの準備をwork9で示す。`original_set_object_call.lean` の11 rootsは、その準備・元本体・2field exportを任意callerへ接続し、総IR work増分32以下とscalar/storage/outer peak、旧scalar/vectorの値・参照・権限・scope/storage workを保持する。入力writable・参照先相異・非負性は要求しない。両原本からfresh生成する独立kernel/nativeと共有準備補題の回帰の最新結果はhandoffを参照する。厳密C++ identity/lifetimeと任意T/Mや途中更新の扱いは別の残件である。
+
+## 異なるreceiver/result recordのmember返却
+
+`companion_instances` と明示 `receiver_methods=((record_index,method_name),)` は同じcontrolled TUのreceiverを選び、selected result recordを返す元memberを全field stageへ渡す。receiverのsource/qualified identity・field宣言を既存監査へ通し、元field順で参照引数を作る。const/mutableを保持し、元method signatureをmetadataへ残す。明示argumentのresult型recordは従来の値snapshotへ展開し、mixed receiver/value wrapperですべてをprepare前に検査する。
+
+このopt-in memberだけは、早期returnのない前置処理を保持し、最終returnの構築/copyより前に実行する。receiverの書込みはcaller prefixへ保持し、値引数の更新はcalleeのコピーに閉じる。static/friendの単一return制限は維持する。裸this、他member呼出し、未対応qualifierやearly return等は拒否する。regular const noexcept memberもreadonly receiver fieldを受け付ける。
+
+元Set/Sum applyは値コピーx.xの更新後に全x/sizeを返し、Add/Sum applyも全結果recordを返す。`original_member_record_return.lean` の9 rootsは負size/zero/noop/const・readonly receiver拒否・未来slot・overflow/未選択乗算を含む。`member_record_prefix_updates.lean` の5 rootsはreceiver更新と同一object aliasでsnapshot時点を確認し、`const_record_member.lean` の3 rootsはconst noexceptを検査する。新検査と変更後の既存回帰の結果はhandoffを参照する。member templateの任意M、任意T、厳密C++ class identity/lifetime、applyの任意入力/caller一般定理は未完了。
+
+
+member選択後には、元宣言へのmember pointerの型をC++ compilerの `__is_same` で照合する。receiver/result/record引数には選択した宣言の完全修飾名を使い、const/noexceptも保持する。probe内identifierのmacro置換は拒否する。これにより、fieldと構成子署名が一致する別familyの同名recordを取り違えて構成子を流用する経路を閉じる。`test_record_member_rejects_namesake_return_and_argument_records` はC++/UBSanで107を確認した上で返却型・引数型双方の誤選択を拒否する。これは宣言型の同一性の検査で、object lifetime全体の証明とは区別する。
+
+
+元Set/Add applyの任意入力本体は `original_set_member_general.lean` / `original_add_member_general.lean` で証明する。任意prefixとreceiver参照先、型付き値コピーx/sizeに対して、prefix全保持と全結果PS一致を結論に含める。Setはnoop時に積の表現可能性を要求せず、active時のみ要求する（work13/7、need≤P.length+13）。Addは積と加算の両方を要求する（work14、need=P.length+16）。sizeのi32→s64拡大は入力型から導く。負sizeを除外しない。任意callerからのmixed参照/値prepareと全field exportの接続、任意T/M、厳密identity/lifetime・公開API復元は別の未完了項目であり、本体定理だけで移植完了とはしない。
+
+
+Set/Sum・Add/Sum applyの任意caller接続:
+
+`original_member_prepare.lean` の2 rootsは任意型の1参照/2参照と2値snapshotを元callerから準備し、初期memory/bindings/slots/frame/scopeとIR work7/9、peak保持を示す。receiverには元のnonconst member呼出しに必要な書き込み権限を要求し、record値引数の元fieldには要求しない。
+
+`original_add_member_call.lean` と `original_set_member_call.lean` の各11 rootsは、元apply本体から全field exportまでを任意NStateへ接続する。Addは積と和の表現可能性、Setはnoop=falseの場合に限り積の表現可能性を前提にする。負size、元のreadonly引数、型の合うscalar slotのaliasを排除しない。結果x/sizeを返し、const destinationは新fieldの権限だけを制限する。旧scalarの値/参照、vectorの内容/resolve/read、scope、storage workを保持し、IR総work増分はAdd≤24/Set≤25、scalar/storage/outer peakも上界を与える。class objectの厳密identity/lifetimeと任意T/M、member template apply、公開APIの復元・原本全体の完了とは区別する。登録テストは元ソースを変えずfreshモデルを生成し、独立kernelとC++/UBSanを確認する。最新実行結果はhandoff参照。
+
+
+明示member templateとrecord conditional返却:
+
+`receiver_methods` の3要素形 `(record_index, method_name, (RecordArgument(selected_index),))` は、既存 `instantiate_members` が監査した元source patternと同一TUのrecord宣言IDに一致する具体化だけを使う。型名文字列で別の同名recordを指定しない。元C++の `apply<選択型>` へのmember pointerをcompilerで照合し、receiver/result/引数の完全修飾型とconst/noexceptを検査する。source名・型引数・decl IDはmetadataへ残す。
+
+元Set/MaxMinの `return noop ? x : v` は、bool条件に応じたimplicit copyと値構築である。新member経路は純粋boolの1段conditionalに限り、branch外にscalar結果slotを置き、選ばれたbranch内だけで元constructorまたは監査済みcopyをmaterializeして全fieldを渡す。コピー時に値構成子を呼び直さず、未選択branchの演算やconstructor bodyを実行しない。追加slotはIR上のscalar作業領域であり、C++のクラス既定構築を挿入するものではない。static/friendの従来制限と、入れ子conditional・副作用条件など未対応形の拒否は維持する。
+
+`original_template_member_result.lean` は元Add/Set×Max/Minの全field返却、負値・noop/id・const結果・readonly/未来slot・overflowを有限LLで確認する。`member_constructor_choice.lean` は値構成子がxに100・sizeに1を加える2field recordを使い、copyでは元の両fieldを保ち、選ばれた構築だけを実行すること、未選択overflowを避けることを確認する。登録結果はhandoff参照。新具体化に対する任意入力/任意caller一般定理や任意T/M、厳密identity/lifetime・公開API全体の復元は未完了。

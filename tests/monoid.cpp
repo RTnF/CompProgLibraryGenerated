@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/monoid.hpp"
+#include "../library/algebraic_structure/monoid.hpp"
 #include <climits>
 #include <random>
 #include <vector>

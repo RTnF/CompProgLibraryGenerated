@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/topological_sort.hpp"
+#include "../library/graph/topological_sort.hpp"
 #include <random>
 #include <vector>
 

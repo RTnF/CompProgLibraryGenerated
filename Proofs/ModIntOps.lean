@@ -101,13 +101,17 @@ theorem add_val (mv : MV) (hnv : mv.nv = 0) (vv : Nat → List Int) (P cs : List
   rw [this]
   exact convert32 _ hs
 
+abbrev copyReturn (k : Nat) : Command :=
+  .sequence (.primitive (.declare u32 true (.variable u32 k)))
+    (.sequence (.primitive (.ret (.variable u32 k))) Sk)
+
 abbrev addBody (m : Nat) : Command :=
   .sequence (.primitive (.declare u32 true (.variable u32 0)))
     (.sequence (.primitive (.assign 2 u32 (.binary u32 .add (.variable u32 2) (.variable u32 1))))
       (.sequence (.branch (.binary bl .ge (.variable u32 2) (.literal u32 (m : Int)))
           (.sequence (.scope (.sequence (.primitive (.assign 2 u32
             (.binary u32 .sub (.variable u32 2) (.literal u32 (m : Int))))) Sk)) Sk) Sk)
-        (.sequence (.primitive (.ret (.variable u32 2))) Sk)))
+        (copyReturn 2)))
 
 theorem add_body_eq : (Proofs.ModIntInstance.operator_add_ModInt_998244353U).body = addBody 998244353 := rfl
 
@@ -128,16 +132,27 @@ theorem gS_scope_same (P cs cs' : List Cell) (h : cs'.length = cs.length) :
 
 theorem ret_var (mv : MV) (hnv : mv.nv = 0) (fu : Nat) (P cs : List Cell) (vv : Nat → List Int) (k v : Nat)
     (hk : cs[k]? = some (cu32 v)) (hv : v < 4294967296) :
-    pexecM mv fu (.sequence (.primitive (.ret (.variable u32 k))) Sk) (gS P cs) vv =
-      some ⟨gS P cs, vv, some (v : Int), (vwp (.variable u32 k)).1 + 1,
-        (gS P cs).mem.length + (gS P cs).bs.length + (vwp (.variable u32 k)).2 + 2, 0⟩ :=
-  seqM_ret (by rw [pexecM_prim, pstmtM_ret_ok mv _ vv _ _ (var_val mv hnv vv P cs k v hk hv)]) rfl
+    pexecM mv fu (copyReturn k) (gS P cs) vv =
+      some ⟨gS P (cs ++ [cu32 v]),vv,some (v : Int),4,
+        (gS P cs).mem.length+(gS P cs).bs.length+5,0⟩ := by
+  have q0 := (pexecM_prim mv fu _ _ _).trans
+    (gSM_decl mv P cs vv u32 (.variable u32 k) (v : Int) (v : Int)
+      (var_val mv hnv vv P cs k v hk hv) (convert32 v hv))
+  have index : k < cs.length := (List.getElem?_eq_some_iff.mp hk).1
+  have read : (cs ++ [cu32 v])[k]? = some (cu32 v) := by
+    rw [List.getElem?_append_left index]; exact hk
+  have q1 := seqM_ret (fu:=fu) (b:=Sk) (by
+    rw [pexecM_prim,pstmtM_ret_ok mv _ vv _ _ (var_val mv hnv vv P (cs ++ [cu32 v]) k v read hv)]) rfl
+  have q := seqM_some q0 rfl q1
+  have need : max (P.length+2*cs.length+1+4)
+      (P.length+(cs.length+1)+(cs.length+1)+1+2) = P.length+cs.length+cs.length+5 := by omega
+  simpa [copyReturn,vwp,NExpr.scalarOnly,NExpr.nodes,gS_mem_len,gS_bs_len,need] using q
 
 /-- The tail `if (r >= m) { r -= m; } return r;` common to `+` (after the sum) -/
 theorem add_exec (mv : MV) (hnv : mv.nv = 0) (fu : Nat) (P : List Cell) (vv : Nat → List Int) (m x y : Nat)
     (hm : 2 ≤ m) (hm2 : m ≤ 2147483648) (hx : x < m) (hy : y < m) :
     ∃ r : PRM, pexecM mv fu (addBody m) (gS P [cu32 x, cu32 y]) vv = some r ∧
-      r.ret = some (((x + y) % m : Nat) : Int) ∧ r.ps = gS P [cu32 x, cu32 y, cu32 ((x + y) % m)] ∧ r.vv = vv ∧
+      r.ret = some (((x + y) % m : Nat) : Int) ∧ r.ps = gS P [cu32 x, cu32 y, cu32 ((x + y) % m), cu32 ((x + y) % m)] ∧ r.vv = vv ∧
       r.cost ≤ 60 ∧ r.need ≤ P.length + 30 ∧ r.wk = 0 := by
   have hx32 : x < 4294967296 := by omega
   have hy32 : y < 4294967296 := by omega
@@ -254,13 +269,13 @@ abbrev subBody (m : Nat) : Command :=
       (.sequence (.branch (.binary bl .ge (.variable u32 2) (.literal u32 (m : Int)))
           (.sequence (.scope (.sequence (.primitive (.assign 2 u32
             (.binary u32 .add (.variable u32 2) (.literal u32 (m : Int))))) Sk)) Sk) Sk)
-        (.sequence (.primitive (.ret (.variable u32 2))) Sk)))
+        (copyReturn 2)))
 
 abbrev mulBody (m : Nat) : Command :=
   .sequence (.primitive (.declare u32 true (.variable u32 0)))
     (.sequence (.primitive (.assign 2 u32 (.cast u32 (.divrem u64 true (.binary u64 .mul (.cast u64 (.variable u32 2))
       (.cast u64 (.variable u32 1))) (.cast u64 (.literal u32 (m : Int)))))))
-      (.sequence (.primitive (.ret (.variable u32 2))) Sk))
+      (copyReturn 2))
 
 theorem sub_body_eq : (Proofs.ModIntInstance.operator_sub_ModInt_998244353U).body = subBody 998244353 := rfl
 theorem mul_body_eq : (Proofs.ModIntInstance.operator_mul_ModInt_998244353U).body = mulBody 998244353 := rfl
@@ -269,7 +284,7 @@ theorem mul_body_eq : (Proofs.ModIntInstance.operator_mul_ModInt_998244353U).bod
 theorem mul_exec (mv : MV) (hnv : mv.nv = 0) (fu : Nat) (P : List Cell) (vv : Nat → List Int) (m x y : Nat)
     (hm : 2 ≤ m) (hm2 : m ≤ 2147483648) (hx : x < m) (hy : y < m) :
     ∃ r : PRM, pexecM mv fu (mulBody m) (gS P [cu32 x, cu32 y]) vv = some r ∧
-      r.ret = some ((x * y % m : Nat) : Int) ∧ r.ps = gS P [cu32 x, cu32 y, cu32 (x * y % m)] ∧ r.vv = vv ∧
+      r.ret = some ((x * y % m : Nat) : Int) ∧ r.ps = gS P [cu32 x, cu32 y, cu32 (x * y % m), cu32 (x * y % m)] ∧ r.vv = vv ∧
       r.cost ≤ 60 ∧ r.need ≤ P.length + 30 ∧ r.wk = 0 := by
   have hx32 : x < 4294967296 := by omega
   have hy32 : y < 4294967296 := by omega
@@ -301,7 +316,7 @@ theorem mul_exec (mv : MV) (hnv : mv.nv = 0) (fu : Nat) (P : List Cell) (vv : Na
 theorem sub_exec (mv : MV) (hnv : mv.nv = 0) (fu : Nat) (P : List Cell) (vv : Nat → List Int) (m x y : Nat)
     (hm : 2 ≤ m) (hm2 : m ≤ 2147483648) (hx : x < m) (hy : y < m) :
     ∃ r : PRM, pexecM mv fu (subBody m) (gS P [cu32 x, cu32 y]) vv = some r ∧
-      r.ret = some (((x + m - y) % m : Nat) : Int) ∧ r.ps = gS P [cu32 x, cu32 y, cu32 ((x + m - y) % m)] ∧ r.vv = vv ∧
+      r.ret = some (((x + m - y) % m : Nat) : Int) ∧ r.ps = gS P [cu32 x, cu32 y, cu32 ((x + m - y) % m), cu32 ((x + m - y) % m)] ∧ r.vv = vv ∧
       r.cost ≤ 60 ∧ r.need ≤ P.length + 30 ∧ r.wk = 0 := by
   have hx32 : x < 4294967296 := by omega
   have hy32 : y < 4294967296 := by omega
@@ -433,7 +448,7 @@ theorem op_call (prog : NProgram) (body : Command) (hbody : prog.body = body)
     (hrv : rv < 4294967296) (hx : x < 4294967296) (hy : y < 4294967296)
     (exec : ∀ (mv : MV) (_ : mv.nv = 0) (fu : Nat) (P : List Cell) (vv : Nat → List Int),
       ∃ r : PRM, pexecM mv fu body (gS P [cu32 x, cu32 y]) vv = some r ∧ r.ret = some (rv : Int) ∧
-        r.ps = gS P [cu32 x, cu32 y, cu32 rv] ∧ r.vv = vv ∧ r.cost ≤ 60 ∧ r.need ≤ P.length + 30 ∧ r.wk = 0)
+        r.ps = gS P [cu32 x, cu32 y, cu32 rv, cu32 rv] ∧ r.vv = vv ∧ r.cost ≤ 60 ∧ r.need ≤ P.length + 30 ∧ r.wk = 0)
     (caller : NState) (e1 e2 : NExpr) (hs1 : e1.scalarOnly = true) (hs2 : e2.scalarOnly = true)
     (ty1 : e1.resultType = u32) (ty2 : e2.resultType = u32)
     (d1 : e1.denote (envOf caller) = some (x : Int)) (d2 : e2.denote (envOf caller) = some (y : Int))
@@ -727,7 +742,7 @@ theorem prep_val_ref (caller : NState) (params : List CppVectorBindings.Paramete
 set_option maxHeartbeats 4000000 in
 /-- `a / b` of two `ModInt<m>` (`a` passed by value, `b` by reference): the result is `x * y^(m-2) % m` (the quotient when
 `m` is prime), for `x, y < m` and `y != 0`. -/
-theorem operator_div_correct (prog : NProgram) (m : Nat) (hbody : prog.body = (Proofs.ModIntInstance.ModInt_div_assign m).body)
+theorem operator_div_correct (prog : NProgram) (m : Nat) (hbody : prog.body = Proofs.ModIntDiv.divBody m 2)
     (hpar : prog.parameters = [.scalar u32 false true, .scalar u32 true false])
     (hres : prog.result = ResultKind.scalar u32) (hm : 2 ≤ m) (hm2 : m < 4294967296) (x y : Nat) (hx : x < m) (hy : y < m)
     (hy0 : y ≠ 0) (caller : NState) (e : NExpr) (sb : Nat) (bb : CppState.Binding)
@@ -755,7 +770,7 @@ theorem operator_div_correct (prog : NProgram) (m : Nat) (hbody : prog.body = (P
   have hPy : (callerP caller ++ [(⟨u32,(x : Int)⟩ : Cell)])[bb.address]? = some ⟨u32,(y : Int)⟩ := by
     rw [List.getElem?_append_left hlty0]; exact hPy0
   obtain ⟨r,L2,hexec,hret,hcost,hneed,hrps⟩ :=
-    Proofs.ModIntDiv.div_exec m hm hm2 (callerP caller ++ [(⟨u32,(x : Int)⟩ : Cell)]) (callerP caller).length bb.address x y
+    Proofs.ModIntDiv.div_exec_copies 2 (by decide) m hm hm2 (callerP caller ++ [(⟨u32,(x : Int)⟩ : Cell)]) (callerP caller).length bb.address x y
       hx hy hy0 hPx hPy (by simp) (by simp; omega)
   simp only [List.length_append, List.length_singleton] at hneed
   have hrl : (x * ((y ^ (m - 2)) % m) % m) < 4294967296 := by

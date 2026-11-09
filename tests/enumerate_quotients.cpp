@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/enumerate_quotients.hpp"
+#include "../library/number_theory/enumerate_quotients.hpp"
 #include <cstdint>
 #include <random>
 #include <set>

@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/bellman_ford.hpp"
+#include "../library/graph/bellman_ford.hpp"
 #include <random>
 #include <vector>
 

@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/modint.hpp"
+#include "../library/modint/modint.hpp"
 #include <cstdint>
 #include <random>
 

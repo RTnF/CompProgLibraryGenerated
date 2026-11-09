@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/countr_zero.hpp"
+#include "../library/number_theory/countr_zero.hpp"
 #include <random>
 
 // The original countr_zero_constexpr of experiments/library/cpp/fps/convolution.hpp (valid for 1 <= n < 2^32).

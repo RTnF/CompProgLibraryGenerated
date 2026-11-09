@@ -1,0 +1,14 @@
+name = "vector_max"
+source = "array/vector_max.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.VectorMaxInstance"
+proof = "Proofs/VectorMaxCall.lean"
+model = "Proofs/Generated/VectorMax.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/vector_max.cpp"]
+sanitizers = true
+spec = "docs/vector_max.md"
+standard = "c++17"
+source_sha256 = "45d4d56c730bd4310f8cee267ae7e644413db0363483e4220b791342de4600df"
+public_declarations = ["FunctionTemplateDecl:vector_max<vector>"]

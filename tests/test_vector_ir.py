@@ -119,7 +119,7 @@ class VectorIRTests(unittest.TestCase):
                 source.write_text('#include <vector>\n'+text)
                 with self.subTest(source=text),self.assertRaises(ValueError):lower_source(source)
             with self.assertRaises(ValueError):
-                lower_source(ROOT/'library/doubling.hpp')
+                lower_source(ROOT/'library/array/doubling.hpp')
         print('vector body: rename invariance, three source mutations rejected, 11 unsupported body profiles (compound assignment is desugared by verifier/inline_ast.py)')
 
 if __name__=='__main__':

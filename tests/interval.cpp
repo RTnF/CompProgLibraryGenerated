@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/interval.hpp"
+#include "../library/interval/interval.hpp"
 #include <climits>
 
 int main() {

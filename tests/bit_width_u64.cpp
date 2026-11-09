@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/bit_width_u64.hpp"
+#include "../library/number_theory/bit_width_u64.hpp"
 #include <cstdint>
 #include <random>
 

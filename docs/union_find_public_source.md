@@ -3,7 +3,7 @@
 `tests/imports/union_find_public_compat.hpp` は、元の別フィールド
 `_ps` / `_num_groups` / `_n`、通常メソッドの経路圧縮、両構成子を保ち、
 公開版にある const query も overload として残す隔離 fixture である。
-**`library/union_find.hpp` はまだ番兵表現のままで、切替は行っていない。**
+**`library/union_find/union_find.hpp` はまだ番兵表現のままで、切替は行っていない。**
 
 `Proofs/Generated/UnionFindPublicCompat.lean` はこの fixture 全体から
 `context_class_ir` により生成する。`tests/test_context_class_ir.py` は

@@ -197,7 +197,7 @@ def check_lean():
     inputs = [ROOT / name for name in ("Proofs.lean", "Proofs", "verification", "lakefile.toml", "lake-manifest.json",
                                        "lean-toolchain", "verifier/support.toml", "tools/proof_security.py",
                                        "tools/check_proof_security.py", "tools/offline.py", "tools/public.py")]
-    inputs += sorted((ROOT / "library").glob("*.toml"))
+    inputs += sorted((ROOT / "library").rglob("*.toml"))
     inputs += [ROOT / ".tools/lean4export/.lake/build/bin/lean4export", ROOT / ".tools/nanoda_lib/target/release/nanoda_bin"]
     remaining_seconds()
     check_cache.cached_call("proof-security", inputs,

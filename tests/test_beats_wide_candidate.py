@@ -22,7 +22,7 @@ class BeatsWideCandidateTests(unittest.TestCase):
         model = emit_context_class(CANDIDATE,'cp::SegmentTreeBeats','BeatsMemberBundle',member_exports=True)
         self.assertNotIn('set_option',model)
         self.assertIn('private def',model)
-        original = lower_source(ROOT/'library/segment_tree_beats.hpp')
+        original = lower_source(ROOT/'library/segment_tree/segment_tree_beats.hpp')
         methods = [f['name'] for f in original['functions'] if f['name']!='SegmentTreeBeats_new0']
         self.assertEqual(len(methods),14)
         checks = ['example : BeatsMemberBundle.Construction.Stages.SegmentTreeBeats_construct0 = '
@@ -90,7 +90,7 @@ class BeatsWideCandidateTests(unittest.TestCase):
             source = (ROOT/'tests/segment_tree_beats.cpp').read_text()
             source = source.replace('../experiments/library/cpp/template/small_template.hpp',
                                     str(ROOT/'experiments/library/cpp/template/small_template.hpp'))
-            source = source.replace('../library/segment_tree_beats.hpp', str(CANDIDATE))
+            source = source.replace('../library/segment_tree/segment_tree_beats.hpp', str(CANDIDATE))
             cpp = root/'checks.cpp'; cpp.write_text(source)
             binary = root/'check'
             for flags in [['-O2'], ['-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer']]:
@@ -182,7 +182,7 @@ int main() {
                         'Proofs.BeatsConstructCall.program.constructMembersFuel fuel caller args '
                         'Proofs.BeatsConstructorFields.vectorFields '
                         'Proofs.BeatsConstructorFields.scalarFields := rfl\n')
-        public = lower_source(ROOT/'library/segment_tree_beats.hpp')
+        public = lower_source(ROOT/'library/segment_tree/segment_tree_beats.hpp')
         old_functions = {f['name']:f for f in public['functions']}
         for function in body['functions']:
             if function['name'] != 'SegmentTreeBeats_new0':

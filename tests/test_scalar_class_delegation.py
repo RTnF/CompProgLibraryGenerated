@@ -281,7 +281,7 @@ int main(){Traced::events.clear();Group a;auto defaults=Traced::events;
         with tempfile.TemporaryDirectory(prefix='group-original-events-') as directory:
             scratch = Path(directory)
             variants = [('original',ROOT/'experiments/library/cpp/algebraic_structure/group.hpp',''),
-                        ('public',ROOT/'library/group.hpp','cp::')]
+                        ('public',ROOT/'library/algebraic_structure/group.hpp','cp::')]
             for name,header,prefix in variants:
                 source = scratch/(name+'.cpp')
                 source.write_text(common+'#include "'+str(header)+'"\nusing Group = '+prefix+'GroupAffine<Traced>;\n'+driver)

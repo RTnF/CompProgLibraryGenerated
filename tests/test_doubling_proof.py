@@ -28,7 +28,7 @@ class DoublingProofTests(unittest.TestCase):
     def test_modules_are_registered_and_sorry_free(self):
         index = (ROOT / 'Proofs.lean').read_text()
         support = (ROOT / 'verifier/support.toml').read_text()
-        component = (ROOT / 'library/doubling.toml').read_text()
+        component = (ROOT / 'library/array/doubling.toml').read_text()
         for module in MODULES:
             self.assertIn(f'import Proofs.{module}\n', index)
             if module == 'DoublingCall':

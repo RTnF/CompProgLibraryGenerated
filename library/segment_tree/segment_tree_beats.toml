@@ -1,0 +1,14 @@
+name = "segment_tree_beats"
+source = "segment_tree/segment_tree_beats.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.BeatsInstance"
+proof = "Proofs/SegmentTreeBeatsCall.lean"
+model = "Proofs/Generated/SegmentTreeBeats.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/segment_tree_beats.cpp"]
+sanitizers = true
+spec = "docs/segment_tree_beats.md"
+standard = "c++17"
+source_sha256 = "3c066fa33e3d07fee25447426ccc74ce3ae73d64a6ab968d72750199436dd360"
+public_declarations = ["CXXRecordDecl:SegmentTreeBeats"]

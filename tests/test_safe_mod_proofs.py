@@ -16,7 +16,7 @@ from offline import disable_network
 
 class SafeModProofTests(unittest.TestCase):
     def test_operator_changes_invalidate_universal_proof(self):
-        candidate = (ROOT / "library/safe_mod.hpp").read_text()
+        candidate = (ROOT / "library/number_theory/safe_mod.hpp").read_text()
         proof = (ROOT / "Proofs/SafeModProofs.lean").read_text()
         frame = (ROOT / "Proofs/SafeModFrame.lean").read_text()
         invoke = (ROOT / "Proofs/SafeModInvoke.lean").read_text()

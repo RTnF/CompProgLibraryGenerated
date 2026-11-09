@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/dijkstra.hpp"
+#include "../library/graph/dijkstra.hpp"
 #include <random>
 #include <vector>
 

@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/sort_util.hpp"
+#include "../library/array/sort_util.hpp"
 #include <algorithm>
 #include <climits>
 #include <numeric>

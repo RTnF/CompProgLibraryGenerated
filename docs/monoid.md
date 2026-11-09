@@ -22,4 +22,4 @@
 
 hidden friendのLL生成モデルとqualified opの生成モデルが全NProgramで一致することも証明する。callerの元スカラーメモリを保持し、引数が同じセルを指す場合も含む。完全なC++ object/lifetimeを検証したとはしない。
 
-定理に含めていないこと: 結合律や単位元の法則そのもの（long longのC++テストで確認する）、任意Tや浮動小数の形式検証。原本どおり`MonoidMax<T>::e()`は`numeric_limits<T>::min()`であり、浮動小数では最も負の値ではない。任意Tについてこの値がmaxの単位元になるとは主張しない。C++ のテストは `tests/monoid.cpp` で、`std::max`/`std::min` と `__builtin_mul_overflow` を独立した基準として、極値を含む全組と乱数の結合律を確認する。
+定理に含めていないこと: 結合律や単位元の法則そのもの（long longのC++テストで確認する）、任意Tや浮動小数の形式検証。2026-11-08に原本と公開版のMax/Minの浮動小数単位元を修正した。標準浮動小数型では無限大対応ならMaxに負・Minに正の無限大を使い、それ以外ではlowest/maxを使う。非浮動小数型では従来のmin/maxを保持し、任意のユーザー型に追加の順序・単項マイナス・numeric_limitsメンバーを要求しない。NaNを含む単位元則や結合律は主張しない。float/double/long doubleの負値・極値・両無限大の両側単位元、defaultとe、公開qualified opを`tests/monoid_floating_identity.cpp`で検査する。nativeの成功を浮動小数のLean証明とは扱わない。C++ のテストは `tests/monoid.cpp` で、`std::max`/`std::min` と `__builtin_mul_overflow` を独立した基準として、極値を含む全組と乱数の結合律を確認する。

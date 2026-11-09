@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/xorshift.hpp"
+#include "../library/random/xorshift.hpp"
 #include <cstdint>
 
 // Independent oracle written as a free function over a plain state.

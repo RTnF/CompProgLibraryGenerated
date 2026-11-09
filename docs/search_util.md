@@ -1,6 +1,6 @@
 # search_util
 
-`library/search_util.hpp` は元の `experiments/library/cpp/array/search_util.hpp` の `count` と、二分探索 `lower_bound_index` をまとめた 1 つのヘッダーである。どちらも要素型 `T` のテンプレートのままで、検証した具体化は `count<int>` と `lower_bound_index<long long>`。
+`library/array/search_util.hpp` は元の `experiments/library/cpp/array/search_util.hpp` の `count` と、二分探索 `lower_bound_index` をまとめた 1 つのヘッダーである。どちらも要素型 `T` のテンプレートのままで、検証した具体化は `count<int>` と `lower_bound_index<long long>`。
 
 元のソースからの変更: `count` の既定引数（`idx_begin = 0`、`idx_end = -1`）は元のまま残した。`counts`（ソート済みの値と個数の組を返す）は `pair` と vector の返却が未対応のため含めていない。`lower_bound_index` は元のソースにはなく、`std::lower_bound` と同じ結果を返す二分探索である。
 

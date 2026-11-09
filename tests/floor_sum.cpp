@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/floor_sum.hpp"
+#include "../library/number_theory/floor_sum.hpp"
 #include <cstdint>
 #include <limits>
 #include <numeric>

@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/square_matrix.hpp"
+#include "../library/number/square_matrix.hpp"
 #include <random>
 #include <vector>
 

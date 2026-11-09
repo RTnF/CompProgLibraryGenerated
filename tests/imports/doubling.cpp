@@ -1,5 +1,5 @@
 #include "../../experiments/library/cpp/template/small_template.hpp"
-#include "../../library/doubling.hpp"
+#include "../../library/array/doubling.hpp"
 #include <array>
 #include <cassert>
 #include <cstdint>

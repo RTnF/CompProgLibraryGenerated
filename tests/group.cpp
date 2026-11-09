@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/group.hpp"
+#include "../library/algebraic_structure/group.hpp"
 #include <climits>
 #include <random>
 #include <type_traits>

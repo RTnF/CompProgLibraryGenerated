@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/safe_mod.hpp"
+#include "../library/number_theory/safe_mod.hpp"
 #include <cstdint>
 #include <limits>
 #include <random>

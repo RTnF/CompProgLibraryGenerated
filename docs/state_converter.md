@@ -147,7 +147,7 @@ FloorSumSignedCorrection の signedTriangleExpression は `(ull)n*(n-1)/2` の�
 
 `FloorSumSignedSpecification` は、負の係数だけを正規化する場合の数学的総和の分解と、補正 ans の unsigned 巻き戻りを証明する。元の全入力で最終復号値を `signedDecode64(signedSum(m,a,b,n))` に接続した。`call_correct` は生成プログラムの値引数の束縛・返却型検査と元 caller のメモリ復元まで含め、`n<2^32,0<m<2^32` と任意の signed64 a,b に対して、燃料846で正常終了、仕事量4378以下・対数上界、peak35以下を証明する。caller のセル列は任意であり、caller 内の未束縛の値を読むことはない。初期の4値引数の束縛は既存の共通モデルの入口規則に従い、8セル・束縛の最大領域へ対応する。返却する数学的総和が signed64 の範囲内なら `call_exact_if_representable` によりその値と一致する。範囲外の変換は明示した対象コンパイラの契約であり、他の C++17 コンパイラ一般で同じ結果になるとは主張しない。
 
-公開正本を `library/floor_sum.hpp` に登録し、元の experiments の実装は保持する。公開5部品の全検証、テンプレート先行 include、5ヘッダだけの ZIP の内容・展開先だけでのコンパイルと実行が成功した。GitHub Release 上の更新確認は未完了である。
+公開正本を `library/number_theory/floor_sum.hpp` に登録し、元の experiments の実装は保持する。公開5部品の全検証、テンプレート先行 include、5ヘッダだけの ZIP の内容・展開先だけでのコンパイルと実行が成功した。GitHub Release 上の更新確認は未完了である。
 
 ### 依存ヘッダと公開 signed 変換契約
 

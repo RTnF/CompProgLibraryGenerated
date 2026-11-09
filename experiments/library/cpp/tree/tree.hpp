@@ -3,8 +3,7 @@
 #include "graph/edge.hpp"
 
 // 根付き木
-template<class Cost = ll, class E = Edge<Cost>>
-class Tree {
+template <class Cost = ll, class E = Edge<Cost>> class Tree {
   int n_, root_;
   vector<vector<E>> adj;
   // 0の親は0, 深さ(根からの辺の数/コスト合計)
@@ -37,7 +36,7 @@ class Tree {
         max_cost = dc;
         farthest = node;
       }
-      for (auto &&e: adj[node]) {
+      for (auto &&e : adj[node]) {
         if (!visited[e.to]) {
           visited[e.to] = true;
           parent_[from][e.to] = node;
@@ -52,9 +51,9 @@ class Tree {
   }
 
 public:
-  Tree(int root, vector<int> &from, vector<int> &to, vector<Cost> &cost):
-    n_(from.size() + 1), root_(root), adj(n_), parent_(n_), depth_(n_), cost_depth_(n_),
-    farthest_node_(n_, -1), height_(n_, -1) {
+  Tree(int root, vector<int> &from, vector<int> &to, vector<Cost> &cost)
+      : n_(from.size() + 1), root_(root), adj(n_), parent_(n_), depth_(n_),
+        cost_depth_(n_), farthest_node_(n_, -1), height_(n_, -1) {
     assert(n_ == (int)to.size() + 1);
     assert(n_ == (int)cost.size() + 1);
     for (int i = 0; i < n_ - 1; i++) {
@@ -67,9 +66,9 @@ public:
     }
     build_depth(root_);
   }
-  Tree(int root, vector<int> &from, vector<int> &to):
-    n_(from.size() + 1), root_(root), adj(n_), parent_(n_), depth_(n_), cost_depth_(n_),
-    farthest_node_(n_, -1), height_(n_, -1) {
+  Tree(int root, vector<int> &from, vector<int> &to)
+      : n_(from.size() + 1), root_(root), adj(n_), parent_(n_), depth_(n_),
+        cost_depth_(n_), farthest_node_(n_, -1), height_(n_, -1) {
     assert(n_ == (int)to.size() + 1);
     for (int i = 0; i < n_ - 1; i++) {
       assert(0 <= from[i]);
@@ -81,9 +80,9 @@ public:
     }
     build_depth(root_);
   }
-  Tree(int root, vector<int> &parent):
-    n_(parent.size()), root_(root), adj(n_), parent_(n_), depth_(n_), cost_depth_(n_),
-    farthest_node_(n_, -1), height_(n_, -1) {
+  Tree(int root, vector<int> &parent)
+      : n_(parent.size()), root_(root), adj(n_), parent_(n_), depth_(n_),
+        cost_depth_(n_), farthest_node_(n_, -1), height_(n_, -1) {
     assert(n_ > 0);
     for (int i = 0; i < n_; i++) {
       if (i != parent[i] && 0 <= parent[i] && parent[i] < n_) {
@@ -93,9 +92,9 @@ public:
     }
     build_depth(root_);
   }
-  Tree(vector<int> &parent):
-    n_(parent.size()), adj(n_), parent_(n_), depth_(n_), cost_depth_(n_), farthest_node_(n_, -1),
-    height_(n_, -1) {
+  Tree(vector<int> &parent)
+      : n_(parent.size()), adj(n_), parent_(n_), depth_(n_), cost_depth_(n_),
+        farthest_node_(n_, -1), height_(n_, -1) {
     assert(n_ > 0);
     int r = -1;
     for (int i = 0; i < n_; i++) {
@@ -116,7 +115,7 @@ public:
 
   vector<E> &operator[](int i) { return adj[i]; }
 
-  template<class C_, class E_>
+  template <class C_, class E_>
   friend ostream &operator<<(ostream &, const Tree<C_, E_> &);
 
   // 直径(from, to, cost) O(N)
@@ -155,7 +154,7 @@ public:
         return path;
       }
       s.pop();
-      for (auto &&e: adj[node]) {
+      for (auto &&e : adj[node]) {
         if (path_parent[e.to] == -1) {
           path_parent[e.to] = node;
           s.emplace(e.to);
@@ -192,7 +191,7 @@ public:
     if (u == v) {
       return u;
     }
-    for (int k = bit_width((unsigned)du); k >= 0; k--) {
+    for (int k = (int)ancestor_.size() - 1; k >= 0; k--) {
       int nu = ancestor_[k][u];
       int nv = ancestor_[k][v];
       if (nu != nv) {
@@ -209,8 +208,8 @@ public:
     assert(u < n_);
     assert(0 <= v);
     assert(v < n_);
-    return cost_depth_[root_][u] + cost_depth_[root_][v]
-         - cost_depth_[root_][lowest_common_ancestor(u, v)] * 2;
+    return cost_depth_[root_][u] + cost_depth_[root_][v] -
+           cost_depth_[root_][lowest_common_ancestor(u, v)] * 2;
   }
 
   int depth(int v) const { return depth_[root_][v]; }
@@ -225,9 +224,9 @@ public:
    * @param e 単位元
    * @param op モノイドの二項演算
    * @param sum_up すべての子の総積から木のDP値を求める
-   * @return vector<M> 
+   * @return vector<M>
    */
-  template<class M, class F, class G>
+  template <class M, class F, class G>
   vector<M> full_tree_dp(M e, F op, G sum_up) {
     vector<M> dp(n_), dp_full(n_);
     vector<vector<M>> dp_sub(n_), dp_sub_left(n_), dp_sub_right(n_);
@@ -238,7 +237,7 @@ public:
     }
     auto dfs = [&](auto &Self, int node, int par) -> void {
       dp[node] = e;
-      for (auto &&edge: adj[node]) {
+      for (auto &&edge : adj[node]) {
         if (edge.to != par) {
           Self(Self, edge.to, node);
           dp[node] = op(dp[node], dp[edge.to]);
@@ -250,12 +249,14 @@ public:
       dp_sub_right[node].emplace_back(e);
       for (int i = 0; i < (int)adj[node].size(); i++) {
         if (adj[node][i].to != par) {
-          dp_sub_left[node].emplace_back(op(dp_sub_left[node].back(), dp[adj[node][i].to]));
+          dp_sub_left[node].emplace_back(
+              op(dp_sub_left[node].back(), dp[adj[node][i].to]));
         }
       }
       for (int i = (int)adj[node].size() - 1; i >= 0; i--) {
         if (adj[node][i].to != par) {
-          dp_sub_right[node].emplace_back(op(dp_sub_right[node].back(), dp[adj[node][i].to]));
+          dp_sub_right[node].emplace_back(
+              op(dp_sub_right[node].back(), dp[adj[node][i].to]));
         }
       }
     };
@@ -271,12 +272,13 @@ public:
         dp_full[node] = sum_up(op(v, dp_sub_left[node].back()));
       }
       int i = 0;
-      for (auto &&edge: adj[node]) {
+      for (auto &&edge : adj[node]) {
         if (edge.to != par) {
-          q.emplace(edge.to,
-                    node,
-                    sum_up(op(op(v, dp_sub_left[node][i]),
-                              dp_sub_right[node][dp_sub_right[node].size() - i - 2])));
+          q.emplace(
+              edge.to, node,
+              sum_up(
+                  op(op(v, dp_sub_left[node][i]),
+                     dp_sub_right[node][dp_sub_right[node].size() - i - 2])));
           i++;
         }
       }
@@ -285,11 +287,11 @@ public:
   }
 };
 
-template<class C_, class E_>
+template <class C_, class E_>
 ostream &operator<<(ostream &os, const Tree<C_, E_> &graph) {
   os << "N = " << graph.n_ << '\n';
-  for (const auto &ev: graph.adj) {
-    for (const auto &e: ev) {
+  for (const auto &ev : graph.adj) {
+    for (const auto &e : ev) {
       os << e << '\n';
     }
   }

@@ -317,6 +317,31 @@ tests = ["tests/{name}.cpp"]
 ''')
         write("Proofs.lean", "import Proofs.a\nimport Proofs.b\nimport Proofs.Core\n")
 
+    def test_nested_components_keep_unique_names_and_ordered_includes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.fixture(root)
+            for name,category in [('a','array'),('b','graph')]:
+                target=root/'library'/category;target.mkdir()
+                (root/'library'/f'{name}.hpp').rename(target/f'{name}.hpp')
+                old=root/'library'/f'{name}.toml'
+                text=old.read_text().replace(f'source = "{name}.hpp"',f'source = "{category}/{name}.hpp"')
+                if name=='b':text=text.replace('dependencies = []','dependencies = ["a"]')
+                old.rename(target/f'{name}.toml');(target/f'{name}.toml').write_text(text)
+            with patch.object(public,'ROOT',root),patch.object(public,'PUBLIC',root/'library'):
+                entries=public.registry()
+                self.assertEqual(public.component('b')['source'],'graph/b.hpp')
+                self.assertEqual(public.dependency_order('b',entries),['a','b'])
+                with patch.object(public,'TEMPLATE','library/array/a.hpp'):
+                    includes=public.include_check(['b'],entries)
+                    self.assertEqual(includes.count('library/array/a.hpp'),1)
+                    self.assertLess(includes.index('array/a.hpp'),includes.index('graph/b.hpp'))
+                duplicate=root/'library/graph/a.toml'
+                duplicate.write_text((root/'library/array/a.toml').read_text().replace('array/a.hpp','graph/a.hpp'))
+                (root/'library/graph/a.hpp').write_text('')
+                with self.assertRaisesRegex(ValueError,'invalid component name'):public.registry()
+                with self.assertRaisesRegex(ValueError,'expected one metadata'):public.component('a')
+
     def test_shared_bridge_and_support_are_allowed_but_unregistered_proofs_are_not(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

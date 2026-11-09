@@ -242,7 +242,7 @@ class NestedTemplateTests(unittest.TestCase):
             names.extend([name,'call_'+name])
         with tempfile.TemporaryDirectory(prefix='original-record-apply-') as tmp:
             scalar_checks.ScalarDelegationTests().kernel(Path(tmp),'RecordApplyCheck',
-                ['RecordApplyAudit.'+name for name in names],proof)
+                ['RecordApplyAudit.'+name for name in names]+['RecordComposeAudit.compose_correct'],proof)
             exe=Path(tmp)/'native'
             subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined','-fno-sanitize-recover=all',
                 '-I',str(ROOT/'experiments/library/cpp'),'-include',str(source),str(witness),'-o',str(exe)],
@@ -318,7 +318,8 @@ class NestedTemplateTests(unittest.TestCase):
         source=ROOT/'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp'
         witness=ROOT/'tests/imports/original_mixed_set_sum.cpp'
         add_witness=ROOT/'tests/imports/original_mixed_add_sum.cpp'
-        before={p:hashlib.sha256(p.read_bytes()).hexdigest() for p in (source,witness,add_witness)}
+        extrema_witness=ROOT/'tests/imports/original_mixed_set_extrema.cpp'
+        before={p:hashlib.sha256(p.read_bytes()).hexdigest() for p in (source,witness,add_witness,extrema_witness)}
         ir,coverage=lower_template_class(source,'RangeSetRangeSum',
             TemplateInstance(('long long',),witness,nested_members=('RangeSet',)),
             [ROOT/'experiments/library/cpp'],companion_instances=((
@@ -326,6 +327,15 @@ class NestedTemplateTests(unittest.TestCase):
         self.assertEqual(len(ir['functions']),18)
         self.assertFalse(coverage['generic_types_verified'])
         self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
+        extrema_ir,extrema_coverage=lower_template_class(source,'RangeSetRangeMaxMin',
+            TemplateInstance(('long long',),extrema_witness,nested_members=('RangeSet',)),
+            [ROOT/'experiments/library/cpp'],companion_instances=tuple(
+                ('RangeSetRangeMaxMin',TemplateInstance(('long long',),extrema_witness,nested_members=(name,)))
+                for name in ('RangeMax','RangeMin')),
+            member_instances={'apply':[(RecordArgument(1),),(RecordArgument(2),)]})
+        self.assertEqual(len(extrema_ir['functions']),18)
+        self.assertFalse(extrema_coverage['generic_types_verified'])
+        self.assertFalse(extrema_coverage['full_cpp_object_lifetime_verified'])
         fixture=(ROOT/'tests/lean/original_mixed_set_sum_samples.lean').read_text()
         roots=['CopyReturnSamples.'+line.split()[1] for line in fixture.splitlines() if line.startswith('theorem ')]
         self.assertEqual(len(roots),38)
@@ -334,22 +344,40 @@ class NestedTemplateTests(unittest.TestCase):
             [ROOT/'experiments/library/cpp'],companion_instances=((
                 'RangeAddRangeSum',TemplateInstance(('long long',),add_witness,nested_members=('RangeSum',))),))
         proof='import Proofs.MonoidLazyCall\n'
-        for bundle,namespace in [(add_ir,'OriginalMixedAddSum'),(ir,'OriginalSetSum')]:
+        for bundle,namespace in [(add_ir,'OriginalMixedAddSum'),(ir,'OriginalSetSum'),
+                (extrema_ir,'OriginalSetExtrema')]:
             proof+='\n'.join(line for line in emit_lean(bundle,namespace).splitlines()
                 if not line.startswith('import '))+'\n'
         for name in ['original_mixed_add_sum.lean','scalar_record_copy_fields.lean',
-                'original_mixed_set_sum_callers.lean']:
+                'original_mixed_set_sum_callers.lean','original_mixed_set_sum_value_ctor.lean',
+                'original_mixed_set_sum_compose.lean','original_mixed_set_sum_apply.lean',
+                'original_mixed_set_extrema.lean']:
             proof+=(ROOT/'tests/lean'/name).read_text()
         proof+=fixture
         roots+=['SetSumTransferred.'+name for name in ['e_program','e_correct','new1_program',
             'default_correct','new0_program','new_correct','op_program','op_correct',
             'set_default_correct','set_id_program','set_id_correct']]
         roots+=['CopiedScalarFieldsAudit.copy_exec','CopiedScalarFieldsAudit.copy_block_exec']
+        roots+=['SetValueCtorAudit.'+name for name in ['new_value_exec','one_value_body_correct','new_value_correct']]
+        roots+=['SetComposeAudit.compose_body','SetComposeAudit.compose_exec',
+            'SetComposePrepareAudit.prepare_values4','SetComposeCallerAudit.four_values_body_correct',
+            'SetComposeCallerAudit.compose_correct']
+        roots+=['SetApplyAudit.apply_body','SetApplyAudit.update_exec','SetApplyAudit.apply_exec',
+            'SetApplyPrepareAudit.prep_RW2V2','SetApplyPrepareAudit.RW2V2_correct',
+            'SetApplyCallerAudit.apply_correct']
+        roots+=['SetExtremaPrepareAudit.prep_RW2V1','SetExtremaPrepareAudit.RW2V1_correct',
+            'SetExtremaApplyAudit.apply_same','SetExtremaApplyAudit.ws_assign_first',
+            'SetExtremaApplyAudit.branch_exec','SetExtremaApplyAudit.apply_exec',
+            'SetExtremaCallerAudit.apply_correct']
+        for name in [cls+'_'+method for cls in ('RangeMax','RangeMin') for method in ('new0','new1','e','op')]+[
+                'set_'+method for method in ('new0','new1','id','compose')]:
+            roots+=['SetExtremaTransferred.'+name,'SetExtremaTransferred.call_'+name]
         with tempfile.TemporaryDirectory(prefix='mixed-set-sum-') as tmp:
             directory=Path(tmp)
             scalar_checks.ScalarDelegationTests().kernel(directory,'MixedSetSumCheck',roots,proof)
-            for cpp,guarded in [(witness,False),(ROOT/'tests/imports/original_mixed_set_sum_guarded.cpp',True)]:
-                exe=directory/('guarded' if guarded else 'native')
+            for cpp,guarded in [(witness,False),(extrema_witness,False),
+                    (ROOT/'tests/imports/original_mixed_set_sum_guarded.cpp',True)]:
+                exe=directory/cpp.stem
                 subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined','-fno-sanitize-recover=all',
                     '-I',str(ROOT/'experiments/library/cpp'),'-include',str(source),str(cpp),'-o',str(exe)],
                     check=True,timeout=60)

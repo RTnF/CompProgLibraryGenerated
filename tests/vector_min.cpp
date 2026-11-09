@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/vector_min.hpp"
+#include "../library/array/vector_min.hpp"
 #include <algorithm>
 #include <climits>
 #include <random>

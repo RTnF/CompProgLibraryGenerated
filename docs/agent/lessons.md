@@ -1,5 +1,67 @@
 # 作業上の教訓
 
+## 2026-11-08: recordの条件付き返却は選んだ全fieldをコピーする
+
+- 返却式がconditionalでも、外側はimplicit copy constructorになり得る。実ASTのconstructor signature・NoOp const化・lvalue分類と各parameter/fieldの宣言を確認する。値構成子で再構築するとnoop等の状態を落とす。
+- 条件は一度保存し、同じ判定で全fieldを選ぶ。既存inlinerのscalar conditional展開を新経路だけに使い、未選択operandを前置しない。NestedBodyがConditionalOperatorを直接扱えると仮定しない。
+- 条件付き返却を追加しても、nontrivial copyや副作用付き条件・入れ子条件等の未対応境界を消さない。readonly入力からのcopy先の権限は元fieldとtargetConstで決める。
+
+## 2026-11-08: record値引数を参照として渡さない
+
+- trivial recordの値引数も、元のfield順で値をcopyしてからcalleeを実行する。参照引数のfield viewとmetadata/ABIを区別し、元のreadonly fieldでもコピー先の通常値引数は使えるようにする。nontrivial copyをscalarコピーとして省略しない。
+- object wrapperは全入力の型・個数・値・参照権限をcaller上で検査してからprepareへ進める。値snapshotをcalleeの確保と交互に作ると、不正な未来slotが入力として有効になり得る。mixed value/referenceとaliasも検査する。
+- 明示的なRecord(...)はCXXFunctionalCastExprのConstructorConversionを挟む場合がある。実ASTを確認し、このcastだけ内側の構築へ進む。構成子signatureとselected recordの照合は残す。
+
+## 2026-11-08: factoryの標準呼出し監査とconstexpr選択を共用する
+
+- 構成子引数のstd呼出しも、通常の本体と同じTUの宣言ID・pristine body監査を通す。名前だけの許可を増やさず、最終stageでも元callを保持してnumeric_limitsのpointer/value probeとmin/max監査を行う。
+- sole if constexprの選択はcompiler-resolved bool ConstantExprだけに限定する。runtime initializerやcondition variableは捨てず拒否する。構成子専用経路だけで選択すると、同じ原本を読む既存のfield投影で退行する。rootとcalleeのinlinerにも共通処理を使い、両経路を検査する。
+- 新しい一般証明は単独compileしてから重い登録検査へ進む。失敗時はfailfastで止め、raw logと実終了コードを保存する。実行中の入力を固定し、観測の切断だけで同じ検査を再起動しない。
+
+## 2026-11-08: friendの本体証明を実callerの全field exportまで接続する
+
+- readonly参照4個でも型が混在する。各scalarCellからmemory内のtyped値/有効性を得てcallerPへ保持し、prepareのfield参照と本体の入力bindingを合わせる。aliasや負sizeを排除して証明を簡単にしない。
+- 本体の結果memoryだけではtyped exportへのQS接続に足りない。入力readonly bindingとfresh field bindingを含むPS全体の一致を記録し、元参照先と生成fieldの位置を保つ。scopeでbindingを回収する補題では、局所定義も展開して一致を確認する。
+- 本体のpexec成功だけで呼出し全体を検証済みとしない。StraightLine.sound/runFuel、callee scope回収、typed field capture、const制限、旧scalar/vector観測の保持、ObjectRef wrapper、work/peakを接続する。
+- 同じ証明を別familyへ再利用するときも、元の宣言とwitnessからモデルをfresh生成し、両方をkernel/nativeで検査する。元のCPP型を統合して証明の一致を作らない。
+- Leanは `error(lean.unknownIdentifier)` の形式でもエラーを出す。`error:` だけのfilterが空でも成功とせず、実returncodeとraw logを必ず照合する。
+
+## 2026-11-08: record参照を全fieldで検査してから返却objectを構築する
+
+- friendのrecord参照を1fieldの投影で代用しない。元parameter/memberの宣言IDを照合し、const/mutableを保って全fieldの参照へ変換する。record値引数のcopy/moveは別の義務であり、参照として受け付けない。
+- ObjectRefは全fieldの個数/型/値/権限をcaller上で先に検査する。callee確保後に存在し始めるslotを入力と誤認しない。typed viewの検査と、厳密なclass identity/lifetime証明を区別する。
+- 新しいfriend対応は明示opt-inにする。未対応の値渡しfriendがあるために、以前から使えるstatic factory exportまで拒否しない。本体の任意入力pexec証明と、callerのprepare/run/export一般定理を別の義務として記録する。
+
+## 2026-11-08: factory返却ではmaterializeした全fieldを直接exportする
+
+- 委譲構築のfactory内で全fieldを作る処理と、factory自体を呼ぶ処理を共用する。factoryの返却objectをexportするときは、field別の再評価や外側構成子への追加moveで代用しない。同じfieldの宣言ID・型・mutable属性をcopy auditと照合する。
+- factoryのstageには元factory bodyのrangeを保持する。合成CompoundStmtにrangeがないとNestedBodyのscope終端が取得できず、model生成が止まる。本文は構成子由来でも、stageのsource由来の情報を欠落させない。
+- 元factoryのclass返却と、内部unit stageのcallFuelを混同しない。任意callerの検証はprepare/runとtyped exportをつなぎ、未使用の構成子引数の失敗やbodyの失敗を含めて、完成していないobjectをexportしないことを確認する。
+
+## 2026-11-08: receiverの置換と未使用return式の評価を保持する
+
+- factoryの構築bodyがmethodを呼ぶとき、外側constructorのfieldをreceiverとして流用しない。materializeした全fieldを明示引数にし、入れ子の呼出しも同じfieldへ結び付ける。通常のinlinerでも、calleeの元のfield仮引数IDを次の呼出しへ渡さず、現在の実引数へ置換する。直接構築とfactory経由、const getter、caller prefix、失敗例を確認する。
+- 副作用のないreturn式でもゼロ除算や符号付きoverflowが起こる。呼出し側が戻り値を捨ててもreturn式を評価する。代入・callがないというpure判定は式の省略を正当化しない。成功値だけでなくfaultとC++/UBSanの失敗も回帰する。
+- thisへの呼出しでは元receiverを継承する。readonly fieldのhelper ABI上の値captureを新receiverにすると、Beatsのn/inf読取slotだけが変わり、既存生成modelとの一致が崩れた。差分を6関数のslotへ絞り、元receiverを保つ修正でconstruction-stage/bodyのbyte一致と構築中alias/入れ子呼出しの両方を回帰した。既存modelを再生成して差を隠さない。
+- `long long &get()` のcall式の型は `long long` でvalueCategoryがlvalueになる。ポインタ/参照返却を対象外とする場合、call式の型だけでなくexactなmethod宣言の返却型を確認する。
+
+## 2026-11-07: scalar構築後の既存vector内容を別途保持する
+
+- FAのobject数/live/workやSameHeadersのsignature保持は、buffer要素値の保持を意味しない。scalar-onlyの実行についてforest/storage.objects/baseSpace/rootWritableを保つ共通定理を作り、prepare/body/exportを通した不変条件へ含める。旧frame bindingの復元と合わせてExtendsへ接続し、既存vectorのresolve/readを確認する。
+- scope回収では既存ownerが外側scope以下にあることから回収対象がfreshと示す。frameのbinding切詰めで構造体の添字全体が変わる場合、Contentsの各field等式を再構成し、同一frameと扱わない。
+
+## 2026-11-07: 委譲構築のfactory返却値は全fieldを1回だけ作る
+
+- `Ctor():Ctor(e())` のASTはclass返却からのmove/copyを含み得る。factory側の引数と全field、構成子bodyを先に実行し、全fieldをtargetへ移してから外側bodyを実行する。field投影を別々に実行して代用しない。未対応の特殊メンバーやreceiverは拒否し、任意T/lifetime完了としない。
+- delegation prefixにCompoundStmtがある。cloneではprefix/初期化子/bodyを別groupとして保持し、最初のCompoundStmtをbodyと誤認しない。bodyに値変更のあるfactoryと委譲chainで戻り値だけでなくcaller prefixと一時回収を確認する。途中returnは内側call境界がないまま埋め込まない。
+- constructor stageを作った後のhelper収集でconstructor自体を旧形式へ再変換しない。method-onlyの入口を明示し、既存constructor入口の既定動作を保って回帰する。
+
+## 2026-11-07: 条件式の呼出しは選択branch内で展開する
+
+- 条件式内の構築や既知helperを単純に前置すると、未選択側の副作用やゼロ除算も実行する。整数prvalueは結果localとIfStmtへ変換し、条件を一度評価してoperandの処理をbranch内に保つ。参照/object結果やloop/short-circuitは別の対応が必要なので拒否を維持する。
+- 回帰ではbranchの戻り値だけでなく条件/operandの実行回数と元callerメモリを確認する。失敗例は単にfinishedでないだけでなくfaultを要求し、fuel切れを成功扱いしない。
+- 生成モデル数を証明済み数としない。原本の各宣言から登録rootを照合したところ、Add/MaxMinのcompose一般callerの登録漏れが見つかった。値渡しと元の型範囲を保った定理を追加し、freshモデルと固定kernelで検査した。
+
 ## 2026-11-07: record名を含む型をrecord自身として消去しない
 
 - 型名の正規表現searchでclass membershipを判定すると、unusedな `Probe *`、`vector<Probe>`、配列参照の引数をscalar fieldに変換できてしまう。原本CPP/native/UBSanが成功する3例で、生成ABIの誤りを再現した。全件gateの成功は未登録の型境界の証拠にならない。
@@ -132,3 +194,25 @@
 ## 2026-11-04: 最終監査にも全体deadlineを渡す
 
 - buildと共有テストだけにremainingを渡しても、最後のproof-securityがsubprocess.runへtimeoutなしで渡されると全体制限が効かない。cache判定の前後にも予算を確認し、実監査にはその時点の残時間を使う。監査のtimeoutでは親だけでなく同じ専用process groupのcompiler/exporter/kernelも止める。期限切れ時の未起動、cache走査後の再確認、実子プロセスの停止を回帰で確認する。
+
+
+## 2026-11-08: 異なるfamilyの同名recordを短名で同一視しない
+
+- `A<T>::Data` と `B<T>::Data` はfield名・型・構成子署名が一致しても別の宣言である。Bの構成子だけ100を加える例では、C++結果107に対してAの構成子による7を誤生成できた。
+- recordを返すmemberでは、元宣言へのmember pointerの型を完全修飾receiver/result/record引数で構成した型とcompilerで照合する。const/noexceptを保持し、probe内の型名や検査keywordのmacro置換も拒否する。返却型と引数型の両方に取り違えの回帰を置く。
+- source/TU所有とfield宣言の監査だけでは返却型や引数型の宣言identityを保証できない。有限モデルの成功も型identityの証明の代わりにはならない。
+
+
+## 2026-11-08: LCAの開始段は表の実在行で制限する
+
+- `bit_width(depth)` は最大行番号ではない。親[0,0,1,1]のdepth=2では2となる一方、doubling(...,n-1=3)は2行しか持たない。実表のsize()-1から降下すればこの範囲外を避けられる。
+- 高位段を増やした同等性は、根の親が根・全行が正しい反復表・深さを覆う段数の前提で証明する。有限なrandom比較だけで数学証明の代わりにしない。
+- 原本のC++20/llの実型を保ったテストを使う。元class全体のC++自動生成/寿命やsingletonの構築境界は、降下の数学仕様と区別して記録する。
+
+
+## 2026-11-08: 公開ディレクトリの階層化
+
+- 公開headerとTOMLを分野別に隣接配置し、sourceはlibraryルートからの相対パスとする。登録と検査cacheはrglobでmetadata全件を拾い、部品名は階層を越えて一意に保つ。
+- include/test/doc/台帳と配布ZIPを同時に更新する。配置前後のheader hashで本文保持を確認し、相対includeの変更は別に検査する。
+- 全件gateで既存変換器と古いモデルのずれを見つけたら、移動前配置からの生成とも比較して原因を分ける。検査を弱めず、全件成功とは報告しない。
+- 完全なパス文字列の置換だけでは、`DIRECTORY / 'doubling.hpp'`のような分割されたパスを見落とす。パスの組立も調べ、変異テスト用の一時配置には相対include先の階層を再現する。nested oracle全3区分・native ASan/UBSan・変異テストで新配置を確認した。

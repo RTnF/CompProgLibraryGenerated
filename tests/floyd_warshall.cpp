@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/floyd_warshall.hpp"
+#include "../library/graph/floyd_warshall.hpp"
 #include <algorithm>
 #include <random>
 #include <vector>

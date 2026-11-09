@@ -1,0 +1,14 @@
+name = "modint"
+source = "modint/modint.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.ModIntInstance"
+proof = "Proofs/ModIntComponent.lean"
+model = "Proofs/Generated/ModInt.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/modint.cpp"]
+sanitizers = true
+spec = "docs/modint.md"
+standard = "c++17"
+source_sha256 = "ef5e7606c2d10259e5e7f8aee79761ed5dbbc699bb08e33f9e07994aa5d91786"
+public_declarations = ["ClassTemplateDecl:ModInt", "ClassTemplateSpecializationDecl:ModInt<1000000007>", "ClassTemplateSpecializationDecl:ModInt<998244353>", "FunctionTemplateDecl:operator*<ModInt>", "FunctionTemplateDecl:operator/<ModInt>", "FunctionTemplateDecl:operator+<ModInt>", "FunctionTemplateDecl:operator-<ModInt>"]

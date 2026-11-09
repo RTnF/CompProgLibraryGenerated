@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/lowlink.hpp"
+#include "../library/graph/lowlink.hpp"
 #include <random>
 #include <vector>
 

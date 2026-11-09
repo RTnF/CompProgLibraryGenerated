@@ -111,10 +111,27 @@ class OriginalTemplateTests(unittest.TestCase):
         self.check_monoid_mul(ROOT/'experiments/library/cpp/algebraic_structure/monoid.hpp',
                               ROOT/'experiments/library/cpp')
 
+    def test_monoid_floating_identity_and_original_type_requirements(self):
+        driver = ROOT/'tests/imports/monoid_floating_identity.cpp'
+        sources = [ROOT/'experiments/library/cpp/algebraic_structure/monoid.hpp',
+                   ROOT/'library/algebraic_structure/monoid.hpp']
+        before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in [driver,*sources]}
+        with tempfile.TemporaryDirectory(prefix='monoid-floating-identity-') as directory:
+            for index, source in enumerate(sources):
+                with self.subTest(source=source):
+                    executable = Path(directory)/str(index)
+                    options = ['-I',str(ROOT/'experiments/library/cpp')] if index == 0 else ['-DPUBLIC_MONOID']
+                    subprocess.run(['g++','-std=c++17','-O1','-fsanitize=undefined',
+                        '-fno-sanitize-recover=all',*options,'-include',str(source),
+                        str(driver),'-o',str(executable)], check=True)
+                    subprocess.run([str(executable)], check=True)
+        for path, digest in before.items():
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+
     def test_monoid_api_events(self):
         witness = ROOT/'tests/imports/monoid_api_events.cpp'
         sources = [ROOT/'experiments/library/cpp/algebraic_structure/monoid.hpp',
-                   ROOT/'library/monoid.hpp']
+                   ROOT/'library/algebraic_structure/monoid.hpp']
         before = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in [witness,*sources]}
         outputs = []
         with tempfile.TemporaryDirectory(prefix='monoid-api-events-') as directory:

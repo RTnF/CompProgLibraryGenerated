@@ -7,9 +7,10 @@ assignment/move and whole-class proofs remain separate obligations.
 import hashlib
 import json
 import re
+import subprocess
 from pathlib import Path
 
-from ast_stream import class_construction_stages, class_method_functions
+from ast_stream import class_construction_stages, class_factory_stages, class_method_functions
 from inline_ast import inline_functions
 from class_copy import audit_copy_record, spelling
 from nested_ir import NestedBody, parse_element, emit_lean
@@ -17,6 +18,48 @@ from scalar_ir import apply_conversion_policy, lean_type, TYPES
 from state_ir import ValueCalls
 from vector_bindings import bindings_from_audit, verify_type_probes
 from vector_stl import translation_unit, audit_vector_nodes
+
+
+MEMBER_FACTORY_SUPPORT = r'''
+namespace MemberFactory
+open Proofs.CppScalar Proofs.CppNestedProgram Proofs.CppNestedCall Proofs.CppConstructorMultiFinish
+
+def referenceFields (caller : NState) : List (Ty × Bool) → List Nat → Option (List NArgument)
+  | [],[] => some []
+  | (ty,writable)::fields,slot::slots => do
+      let (binding,_) ← caller.scalarCell slot ty
+      if writable && !binding.writable then none else do
+        let rest ← referenceFields caller fields slots
+        some (.scalarReference slot::rest)
+  | _,_ => none
+
+def referenceArguments (caller : NState) : List (List (Ty × Bool)) → List ObjectRef → Option (List NArgument)
+  | [],[] => some []
+  | fields::profiles,object::objects => do
+      if !object.vectorSlots.isEmpty then none else do
+        let args ← referenceFields caller fields object.scalarSlots
+        let rest ← referenceArguments caller profiles objects
+        some (args++rest)
+  | _,_ => none
+def valueFields (caller : NState) : List (Ty × Bool) → List Nat → Option (List NArgument)
+  | [],[] => some []
+  | (ty,_)::fields,slot::slots => do
+      let (_,cell) ← caller.scalarCell slot ty
+      let rest ← valueFields caller fields slots
+      some (.value (.literal ty cell.value)::rest)
+  | _,_ => none
+
+def objectArguments (caller : NState) : List (Bool × List (Ty × Bool)) → List ObjectRef → Option (List NArgument)
+  | [],[] => some []
+  | (byValue,fields)::profiles,object::objects => do
+      if !object.vectorSlots.isEmpty then none else do
+        let args ← if byValue then valueFields caller fields object.scalarSlots
+                   else referenceFields caller fields object.scalarSlots
+        let rest ← objectArguments caller profiles objects
+        some (args++rest)
+  | _,_ => none
+end MemberFactory
+'''
 
 
 MEMBER_VIEW_SUPPORT = r'''
@@ -1175,24 +1218,121 @@ def _field_layout(record, plan, stage, body):
     return result
 
 
-def lower_class_layout(source, qualified, include_dirs=(), signed_conversion='checked', *, multiple_vectors=False):
+def _verify_member_signature(source,result,owner,method,include_dirs):
+    """Check declaration types in C++, including injected nested record names."""
+    from clang_ast import clang_command
+    from class_lowering import selected_type_pattern,scalar_record_type
+    from ast_stream import _display_name
+    target=result['_copy_qualified'];receiver=owner['_copy_qualified']
+    pattern=selected_type_pattern(result,_display_name(result))
+    if pattern is None:
+        pattern=re.compile(r'(?:::)?(?:'+re.escape(target)+'|'+re.escape(_display_name(result))+')')
+    arguments=[]
+    for p in method.get('inner',[]):
+        if p.get('kind')!='ParmVarDecl' or p.get('id') in method['_factory_receiver_fields']:continue
+        ty=spelling(p)
+        if scalar_record_type(p.get('type',{}),pattern):
+            suffix=' &&' if ty.endswith('&&') else ' &' if ty.endswith('&') else ''
+            bare=ty.removesuffix('&&').removesuffix('&').strip()
+            ty=('const ' if bare.startswith('const ') or bare.endswith(' const') else '')+'::'+target+suffix
+        arguments.append(ty)
+    original=method['_factory_receiver']['method_type']
+    suffix=original[original.rfind(')')+1:]
+    returned=('const ' if original.split('(',1)[0].strip().startswith('const ') else '')+'::'+target
+    prototype=returned+' (::'+receiver+'::*)('+','.join(arguments)+')'+suffix
+    name=method['_factory_source_name']
+    instance=method['_factory_receiver'].get('template_instance')
+    if instance:
+        name+='<' + ','.join(a if a in TYPES else '::'+a for a in instance['type_arguments']) + '>'
+    identifiers=set(re.findall(r'[A-Za-z_][A-Za-z_0-9]*',prototype+' '+receiver+' '+name))
+    identifiers.update(('__is_same','decltype','static_assert'))
+    guard=' || '.join('defined('+n+')' for n in sorted(identifiers))
+    probe=('#if '+guard+'\n#error record member signature keywords must not be macros\n#endif\n'
+        'static_assert(__is_same(decltype(&::'+receiver+'::'+name+'),'+prototype+'),'
+        '"selected receiver/member/result signature mismatch");\n')
+    command=clang_command()
+    for directory in include_dirs:command+=['-I',str(Path(directory).resolve(strict=True))]
+    checked=subprocess.run([*command,'-include',str(source),'-'],input=probe,text=True,capture_output=True)
+    if checked.returncode:
+        raise ValueError('record member signature identity probe failed: '+checked.stderr)
+
+
+def lower_class_layout(source, qualified, include_dirs=(), signed_conversion='checked', *, multiple_vectors=False,
+                       template_instance=None, factory_exports=False, friend_exports=False, companion_instances=(), receiver_methods=()):
+    from class_templates import RecordArgument,instantiate_members
+    if not isinstance(receiver_methods,tuple) or any(not isinstance(r,tuple) or len(r) not in (2,3) or
+            type(r[0]) is not int or r[0]<0 or not isinstance(r[1],str) or
+            not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*',r[1]) or
+            (len(r)==3 and (not isinstance(r[2],tuple) or not r[2] or
+                any(not isinstance(a,RecordArgument) and (not isinstance(a,str) or a not in TYPES) for a in r[2])))
+            for r in receiver_methods):
+        raise ValueError('receiver methods require structured record indices, names and optional type arguments')
+    requests=[(r[0],r[1],r[2] if len(r)==3 else None) for r in receiver_methods]
+    if not isinstance(companion_instances,tuple):
+        raise ValueError('companion instances require a tuple of structured selections')
+    if len(receiver_methods)!=len(set(receiver_methods)):
+        raise ValueError('duplicate record-returning member request')
+    if any(i>len(companion_instances) or any(isinstance(a,RecordArgument) and a.index>len(companion_instances)
+            for a in (args or ())) for i,_,args in requests):
+        raise ValueError('receiver record index is outside selected records')
+    if receiver_methods and not factory_exports:
+        raise ValueError('record-returning members require factory exports')
+    if friend_exports and not factory_exports:
+        raise ValueError('friend exports require factory exports')
+    if factory_exports and not multiple_vectors:
+        raise ValueError('factory exports require member exports')
     source = Path(source).resolve(strict=True)
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    selected = qualified
+    witness_digest = None
+    if template_instance is not None:
+        from class_templates import TemplateInstance
+        if not isinstance(template_instance, TemplateInstance):
+            raise ValueError('a structured template instance is required for class layout')
+        selected = template_instance.target(qualified)
+        witness_digest = hashlib.sha256(template_instance.witness.read_bytes()).hexdigest()
     records, callees = [], []
     _, roots = translation_unit(source, include_dirs, callees=callees,
-                                copy_class=qualified, copy_records=records)
-    if len(records) != 1:
-        raise ValueError('exactly one original class definition required')
+                                copy_class=qualified, copy_records=records, template_instance=template_instance,
+                                companion_instances=companion_instances)
+    if len(records) != 1+len(companion_instances):
+        raise ValueError('one original class and the requested companions are required')
     record = records[0]
-    record['_copy_qualified'] = qualified
-    plan = audit_copy_record(source, qualified, record, roots, include_dirs,
+    record['_copy_qualified'] = selected
+    plan = audit_copy_record(source, selected, record, roots, include_dirs,
                              vector_anywhere=multiple_vectors, multiple_vectors=multiple_vectors)
-    stages = class_construction_stages(record, source)
+    stages = class_construction_stages(record, source, standard_roots=roots, include_dirs=include_dirs)
     if not stages:
         raise ValueError('implicit default construction requires a separate stage model')
+    if factory_exports:
+        from ast_stream import member_factory_method
+        from class_copy import audit_class_fields
+        member_methods=[];selected_owners={}
+        for index,name,args in requests:
+            if index not in selected_owners:
+                owner=records[index]
+                owner['_copy_qualified']=selected if index==0 else companion_instances[index-1][1].target(companion_instances[index-1][0])
+                audit_class_fields(source,owner['_copy_qualified'],owner,roots)
+                instances={}
+                for i,n,arguments in requests:
+                    if i==index and arguments is not None:instances.setdefault(n,[]).append(arguments)
+                if instances:owner,_=instantiate_members(owner,instances,record_arguments=records)
+                selected_owners[index]=owner
+            owner=selected_owners[index];model_name=name
+            if args is not None:
+                types=[records[a.index]['_template_witness_origin']['requested'] if isinstance(a,RecordArgument) else a for a in args]
+                matches=[m for m in owner['inner'] if m.get('_member_template_instance',{}).get('source_name')==name and
+                         m['_member_template_instance']['type_arguments']==types]
+                if len(matches)!=1:raise ValueError('one selected member template instance required')
+                model_name=matches[0]['name']
+            member=member_factory_method(owner,model_name,index,source)
+            _verify_member_signature(source,record,owner,member,include_dirs)
+            member_methods.append(member)
+        stages += class_factory_stages(record, source, include_friends=friend_exports,member_methods=member_methods,
+                                       standard_roots=roots, include_dirs=include_dirs)
     if multiple_vectors:
         helpers = []
-        for function in class_method_functions(record, source):
+        for function in class_method_functions(record, source, include_constructors=False):
             if '_all_fields' not in function:
                 function['_construction_helper'] = True
                 helpers.append(function)
@@ -1207,6 +1347,8 @@ def lower_class_layout(source, qualified, include_dirs=(), signed_conversion='ch
         function = body.lower()
         function['parameters'] = schema['parameters']
         function['class_fields'] = _field_layout(record, plan, stage, body)
+        if '_factory_stage' in stage:
+            function['class_factory'] = stage['_factory_stage']
         if not multiple_vectors:
             vector, *scalars = function['class_fields']
             function['class_export'] = dict(vector_slot=vector['slot'], element=vector['element'],
@@ -1217,33 +1359,65 @@ def lower_class_layout(source, qualified, include_dirs=(), signed_conversion='ch
     verify_type_probes(source, probes, include_dirs)
     if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
         raise ValueError('class source changed during layout generation')
-    result = dict(coverage='audited_constructor_field_layout', qualified_class=qualified, source_sha256=digest,
+    if template_instance is not None and hashlib.sha256(template_instance.witness.read_bytes()).hexdigest() != witness_digest:
+        raise ValueError('template witness changed during layout generation')
+    coverage = 'audited_constructor_and_factory_field_layout' if factory_exports else 'audited_constructor_field_layout'
+    if friend_exports:
+        coverage = 'audited_constructor_factory_and_friend_field_layout'
+    if receiver_methods:
+        coverage = 'audited_constructor_factory_and_record_member_field_layout'
+    result = dict(coverage=coverage, qualified_class=selected, source_sha256=digest,
                   fields=[dict(name=f['name'], kind=f['kind'], writable=f['writable'],
                                mutable=bool(original.get('mutable')),
                                type=f.get('element', f.get('type')))
                           for original,f in zip([n for n in record['inner'] if n.get('kind')=='FieldDecl'],
                                                 plan['fields'],strict=True)],
                   functions=functions, callees=[used_callees[name] for name in sorted(used_callees)])
+    if template_instance is not None:
+        result['template_instance'] = dict(arguments=list(template_instance.arguments),
+            nested_members=list(template_instance.nested_members), witness_sha256=witness_digest,
+            generic_types_verified=False, full_cpp_object_lifetime_verified=False)
+    if companion_instances:
+        result['companions']=[dict(qualified_class=q,arguments=list(i.arguments),nested_members=list(i.nested_members),
+            selected_type=i.target(q)) for q,i in companion_instances]
+    if receiver_methods:
+        result['receiver_methods']=[dict(record_index=i,method=n,**(
+            {'type_arguments':m['_factory_receiver']['template_instance']['type_arguments']} if args is not None else {}))
+            for (i,n,args),m in zip(requests,member_methods,strict=True)]
     if signed_conversion != 'checked':
         result['signed_conversion'] = signed_conversion
     return result
 
 
 def emit_class_layout(source, qualified, namespace='Proofs.Generated.ClassLayout', include_dirs=(),
-                      signed_conversion='checked', *, member_exports=False):
+                      signed_conversion='checked', *, member_exports=False, template_instance=None,
+                      factory_exports=False, friend_exports=False, companion_instances=(), receiver_methods=()):
     if not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*', namespace):
         raise ValueError('invalid Lean namespace')
-    ir = lower_class_layout(source, qualified, include_dirs, signed_conversion, multiple_vectors=member_exports)
+    ir = lower_class_layout(source, qualified, include_dirs, signed_conversion, multiple_vectors=member_exports,
+                            template_instance=template_instance, factory_exports=factory_exports,
+                            friend_exports=friend_exports,companion_instances=companion_instances,receiver_methods=receiver_methods)
     # emit_lean validates the namespace and every emitted function identifier.
     program = emit_lean(ir, namespace+'.Stages', constructor_exports=member_exports,
                         share_commands=member_exports)
     if member_exports:
+        coverage = 'constructor_and_factory_member_exports' if factory_exports else 'constructor_member_exports'
+        if friend_exports:
+            coverage = 'constructor_factory_and_friend_member_exports'
+        if receiver_methods:
+            coverage = 'constructor_factory_and_record_returning_member_exports'
         lines = ['import Proofs.CppConstructorView', 'import Proofs.CppClassCopyCommands',
                  'import Proofs.CppFrameResolveExtension', program, f'namespace {namespace}',
                  'open Proofs.CppNestedProgram Proofs.CppNestedCall',
                  f'def qualifiedClass : String := {json.dumps(ir["qualified_class"])}',
                  f'def sourceSHA256 : String := {json.dumps(ir["source_sha256"])}',
-                 'def coverage : String := "constructor_member_exports"', MEMBER_VIEW_SUPPORT, MEMBER_COPY_SUPPORT]
+                 f'def coverage : String := {json.dumps(coverage)}', MEMBER_VIEW_SUPPORT, MEMBER_COPY_SUPPORT]
+        if factory_exports:
+            lines.append(MEMBER_FACTORY_SUPPORT)
+        if template_instance is not None:
+            lines += [f'def templateWitnessSHA256 : String := {json.dumps(ir["template_instance"]["witness_sha256"])}',
+                      'def genericTypesVerified : Bool := false',
+                      'def fullObjectLifetimeVerified : Bool := false']
         def permission(field):
             return f"({str(field['writable']).lower()} && (!targetConst || {str(field['mutable']).lower()}))"
         def member_type(field):
@@ -1252,7 +1426,8 @@ def emit_class_layout(source, qualified, namespace='Proofs.Generated.ClassLayout
         vector_flags = ','.join(permission(f) for f in ir['fields'] if f['kind']=='vector_copy')
         scalar_flags = ','.join(f'({member_type(f)},{permission(f)})'
                                 for f in ir['fields'] if f['kind']=='scalar_copy')
-        lines += [f'def vectorPermissions (targetConst : Bool) : List Bool := [{vector_flags}]',
+        vector_binder = 'targetConst' if vector_flags else '_targetConst'
+        lines += [f'def vectorPermissions ({vector_binder} : Bool) : List Bool := [{vector_flags}]',
                   f'def scalarPermissions (targetConst : Bool) : List (Proofs.CppScalar.Ty × Bool) := [{scalar_flags}]']
         fields = ir['fields']
         vectors = sum(f['kind']=='vector_copy' for f in fields)
@@ -1401,6 +1576,24 @@ def emit_class_layout(source, qualified, namespace='Proofs.Generated.ClassLayout
                       f'  MemberView.constructViewFuel Stages.«{name}» fuel caller arguments',
                       f'    Stages.«{name}».vectorFields Stages.«{name}».scalarFields',
                       '    (vectorPermissions targetConst) (scalarPermissions targetConst)']
+            groups=function.get('class_factory',{}).get('arguments',[])
+            if groups and all(g['kind'] in ('record_reference','record_value') for g in groups):
+                by_value=any(g['kind']=='record_value' for g in groups)
+                profiles=[];start=0
+                for group in groups:
+                    fields=[]
+                    for parameter in function['parameters'][start:start+group['count']]:
+                        fields.append('('+lean_type(parameter['element'])+','+str(parameter['writable']).lower()+')')
+                    profile='['+', '.join(fields)+']'
+                    profiles.append('('+str(group['kind']=='record_value').lower()+','+profile+')' if by_value else profile)
+                    start+=group['count']
+                argument_helper='objectArguments' if by_value else 'referenceArguments'
+                lines += [f'def «{name}_exportObjectsFuel» (fuel : Nat) (caller : NState)',
+                          '    (objects : List Proofs.CppConstructorMultiFinish.ObjectRef) (targetConst : Bool) :',
+                          '    Proofs.CppLoop.Outcome (NState × Proofs.CppConstructorMultiFinish.ObjectRef) :=',
+                          f'  match MemberFactory.{argument_helper} caller [{", ".join(profiles)}] objects with',
+                          '  | none => .fault',
+                          f'  | some args => «{name}_exportViewFuel» fuel caller args targetConst']
         return '\n'.join([*lines, f'end {namespace}', ''])
     lines = ['import Proofs.CppClassCopyCommands', 'import Proofs.CppConstructorView', program, f'namespace {namespace}',
              'open Proofs.CppNestedProgram Proofs.CppNestedCall Proofs.CppConstructorFinish',

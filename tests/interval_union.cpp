@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/interval_union.hpp"
+#include "../library/interval/interval_union.hpp"
 #include <algorithm>
 #include <random>
 #include <vector>

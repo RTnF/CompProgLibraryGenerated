@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/is_prime.hpp"
+#include "../library/number_theory/is_prime.hpp"
 #include <random>
 
 // The original is_prime of experiments/library/cpp/number_theory/is_prime.hpp (products through __uint128_t).

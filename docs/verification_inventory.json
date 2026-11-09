@@ -542,7 +542,7 @@
     },
     {
       "source": "experiments/library/cpp/algebraic_structure/monoid.hpp",
-      "source_sha256": "266316533145db3cf6cb764e82c5e625d7fa621a6a398563c2cf1d4f9e3609d7",
+      "source_sha256": "d566d142fa9e985c08fd1092a2af4c0a94fcfd4fe2024b612aa3e235b62894bf",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": null,
@@ -1098,15 +1098,17 @@
         "docs/original_template_classes.md",
         "docs/scalar_stl_contracts.md",
         "tests/imports/original_monoid_mul.cpp",
-        "tests/lean/original_monoid_mul.lean"
+        "tests/lean/original_monoid_mul.lean",
+        "tests/imports/monoid_floating_identity.cpp"
       ],
       "review_notes": [
-        "2026-11-06: 原本MonoidMax/Min<long long>各4モデルを共通変換器から生成。std::max/minの同一TU宣言ID・primary・具体化bodyをpinned標準実装と照合し、即時value消費を既存分岐へlowerする。一般callerのop結果・停止・元memory保持・ScalarPost2 0 100と既定構築の各端点・ScalarPost2 0 70、値構築/eの既存モデル一致を独立kernelで確認。有限具体化に限り、原本のAPI/任意Tを変更していない。MonoidMulもこの原本からLL4モデルを再生成し、値構築/e/opの既存モデル一致と委譲defaultの任意caller/post0 70をLean/固定nanoda3588宣言で確認した。公開CPPはhidden friend/委譲構築/generic max/minとADLを復元し、copy-only型/暗黙変換/qualifiedのC++/ASan/UBSan/template-firstと既存定理のLeanビルドが成功。公開版の新モデル全件gateは成功。任意T・完全object/lifetimeは未完了。lean_proved/publishedはfalseを維持。"
+        "2026-11-06: 原本MonoidMax/Min<long long>各4モデルを共通変換器から生成。std::max/minの同一TU宣言ID・primary・具体化bodyをpinned標準実装と照合し、即時value消費を既存分岐へlowerする。一般callerのop結果・停止・元memory保持・ScalarPost2 0 100と既定構築の各端点・ScalarPost2 0 70、値構築/eの既存モデル一致を独立kernelで確認。有限具体化に限り、原本のAPI/任意Tを変更していない。MonoidMulもこの原本からLL4モデルを再生成し、値構築/e/opの既存モデル一致と委譲defaultの任意caller/post0 70をLean/固定nanoda3588宣言で確認した。公開CPPはhidden friend/委譲構築/generic max/minとADLを復元し、copy-only型/暗黙変換/qualifiedのC++/ASan/UBSan/template-firstと既存定理のLeanビルドが成功。公開版の新モデル全件gateは成功。任意T・完全object/lifetimeは未完了。lean_proved/publishedはfalseを維持。",
+        "2026-11-08: Max/Minの浮動小数単位元の不具合を原本と公開版で再現し、標準浮動小数型だけconstexpr分岐して±infinity（非対応ではlowest/max）へ修正。非浮動小数のmin/max要件とAPIを保持。tests/imports/monoid_floating_identity.cppで両版の負値・端値・無限大・整数・Opaque/LimitsOnlyを検査し、LLモデル/証明も再確認する。結果はhandoff参照。任意T・浮動小数のLean・厳密object/lifetimeは未完了。"
       ]
     },
     {
       "source": "experiments/library/cpp/algebraic_structure/monoid_lazy.hpp",
-      "source_sha256": "380c0c6d5d8b14d674923a578d135db5a9e3c27f276b35db6bcb7ca9fee01e62",
+      "source_sha256": "1ee496701774dfd2beefab4b40e33537319f58d87caa606be9c4695aad499b76",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": null,
@@ -2219,81 +2221,123 @@
           "kind": "CXXRecordDecl",
           "line": 89,
           "declaration": "referenced struct RangeSum definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_delegating_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 90,
           "declaration": "x 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_delegating_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 91,
           "declaration": "size 'int'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_delegating_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 92,
           "declaration": "RangeSum 'void (T, int)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_delegating_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 93,
           "declaration": "RangeSum 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_delegating_object_layout.lean",
+            "docs/class_copy_audit.md",
+            "tests/lean/original_delegating_constructor_general.lean"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。",
+            "2026-11-07: LL/int既定構築について任意typed callerのprepare/body/export、scalar footprint/read保持、IR資源上界を一般証明し固定kernelで登録検査。型T全体やCPP厳密lifetime/総費用は未完了でfull flagsを保持。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
@@ -2331,81 +2375,121 @@
           "kind": "CXXRecordDecl",
           "line": 99,
           "declaration": "struct RangeSet definition",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_template_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 100,
           "declaration": "referenced v 'T'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_template_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 101,
           "declaration": "referenced noop 'bool'",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_template_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 102,
           "declaration": "RangeSet 'void (T)' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_template_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 103,
           "declaration": "RangeSet 'void ()' implicit-inline",
-          "template_instantiation_review": "pending",
+          "template_instantiation_review": "partial",
           "verification_target": null,
           "status": {
-            "review": "pending",
+            "review": "partial",
             "bug": "unknown",
             "cpp_tested": false,
             "common_translator": false,
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_template_class_layout.py",
+            "tests/lean/original_template_object_layout.lean",
+            "docs/class_copy_audit.md"
+          ],
+          "review_notes": [
+            "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
@@ -2506,7 +2590,48 @@
         "tests/lean/original_mixed_add_sum.lean",
         "tests/lean/original_mixed_set_sum_samples.lean",
         "tests/lean/scalar_record_copy_fields.lean",
-        "tests/lean/original_mixed_set_sum_callers.lean"
+        "tests/lean/original_mixed_set_sum_callers.lean",
+        "tests/lean/original_mixed_set_sum_value_ctor.lean",
+        "tests/lean/original_mixed_set_sum_compose.lean",
+        "tests/lean/original_mixed_set_sum_apply.lean",
+        "tests/lean/original_mixed_set_extrema.lean",
+        "tests/test_template_class_layout.py",
+        "tests/lean/original_template_object_layout.lean",
+        "docs/class_copy_audit.md",
+        "tests/lean/original_delegating_object_layout.lean",
+        "tests/lean/scalar_delegation_bodies.lean",
+        "tests/lean/scalar_delegation_failure.lean",
+        "tests/lean/original_delegating_constructor_general.lean",
+        "tests/lean/original_extrema_object_call.lean",
+        "tests/lean/scalar_factory_value_arguments.lean",
+        "tests/lean/original_value_add_objects.lean",
+        "tests/lean/original_value_add_call.lean",
+        "tests/lean/original_set_object_values.lean",
+        "tests/lean/scalar_record_copy_returns.lean",
+        "tests/lean/original_set_object_general.lean",
+        "tests/lean/original_set_object_call.lean",
+        "tests/lean/original_member_record_return.lean",
+        "tests/lean/member_record_prefix_updates.lean",
+        "tests/lean/const_record_member.lean",
+        "tests/lean/original_set_member_general.lean",
+        "tests/lean/original_add_member_general.lean",
+        "tests/lean/original_member_prepare.lean",
+        "tests/lean/original_add_member_call.lean",
+        "tests/lean/original_set_member_call.lean",
+        "tests/lean/original_template_member_result.lean",
+        "tests/lean/member_constructor_choice.lean",
+        "tests/lean/original_extrema_add_member_general.lean",
+        "tests/lean/original_extrema_add_member_call.lean",
+        "tests/lean/original_extrema_set_member_general.lean",
+        "tests/lean/original_extrema_set_member_call.lean",
+        "tests/lean/original_extrema_member_prepare.lean",
+        "experiments/verification/algebraic_structure/monoid_lazy.hpp",
+        "tests/test_monoid_lazy_original_api.py",
+        "tests/imports/monoid_lazy_api_events.cpp",
+        "tests/imports/candidate_mixed_add_sum.cpp",
+        "tests/imports/candidate_mixed_set_sum.cpp",
+        "tests/lean/original_scalar_record_constructor_general.lean",
+        "tests/lean/original_scalar_record_zero_factory_general.lean"
       ],
       "review_notes": [
         "2026-11-06: GCC13.3/C++17/UBSanで4比較。原本RangeAddRangeMaxMin<long long>::RangeAdd::id()は成功し、公開flat RangeAddのidは存在せず拒否。原本RangeSet composeは値引数と返却でcopy observerが3回、公開const参照/再構築は2回で同じ値2に対して効果が異なる。原本CPPは変更していない。nested型/static e/id/member apply、値渡し、任意T/全object lifetimeの対応は未完了。nativeの局所確認だけで全declのcpp_tested/lean_proved/publishedをtrueにしない。証拠はdocs/experiments_findings.mdの調査節とローカルnative_api_receipt.json。",
@@ -2519,7 +2644,24 @@
         "2026-11-07: mixed_scalar_functions/strict_scalar_returnを正本companion経路へ統合。tests/test_nested_templates.pyへ13モデルの一般caller証明、18モデルの38事例、4拒否境界、初期化順/他fieldゼロ除算/forward read拒否を登録。実80528終了0/8tests・固定nanoda3673/2062等、実62213終了0/追加1test・2008宣言。証拠 tests/lean/original_mixed_{add_sum,set_sum_samples}.lean と .cache/wip/mixed_records_integrated_20261107/focused_receipt.json。原本API未変更。Setの一般caller・非companion旧投影の移行・任意T・完全object lifetimeは未完了、全件gateはこれから、file flagsは拡大しない。",
         "2026-11-07: source-owned record名を含むpointer/vector/array等をrecord自身と誤判定するABI境界を再現し、全型一致/const・参照限定と複合型の拒否へ修正。単一/複数field×12 native/UBSan・意図した拒否が実66787終了0。tests/test_nested_templates.pyのtest_record_value_type_boundariesと .cache/wip/record_type_boundary_fix_20261107/boundary_receipt.jsonが根拠。旧gate44736成功は修正前であり、修正後の全件検査は必要。原本CPPとfull flagsは未変更。",
         "2026-11-07: compound局所宣言を含む18境界回帰は実60213終了0。Set版RangeSum8モデルのNProgram同一性から一般caller定理を共有し、RangeSet既定構築/id4モデルと汎用2fieldコピー/scope復元も実74872終了0・固定nanoda3649宣言で確認。正本のscalar_record_copy_fields.lean/original_mixed_set_sum_callers.leanへ移して登録検査中。残るSet値構築/compose/apply6モデル、任意T/完全object lifetime/全137は未完了、file full flagsは拡大しない。",
-        "2026-11-07: 正本Set/Sumの登録検査が実45891終了0・固定nanoda3731宣言で成功。全18モデルの38事例と12一般callerモデル、汎用2fieldコピー/scope復元を同時確認。registered_set_sum_receipt.jsonが根拠。残る値構築/compose/apply6モデルと任意T/完全object lifetime/全137目標は未達、full flagsは拡大しない。"
+        "2026-11-07: 正本Set/Sumの登録検査が実45891終了0・固定nanoda3731宣言で成功。全18モデルの38事例と12一般callerモデル、汎用2fieldコピー/scope復元を同時確認。registered_set_sum_receipt.jsonが根拠。残る値構築/compose/apply6モデルと任意T/完全object lifetime/全137目標は未達、full flagsは拡大しない。",
+        "2026-11-07 最新: Set/Sum LL18モデルの一般callerと38事例、Set/MaxMin LL18モデルの16全NProgram/callFuel一致＋apply2一般caller、Add/MaxMin composeの値渡し一般callerを登録検査済み。条件付き構築は選択branchに呼出しを保持する。さらに原本Set/Sum RangeSetのLL/boolの両fieldをObjectRefで構築/copyする既存評価器へ接続し、9事例とcopyの一般layout/observer/value/position/work/space定理を固定nanoda3329宣言、新4＋既存4testsで検査した。任意T/M、RangeSumのclass返却/move/委譲、全object lifetime/単一object総費用、公開API復元は未完了。file全体の完了flagsはfalseを維持する。docs/original_template_classes.md、docs/class_copy_audit.mdと新登録testを参照。",
+        "2026-11-07 最新: RangeSum LLのdefaultをsame-record factory返却の全field構築→trivial move/copy→外側bodyという非投影stageで生成。原本7 roots（全program/layout rflを含む）と別class body/chain5事例、他fieldゼロ除算4事例、nontrivial特殊メンバー等7境界を登録検査。関連16tests終了0・固定nanoda2815/2648/3300/3329宣言。型付きscalar一時領域はfinishで非export分を回収する。任意T/M、一般callerでの構築全体、C++厳密lifetime/identity/総費用、API復元/全137は未完了でfull flagsを維持。docs/class_copy_audit.mdと新fixture群を参照。",
+        "2026-11-07 最新: RangeSum LL/intの既定構築を任意callerのprepare/body/exportまで一般証明。raw work14/need P.length+15、旧mem/binding/slotとscalar読取保持、typed 2field追加、const権限、有効frame、storage object/live/work、scalar work増分18以下とpeak上界を示す。正本登録実99895終了0・固定nanoda4076宣言・CPP fresh生成/UBSan。値構築等の一般object caller、任意T/M、全frame観測、C++厳密lifetime/総費用、API復元と全137は未完了のためfull flagsを維持。docs/class_copy_audit.mdと一般fixtureを参照。",
+        "2026-11-08: RangeAddRangeSum<long long>::RangeSumとRangeSetRangeSum<long long>::RangeSumのop(const RangeSum&,const RangeSum&)について、原本から生成した全field返却を任意typed callerのprepare/run/exportへ接続した。original_friend_object_call.leanの12 rootsで入力保持・const結果・scalar/vector観測・抽象work増分25以下とpeakを確認。登録検査は別原本/witnessからfresh生成した両familyの固定nanoda4086/4086宣言とC++/UBSanで成功。厳密class identity/CPP lifetime/総費用、任意T/M、値渡しobject、元の全API復元は未完了で、全体の各verified flagsはfalseを維持する。",
+        "2026-11-08: Add/SetのRangeMax::e()はdoubleの有限負値で単位元則が破れ、RangeMin::e()も正の無限大で破れることを元コードのC++/UBSanで確認。標準浮動小数型だけconstexpr分岐して適切な±infinity（非対応型はlowest/max）を返す修正を原本4箇所へ適用し、整数/独自型の既存min/max経路を維持した。fixes.mdとmonoid_lazy_floating_identity.cppを参照。型の汎用性・浮動小数のLean検証・class lifetime全体のflagsはfalseを維持する。",
+        "2026-11-08: Add/Set×RangeMax/RangeMinの4原本からfresh生成した全objectモデルで、readonly2参照のprepare→元body→typed全field exportと任意callerの旧scalar/vector観測保持・IR work増分47以下・peak上界の11 rootsを固定nanoda4117宣言ずつで検査済み（38695、入力不変）。その後、trivial record値引数を全field scalar値コピーへ展開し、mixed value/refの8 roots（2820宣言）と元Add/MaxMin・Add/SumのRangeAdd compose/id全object返却の8 roots（2823宣言ずつ）、alias/const/不正入力/overflow/native/UBSanを追加。値引数の一般caller、Setの条件付きobject返却、任意T/Mと厳密identity/lifetimeは未完了。共通frontend変更後の最終関連検査の結果はhandoff参照。full flagsはfalseを維持する。",
+        "2026-11-08: Add/MaxMinとAdd/Sumの元RangeAdd composeを任意callerの値prepare/run/全object exportへ接続した13 rootsを登録。入力2値と和のs64.validだけで、任意scalar引数式Eノードならwork増分E+12以下、ObjectRef snapshotでは14以下、旧scalar/vector観測とscope/storage work保持・peakを証明。実94800は両原本freshモデルの固定nanoda4072宣言ずつ、共有prepare補題を使う元RangeSum4316宣言、mixed値/参照2820宣言・native/UBSan・入力hash不変の3testsで成功。準備補題はProofs/CppScalarValuePrepare.leanへ共有し、既存RangeSumの定理は同じ命題のwrapperを保つ。Set条件付きrecord返却/値引数更新、任意T/M、厳密identity/lifetimeと原本全体は未完了。full flagsはfalseを維持。",
+        "2026-11-08: Set/MaxMin・Set/Sumの元composeのconditional lvalue→implicit defaulted copyをparameter field viewから全fieldへコピーする経路を追加。条件を一度const boolへ保存し、既存scalar conditional展開で選択fieldをコピーする。noop=trueの非ゼロvや型の極値も値構成子で再構築せず保持する。direct copy/moveも同じtrivial特殊メンバー監査を通す。新3tests/78.805秒は元Set両系統の固定nanoda2828宣言ずつ・直接返却2821宣言、native/UBSan全64組ずつ・拒否境界・入力hash不変で成功。副作用付き条件・入れ子record conditional等は拒否を維持。Setの任意入力/任意caller一般定理、値引数更新、任意T/M、厳密identity/lifetimeと原本全体は未完了。変更後の既存回帰はhandoff参照。full flagsはfalseを維持。",
+        "2026-11-08: 元Set両系統composeの任意P/型付き4値に対する成功・work20/need P.length+21・readonly flagを含む全PS一致の4 rootsと、任意callerの4値snapshot prepare/run/2field export・旧scalar/vector観測保持・work増分32以下とpeakの11 rootsを追加。共有prepare_literals4は任意4型を扱う。実49735はSet両原本freshモデルの固定nanoda4102宣言ずつ、Add両系統4072宣言ずつ/元RangeSum4316宣言の3testsでnative/UBSan・入力hash不変とともに成功。途中更新/異なるrecordのapply、任意T/M、厳密identity/lifetimeと原本全体は未完了。full flagsはfalseを維持。",
+        "2026-11-08: 同一TUのcompanion receiverを用い、元Set/Sum・Add/Sum applyのrecord値引数更新と全field返却を生成。有限LL検査はoriginal_member_record_return.leanの9 roots、receiver更新/aliasはmember_record_prefix_updates.leanの5 roots、const noexceptはconst_record_member.leanの3 roots。member pointer型のcompiler照合で別family同名recordの返却型・引数型取り違えを拒否する。任意入力/callerのapply一般定理、任意T/M・厳密identity/lifetime・公開API復元とファイル全体の完了は未達。最新実行結果はhandoffを参照。",
+        "2026-11-08: 元Set/Add Sum applyの任意入力本体をoriginal_set_member_general.lean / original_add_member_general.leanで証明。任意prefix/receiver位置と型付きコピー引数の全PS一致、prefix全保持、ret none、Setはwork13/7・need≤P.length+13、Addはwork14・need=P.length+16。Setのnoop時に積の前提を課さず、Addは積と和の表現可能性を要求。任意callerのmixed prepare/export接続は未完了、全ファイル完了フラグは変更しない。",
+        "2026-11-08: 元Set/Sum・Add/Sum applyのmixed prepare→body→2field object exportを任意NStateへ接続。original_member_prepareの2rootsとoriginal_{set,add}_member_callの各11rootsで結果・元scalar/vector内容/参照・readonly/alias・const結果・scope/storage work、総IR work増分Set≤25/Add≤24とpeakを示す。Setはnoop時に積の前提不要。任意T/M・厳密identity/lifetime・member template・公開API復元・原本全体は未達。最新実行結果はhandoff参照。",
+        "2026-11-08: 同一TUのrecord宣言IDと元member-template patternを照合し、明示apply<M>を全field返却経路へ接続。receiver_methodsの3要素形でRecordArgumentを指定し、元apply<完全修飾型>へのcompiler member-pointer型照合を実施。元Add/Set×Max/Minの有限LL8rootsずつ（固定nanoda2825宣言×4）と、copy対2field値構築/未選択overflowの5roots（2817宣言）、native/UBSan・未具体化型/副作用条件拒否を新3tests/161.944秒で確認。任意入力/caller一般定理、任意T/M・厳密identity/lifetime・公開API復元・原本全体は未完了。既存回帰の最新結果はhandoff参照。",
+        "2026-11-09: 元Add/Set×Max/Min apply<M>のlong long全入力（Addは加算範囲内）・任意prefix/callerをraw→mixed prepare→field capture/exportへ接続。既存scalar/vector内容・権限・const結果・scope/peak、総IR work増分Add≤14/Set≤21を証明。Setは選択枝だけ実行し、加算/積の範囲前提は不要。fresh原本4具体化の登録回帰は固定nanoda4080/4080/4100/4100宣言・C++/UBSan・入力hash不変で成功。任意T/M・厳密identity/lifetime・元公開APIと原本全体の完了は未達。",
+        "2026-11-09: 原本のMaxMin/Sum RangeAdd::idをreturn RangeAdd(0)へ修正。return 0ではint→class型T→RangeAddと2段のユーザー定義変換でコンパイル不可だった。原本本体とnamespace/include以外一致する元API候補をexperiments/verification/algebraic_structure/monoid_lazy.hppへ配置。原本/候補の4family APIと非自明Tのcopy/assignment/destruction traceが一致、旧id2か所の負例も成功。5tests/418.354秒で旧frontend3673・Add compose/id4072×2・原本/候補MaxMin apply4080/4080/4100/4100×2の固定kernel/C++/UBSanが成功。任意T/M・strict identity/lifetime・候補の公開条件は未完了、現公開flat API違反は残る。",
+        "2026-11-09: 元API候補についてSum構築/e/op/apply・MaxMin op/e・Add/Set composeを原本と同じ一般証明経路へ接続。7tests/507.224秒、独立kernel4316×3/4086×2/4117×4/4072×2/4102×2/4126/4104、C++/UBSan・入力hash不変が成功。idの既存有限回帰も成功。1fieldの単独構築と作用型id/default/value構築の任意caller入口は別途監査・補強が必要。任意T/M・厳密identity/lifetime・公開切替と原本全体は未完了。",
+        "2026-11-09: 原本/候補の1field RangeMax/RangeMin/RangeAddの6型ずつで、値構築とRangeAdd::idの任意caller仕様を追加。純粋scalar式の評価から全field capture/export、既存scalar/vector・権限・const結果・scope/peakを保持。値構築総IR work≤引数式nodes+6（literalなら7）、idは変換/scope込み≤9。raw need=P.length+7。fresh12具体化の固定kernel3857×8/3885×4・C++/UBSan・入力hash不変で2tests/380.630秒成功。次はRangeSet value/default/idの一般caller入口。任意T/M・strict identity/lifetime・公開切替・原本全体は未完。"
       ]
     },
     {
@@ -2822,7 +2964,7 @@
           "line": 8,
           "declaration": "doubling 'vector<vector<int>> (vector<int> &, uint64_t)'",
           "template_instantiation_review": "pending",
-          "verification_target": "library/doubling.hpp",
+          "verification_target": "library/array/doubling.hpp",
           "status": {
             "review": "partial",
             "bug": "confirmed",
@@ -2839,10 +2981,10 @@
             "Proofs/BitWidthU64.lean",
             "docs/doubling_experiment.md",
             "docs/bit_width_u64.md",
-            "library/doubling.hpp",
-            "library/doubling.toml",
-            "library/bit_width_u64.hpp",
-            "library/bit_width_u64.toml",
+            "library/array/doubling.hpp",
+            "library/array/doubling.toml",
+            "library/number_theory/bit_width_u64.hpp",
+            "library/number_theory/bit_width_u64.toml",
             "tests/doubling.cpp",
             "tests/bit_width_u64.cpp",
             "tests/test_nested_ir.py",
@@ -2871,7 +3013,7 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": "library/doubling.hpp",
+      "verification_target": "library/array/doubling.hpp",
       "status": {
         "review": "partial",
         "bug": "confirmed",
@@ -2899,10 +3041,10 @@
         "Proofs/BitWidthU64.lean",
         "docs/doubling_experiment.md",
         "docs/bit_width_u64.md",
-        "library/doubling.hpp",
-        "library/doubling.toml",
-        "library/bit_width_u64.hpp",
-        "library/bit_width_u64.toml",
+        "library/array/doubling.hpp",
+        "library/array/doubling.toml",
+        "library/number_theory/bit_width_u64.hpp",
+        "library/number_theory/bit_width_u64.toml",
         "tests/doubling.cpp",
         "tests/bit_width_u64.cpp",
         "tests/test_nested_ir.py",
@@ -3018,7 +3160,7 @@
           "line": 5,
           "declaration": "count",
           "template_instantiation_review": "pending",
-          "verification_target": "library/search_util.hpp",
+          "verification_target": "library/array/search_util.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -3029,8 +3171,8 @@
             "published": true
           },
           "evidence": [
-            "library/search_util.hpp",
-            "library/search_util.toml",
+            "library/array/search_util.hpp",
+            "library/array/search_util.toml",
             "tests/search_util.cpp",
             "docs/search_util.md",
             "verifier/nested_ir.py",
@@ -3050,7 +3192,7 @@
           "line": 5,
           "declaration": "count 'int (const vector<T> &, T, int, int)'",
           "template_instantiation_review": "pending",
-          "verification_target": "library/search_util.hpp",
+          "verification_target": "library/array/search_util.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -3061,8 +3203,8 @@
             "published": true
           },
           "evidence": [
-            "library/search_util.hpp",
-            "library/search_util.toml",
+            "library/array/search_util.hpp",
+            "library/array/search_util.toml",
             "tests/search_util.cpp",
             "docs/search_util.md",
             "verifier/nested_ir.py",
@@ -3157,7 +3299,7 @@
           "line": 7,
           "declaration": "inv_perm",
           "template_instantiation_review": "pending",
-          "verification_target": "library/sort_util.hpp",
+          "verification_target": "library/array/sort_util.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -3168,8 +3310,8 @@
             "published": true
           },
           "evidence": [
-            "library/sort_util.hpp",
-            "library/sort_util.toml",
+            "library/array/sort_util.hpp",
+            "library/array/sort_util.toml",
             "tests/sort_util.cpp",
             "tests/test_fill_vector_ir.py",
             "docs/sort_util.md",
@@ -3194,7 +3336,7 @@
           "line": 7,
           "declaration": "inv_perm 'vector<int> (const vector<T> &)'",
           "template_instantiation_review": "pending",
-          "verification_target": "library/sort_util.hpp",
+          "verification_target": "library/array/sort_util.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -3205,8 +3347,8 @@
             "published": true
           },
           "evidence": [
-            "library/sort_util.hpp",
-            "library/sort_util.toml",
+            "library/array/sort_util.hpp",
+            "library/array/sort_util.toml",
             "tests/sort_util.cpp",
             "tests/test_fill_vector_ir.py",
             "docs/sort_util.md",
@@ -8991,7 +9133,7 @@
             "published": false
           },
           "review_notes": [
-            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
+            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/number_theory/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
           ]
         },
         {
@@ -9660,7 +9802,7 @@
             "published": false
           },
           "review_notes": [
-            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
+            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/number_theory/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
           ]
         },
         {
@@ -10223,7 +10365,7 @@
             "published": false
           },
           "review_notes": [
-            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
+            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/number_theory/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
           ]
         },
         {
@@ -11476,7 +11618,7 @@
           "line": 5,
           "declaration": "enumerate_quotients 'vector<ull> (ull)'",
           "template_instantiation_review": "pending",
-          "verification_target": "library/enumerate_quotients.hpp",
+          "verification_target": "library/number_theory/enumerate_quotients.hpp",
           "status": {
             "review": "partial",
             "bug": "confirmed",
@@ -11487,8 +11629,8 @@
             "published": true
           },
           "evidence": [
-            "library/enumerate_quotients.hpp",
-            "library/enumerate_quotients.toml",
+            "library/number_theory/enumerate_quotients.hpp",
+            "library/number_theory/enumerate_quotients.toml",
             "tests/enumerate_quotients.cpp",
             "docs/enumerate_quotients.md",
             "verifier/nested_ir.py",
@@ -11515,7 +11657,7 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": "library/enumerate_quotients.hpp",
+      "verification_target": "library/number_theory/enumerate_quotients.hpp",
       "status": {
         "review": "partial",
         "bug": "confirmed",
@@ -11753,7 +11895,7 @@
           "line": 4,
           "declaration": "used constexpr safe_mod 'll (ll, ll)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/safe_mod.hpp",
+          "verification_target": "library/number_theory/safe_mod.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -11770,7 +11912,7 @@
             "Proofs/SafeModProofs.lean",
             "tools/check_safe_mod_proofs.py",
             "tests/test_safe_mod_proofs.py",
-            "library/safe_mod.toml",
+            "library/number_theory/safe_mod.toml",
             "tests/safe_mod.cpp",
             "verifier/state_bridge.py",
             "tests/test_state_bridge.py"
@@ -11784,7 +11926,7 @@
           "line": 14,
           "declaration": "used floor_sum_unsigned 'ull (ull, ull, ull, ull)'",
           "template_instantiation_review": "pending",
-          "verification_target": "library/floor_sum_unsigned.hpp",
+          "verification_target": "library/number_theory/floor_sum_unsigned.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -11812,8 +11954,8 @@
             "Proofs/FloorSumANormalization.lean",
             "Proofs/FloorSumRound.lean",
             "Proofs/FloorSumCall.lean",
-            "library/floor_sum_unsigned.hpp",
-            "library/floor_sum_unsigned.toml",
+            "library/number_theory/floor_sum_unsigned.hpp",
+            "library/number_theory/floor_sum_unsigned.toml",
             "tests/floor_sum_unsigned.cpp",
             "verification/statements.json"
           ],
@@ -11826,7 +11968,7 @@
           "line": 41,
           "declaration": "floor_sum 'll (ll, ll, ll, ll)'",
           "template_instantiation_review": "pending",
-          "verification_target": "library/floor_sum.hpp",
+          "verification_target": "library/number_theory/floor_sum.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -11856,8 +11998,8 @@
             "Proofs/FloorSumSignedCall.lean",
             "Proofs/FloorSumSignedSpecification.lean",
             "tests/test_signed_floor_sum_proofs.py",
-            "library/floor_sum.hpp",
-            "library/floor_sum.toml",
+            "library/number_theory/floor_sum.hpp",
+            "library/number_theory/floor_sum.toml",
             "tests/floor_sum.cpp",
             "verifier/state_bridge.py",
             "tests/test_state_bridge.py",
@@ -11884,7 +12026,7 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": "library/safe_mod.hpp",
+      "verification_target": "library/number_theory/safe_mod.hpp",
       "status": {
         "review": "partial",
         "bug": "unknown",
@@ -11906,7 +12048,7 @@
         "Proofs/SafeModProofs.lean",
         "tools/check_safe_mod_proofs.py",
         "tests/test_safe_mod_proofs.py",
-        "library/safe_mod.toml",
+        "library/number_theory/safe_mod.toml",
         "tests/safe_mod.cpp",
         "verifier/state_bridge.py",
         "tests/test_state_bridge.py",
@@ -11927,7 +12069,7 @@
         "Proofs/FloorSumANormalization.lean",
         "Proofs/FloorSumRound.lean",
         "Proofs/FloorSumCall.lean",
-        "library/floor_sum_unsigned.hpp",
+        "library/number_theory/floor_sum_unsigned.hpp",
         "tests/floor_sum_unsigned.cpp",
         "tests/imports/floor_sum_signed.cpp",
         "tools/check_import_floor_sum_signed.py",
@@ -15774,7 +15916,7 @@
           "line": 11,
           "declaration": "used constexpr mul 'ull (ull, ull)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/mod61.hpp",
+          "verification_target": "library/modint/mod61.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -15785,8 +15927,8 @@
             "published": true
           },
           "evidence": [
-            "library/mod61.hpp",
-            "library/mod61.toml",
+            "library/modint/mod61.hpp",
+            "library/modint/mod61.toml",
             "tests/mod61.cpp",
             "tests/test_bitwise_ir.py",
             "docs/mod61.md",
@@ -15801,7 +15943,7 @@
             "Proofs/Mod61Call.lean"
           ],
           "review_notes": [
-            "2026-10-08: rh_in::mod and rh_in::mul are published as cp::mod61 and cp::mul61 (library/mod61.hpp) after rewriting them into the generator's subset (locals instead of namespace constants, no compound assignment). Proofs.Mod61Call proves mod61(x) = x mod (2^61-1) for every uint64 x, and for a, b < 2^61 that mul61 does not wrap and is congruent to a*b mod (2^61-1) (mul61_correct, mul61_spec), with constant work and space. Bitwise operators are modelled for unsigned 32/64 bit types with literal shift counts. The contents of unrelated caller objects are not stated unchanged. Only the standard axioms are used."
+            "2026-10-08: rh_in::mod and rh_in::mul are published as cp::mod61 and cp::mul61 (library/modint/mod61.hpp) after rewriting them into the generator's subset (locals instead of namespace constants, no compound assignment). Proofs.Mod61Call proves mod61(x) = x mod (2^61-1) for every uint64 x, and for a, b < 2^61 that mul61 does not wrap and is congruent to a*b mod (2^61-1) (mul61_correct, mul61_spec), with constant work and space. Bitwise operators are modelled for unsigned 32/64 bit types with literal shift counts. The contents of unrelated caller objects are not stated unchanged. Only the standard axioms are used."
           ]
         },
         {
@@ -15809,7 +15951,7 @@
           "line": 21,
           "declaration": "used constexpr mod 'ull (ull)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/mod61.hpp",
+          "verification_target": "library/modint/mod61.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -15820,8 +15962,8 @@
             "published": true
           },
           "evidence": [
-            "library/mod61.hpp",
-            "library/mod61.toml",
+            "library/modint/mod61.hpp",
+            "library/modint/mod61.toml",
             "tests/mod61.cpp",
             "tests/test_bitwise_ir.py",
             "docs/mod61.md",
@@ -15836,7 +15978,7 @@
             "Proofs/Mod61Call.lean"
           ],
           "review_notes": [
-            "2026-10-08: rh_in::mod and rh_in::mul are published as cp::mod61 and cp::mul61 (library/mod61.hpp) after rewriting them into the generator's subset (locals instead of namespace constants, no compound assignment). Proofs.Mod61Call proves mod61(x) = x mod (2^61-1) for every uint64 x, and for a, b < 2^61 that mul61 does not wrap and is congruent to a*b mod (2^61-1) (mul61_correct, mul61_spec), with constant work and space. Bitwise operators are modelled for unsigned 32/64 bit types with literal shift counts. The contents of unrelated caller objects are not stated unchanged. Only the standard axioms are used."
+            "2026-10-08: rh_in::mod and rh_in::mul are published as cp::mod61 and cp::mul61 (library/modint/mod61.hpp) after rewriting them into the generator's subset (locals instead of namespace constants, no compound assignment). Proofs.Mod61Call proves mod61(x) = x mod (2^61-1) for every uint64 x, and for a, b < 2^61 that mul61 does not wrap and is congruent to a*b mod (2^61-1) (mul61_correct, mul61_spec), with constant work and space. Bitwise operators are modelled for unsigned 32/64 bit types with literal shift counts. The contents of unrelated caller objects are not stated unchanged. Only the standard axioms are used."
           ]
         },
         {
@@ -17402,7 +17544,7 @@
           "line": 33,
           "declaration": "chmax",
           "template_instantiation_review": "pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -17413,8 +17555,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -17425,7 +17567,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -17433,7 +17575,7 @@
           "line": 33,
           "declaration": "chmax 'bool (S &, const T &)' inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -17444,8 +17586,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -17456,7 +17598,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -17464,7 +17606,7 @@
           "line": 40,
           "declaration": "chmin",
           "template_instantiation_review": "pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -17475,8 +17617,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -17487,7 +17629,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -17495,7 +17637,7 @@
           "line": 40,
           "declaration": "chmin 'bool (S &, const T &)' inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -17506,8 +17648,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -17518,7 +17660,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -18922,7 +19064,7 @@
           "line": 46,
           "declaration": "chmax",
           "template_instantiation_review": "int_int_and_unsigned_int_unsigned_int_checked; other_instances_pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -18933,8 +19075,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -18945,7 +19087,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -18953,7 +19095,7 @@
           "line": 46,
           "declaration": "constexpr chmax 'bool (S &, const T &)' implicit-inline",
           "template_instantiation_review": "int_int_and_unsigned_int_unsigned_int_checked; other_instances_pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -18964,8 +19106,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -18976,7 +19118,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -18984,7 +19126,7 @@
           "line": 53,
           "declaration": "chmin",
           "template_instantiation_review": "int_int_and_unsigned_int_unsigned_int_checked; other_instances_pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -18995,8 +19137,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -19007,7 +19149,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -19015,7 +19157,7 @@
           "line": 53,
           "declaration": "constexpr chmin 'bool (S &, const T &)' implicit-inline",
           "template_instantiation_review": "int_int_and_unsigned_int_unsigned_int_checked; other_instances_pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -19026,8 +19168,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -19038,7 +19180,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -19480,7 +19622,7 @@
     },
     {
       "source": "experiments/library/cpp/tree/tree.hpp",
-      "source_sha256": "e27640d88cb8fef599d82a67e86db9833eb2115f2f2b7f8f48a94c43ffeed99c",
+      "source_sha256": "1a4a9b715c54071b0392c7b69e3b2d763ca7ad9bdeeefed4c52d933dbc4d28e0",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": "全方位木DP",
@@ -19497,7 +19639,7 @@
       "declarations": [
         {
           "kind": "ClassTemplateDecl",
-          "line": 7,
+          "line": 6,
           "declaration": "Tree",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19513,7 +19655,7 @@
         },
         {
           "kind": "CXXRecordDecl",
-          "line": 7,
+          "line": 6,
           "declaration": "class Tree definition",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19529,7 +19671,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 8,
+          "line": 7,
           "declaration": "referenced n_ 'int'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19545,7 +19687,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 8,
+          "line": 7,
           "declaration": "referenced root_ 'int'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19561,7 +19703,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 9,
+          "line": 8,
           "declaration": "referenced adj 'vector<vector<E>>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19577,7 +19719,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 11,
+          "line": 10,
           "declaration": "referenced parent_ 'vector<vector<int>>':'std::vector<std::vector<int>>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19593,7 +19735,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 11,
+          "line": 10,
           "declaration": "referenced depth_ 'vector<vector<int>>':'std::vector<std::vector<int>>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19609,7 +19751,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 11,
+          "line": 10,
           "declaration": "referenced cost_depth_ 'vector<vector<int>>':'std::vector<std::vector<int>>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19625,7 +19767,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 12,
+          "line": 11,
           "declaration": "referenced ancestor_ 'vector<vector<int>>':'std::vector<std::vector<int>>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19641,7 +19783,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 13,
+          "line": 12,
           "declaration": "referenced farthest_node_ 'vector<int>':'std::vector<int>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19657,7 +19799,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 14,
+          "line": 13,
           "declaration": "referenced height_ 'vector<Cost>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19673,7 +19815,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 17,
+          "line": 16,
           "declaration": "referenced build_depth 'void (int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19689,7 +19831,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 55,
+          "line": 54,
           "declaration": "Tree<Cost, E> 'void (int, vector<int> &, vector<int> &, vector<Cost> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19705,7 +19847,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 70,
+          "line": 69,
           "declaration": "Tree<Cost, E> 'void (int, vector<int> &, vector<int> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19721,7 +19863,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 84,
+          "line": 83,
           "declaration": "Tree<Cost, E> 'void (int, vector<int> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19737,7 +19879,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 96,
+          "line": 95,
           "declaration": "Tree<Cost, E> 'void (vector<int> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19753,7 +19895,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 117,
+          "line": 116,
           "declaration": "operator[] 'vector<E> &(int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19769,7 +19911,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 119,
+          "line": 118,
           "declaration": "friend_undeclared operator<<",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19785,7 +19927,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 120,
+          "line": 119,
           "declaration": "friend_undeclared operator<< 'ostream &(ostream &, const Tree<C_, E_> &)'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19801,7 +19943,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 123,
+          "line": 122,
           "declaration": "referenced diameter 'tuple<int, int, Cost> ()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19817,7 +19959,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 131,
+          "line": 130,
           "declaration": "height 'vector<Cost> ()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19833,7 +19975,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 142,
+          "line": 141,
           "declaration": "path 'vector<int> (int, int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19849,7 +19991,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 169,
+          "line": 168,
           "declaration": "build_ancestor 'void ()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19865,7 +20007,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 172,
+          "line": 171,
           "declaration": "referenced ancestor 'int (int, int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19881,7 +20023,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 183,
+          "line": 182,
           "declaration": "referenced lowest_common_ancestor 'int (int, int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19897,7 +20039,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 207,
+          "line": 206,
           "declaration": "distance 'Cost (int, int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19913,7 +20055,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 216,
+          "line": 215,
           "declaration": "depth 'int (int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19929,7 +20071,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 218,
+          "line": 217,
           "declaration": "cost_depth 'Cost (int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19945,7 +20087,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 231,
+          "line": 230,
           "declaration": "full_tree_dp",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19961,7 +20103,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 231,
+          "line": 230,
           "declaration": "full_tree_dp 'vector<M> (M, F, G)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19977,7 +20119,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 239,
+          "line": 238,
           "declaration": "operator()",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -19993,7 +20135,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 239,
+          "line": 238,
           "declaration": "operator() 'auto (auto &, int, int) const -> void' inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -20009,7 +20151,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 289,
+          "line": 291,
           "declaration": "operator<<",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -20025,7 +20167,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 289,
+          "line": 291,
           "declaration": "operator<< 'ostream &(ostream &, const Tree<C_, E_> &)'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -20054,7 +20196,7 @@
       "ignored_driver": false,
       "verification_target": null,
       "status": {
-        "review": "pending",
+        "review": "partial",
         "bug": "unknown",
         "cpp_tested": false,
         "common_translator": false,
@@ -20092,7 +20234,16 @@
         "experiments/library3/cpp/Graph/Lowlink.hpp",
         "experiments/library3/cpp/ModInt/ModInt.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "review_notes": [
+        "2026-11-08: 利用者によるlowest_common_ancestorの降順上限をancestor_.size()-1にする変更を確認。旧bit_width(du)は親[0,0,1,1]のLCA(2,3)で2行表の行2を読む。原本の全小木/境界木/乱数rootと全頂点対を素朴LCAへ照合し、旧上限だけ戻した負例を検査する。TreeLcaMathのlca_all_rows_spec/all_rows_lca_correct/all_rows_indicesを追加。これは全行降順の数学仕様の証明であり、元class全体のC++生成/寿命・公開移植完了ではない。"
+      ],
+      "evidence": [
+        "tests/test_original_tree_lca.py",
+        "tests/imports/tree_lca_source.cpp",
+        "Proofs/TreeLcaMath.lean",
+        "docs/tree_lca_same_depth.md"
+      ]
     },
     {
       "source": "experiments/library/cpp/union_find/disjoint_set_union.hpp",
@@ -26620,7 +26771,7 @@
             "published": false
           },
           "review_notes": [
-            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
+            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/number_theory/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
           ]
         },
         {
@@ -27667,7 +27818,7 @@
           "line": 22,
           "declaration": "chmax",
           "template_instantiation_review": "pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -27678,8 +27829,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -27690,7 +27841,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -27698,7 +27849,7 @@
           "line": 22,
           "declaration": "chmax 'bool (S &, const T &)' inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -27709,8 +27860,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -27721,7 +27872,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -27729,7 +27880,7 @@
           "line": 29,
           "declaration": "chmin",
           "template_instantiation_review": "pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -27740,8 +27891,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -27752,7 +27903,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -27760,7 +27911,7 @@
           "line": 29,
           "declaration": "chmin 'bool (S &, const T &)' inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -27771,8 +27922,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -27783,7 +27934,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -29159,7 +29310,7 @@
           "line": 46,
           "declaration": "chmax",
           "template_instantiation_review": "int_int_and_unsigned_int_unsigned_int_checked; other_instances_pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -29170,8 +29321,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -29182,7 +29333,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -29190,7 +29341,7 @@
           "line": 46,
           "declaration": "constexpr chmax 'bool (S &, const T &)' implicit-inline",
           "template_instantiation_review": "int_int_and_unsigned_int_unsigned_int_checked; other_instances_pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -29201,8 +29352,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -29213,7 +29364,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -29221,7 +29372,7 @@
           "line": 53,
           "declaration": "chmin",
           "template_instantiation_review": "int_int_and_unsigned_int_unsigned_int_checked; other_instances_pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -29232,8 +29383,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -29244,7 +29395,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {
@@ -29252,7 +29403,7 @@
           "line": 53,
           "declaration": "constexpr chmin 'bool (S &, const T &)' implicit-inline",
           "template_instantiation_review": "int_int_and_unsigned_int_unsigned_int_checked; other_instances_pending",
-          "verification_target": "library/extrema.hpp",
+          "verification_target": "library/number/extrema.hpp",
           "status": {
             "review": "partial",
             "bug": "unknown",
@@ -29263,8 +29414,8 @@
             "published": true
           },
           "evidence": [
-            "library/extrema.hpp",
-            "library/extrema.toml",
+            "library/number/extrema.hpp",
+            "library/number/extrema.toml",
             "tests/extrema.cpp",
             "docs/extrema.md",
             "verifier/nested_ir.py",
@@ -29275,7 +29426,7 @@
             "Proofs/CppNestedCall.lean"
           ],
           "review_notes": [
-            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
+            "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
           ]
         },
         {

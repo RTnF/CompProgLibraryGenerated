@@ -1,6 +1,6 @@
-# doubling の C++17 修復と公開（`library/doubling.hpp`）
+# doubling の C++17 修復と公開（`library/array/doubling.hpp`）
 
-原本 `experiments/library/cpp/array/doubling.hpp` は C++20 の `bit_width` を参照し、固定した C++17 環境ではコンパイルできない。原本を保持し、候補を `library/doubling.hpp` に置いた。入力を const 参照とし、添字への int 変換前にサイズ上限を検査する。ライブラリのテンプレートを先に include するテストを用意した。
+原本 `experiments/library/cpp/array/doubling.hpp` は C++20 の `bit_width` を参照し、固定した C++17 環境ではコンパイルできない。原本を保持し、候補を `library/array/doubling.hpp` に置いた。入力を const 参照とし、添字への int 変換前にサイズ上限を検査する。ライブラリのテンプレートを先に include するテストを用意した。
 
 前提は `kmax > 0`、サイズが INT_MAX 以下、全要素が `[0,n)` 内であること。空配列も許す。行数は kmax のビット幅、行 i の頂点 j は写像の 2^i 回適用である。候補の時間と出力領域は O(n × bit_width(kmax))。vector の割当・添字・所有権・寿命・例外を含む本体の AST 変換と Lean 証明は未完了で、公開済みとは扱わない。
 

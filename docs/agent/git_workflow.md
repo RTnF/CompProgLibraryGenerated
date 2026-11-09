@@ -15,6 +15,15 @@
 
 ## push と GitHub Actions
 
+### push の粒度
+
+- ユーザー指定により、`experiments/` の原本1ファイルの移植完了をpushの単位とする。変更行数やローカルcommit数では判断しない。
+- 対象の原本パスを明示し、元のAPI・機能・汎用性を保持した公開側への移植、C++由来の検証対象生成、Leanでの結果・停止・未定義動作不在・時間と追加領域の検証、C++テストとテンプレート先行include、必要な登録・文書・台帳の確認をそのファイル全体で完了させる。有限具体化や一部のfieldモデルだけの成功をファイル全体の完了としない。
+- 変換器の機能追加、不具合修正、部分証明、handoff更新だけの段階ではpushしない。必要なローカルcommitは保持し、1ファイルの移植完了時にまとめて送る。
+- 完了した移植単位でも、push前の全件検証・機密情報検査・差分確認と、毎回の手動承認は省略しない。push後のCIと配布物の確認も当該移植単位の作業に含める。
+
+### 実行と確認
+
 1. このプロジェクトの `git push` は `.codex/rules/git-push.rules` で毎回ユーザーに承認を求める。`approvals_reviewer = "user"` をプロジェクト設定に置く。Codex は信頼済みプロジェクトのルールを起動時に読み込むため、設定後は Codex を再起動する。上位の禁止ルールが優先される場合は push できない。権限・自動承認レビューに拒否されたら、コマンドの書式やツールを変えて回避せず、未 push の状態と理由を報告する。
 2. push に成功したら、**そのコミット ID** に対応する GitHub Actions 実行を調べる。例: `gh run list --repo RTnF/CompProgLibraryGenerated --commit <SHA> --json databaseId,status,conclusion,url`。
 3. 実行中なら完了を待つ。例: `gh run watch <run-id> --repo RTnF/CompProgLibraryGenerated --exit-status`。実行が見つからない場合も成功とみなさず、ワークフローのトリガー、対象ブランチ、反映待ちを確認する。

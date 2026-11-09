@@ -710,14 +710,17 @@ abbrev divA (m : Nat) : Command :=
 abbrev mulD (m : Nat) : NExpr := .cast u32 (.divrem u64 true (.binary u64 .mul (.cast u64 (.variable u32 0))
   (.cast u64 (.variable u32 9))) (.cast u64 (.literal u32 (m : Int))))
 
-/-- What `x /= y` does with the inverse: two copies, the product stored into `x`, and `return *this`. -/
+/-- Discarded nested multiplication returns are evaluated before the final return. -/
+abbrev divBody (m copies : Nat) : Command := (divA m).sh.snoc
+  (.sequence (.primitive (.declare u32 true (.variable u32 7)))
+    (.sequence (.primitive (.declare u32 true (.variable u32 8)))
+      (.sequence (.primitive (.assign 0 u32 (mulD m))) (returnedCopies copies))))
 abbrev divZ (m : Nat) : Command :=
-  .sequence (.primitive (.declare u32 true (.variable u32 7))) (.sequence (.primitive (.declare u32 true (.variable u32 8)))
-    (.sequence (.primitive (.assign 0 u32 (mulD m))) (.sequence (.primitive (.ret (.variable u32 0))) (.primitive .skip))))
+  .sequence (.primitive (.declare u32 true (.variable u32 7)))
+    (.sequence (.primitive (.declare u32 true (.variable u32 8)))
+      (.sequence (.primitive (.assign 0 u32 (mulD m))) (returnedCopies 1)))
 
-theorem div_body_eq (m : Nat) : (Proofs.ModIntInstance.ModInt_div_assign m).body = (divA m).sh.snoc (.sequence
-    (.primitive (.declare u32 true (.variable u32 7))) (.sequence (.primitive (.declare u32 true (.variable u32 8)))
-    (.sequence (.primitive (.assign 0 u32 (mulD m))) (.sequence (.primitive (.ret (.variable u32 0))) (.primitive .skip))))) := rfl
+theorem div_body_eq (m : Nat) : (Proofs.ModIntInstance.ModInt_div_assign m).body = divBody m 1 := rfl
 
 theorem divA_exec (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell) (a x : Nat) (hx : x < m) (hx0 : x ≠ 0)
     (ha : P[a]? = some ⟨u32,(x : Int)⟩) (hlt : a < P.length) :
@@ -816,10 +819,10 @@ theorem shDecl (P L : List Cell) (a : Nat) (b0 : CppState.Binding) (ty : Ty) (k 
   rw [h, e, d]
   simp [shR, NExpr.nodes, stK]
 
-theorem div_exec (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell) (ax ay x y : Nat) (hx : x < m) (hy : y < m)
+theorem div_exec_copies (copies : Nat) (small : copies ≤ 2) (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell) (ax ay x y : Nat) (hx : x < m) (hy : y < m)
     (hy0 : y ≠ 0) (hPx : P[ax]? = some ⟨u32,(x : Int)⟩) (hPy : P[ay]? = some ⟨u32,(y : Int)⟩)
     (hltx : ax < P.length) (hlty : ay < P.length) :
-    ∃ (r : PR) (L2 : List Cell), pexec 70 (Proofs.ModIntInstance.ModInt_div_assign m).body
+    ∃ (r : PR) (L2 : List Cell), pexec 70 (divBody m copies)
         ⟨P,[⟨ax,true⟩,⟨ay,false⟩]⟩ = some r ∧
       r.ret = some ((x * ((y ^ (m - 2)) % m) % m : Nat) : Int) ∧ r.cost ≤ 80 * 64 + 200 ∧ r.need ≤ P.length + 80 ∧
       r.ps.mem = P.set ax ⟨u32,((x * ((y ^ (m - 2)) % m) % m : Nat) : Int)⟩ ++ L2 := by
@@ -840,7 +843,7 @@ theorem div_exec (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell)
   simp only [Option.map_some] at hsh
   have hsnoc := pexec_snoc 70 (Command.sequence (.primitive (.declare u32 true (.variable u32 7)))
     (.sequence (.primitive (.declare u32 true (.variable u32 8)))
-      (.sequence (.primitive (.assign 0 u32 (mulD m))) (.sequence (.primitive (.ret (.variable u32 0))) (.primitive .skip)))))
+      (.sequence (.primitive (.assign 0 u32 (mulD m))) (returnedCopies copies))))
     (divA m).sh _ (shR ⟨ax,true⟩ r1) hsh hret1
   -- the state after `inv` in the shifted numbering
   have hS1 : (shR ⟨ax,true⟩ r1).ps = ⟨P ++ L', ⟨ax,true⟩ :: bsK ay P.length L'.length⟩ := by
@@ -870,22 +873,31 @@ theorem div_exec (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell)
   have ev : penv ⟨(P ++ (L' ++ [c] ++ [c])).set ax ⟨u32,((x * rr % m : Nat) : Int)⟩,
       ⟨ax,true⟩ :: bsK ay P.length (L' ++ [c] ++ [c]).length⟩ 0 u32 = some ((x * rr % m : Nat) : Int) :=
     penv_ok _ 0 u32 ⟨ax,true⟩ ⟨u32,((x * rr % m : Nat) : Int)⟩ rfl cellV rfl (u32_valid_nat _ hx')
-  have z4 := pstmt_ret_ok ⟨(P ++ (L' ++ [c] ++ [c])).set ax ⟨u32,((x * rr % m : Nat) : Int)⟩,
-      ⟨ax,true⟩ :: bsK ay P.length (L' ++ [c] ++ [c]).length⟩ (.variable u32 0) ((x * rr % m : Nat) : Int)
-    (by rw [den_variable]; exact ev)
-  have p4 := seq_ret (fu := 70) (b := .primitive .skip) (a := .primitive (.ret (.variable u32 0)))
-    ((pexec_prim _ _ _).trans z4) rfl
+  have p4 := returnedCopies_exec copies 70
+    ⟨(P ++ (L' ++ [c] ++ [c])).set ax ⟨u32,((x*rr%m : Nat) : Int)⟩,
+      ⟨ax,true⟩ :: bsK ay P.length (L' ++ [c] ++ [c]).length⟩ ((x*rr%m : Nat) : Int)
+    ev (u32_valid_nat _ hx')
   have p3 := seq_some ((pexec_prim 70 (.assign 0 u32 (mulD m)) _).trans z3) rfl p4
   have p2 := seq_some ((pexec_prim 70 (.declare u32 true (.variable u32 8)) _).trans z2) rfl p3
   have p1 := seq_some ((pexec_prim 70 (.declare u32 true (.variable u32 7)) _).trans z1) rfl p2
-  rw [div_body_eq, hsnoc, hS1, p1]
+  rw [divBody, hsnoc, hS1, p1]
   simp only [Option.map_some]
-  refine ⟨_, L' ++ [c] ++ [c], rfl, rfl, ?_, ?_, ?_⟩
+  refine ⟨_, L' ++ [c] ++ [c] ++ List.replicate copies ⟨u32,((x*rr%m : Nat) : Int)⟩, rfl, rfl, ?_, ?_, ?_⟩
   · simp [shR, NExpr.nodes, mulD] at *
     omega
   · simp [shR, NExpr.nodes, mulD, stK, bsK] at *
     omega
-  · simp [List.set_append_left, hltx]
+  · simp [pushedCopies_memory,List.set_append_left,hltx,List.append_assoc]
+
+theorem div_exec (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell) (ax ay x y : Nat) (hx : x < m) (hy : y < m)
+    (hy0 : y ≠ 0) (hPx : P[ax]? = some ⟨u32,(x : Int)⟩) (hPy : P[ay]? = some ⟨u32,(y : Int)⟩)
+    (hltx : ax < P.length) (hlty : ay < P.length) :
+    ∃ (r : PR) (L2 : List Cell), pexec 70 (Proofs.ModIntInstance.ModInt_div_assign m).body
+        ⟨P,[⟨ax,true⟩,⟨ay,false⟩]⟩ = some r ∧
+      r.ret = some ((x * ((y ^ (m - 2)) % m) % m : Nat) : Int) ∧ r.cost ≤ 80 * 64 + 200 ∧ r.need ≤ P.length + 80 ∧
+      r.ps.mem = P.set ax ⟨u32,((x * ((y ^ (m - 2)) % m) % m : Nat) : Int)⟩ ++ L2 := by
+  rw [div_body_eq]
+  exact div_exec_copies 1 (by decide) m hm hm2 P ax ay x y hx hy hy0 hPx hPy hltx hlty
 
 open Proofs.ModIntCall Proofs.ScalarCall Proofs.ScalarStraight Proofs.ExtremaCall Proofs.DoublingCall in
 theorem div_assign_correct (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (caller : NState) (sa sb : Nat)

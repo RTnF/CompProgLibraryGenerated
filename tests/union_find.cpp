@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/union_find.hpp"
+#include "../library/union_find/union_find.hpp"
 #include <random>
 #include <vector>
 

@@ -8,7 +8,7 @@ template <class T = ll> struct RangeAddRangeMaxMin {
     T x;
     RangeMax(T x_) : x(x_) {}
     RangeMax() : RangeMax(e()) {}
-    static RangeMax e() { return numeric_limits<T>::min(); }
+    static RangeMax e() { if constexpr (std::is_floating_point_v<T>) { return numeric_limits<T>::has_infinity ? -numeric_limits<T>::infinity() : numeric_limits<T>::lowest(); } else { return numeric_limits<T>::min(); } }
     friend RangeMax op(const RangeMax &a, const RangeMax &b) {
       return max(a.x, b.x);
     }
@@ -17,7 +17,7 @@ template <class T = ll> struct RangeAddRangeMaxMin {
     T x;
     RangeMin(T x_) : x(x_) {}
     RangeMin() : RangeMin(e()) {}
-    static RangeMin e() { return numeric_limits<T>::max(); }
+    static RangeMin e() { if constexpr (std::is_floating_point_v<T>) { return numeric_limits<T>::has_infinity ? numeric_limits<T>::infinity() : numeric_limits<T>::max(); } else { return numeric_limits<T>::max(); } }
     friend RangeMin op(const RangeMin &a, const RangeMin &b) {
       return min(a.x, b.x);
     }
@@ -25,7 +25,7 @@ template <class T = ll> struct RangeAddRangeMaxMin {
   struct RangeAdd {
     T v;
     RangeAdd(T v_) : v(v_) {}
-    static RangeAdd id() { return 0; }
+    static RangeAdd id() { return RangeAdd(0); }
     friend RangeAdd compose(RangeAdd f, RangeAdd g) {
       return RangeAdd(f.v + g.v);
     }
@@ -47,7 +47,7 @@ template <class T = ll> struct RangeAddRangeSum {
   struct RangeAdd {
     T v;
     RangeAdd(T v_) : v(v_) {}
-    static RangeAdd id() { return 0; }
+    static RangeAdd id() { return RangeAdd(0); }
     friend RangeAdd compose(RangeAdd f, RangeAdd g) {
       return RangeAdd(f.v + g.v);
     }
@@ -60,7 +60,7 @@ template <class T = ll> struct RangeSetRangeMaxMin {
     T x;
     RangeMax(T x_) : x(x_) {}
     RangeMax() : RangeMax(e()) {}
-    static RangeMax e() { return numeric_limits<T>::min(); }
+    static RangeMax e() { if constexpr (std::is_floating_point_v<T>) { return numeric_limits<T>::has_infinity ? -numeric_limits<T>::infinity() : numeric_limits<T>::lowest(); } else { return numeric_limits<T>::min(); } }
     friend RangeMax op(const RangeMax &a, const RangeMax &b) {
       return max(a.x, b.x);
     }
@@ -69,7 +69,7 @@ template <class T = ll> struct RangeSetRangeMaxMin {
     T x;
     RangeMin(T x_) : x(x_) {}
     RangeMin() : RangeMin(e()) {}
-    static RangeMin e() { return numeric_limits<T>::max(); }
+    static RangeMin e() { if constexpr (std::is_floating_point_v<T>) { return numeric_limits<T>::has_infinity ? numeric_limits<T>::infinity() : numeric_limits<T>::max(); } else { return numeric_limits<T>::max(); } }
     friend RangeMin op(const RangeMin &a, const RangeMin &b) {
       return min(a.x, b.x);
     }

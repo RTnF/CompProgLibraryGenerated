@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/segment_tree.hpp"
+#include "../library/segment_tree/segment_tree.hpp"
 #include <climits>
 #include <random>
 #include <vector>

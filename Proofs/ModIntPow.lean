@@ -148,38 +148,69 @@ theorem assign_r (P : List Cell) (a n y r c : Nat) (hr : r < 4294967296) (e : NE
   simp
 
 
-abbrev oddThen (m : Nat) : Command := .sequence (.scope (.sequence (.primitive (.assign 5 u32 (mulS m 5 2))) Sk)) Sk
-abbrev powBody (m : Nat) : Command :=
-  .sequence (.scope (.sequence (.branch oddCond (oddThen m) Sk)
-    (.sequence (.primitive (.assign 2 u32 (mulS m 2 2))) (.sequence (.primitive (.assign 1 u64 shrN)) Sk)))) Sk
+/-- A discarded scalar return is evaluated into a fresh cell. Its enclosing
+C++ expression/block scope removes this cell after evaluation. -/
+def pushed (ps : PS) (ty : Ty) (v : Int) : PS :=
+  ⟨ps.mem ++ [⟨ty,v⟩],ps.bs ++ [⟨ps.mem.length,true⟩]⟩
 
+theorem pushed_trim (ps : PS) (ty : Ty) (v : Int) :
+    (⟨(pushed ps ty v).mem.take ps.mem.length,(pushed ps ty v).bs.take ps.bs.length⟩ : PS) = ps := by
+  simp [pushed]
+
+abbrev oddThen (m : Nat) : Command := .sequence (.scope
+  (.sequence (.primitive (.assign 5 u32 (mulS m 5 2)))
+    (.sequence (.primitive (.declare u32 true (.variable u32 5))) Sk))) Sk
 abbrev powTail (m : Nat) : Command :=
-  .sequence (.primitive (.assign 2 u32 (mulS m 2 2))) (.sequence (.primitive (.assign 1 u64 shrN)) Sk)
+  .sequence (.primitive (.assign 2 u32 (mulS m 2 2)))
+    (.sequence (.primitive (.declare u32 true (.variable u32 2)))
+      (.sequence (.primitive (.assign 1 u64 shrN)) Sk))
+abbrev powBody (m : Nat) : Command :=
+  .sequence (.scope (.sequence (.branch oddCond (oddThen m) Sk) (powTail m))) Sk
 
 theorem tail_exec (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell) (a n y r c : Nat)
     (hy : y < m) (hn : n < 18446744073709551616) (fu : Nat) :
     ∃ r2, pexec fu (powTail m) (pstate P a n y r c) = some r2 ∧
-      r2.ps = pstate P a (n / 2) (y * y % m) r c ∧ r2.ret = none ∧ r2.cost ≤ 30 ∧ r2.need ≤ P.length + 30 := by
+      r2.ps = pushed (pstate P a (n / 2) (y * y % m) r c) u32 ((y * y % m : Nat) : Int) ∧
+      r2.ret = none ∧ r2.cost ≤ 30 ∧ r2.need ≤ P.length + 30 := by
+  let yy := y*y%m
   have ey := env_y P a n y r c (by omega)
-  have hyy : y * y % m < m := Nat.mod_lt _ (by omega)
+  have hyy : yy < m := Nat.mod_lt _ (by omega)
   have hn2 : n / 2 < 18446744073709551616 := by have := Nat.div_le_self n 2; omega
   have dy := mulS_value (penv (pstate P a n y r c)) m 2 2 y y (by omega) hm2 hy hy ey ey
-  have s1 := assign_y P a n y r c (by omega) (mulS m 2 2) (y * y % m) (by omega) dy
-  have q1 : pexec fu (.primitive (.assign 2 u32 (mulS m 2 2))) (pstate P a n y r c) =
-      some ⟨pstate P a n (y * y % m) r c,none,(mulS m 2 2).nodes+1,P.length+11+(mulS m 2 2).nodes+2⟩ := by
-    rw [pexec_prim, s1]
-  have en := env_n P a n (y * y % m) r c hn
-  have dn := shrN_value (penv (pstate P a n (y * y % m) r c)) n hn en
-  have s2 := assign_n P a n (y * y % m) r c hn shrN (n / 2) hn2 dn
-  have q2 : pexec fu (.primitive (.assign 1 u64 shrN)) (pstate P a n (y * y % m) r c) =
-      some ⟨pstate P a (n / 2) (y * y % m) r c,none,shrN.nodes+1,P.length+11+shrN.nodes+2⟩ := by
-    rw [pexec_prim, s2]
-  have q3 := seq_some q2 rfl (pexec_skip fu (pstate P a (n / 2) (y * y % m) r c))
-  have q4 := seq_some q1 rfl q3
+  have s1 := assign_y P a n y r c (by omega) (mulS m 2 2) yy (by omega) dy
+  have q1 := (pexec_prim fu _ _).trans s1
+  have copied := pstmt_declare_ok (pstate P a n yy r c) u32 true (.variable u32 2) (yy : Int)
+    (by rw [den_variable]; exact env_y P a n yy r c (by omega)) (yy : Int) (convert32 yy (by omega))
+  have qcopy : pexec fu (.primitive (.declare u32 true (.variable u32 2))) (pstate P a n yy r c) =
+      some ⟨pushed (pstate P a n yy r c) u32 (yy : Int),none,2,P.length+16⟩ := by
+    rw [pexec_prim,copied]
+    simp [pushed,pstate_size,NExpr.nodes]
+  let extra := pushed (pstate P a n yy r c) u32 (yy : Int)
+  have memn : extra.mem[P.length]? = some ⟨u64,(n : Int)⟩ := by
+    change ((pstate P a n yy r c).mem ++ [_])[P.length]? = _
+    rw [List.getElem?_append_left (by simp [pstate,cells])]
+    exact mem_n P a n yy r c
+  have en : penv extra 1 u64 = some (n : Int) :=
+    penv_ok extra 1 u64 ⟨P.length,true⟩ ⟨u64,(n : Int)⟩
+      (by simp [extra,pushed,pstate,binds]) memn rfl (u64_lt n hn)
+  have dn := shrN_value (penv extra) n hn en
+  have assigned := pstmt_assign_ok extra 1 u64 shrN ((n/2 : Nat) : Int) dn
+    ⟨P.length,true⟩ ⟨u64,(n : Int)⟩ (by simp [extra,pushed,pstate,binds]) memn rfl (u64_lt n hn) rfl _
+    (Ty.convert_of_valid _ _ (u64_lt _ hn2))
+  have memSet : (pstate P a n yy r c).mem.set P.length ⟨u64,((n/2 : Nat) : Int)⟩ =
+      (pstate P a (n/2) yy r c).mem := by
+    simp only [pstate,cells]
+    rw [List.set_append_right _ _ (by omega)]
+    simp
+  have q2 : pexec fu (.primitive (.assign 1 u64 shrN)) extra =
+      some ⟨pushed (pstate P a (n/2) yy r c) u32 (yy : Int),none,shrN.nodes+1,P.length+13+shrN.nodes+2⟩ := by
+    rw [pexec_prim,assigned]
+    simp [extra,pushed,List.set_append_left,memSet,pstate,cells,binds]
+  have q3 := seq_some q2 rfl (pexec_skip fu _)
+  have q4 := seq_some q1 rfl (seq_some qcopy rfl q3)
   refine ⟨_,q4,rfl,rfl,?_,?_⟩
   · simp [NExpr.nodes]
-  · simp [NExpr.nodes, pstate_size]
-
+  · simp [NExpr.nodes,pushed,pstate,cells,binds] <;> omega
 
 theorem pstate_lens (P : List Cell) (a n y r c n' y' r' c' : Nat) :
     (pstate P a n' y' r' c').mem.length = (pstate P a n y r c).mem.length ∧
@@ -209,7 +240,12 @@ theorem pow_iter (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell)
     have hl := pstate_lens P a n y r c (n / 2) (y * y % m) r' c
     have q2 := pexec_scope fu _ (pstate P a n y r c) _ q1
     rw [h2ps] at q2
-    have q3 := scope_take (pstate P a n y r c) (pstate P a (n / 2) (y * y % m) r' c) hl.1 hl.2
+    have q3 : (⟨(pushed (pstate P a (n/2) (y*y%m) r' c) u32 ((y*y%m : Nat) : Int)).mem.take
+          (pstate P a n y r c).mem.length,
+        (pushed (pstate P a (n/2) (y*y%m) r' c) u32 ((y*y%m : Nat) : Int)).bs.take
+          (pstate P a n y r c).bs.length⟩ : PS) = pstate P a (n/2) (y*y%m) r' c := by
+      rw [← hl.1,← hl.2]
+      exact pushed_trim _ _ _
     simp only [q3] at q2
     have q4 := seq_some q2 (by simpa using h2ret) (pexec_skip fu (pstate P a (n / 2) (y * y % m) r' c))
     refine ⟨_,q4,rfl,by simpa using h2ret,?_,?_⟩
@@ -224,10 +260,27 @@ theorem pow_iter (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell)
   · have d1 : oddCond.denote (penv (pstate P a n y r c)) = some 1 := by rw [dc]; simp [z]
     have dm := mulS_value (penv (pstate P a n y r c)) m 5 2 r y (by omega) hm2 hr hy er ey
     have s1 := assign_r P a n y r c (by omega) (mulS m 5 2) (r * y % m) (by omega) dm
-    have br := pexec_braced fu (.assign 5 u32 (mulS m 5 2)) (pstate P a n y r c) _ s1 rfl
-      (pstate_lens P a n y r c n y (r * y % m) c).1 (pstate_lens P a n y r c n y (r * y % m) c).2
+    have qr := pstmt_declare_ok (pstate P a n y (r*y%m) c) u32 true (.variable u32 5)
+      ((r*y%m : Nat) : Int) (by rw [den_variable]; exact env_r P a n y (r*y%m) c (by omega))
+      ((r*y%m : Nat) : Int) (convert32 _ (by omega))
+    have qc := seq_some ((pexec_prim fu _ _).trans s1) rfl
+      (seq_some ((pexec_prim fu _ _).trans qr) rfl (pexec_skip fu _))
+    have sc := pexec_scope fu _ (pstate P a n y r c) _ qc
+    have trim : (⟨(pushed (pstate P a n y (r*y%m) c) u32 ((r*y%m : Nat) : Int)).mem.take
+          (pstate P a n y r c).mem.length,
+        (pushed (pstate P a n y (r*y%m) c) u32 ((r*y%m : Nat) : Int)).bs.take
+          (pstate P a n y r c).bs.length⟩ : PS) = pstate P a n y (r*y%m) c := by
+      have hl := pstate_lens P a n y r c n y (r*y%m) c
+      rw [← hl.1,← hl.2]; exact pushed_trim _ _ _
+    have sc' := sc
+    change pexec fu (.scope _) _ = some ⟨
+      ⟨(pushed (pstate P a n y (r*y%m) c) u32 ((r*y%m : Nat) : Int)).mem.take (pstate P a n y r c).mem.length,
+        (pushed (pstate P a n y (r*y%m) c) u32 ((r*y%m : Nat) : Int)).bs.take (pstate P a n y r c).bs.length⟩,
+      none,_,_⟩ at sc'
+    rw [trim] at sc'
+    have br := seq_some sc' rfl (pexec_skip fu _)
     have qb := pexec_branch_true fu oddCond (oddThen m) Sk _ 1 d1 (by decide) _ br
-    obtain ⟨r1,h1,h2,h3,h4,h5⟩ := key (r * y % m) hry _ qb rfl rfl (by simp [NExpr.nodes, pstate_size]) (by simp [NExpr.nodes, pstate_size])
+    obtain ⟨r1,h1,h2,h3,h4,h5⟩ := key (r * y % m) hry _ qb rfl rfl (by simp [NExpr.nodes, pstate_size]) (by simp [NExpr.nodes, pstate, cells, binds])
     refine ⟨r1,h1,?_,h3,h4,h5⟩
     have : ¬ n % 2 = 0 := by omega
     simp [this, h2]
@@ -518,5 +571,55 @@ theorem inv_exec (m : Nat) (hm : 2 ≤ m) (hm2 : m < 4294967296) (P : List Cell)
   · simp [NExpr.nodes, stK, bsK] at *; omega
   · simp [NExpr.nodes, stK, bsK] at *; omega
   · simp [hps, hrtps, stK]
+
+theorem penv_pushed (ps : PS) (slot : Nat) (ty added : Ty) (v z : Int)
+    (found : penv ps slot ty = some v) : penv (pushed ps added z) slot ty = some v := by
+  cases hb : ps.bs[slot]? with
+  | none => simp [penv,hb] at found
+  | some binding =>
+    cases hm : ps.mem[binding.address]? with
+    | none => simp [penv,hb,hm] at found
+    | some cell =>
+      have ib := (List.getElem?_eq_some_iff.mp hb).1
+      have im := (List.getElem?_eq_some_iff.mp hm).1
+      simpa only [penv,pushed,List.getElem?_append_left ib,hb,Bind.bind,Option.bind,Option.bind_some,
+        List.getElem?_append_left im,hm] using found
+
+def returnedCopies : Nat → Command
+  | 0 => .sequence (.primitive (.ret (.variable u32 0))) Sk
+  | n+1 => .sequence (.primitive (.declare u32 true (.variable u32 0))) (returnedCopies n)
+def pushedCopies : PS → Nat → Int → PS
+  | ps,0,_ => ps
+  | ps,n+1,v => pushedCopies (pushed ps u32 v) n v
+
+theorem pushedCopies_memory (ps : PS) (n : Nat) (v : Int) :
+    (pushedCopies ps n v).mem = ps.mem ++ List.replicate n ⟨u32,v⟩ := by
+  induction n generalizing ps with
+  | zero => simp [pushedCopies]
+  | succ n ih => simp [pushedCopies,ih,pushed,List.replicate_succ,List.append_assoc]
+
+theorem returnedCopies_exec (n fu : Nat) (ps : PS) (v : Int)
+    (found : penv ps 0 u32 = some v) (valid : u32.valid v = true) :
+    pexec fu (returnedCopies n) ps = some ⟨pushedCopies ps n v,some v,2*n+2,
+      ps.mem.length+ps.bs.length+2*n+3⟩ := by
+  induction n generalizing ps with
+  | zero =>
+    have q := pstmt_ret_ok ps (.variable u32 0) v (by rw [den_variable]; exact found)
+    simpa [returnedCopies,pushedCopies,NExpr.nodes] using
+      (seq_ret (b:=Sk) ((pexec_prim fu _ _).trans q) rfl)
+  | succ n ih =>
+    have q := pstmt_declare_ok ps u32 true (.variable u32 0) v
+      (by rw [den_variable]; exact found) v (Ty.convert_of_valid _ _ valid)
+    have next := ih (pushed ps u32 v) (penv_pushed ps 0 u32 u32 v v found)
+    have ran := seq_some ((pexec_prim fu _ _).trans q) rfl next
+    have ran' : pexec fu (returnedCopies (n+1)) ps = some ⟨pushedCopies ps (n+1) v,some v,
+        2+(2*n+2),max (ps.mem.length+ps.bs.length+1+4)
+          ((pushed ps u32 v).mem.length+(pushed ps u32 v).bs.length+2*n+3)⟩ := ran
+    have costEq : 2+(2*n+2) = 2*(n+1)+2 := by omega
+    have needEq : max (ps.mem.length+ps.bs.length+1+4)
+          ((pushed ps u32 v).mem.length+(pushed ps u32 v).bs.length+2*n+3) =
+        ps.mem.length+ps.bs.length+2*(n+1)+3 := by simp [pushed] <;> omega
+    rw [costEq,needEq] at ran'
+    exact ran'
 
 end Proofs.ModIntPow

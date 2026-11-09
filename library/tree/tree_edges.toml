@@ -1,0 +1,14 @@
+name = "tree_edges"
+source = "tree/tree_edges.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.TreeEdgesInstance"
+proof = "Proofs/TreeEdgesCall.lean"
+model = "Proofs/Generated/TreeEdges.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/tree_edges.cpp"]
+sanitizers = true
+spec = "docs/tree_edges.md"
+standard = "c++17"
+source_sha256 = "a8261d58194546e99764504bb859ddece05a5fb962a1be92ae05ddcc3799edac"
+public_declarations = ["FunctionDecl:tree_edges_from_parent"]

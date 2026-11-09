@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/extrema.hpp"
+#include "../library/number/extrema.hpp"
 #include <climits>
 #include <cstdint>
 #include <random>

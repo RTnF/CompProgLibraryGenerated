@@ -46,7 +46,7 @@ example : VectorBindingInstances.g = [.vector ⟨64,false,false⟩ true,.scalar 
             self.lean(scratch,emit_lean(changed)+'''\nexample : VectorBindingInstances.f =
  [.vector ⟨32,true,false⟩ false,.scalar ⟨64,true,false⟩ true true,.scalar ⟨32,false,false⟩ false false] := rfl
 ''',False)
-            doubling=lower_bindings(ROOT/'library/doubling.hpp')
+            doubling=lower_bindings(ROOT/'library/array/doubling.hpp')
             self.assertEqual(doubling,json.loads((ROOT/'experiments/verification/array/doubling_bindings_ir.json').read_text()))
             self.assertEqual(emit_lean(doubling,'DoublingBindingInstance'),
                 (ROOT/'Proofs/Generated/DoublingBindings.lean').read_text())

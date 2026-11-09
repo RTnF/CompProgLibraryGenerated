@@ -13,7 +13,7 @@ def main():
     disable_network()
     original = lower_source(ROOT / "experiments/library/cpp/number_theory/floor_sum.hpp",
                             "safe_mod", [ROOT / "experiments/library/cpp"])
-    candidate = lower_source(ROOT / "library/safe_mod.hpp")
+    candidate = lower_source(ROOT / "library/number_theory/safe_mod.hpp")
     if original != candidate:
         raise RuntimeError("original/candidate safe_mod common IR mismatch")
     generated = emit_lean(candidate, "Proofs.SafeModInstance")

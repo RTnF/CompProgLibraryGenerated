@@ -43,7 +43,7 @@ def load_component(metadata: Path) -> dict:
     name = data.get("name")
     if not isinstance(name, str) or metadata.stem != name:
         raise ValueError(f"invalid component name in {metadata}")
-    if data.get("source") != f"{name}.hpp":
+    if data.get("source") != metadata.resolve().relative_to(PUBLIC.resolve()).with_suffix(".hpp").as_posix():
         raise ValueError(f"invalid source name for {name}")
     if data.get("standard") != "c++17":
         raise ValueError(f"unsupported C++ standard for {name}")
@@ -122,13 +122,18 @@ def load_component(metadata: Path) -> dict:
 
 
 def component(name: str) -> dict:
-    return load_component(PUBLIC / f"{name}.toml")
+    if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name) is None:
+        raise ValueError(f"invalid component name: {name}")
+    matches = list(PUBLIC.rglob(f"{name}.toml"))
+    if len(matches) != 1:
+        raise ValueError(f"expected one metadata file for {name}, found {len(matches)}")
+    return load_component(matches[0])
 
 
 def registry() -> dict[str, dict]:
     support = support_registry()
     entries = {}
-    for metadata in sorted(PUBLIC.glob("*.toml")):
+    for metadata in sorted(PUBLIC.rglob("*.toml")):
         data = load_component(metadata)
         if data["name"] in entries:
             raise ValueError(f"invalid component name in {metadata}")
@@ -136,8 +141,8 @@ def registry() -> dict[str, dict]:
 
     allowed = {PUBLIC / "README.md"}
     for name in entries:
-        allowed.add(PUBLIC / f"{name}.toml")
-        allowed.add(PUBLIC / f"{name}.hpp")
+        allowed.add(PUBLIC / Path(entries[name]["source"]).with_suffix(".toml"))
+        allowed.add(PUBLIC / entries[name]["source"])
     unexpected = sorted(path for path in PUBLIC.rglob("*") if path.is_file() and path not in allowed)
     if unexpected:
         raise ValueError(f"unregistered public files: {[str(path.relative_to(ROOT)) for path in unexpected]}")

@@ -20,7 +20,7 @@ from check_public import FLAGS, check_compiler
 from offline import disable_network
 
 DIRECTORY = ROOT / 'library'
-SOURCE = DIRECTORY / 'doubling.hpp'
+SOURCE = DIRECTORY / 'array/doubling.hpp'
 FIXTURE = ROOT / 'experiments/verification/array/doubling_nested_ir.json'
 MAXIMA = [1, 2, 3, 4, 5, 7, 8, 9, 31, 32, 33, 2**32, 2**63, 2**64-1]
 
@@ -122,7 +122,7 @@ class NestedIrTests(unittest.TestCase):
         for items, kmax in cases:
             lines.append(' '.join(str(v) for row in reference(items, kmax) for v in row))
         text = ['#include "experiments/library/cpp/template/small_template.hpp"\n',
-                '#include "library/doubling.hpp"\n#include <cstdint>\n#include <iostream>\n',
+                '#include "library/array/doubling.hpp"\n#include <cstdint>\n#include <iostream>\n',
                 'int main(){\n']
         for items, kmax in cases:
             values = ','.join(str(v) for v in items)
@@ -147,7 +147,7 @@ class NestedIrTests(unittest.TestCase):
             for items, kmax in [([], 0), ([0], 0), ([1], 3), ([-1, 0], 5), ([0, 2], 5)]:
                 values = ','.join(str(v) for v in items)
                 (scratch / 'abort.cpp').write_text(
-                    '#include "library/doubling.hpp"\n'
+                    '#include "library/array/doubling.hpp"\n'
                     f'int main(){{ std::vector<int> v{{{values}}}; cp::doubling(v,{kmax}ull); }}\n')
                 subprocess.run(['g++', *FLAGS, '-I', str(ROOT), '-I', str(DIRECTORY),
                                 str(scratch / 'abort.cpp'), '-o', str(scratch / 'abort')],
@@ -160,8 +160,12 @@ class NestedIrTests(unittest.TestCase):
         original = SOURCE.read_text()
         baseline = nested_ir.lower_source(SOURCE, [DIRECTORY])
         with tempfile.TemporaryDirectory(prefix='nested-doubling-mutations-') as directory:
-            scratch = Path(directory)
-            shutil.copy(DIRECTORY / 'bit_width_u64.hpp', scratch / 'bit_width_u64.hpp')
+            scratch = Path(directory) / 'array'
+            scratch.mkdir()
+            dependencies = Path(directory) / 'number_theory'
+            dependencies.mkdir()
+            shutil.copy(DIRECTORY / 'number_theory/bit_width_u64.hpp',
+                        dependencies / 'bit_width_u64.hpp')
             renamed = original
             for old_name, new_name in [('doubling', 'other_name'), ('ret', 'table'), ('kmax', 'limit'),
                                        ('v', 'graph')]:

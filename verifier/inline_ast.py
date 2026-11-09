@@ -6,10 +6,32 @@ lowered to a function whose fields are leading reference parameters) becomes the
 spliced before the statement that contained the call. Value parameters become fresh locals, reference
 parameters are replaced by the (side-effect free) lvalue argument, and the callee's single final `return`
 becomes a fresh local holding the call's value. Recursion, early returns, and calls whose position makes
-hoisting change the evaluation order (loop conditions, short-circuit operands, conditional operands)
-are rejected.
+hoisting change the evaluation order (loop conditions and short-circuit operands)
+are rejected. Integer prvalue conditionals keep each operand's expansion inside
+its selected branch and assign the result to a fresh scalar local.
 """
 import copy
+
+
+def select_constexpr_body(body):
+    """Resolve a sole compiler-evaluated branch without runtime initialization."""
+    while len(body.get('inner', [])) == 1:
+        branch = body['inner'][0]
+        if branch.get('kind') != 'IfStmt' or not branch.get('isConstexpr'):
+            break
+        children = branch.get('inner', [])
+        if (branch.get('hasInit') or branch.get('hasVar') or
+                len(children) != (3 if branch.get('hasElse') else 2)):
+            raise ValueError('constexpr factory branch cannot have runtime initializers')
+        condition = children[0]
+        info = condition.get('type', {})
+        if (condition.get('kind') != 'ConstantExpr' or
+                info.get('desugaredQualType', info.get('qualType')) != 'bool' or
+                condition.get('value') not in ('true', 'false')):
+            raise ValueError('constexpr factory branch requires a compiler-resolved boolean')
+        chosen = children[1] if condition['value'] == 'true' else children[2] if len(children) == 3 else {'kind': 'CompoundStmt'}
+        body = dict(body, inner=chosen.get('inner', []) if chosen.get('kind') == 'CompoundStmt' else [chosen])
+    return body
 
 
 class Inliner:
@@ -48,7 +70,9 @@ class Inliner:
                 fields = caller.get('_all_fields', caller.get('_fields'))
                 if fields is None or len(fields) != len(function.get('_fields', [])):
                     raise ValueError('method call requires a method of the same class')
-                refs = [self.field_reference(p) for p in fields]
+                refs = caller.get('_receiver_arguments')
+                if refs is None:
+                    refs = [self.field_reference(p) for p in fields]
                 return function, children[1:], refs
         return None
 
@@ -77,7 +101,7 @@ class Inliner:
         parameters = [c for c in function['inner'] if c.get('kind') == 'ParmVarDecl']
         if len(parameters) != len(all_arguments):
             raise ValueError('call argument count mismatch')
-        body = [c for c in function['inner'] if c.get('kind') == 'CompoundStmt'][0]
+        body = select_constexpr_body([c for c in function['inner'] if c.get('kind') == 'CompoundStmt'][0])
         statements = []
         subst = {}
         rename = {}
@@ -114,16 +138,25 @@ class Inliner:
                 if contains_return(statement):
                     raise ValueError('early returns cannot be inlined')
             cloned = [self.clone(s, subst, rename) for s in leading]
-            statements.extend(self.expand_statements(cloned, function))
+            bound_caller = dict(function)
+            fields = function.get('_all_fields', function.get('_fields'))
+            if fields is not None:
+                # A call on this keeps the same receiver. Read-only fields
+                # may have value parameters in the helper ABI; those captures
+                # are not a new receiver. Keep its original field arguments.
+                bound_caller['_receiver_arguments'] = copy.deepcopy(field_refs) if field_refs else [
+                    self.clone(self.field_reference(p), subst, rename) for p in fields]
+            statements.extend(self.expand_statements(cloned, bound_caller))
             result = None
-            if returned is not None and discard and _is_pure(returned) and not self.contains_call(returned, function):
-                returned = None  # the value is unused and computing it has no effect
+            # A discarded return value still evaluates its expression. Even an
+            # expression without side effects may fault (division, overflow,
+            # invalid shifts), so purity does not justify dropping it.
             if returned is not None:
                 value = returned.get('inner', [None])[0]
                 if value is None:
                     raise ValueError('inlined return needs a value')
                 value = self.clone(value, subst, rename)
-                value, pre = self.hoist(value, function)
+                value, pre = self.hoist(value, bound_caller)
                 statements.extend(pre)
                 identity = self.fresh('ret')
                 spelling = node['type'].get('desugaredQualType', node['type']['qualType'])
@@ -172,6 +205,35 @@ class Inliner:
         return result
 
     # --- hoisting -----------------------------------------------------------------------
+    def conditional(self, node, caller):
+        """Expand a scalar conditional without evaluating an unselected operand."""
+        from scalar_ir import scalar_type
+        children = node.get('inner', [])
+        if len(children) != 3 or node.get('valueCategory') != 'prvalue':
+            raise ValueError('inlined conditional calls require a scalar prvalue result')
+        scalar_type(node)  # Reject references, pointers, containers and object results.
+        spelling = _spelling(node['type']).removeprefix('const ')
+        info = {'qualType': spelling}
+        identity = self.fresh('conditional')
+        declaration = {'kind': 'VarDecl', 'id': identity, 'name': 'conditional',
+                       'type': info, 'init': 'c', 'isUsed': True,
+                       'inner': [{'kind': 'IntegerLiteral', 'type': info, 'value': '0',
+                                  'valueCategory': 'prvalue'}]}
+        reference = {'kind': 'DeclRefExpr', 'type': info, 'valueCategory': 'lvalue',
+                     'referencedDecl': {key: declaration[key] for key in ('id', 'kind', 'name', 'type')}}
+        condition, pre = self.hoist(children[0], caller)
+        branches = []
+        for operand in children[1:]:
+            value, statements = self.hoist(operand, caller)
+            assignment = {'kind': 'BinaryOperator', 'opcode': '=', 'type': info,
+                          'valueCategory': 'lvalue', 'inner': [copy.deepcopy(reference), value]}
+            branches.append({'kind': 'CompoundStmt', 'inner': statements + [assignment]})
+        pre += [{'kind': 'DeclStmt', 'inner': [declaration]},
+                {'kind': 'IfStmt', 'inner': [condition] + branches}]
+        result = {'kind': 'ImplicitCastExpr', 'castKind': 'LValueToRValue',
+                  'type': info, 'valueCategory': 'prvalue', 'inner': [reference]}
+        return result, pre
+
     def hoist(self, node, caller, discard=False):
         """Return (expression without known calls, statements to run before it)."""
         if not isinstance(node, dict):
@@ -195,6 +257,8 @@ class Inliner:
             return result, pre
         kind = node.get('kind')
         children = node.get('inner', [])
+        if kind == 'ConditionalOperator' and self.contains_call(node, caller):
+            return self.conditional(node, caller)
         if kind in ('ConditionalOperator',) or (kind == 'BinaryOperator' and node.get('opcode') in ('&&', '||')):
             for index, child in enumerate(children):
                 if (kind == 'ConditionalOperator' or index > 0) and self.contains_call(child, caller):
@@ -278,7 +342,7 @@ class Inliner:
         if len(body) != 1:
             return function
         self.active = [function['id']] if 'id' in function else []
-        expanded = self.expand_statement(body[0], function)
+        expanded = self.expand_statement(select_constexpr_body(body[0]), function)
         new_inner = [expanded[0] if c is body[0] else c for c in function['inner']]
         return dict(function, inner=new_inner)
 

@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/rolling_hash.hpp"
+#include "../library/string/rolling_hash.hpp"
 #include <random>
 #include <vector>
 

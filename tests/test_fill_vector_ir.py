@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import nested_ir
 from offline import disable_network
 
-LIBRARY = ROOT / 'library/sort_util.hpp'
+LIBRARY = ROOT / 'library/array/sort_util.hpp'
 
 
 def inv_perm_source():

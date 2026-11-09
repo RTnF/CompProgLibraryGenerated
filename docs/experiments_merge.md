@@ -12,9 +12,9 @@
 | `Graph/TopologicalSort.hpp` | `graph/topological_sort.hpp` | 0.85 | 正本のみ。 |
 | `Graph/WarshallFloyd.hpp` | `graph/warshall_floyd.hpp` | 0.86 | 正本のみ。 |
 | `Graph/BellmanFord.hpp` | `graph/bellman_ford.hpp` | 0.79 | 正本のみ。 |
-| `Array/SortUtil.hpp` | `array/sort_util.hpp` | 0.79 | 正本のみ（`inv_perm` は検証済みの `library/sort_util.hpp`）。 |
+| `Array/SortUtil.hpp` | `array/sort_util.hpp` | 0.79 | 正本のみ（`inv_perm` は検証済みの `library/array/sort_util.hpp`）。 |
 | `NumberTheory/IsPrime.hpp` | `number_theory/is_prime.hpp` | 0.77 | 正本のみ。 |
-| `ModInt/ModInt.hpp` | `modint/modint.hpp` | 0.71 | 正本のほうが機能が多い（`mod()`、`set`、`pow` の負の指数、入出力）。検証済みは `library/modint.hpp`。 |
+| `ModInt/ModInt.hpp` | `modint/modint.hpp` | 0.71 | 正本のほうが機能が多い（`mod()`、`set`、`pow` の負の指数、入出力）。検証済みは `library/modint/modint.hpp`。 |
 | `NumberTheory/Factorize.hpp` | `number_theory/factorize.hpp` | 0.64 | 正本のみ。 |
 | `Array/CumulativeSum.hpp` | `array/cumulative_sum.hpp` | 0.38 | 書き方が異なる。正本（2 次元を含む）のみ。 |
 | `AlgebraicStructure/Monoid.hpp` | `algebraic_structure/monoid.hpp` | 0.41 | 正本が機能的に上位。 |

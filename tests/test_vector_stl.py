@@ -37,7 +37,7 @@ int nested(std::vector<std::vector<int>>& v){v[0].reserve(8);return v[0][0];}
                          [(r['operation'],r['element']) for r in renamed['operations']])
 
     def test_actual_doubling_calls_and_verified_assert_arguments(self):
-        result=audit_vector_operations(ROOT/'library/doubling.hpp')
+        result=audit_vector_operations(ROOT/'library/array/doubling.hpp')
         self.assertEqual(result['coverage'],'callee_identity_only')
         self.assertEqual([r['operation'] for r in result['operations']],
             ['size','size','operator[]','operator[]','assign','operator[]','begin','end',

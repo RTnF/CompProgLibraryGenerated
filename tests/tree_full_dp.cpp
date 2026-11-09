@@ -1,6 +1,6 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/tree_full_dp.hpp"
-#include "../library/tree_order.hpp"
+#include "../library/tree/tree_full_dp.hpp"
+#include "../library/tree/tree_order.hpp"
 #include <algorithm>
 #include <cassert>
 #include <random>

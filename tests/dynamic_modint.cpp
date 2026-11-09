@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/dynamic_modint.hpp"
+#include "../library/modint/dynamic_modint.hpp"
 #include <random>
 
 int main() {

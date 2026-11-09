@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/run_length.hpp"
+#include "../library/string/run_length.hpp"
 #include <climits>
 #include <random>
 #include <utility>

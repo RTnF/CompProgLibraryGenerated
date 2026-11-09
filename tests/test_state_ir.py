@@ -150,7 +150,7 @@ int narrowing(int a, unsigned long b){a += b; return a;}
         with tempfile.TemporaryDirectory(prefix='compound-') as directory:
             scratch = Path(directory)
             original = ROOT / 'experiments/library/cpp/number_theory/floor_sum.hpp'
-            candidate = ROOT / 'library/safe_mod.hpp'
+            candidate = ROOT / 'library/number_theory/safe_mod.hpp'
             imported = state_ir.lower_source(original, 'safe_mod', [ROOT/'experiments/library/cpp'])
             lowered_candidate = state_ir.lower_source(candidate)
             self.assertEqual(imported, lowered_candidate)

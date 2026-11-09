@@ -1,6 +1,6 @@
 # sort_util
 
-`library/sort_util.hpp` は元の `experiments/library/cpp/array/sort_util.hpp` の関数をまとめた 1 つのヘッダーで、`inv_perm`・`compress`・`sort_vector`・`dedup_vector` を持つ。すべて要素型 `T` のテンプレートのままで、検証した具体化はヘッダーの明示的な具体化に書いた型（`inv_perm<int>`、ほかは `long long`）。
+`library/array/sort_util.hpp` は元の `experiments/library/cpp/array/sort_util.hpp` の関数をまとめた 1 つのヘッダーで、`inv_perm`・`compress`・`sort_vector`・`dedup_vector` を持つ。すべて要素型 `T` のテンプレートのままで、検証した具体化はヘッダーの明示的な具体化に書いた型（`inv_perm<int>`、ほかは `long long`）。
 
 元のソースからの変更: `arg_sort`・`inv_arg_sort`（`stable_sort` とラムダ比較）は未対応のため含めていない。`compress` は呼び出し側が用意した `unzip`・`cmp` に書き込む形で、元の「vector を返す版」と `offset` 引数は含めていない。`sort_vector`・`dedup_vector` は元のソースにはなく、`std::sort`・`std::unique` の契約を検証するための薄い包みである。
 

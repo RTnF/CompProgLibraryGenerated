@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/csr_build.hpp"
+#include "../library/graph/csr_build.hpp"
 #include <random>
 #include <vector>
 

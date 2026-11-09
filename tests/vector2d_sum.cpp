@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/vector2d_sum.hpp"
+#include "../library/array/vector2d_sum.hpp"
 #include <climits>
 #include <random>
 #include <vector>

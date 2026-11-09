@@ -15,7 +15,7 @@ from state_ir import lower_source, emit_lean
 from test_scalar_ir import lean_environment
 from offline import disable_network
 
-SOURCE = ROOT / 'library/bit_width_u64.hpp'
+SOURCE = ROOT / 'library/number_theory/bit_width_u64.hpp'
 FIXTURE = ROOT / 'experiments/verification/array/bit_width_u64_ir.json'
 
 

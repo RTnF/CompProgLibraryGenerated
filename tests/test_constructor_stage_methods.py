@@ -83,7 +83,7 @@ class ConstructorStageMethodTests(unittest.TestCase):
                 subprocess.run([str(binary)], check=True)
 
     def test_beats_allocation_prefix_and_verified_body_permutation(self):
-        source = ROOT / 'library/segment_tree_beats.hpp'
+        source = ROOT / 'library/segment_tree/segment_tree_beats.hpp'
         full = lower_source(source, construction_stages=True)
         self.assertEqual(emit_lean(full, 'Proofs.BeatsConstructionStage'),
                          (ROOT / 'Proofs/Generated/BeatsConstructionStage.lean').read_text())

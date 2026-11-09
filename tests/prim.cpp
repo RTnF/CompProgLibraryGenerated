@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/prim.hpp"
+#include "../library/graph/prim.hpp"
 #include <algorithm>
 #include <random>
 #include <vector>

@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/cumulative_sum.hpp"
+#include "../library/array/cumulative_sum.hpp"
 #include <random>
 #include <vector>
 

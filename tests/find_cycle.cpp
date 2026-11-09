@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/find_cycle.hpp"
+#include "../library/graph/find_cycle.hpp"
 #include <random>
 #include <vector>
 

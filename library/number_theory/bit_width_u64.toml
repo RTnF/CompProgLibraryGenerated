@@ -1,0 +1,14 @@
+name = "bit_width_u64"
+source = "number_theory/bit_width_u64.hpp"
+dependencies = []
+translation = "state_ir"
+lean_namespace = "Proofs.BitWidthU64Instance"
+proof = "Proofs/BitWidthU64.lean"
+model = "Proofs/Generated/BitWidthU64.lean"
+bridge = "verifier/state_bridge.py"
+tests = ["tests/bit_width_u64.cpp"]
+sanitizers = true
+spec = "docs/bit_width_u64.md"
+standard = "c++17"
+source_sha256 = "a37f75ac88b777158d81356d256d1993523c91fd70decbe4405c07beb3659adc"
+public_declarations = ["FunctionDecl:bit_width_u64"]

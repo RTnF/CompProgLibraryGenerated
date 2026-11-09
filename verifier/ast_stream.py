@@ -318,7 +318,7 @@ def _constructs(expression):
     return bool(expression) and expression.get('kind') == 'CXXConstructExpr'
 
 
-def class_method_functions(record, source):
+def class_method_functions(record, source, *, include_constructors=True):
     """Lower the inline methods and constructors of a class to ordinary functions.
 
     Every field becomes a leading parameter named after the field, and every `this->field` access becomes a
@@ -377,6 +377,8 @@ def class_method_functions(record, source):
         function['loc'].setdefault('file', str(source))
         function['_inline'] = True
         functions.append(function)
+    if not include_constructors:
+        return functions
     constructors = [c for c in record.get('inner', []) if c.get('kind') == 'CXXConstructorDecl' and not c.get('isImplicit')
                     and any(x.get('kind') == 'CompoundStmt' for x in c.get('inner', []))]
     for number, constructor in enumerate(constructors):
@@ -431,7 +433,7 @@ def class_method_functions(record, source):
     return functions
 
 
-def class_construction_stages(record, source):
+def class_construction_stages(record, source, *, standard_roots=(), include_dirs=()):
     """Constructor initializers and body, before object export/scope retirement.
 
     All fields are locals, in declaration order. The returned unit NProgram is
@@ -455,8 +457,12 @@ def class_construction_stages(record, source):
         inits = {i.get('anyInit', {}).get('id'): i for i in ctor.get('inner', [])
                  if i.get('kind') == 'CXXCtorInitializer'}
         if set(inits) != {f['id'] for f in fields}:
-            raise ValueError('construction stages require every field initializer and no delegation')
-        parameters, prologue, layout = {}, [], []
+            from constructor_delegation import expand_scalar_delegation
+            ctor = expand_scalar_delegation(record, ctor, fields, source, _display_name(record), _replace_this_members,
+                                            standard_roots, include_dirs)
+            body = next(c for c in ctor['inner'] if c.get('kind') == 'CompoundStmt')
+            inits = {i['anyInit']['id']: i for i in ctor['inner'] if i.get('kind') == 'CXXCtorInitializer'}
+        parameters, prologue, layout = {}, list(ctor.get('_construction_prefix', [])), []
         for field in fields:
             init = inits[field['id']]
             if len(init.get('inner', [])) != 1:
@@ -477,12 +483,104 @@ def class_construction_stages(record, source):
                            'field_id': field['id'], 'declared_type': spelling,
                            'mutable': bool(field.get('mutable'))})
         rewritten = _replace_this_members(dict(body, inner=prologue+body.get('inner', [])), fields, parameters)
-        function = {k: v for k, v in ctor.items() if k not in ('inner', 'storageClass')}
+        function = {k: v for k, v in ctor.items() if k not in ('inner', 'storageClass', '_construction_prefix')}
         function.update(kind='FunctionDecl', name=f'{name}_construct{number}',
                         type={'qualType': ctor['type']['qualType']},
                         inner=[c for c in ctor.get('inner', []) if c.get('kind') == 'ParmVarDecl']+[rewritten],
                         _construction_fields=layout,
                         _all_fields=[parameters[f['id']] for f in fields])
+        function['loc'].setdefault('file', str(source))
+        functions.append(function)
+    return functions
+
+
+def member_factory_method(owner, name, index, source):
+    """Retain a real receiver as references, with an explicit selected method."""
+    methods=[m for m in owner.get('inner',[]) if m.get('kind')=='CXXMethodDecl' and
+             m.get('name')==name and not m.get('isImplicit') and m.get('storageClass')!='static']
+    if len(methods)!=1:
+        raise ValueError('one instantiated record-returning member must match the request')
+    method=methods[0];signature=method['type']['qualType']
+    suffix=signature[signature.rfind(')')+1:]
+    if suffix not in ('',' const',' noexcept',' const noexcept') or method.get('virtual') or 'noexcept(' in signature:
+        raise ValueError('record-returning member qualifiers are unsupported')
+    constant='const' in suffix.split()
+    fields=_field_reference_parameters(owner);parameters=[];mapped={}
+    for f in fields:
+        if f['type'].get('desugaredQualType',f['type']['qualType']).removeprefix('const ') not in SCALAR_FIELD_TYPES:
+            raise ValueError('record-returning members require scalar receiver fields')
+        parameter=_field_parameter('receiver'+str(index),f,constant,False)
+        parameter['_factory_field']=True
+        parameters.append(parameter);mapped[f['id']]=parameter
+    bodies=[n for n in method.get('inner',[]) if n.get('kind')=='CompoundStmt']
+    if len(bodies)!=1 or any(n.get('kind','').endswith('Attr') for n in method.get('inner',[])):
+        raise ValueError('record-returning members require one original body without attributes')
+    body=_replace_this_members(bodies[0],fields,mapped)
+    def receiver_calls(n):
+        return n.get('kind') in ('CXXThisExpr','CXXMemberCallExpr') or any(receiver_calls(c) for c in n.get('inner',[]))
+    if receiver_calls(body):
+        raise ValueError('record-returning members require direct receiver field accesses')
+    result=dict(method,name='receiver'+str(index)+'_'+name,
+        type={'qualType':signature[:-len(suffix)] if suffix else signature},
+        inner=parameters+[p for p in method.get('inner',[]) if p.get('kind')=='ParmVarDecl']+[body],
+        _factory_member=True,_factory_source_name=name,
+        _factory_receiver_fields=[p['id'] for p in parameters],
+        _factory_receiver=dict(index=index,qualified_class=owner['_copy_qualified'],constant=constant,
+            source_id=owner['id'],method_type=signature))
+    if '_member_template_instance' in method:
+        instance=method['_member_template_instance']
+        result['_factory_source_name']=instance['source_name']
+        result['_factory_receiver']['template_instance']=dict(instance)
+    return result
+
+
+def class_factory_stages(record, source, *, include_friends=False, member_methods=(), standard_roots=(), include_dirs=()):
+    """Materialize all fields of a directly returned scalar record once.
+
+    These unit programs are pre-export stages. Their object result is exposed
+    by the same typed field capture as constructor stages, not scalar erasure.
+    """
+    from constructor_delegation import ScalarDelegation, spelling
+    from class_lowering import scalar_record_type
+    fields = _field_reference_parameters(record)
+    resolver = ScalarDelegation(record, fields, source, _display_name(record), _replace_this_members,
+                               standard_roots, include_dirs)
+    methods = [m for m in record.get('inner', []) if m.get('kind') == 'CXXMethodDecl'
+               and m.get('storageClass') == 'static' and scalar_record_type(
+                   {'qualType': spelling(m).split('(', 1)[0].strip()}, resolver.pattern)]
+    for friend in record.get('inner', []):
+        if not include_friends or friend.get('kind') != 'FriendDecl':
+            continue
+        for method in friend.get('inner', []):
+            if method.get('kind') == 'FunctionDecl' and scalar_record_type(
+                    {'qualType': spelling(method).split('(', 1)[0].strip()}, resolver.pattern):
+                methods.append(dict(method, _factory_friend=True))
+    for method in member_methods:
+        if not method.get('_factory_member') or not scalar_record_type(
+                {'qualType':spelling(method).split('(',1)[0].strip()},resolver.pattern):
+            raise ValueError('member must return the selected record by value')
+        methods.append(method)
+    names = _method_names(_function_class_name(record) + '_factory', methods)
+    functions = []
+    for method in methods:
+        resolver.root_constructor = method['id']
+        method, groups = resolver.factory_parameters(method)
+        prefix, locals_ = resolver.materialize_factory(method, (method['id'],))
+        parameters = [p for p in method.get('inner', []) if p.get('kind') == 'ParmVarDecl']
+        layout = [{'name': f['name'], 'id': locals_[f['id']]['id'], 'field_id': f['id'],
+                   'declared_type': spelling(f), 'mutable': bool(f.get('mutable'))} for f in fields]
+        signature = spelling(method)
+        function = {k: v for k, v in method.items() if k not in ('inner', 'storageClass')}
+        function.update(kind='FunctionDecl', name=names[method['id']],
+                        type={'qualType': 'void ' + signature[signature.index('('):]},
+                        inner=parameters + [dict(resolver.body(method), inner=prefix)],
+                        _construction_fields=layout,
+                        _all_fields=[locals_[f['id']] for f in fields],
+                        _factory_stage={'method': method.get('_factory_source_name',method['name']), 'source_offset': method['loc']['offset'],
+                                        'arguments': groups, 'friend': bool(method.get('_factory_friend')),
+                                        'returned_type': signature.split('(', 1)[0].strip()})
+        if method.get('_factory_member'):
+            function['_factory_stage']['receiver']=method['_factory_receiver']
         function['loc'].setdefault('file', str(source))
         functions.append(function)
     return functions

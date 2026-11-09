@@ -106,7 +106,7 @@ theorem descA_spec (T : List (List Nat)) (f : Nat → Nat) (N : Nat) (hf : ∀ x
       have hne : tab T c (itr f a u0) ≠ tab T c (itr f a v0) := by
         rw [e1, e2, ← itr_add, ← itr_add]
         exact hmin _ (by omega)
-      rw [if_pos hne]
+      rw [ite_eq_left hne]
       have n1 : tab T c (itr f a u0) = itr f (a + 2 ^ c) u0 := by rw [e1, ← itr_add, Nat.add_comm]
       have n2 : tab T c (itr f a v0) = itr f (a + 2 ^ c) v0 := by rw [e2, ← itr_add, Nat.add_comm]
       rw [n1, n2]
@@ -117,7 +117,7 @@ theorem descA_spec (T : List (List Nat)) (f : Nat → Nat) (N : Nat) (hf : ∀ x
         have e : m + (a + 2 ^ c - m) = 2 ^ c + a := by omega
         rw [e] at this
         exact this
-      rw [if_neg (fun h => h heq)]
+      rw [ite_eq_right (fun h => h heq)]
       exact ih a (fun k hk x hx => hT k (by omega) x hx) hu hv ham (by omega)
 
 theorem descA_lt (T : List (List Nat)) (f : Nat → Nat) (N : Nat) :
@@ -131,9 +131,9 @@ theorem descA_lt (T : List (List Nat)) (f : Nat → Nat) (N : Nat) :
     have h1 := (hT c (by omega) u hu).2.1
     have h2 := (hT c (by omega) v hv).2.1
     by_cases h : tab T c u ≠ tab T c v
-    · rw [if_pos h]
+    · rw [ite_eq_left h]
       exact ih _ _ (fun k hk x hx => hT k (by omega) x hx) h1 h2
-    · rw [if_neg h]
+    · rw [ite_eq_right h]
       exact ih _ _ (fun k hk x hx => hT k (by omega) x hx) hu hv
 
 /-- `tree_lca_same_depth`: for vertices of the same depth `d`, the result is the first common vertex `f^m u = f^m v`. -/
@@ -162,5 +162,44 @@ theorem lca_spec (T : List (List Nat)) (f : Nat → Nat) (N root : Nat) (d : Nat
   rw [← itr_add]
   congr 1
   omega
+
+/-- The original Tree member now starts at the last existing row. All levels are
+visited exactly once, in descending order; the first-meeting specification is
+unchanged even when the table has more rows than the current depth needs. -/
+theorem lca_all_rows_spec (T : List (List Nat)) (f : Nat → Nat) (N root : Nat)
+    (d : Nat → Nat) (TF : TreeF f N root d) (u v : Nat)
+    (hu : u < N) (hv : v < N) (hd : d u = d v)
+    (nonempty : 0 < T.length) (enough : d u < 2 ^ T.length)
+    (H : TabAll T f N (T.length - 1)) (different : u ≠ v) :
+    ∃ m, itr f m u = itr f m v ∧ (∀ s, s < m → itr f s u ≠ itr f s v) ∧
+      tab T 0 (descA T T.length u v).1 = itr f m u := by
+  have rows : T.length - 1 + 1 = T.length := by omega
+  simpa only [rows] using lca_spec T f N root d TF u v (T.length - 1)
+    hu hv hd (by simpa only [rows] using enough) H different
+
+/-- The signed C++ loop starts at row_count-1 and stops after row 0. -/
+theorem all_rows_indices (T : List (List Nat)) (k : Nat) :
+    k ∈ (List.range T.length).reverse ↔ k < T.length := by simp
+
+/-- Same-depth part of the original member, including its equal-vertex return. -/
+def allRowsLca (T : List (List Nat)) (u v : Nat) : Nat :=
+  if u = v then u else tab T 0 (descA T T.length u v).1
+
+theorem all_rows_lca_correct (T : List (List Nat)) (f : Nat → Nat) (N root : Nat)
+    (d : Nat → Nat) (TF : TreeF f N root d) (u v : Nat)
+    (hu : u < N) (hv : v < N) (hd : d u = d v)
+    (nonempty : 0 < T.length) (enough : d u < 2 ^ T.length)
+    (H : TabAll T f N (T.length - 1)) :
+    allRowsLca T u v < N ∧
+      ∃ m, itr f m u = allRowsLca T u v ∧ itr f m v = allRowsLca T u v ∧
+        ∀ s, s < m → itr f s u ≠ itr f s v := by
+  by_cases equal : u = v
+  · subst v
+    simp only [allRowsLca,ite_true]
+    exact ⟨hu,0,rfl,rfl,by intro s hs; omega⟩
+  · obtain ⟨m,meet,minimal,result⟩ := lca_all_rows_spec T f N root d TF u v hu hv hd nonempty enough H equal
+    have value : allRowsLca T u v = itr f m u := by simp only [allRowsLca,ite_eq_right equal]; exact result
+    rw [value]
+    exact ⟨itr_lt f N TF.fN m u hu,m,rfl,meet.symm,minimal⟩
 
 end Proofs.TreeLcaMath

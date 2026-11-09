@@ -1,816 +1,136 @@
-# 作業の引き継ぎ
-
-更新: 2026-11-07。過去の引き継ぎ全文は [履歴](handoff_history_20261101.md) にbyte同一で保存した。通常はこの文書から再開し、履歴は必要な節だけ検索して読む。
-
-## 復帰時の最新確認（2026-11-07）
-
-- **修正後全件gate25951が終了0・全工程成功（2026-11-07）:** 実terminal回収済み。inventory137、public59、bridge59、共有240、package/archiveが成功し、全1966入力hashは検査中/終了後とも不変。all4674.573秒/全4682.478秒。C++59と共有3件は一致する成功cacheを再利用、bridge59は今回一致を確認。最終proof-securityは一致する成功cache利用をcurrent fingerprintで再確認したものであり、raw52299/固定nanoda49153を今回fresh実行とはしない。新fieldモデルの一般証明/事例の固定kernelは各登録test内で実行。STL契約依存2は別区分。ZIP全59headerの実source byte照合成功、55630bytes/SHA256 3eaa84cbe59d59d6c3117cc2072056439a3e8c81182ea837171119a13261e6d4。根拠はrecord_type_boundary_fix_20261107/gate/{checks_state,final_gate_receipt,input_manifest}.jsonとall/archive.txt。同25951はterminal0回収済みなので再pollしない。次はこの記録を含む最新20差分の機密再走査→stage/commit全blob照合→commit→毎回手動承認push→当該SHAの実CI/fresh audit/release/ZIP。現在stage/commit/pushなし。MEMORY.md/cacheは公開しない。原本全137/任意T/完全object lifetimeと残るSet6callerモデルは未完了・active。
-
-- **gate25951は共有218/240検査成功へ進行:** 同handleの55秒pollでlive継続。vector loops/construct/IR、mixed invoke、bindings/store/STL、loop条件、参照call/invoke、整数境界、template Lean/IRまで成功し、現在tests/test_signed_floor_sum_proofs.pyを実行中。全1966入力hash不変、条件変更/入力編集/再起動/追加heavy jobなし。根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.json/all.txt。同25951を継続pollして全共有/最終proof監査/package/archiveのterminal結果と最終hashを回収し、最新機密走査→stage/commit→手動承認push→当該SHA CI/release/ZIPへ進む。stage/commit/pushなし、全137目標は未達・active。
-
-- **gate25951は共有199/240成功・oracle全3成功:** 実handleを55秒間隔でpollしてlive継続。nested_ir_oracle_0/1/2が117.566/118.522/118.246秒で成功し、native/unsupported/nested construct/vector bindings/store/ownershipも通過、現在tests/test_vector_loops.pyを検査中。全1966入力hash不変、条件変更/再起動/追加heavy jobなし。根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.json/all.txt。次は同25951を継続pollして全共有/最終proof監査/package/archiveのterminalと最終hashを回収。成功後に機密再検査→stage/commit→手動承認push→新SHA CI/release/ZIPへ進む。現時点stage/commit/pushなし、全137目標は未達・active。
-
-- **gate25951は共有189/240検査成功・oracle照合へ:** 実handleを55秒間隔でpollしlive継続。nested/vector growth、doubling、fill_vector、bitwiseが成功。最初のnested_ir_oracle_0も117.566秒でpassedとなり、現在tests/test_nested_ir_oracle_2.pyを検査中。全1966入力hash不変、入力変更/再起動/検査条件変更/追加heavy jobなし。根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.json/all.txt。同25951を継続pollして全件/最終proof監査/package/archiveのterminalと最終hashを待つ。stage/commit/pushは未実施、全137目標は未達・active。
-
-- **gate25951は共有181/240成功・dynamic系が進行:** 同handleを55秒間隔で実pollしliveを確認。dynamic owned runs/append/scalar/control/state、construct/allocate/scope/preserve/finish/prepare/resolve/index等が成功し、現在tests/test_append_row.pyを実行中。全1966入力hash不変、入力変更/追加heavy job/再起動なし。根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.json/all.txt。次も同25951のterminalを確認し、全件/最終監査/package/archive成功後に機密再検査→stage/commit→手動承認push→新SHA CI/release/ZIPを進める。現時点stage/commit/pushなし、全137目標は未達・active。
-
-- **gate25951は共有152/240成功へ進行:** 実handleを55秒間隔でpollしてliveを確認。UF構築/仕事量/操作列/size/same/fields/original_api/boundsまで成功し、現在tests/test_dynamic_flat_append.pyを実行中。全1966入力hash不変、検査再起動/条件変更/追加heavy jobなし。根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.json/all.txt。次も同25951をpollして全共有/最終proof監査/package/archiveのterminalと最終hashを確認し、機密再検査→stage/commit→手動承認push→当該SHA CI/release/ZIPへ進む。stage/commit/pushなし、全137目標は未達・active。
-
-- **gate25951の共有112/240検査成功を確認:** 同実handleを55秒間隔でpollしlive継続。class construct/local copy/call/vector copy/standard include/copy auditとUF領域系が通過し、現在tests/test_cpp_fixed_call.pyを検査中。全1966入力hash不変、別のheavy jobや入力変更/再起動なし。最新根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.json/all.txt。全件/最終proof監査/package/archiveのterminal回収後に、機密再走査・stage/commit・毎回手動承認push・新SHAのCI/release/ZIPを確認する。現時点はstage/commit/pushなし、全137目標は未達・active。
-
-- **gate25951は共有86/240成功へ進行:** 同handleを55秒間隔で実pollしてliveを確認。UF object/move payload・receiver・prepared call・restore・frame・assignment等の検査が成功し、現在tests/test_class_default_arguments.pyを実行中。全1966入力hash不変、検査の再起動/条件変更/追加heavy jobなし。根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.json/all.txt。次は同25951を継続pollし、all/最終監査/package/archiveのterminal結果と最終hashを確認。stage/commit/pushは未実施、全137目標は未達・active。
-
-- **gate25951を継続poll・共有43/240成功:** 同じ実handleがliveであることを繰り返し確認。UFの読取り・構築後状態/メモリ保持・償却・領域検査が進み、現在tests/test_uf_object_trace_work.pyを実行中。全1966入力hash不変、入力編集/再起動/別の重い処理なし。最新根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.jsonとall.txt。次も同25951をpollし、all/最終公理・固定kernel監査/package/archive/最終入力不変を待つ。検査成功後に最新機密走査→stage/commit→毎回手動承認push→exact-SHA CI/release/ZIP。まだstage/commit/pushなし、全137原本目標は未達・active。
-
-- **gate25951のlive継続・共有20/240検査成功を確認:** all.txtで最終nested10後もBeats allocation/wide/constructor、context_class_ir、UF read系まで成功し、現在tests/test_context_method_selection.pyへ進行。全1966検査入力hash不変、別の重い処理なし。根拠はrecord_type_boundary_fix_20261107/gate/shared_progress.json。同cacheへキャッシュ依存の読取調査を保存し、登録240中237がclass_lowering.py、224がtest_scalar_ir.pyに依存すると確認（registered_cache_dependency_review.json）。test_scalar_irのscalar_ir importをCPP利用method内へ移す隔離試作ではlean_environment ASTは同じまま、環境helperのみのimport時にscalar_ir/ast_stream/class_lowering/class_splitを読み込まないことをfresh Pythonで確認（cache_isolation_probe/receipt.json）。これはimport graphだけの実験でCPP/Lean回帰や速度測定は未実施、正本/cacheロジックは未変更。今のgate完了とrelease checkpoint後に検討し、検査対象や依存を恣意的に減らさず実traceで確認する。次は同25951をpollしall/最終監査/package/archiveまで待つ。全137目標は未達・active、stage/commit/pushなし。
-
-- **最終10nested testsが全件gate内でも成功:** 実25951のliveをpoll確認、all.txtでtests/test_nested_templates.pyが332.593秒でpassed。現在の18型境界・38Set事例・12 Set一般caller・13 Add一般caller・既存nested/source provenance負例を含む最終10testsの成功であり、途中版の結果ではない。scalar_chooseも29.155秒で成功し、original_template_classesへ進行。全1966入力hash不変。release_preparation/{preparation.json,expected_paths.nul}へ20対象path/現在のhash・git blobを整理し、indexが空でMEMORY.mdを除外したことを確認（まだstageしていない）。これは準備資料であり、gate完了後の最終機密再走査とblob再照合を代替しない。現在commit/pushなし。次は同25951をpollしてall/最終監査/package/archive/最終入力不変を確認し、最終20差分の機密再検査→stage/commit→毎回手動承認push→当該SHA CI/release/ZIP。全137目標は未達・active。
-
-- **修正後gate25951は全59bridge成功・共有検査中:** 実pollでliveを確認し、all.txtのC++ AST/Lean model一致を全59件照合、tests/test_nested_templates.pyへ進んだ。全1966検査入力のhashは不変、gate/bridge_receipt.jsonが根拠。新たな重い処理は開始していない。残るSet値構築2モデルの一般caller証明候補をrecord_type_boundary_fix_20261107/value_ctor/{SetValueCtorFixture.lean,check.py,candidate_inputs.json}へ隔離作成し、Python構文/Lean source auditだけ確認。Lean/固定nanoda未実行であり14/18証明済みとは数えず、正本は12/18のまま。候補はprep_val→引数temporary→全field初期化→copyBodyを保ち、結果v/false、元メモリ保持、work/space上界を狙う。gate terminal後に同checkerを既存資源制限で単独実行し、失敗時は前提/上界/資源を緩めず修正する。現在は同25951をpollし入力固定のまま最終全件/監査/package/archiveを待つ。全137目標は未達・active、commit/pushなし。
-
-- **最終20差分の機密検査成功・修正後全件gate25951が稼働中（2026-11-07）:** 実96951終了0、Gitleaks8.30.1固定checksum/default rules/ignoreとinline allow無効/offline。差分・前後全文検出0、全公開treeは既知rowKey SHA256誤検出1のみ/未分類0、MEMORY.md別走査0、control検出成功。証拠はrecord_type_boundary_fix_20261107/secret_scan/secret_scan.json。新gate/check.pyは実25951で開始、inventory137原本終了0、allへ進行。起動時に機密manifestと全1966検査入力のSHA256/HEAD096d290一致を要求し、その後も入力hash不変を確認。次は同25951を実pollし、gate/{checks_state,input_manifest}.json/all.txtを確認。入力を固定し、handoff2以外の編集・別の重い処理・再起動はしない。全10nested tests（18型境界/38事例/12 Set一般caller等）と公開59/共有240/最終監査/package/archiveが最終対象であり、まだ全件成功ではない。旧44736は修正前のterminal0で流用しない。現在commit/pushなし。この開始記録は機密走査後なので公開前再走査とstage/commit blob一致、毎回手動承認push、新SHA CI/release/ZIPが必要。全137目標は未達・active。
-
-- **型境界18回帰・共有12一般callerモデルが成功、全件再検査へ（2026-11-07）:** 実81165終了0、関連4suites計35tests/入力不変（この時点は12境界版、focused_receipt_before_local_extension.json）。その後local compoundの明示拒否を追加し、実60213終了0、18 native/UBSan境界45.401秒が成功。実74872終了0・固定nanoda3649宣言で再生成したAdd/Set両bundleのRangeSum8全NProgram一致→一般caller定理共有とRangeSet default/id4モデル、汎用2fieldコピー/scope復元を確認。これをtests/lean/{scalar_record_copy_fields,original_mixed_set_sum_callers}.leanへ移し、正本のSet/Sum登録検査実45891も終了0（79.770秒/固定nanoda3731宣言）。全18の38事例＋12一般callerモデルを同時検査した。根拠はrecord_type_boundary_fix_20261107/{boundary_local_receipt,set_sum_transferred_receipt,registered_set_sum_receipt,light_audit}.json。上記handleは全てterminal回収済み。残るSet値構築/compose/apply6モデル、非companion旧投影移行、任意T/完全object lifetime、全137は未完了。原本CPP/公開headers/Proofsは未変更。次は最新差分の機密走査→同cache/gateで最終全件all/package/archive/入力不変→commit/手動承認push/新SHA CI release ZIP。旧gate44736は修正前の成功で流用しない。現在commit/pushなし、全137目標は未達・active。
-
-- **recordの全型一致修正・12境界回帰が成功、関連4スイートを検査中:** 実79265/33959はterminal1で、未具体化constructorの先行拒否と、単一field返却型を検査前に書換える問題をそれぞれ修正。実66787終了0、1test29.663秒で単一/複数field×pointer/vector/array/function pointer引数とpointer/vector返却の12有効CPP/native/UBSan・意図した拒否が成功。CPPのAPIは変更せず、未対応の複合ABIを拒否する修正。現在実81165でrecord_type_boundary_fix_20261107/focused.pyを順次実行中（nested_templates全10、class_templates、original_template_classes、scalar_class_delegation）。同handleをpollし、入力を変更/別の重い処理をしない。focused_state.json/各testログ/input_manifest.jsonを参照。旧gate44736はterminal0回収済み、修正前の全件成功であり最終判定へ流用しない。Set版RangeSumの8一般callerモデルをAdd版から全NProgram同一性で移すSetSumTransferredFixture.lean/check_set_sum_transferred.pyも同cacheへ隔離準備したが、まだ実行していない。次は81165回収→局所compound型の追加境界確認と共有証明の検査→最新機密検査/別gate全件再実行。全137目標は未達・active、commit/pushなし。
-
-- **旧gate44736は終了0・新たなrecord型境界を修正中（2026-11-07）:** 44736の実terminalを回収。inventory/all/package/archive全成功、1964入力不変、all4679.510秒/全4687.464秒、raw52299・固定nanoda49153、Lean replay0 changed modules/許可公理定義hash不変再利用/STL契約2別区分。ZIP59header全byte一致/55630bytes/SHA256 3eaa84cbe59d59d6c3117cc2072056439a3e8c81182ea837171119a13261e6d4。根拠はmixed_records_integrated_20261107/gate/final_gate_receipt.json。型判定probeでpointer/vector/arrayがrecord自身と誤分類され、実12997終了0の元CPP/native/UBSanと変換で3例とも不正にscalar2field化されることを再現（record_type_frontend_before.json）。gate停止用の完全一致PIDは見つからずsignal未送信、後の実pollが既に全工程終了0を返した。現在gateは停止済みなので再poll不要。class_loweringのscalar_record_typeを全型一致/cv-ref限定へ、SplitClass/Eraserの判定とparam/result/localのcompound拒否へ修正し、nested_templatesへ単/複数field×pointer/vector/array/function pointer/複合resultの12回帰を追加した。実79265で新testを実行中、同handleをpoll。旧gateをこの修正後の全件成功とは扱わない。次は関連回帰→最新機密検査→別folderで全件gate再実行→commit/手動承認push/新SHA CI release ZIP。原本CPP/APIは未変更、全137目標は未達・active。
-
-- **gate44736は全59bridge成功・登録9testsへ進行中:** 実handleのpollでliveを確認。all.txtのC++ AST/Lean model一致markerを全59件と照合し、tests/test_nested_templates.pyへ進んだ。全1964検査入力のSHA256は不変、追加の重い処理なし。証拠はmixed_records_integrated_20261107/gate/progress_bridge_receipt.json。コピー返却の一般証明用CopiedScalarFieldsFixture.lean/check_copied_scalar_fields.pyを同cacheへ隔離作成しsource auditだけ成功、Lean/固定nanodaではまだ未実行・証明済みと数えない。再開設計はcopied_scalar_fields_next.md、入力hashはcopied_scalar_fields_candidate_inputs.json。gate terminal後に同checkerを順に実行し、値渡しcompose/書込み可能receiverとnoop時の積の非評価を保ってcaller証明へ接続する。全137原本のbyte hash重複も再確認し、SmallTemplateの旧2pathと原本UnionFind/disjoint_set_unionの計2組をoriginal_exact_duplicate_snapshot.json/duplicate_followup_review.mdへ保存。まだmergeしておらず、各include pathとAPI/代表元規則/証明の確認が先。現在は同44736をpollし、入力固定のままall/最終監査/package/archiveを待つ。全137目標は未達・active、commit/pushなし。
-
-- **最終16差分の機密検査通過・新全件gate44736が稼働中（2026-11-07）:** 実71159終了0、Gitleaks8.30.1固定checksum/default rules/ignoreとinline allow無効/offlineで差分・前後全文は検出0、全公開treeは既知rowKey SHA256だけ1誤検出/未分類0、MEMORY.md別走査0、synthetic PAT control検出成功。証拠は.cache/wip/mixed_records_integrated_20261107/secret_scan/secret_scan.json。全件gateは同folderのgate/check.py、実44736でoffline/nice19/ionice3/jobs1/7200秒開始、inventoryは137原本で終了0、allへ進行。起動時に機密走査manifestと全1964検査入力のSHA256一致・HEAD096d290一致を要求した。次は同44736を実pollし、gate/{checks_state,input_manifest}.json/all.txtを確認する。入力は固定、handoff2以外の編集や別の重い処理/再起動はしない。all/package/archive/最終hash不変はまだ未確認。現在commit/pushなし。この開始追記は機密走査後であり、公開前には再走査とstage/commit blob照合、毎回手動承認push、新SHAのCI/release/ZIPが必要。旧096d290はCI/release/ZIP完了済み。全137目標は未達・active。
-
-- **正本統合後の登録9testsが成功・全件gate準備（2026-11-07）:** 実80528終了0、8tests243.987秒、固定nanoda3600/3673/2062/3652/3606宣言。追加の初期化検査実62213も終了0、1test12.337秒・16roots/固定nanoda2008宣言で他fieldゼロ除算/宣言順/forward read拒否を確認。forward readのClang警告は期待した拒否例。verifier/support.tomlへ新Python2moduleを登録、共有878Lean/24Python/240checks/107docs・public59のmetadata/Python構文/新Lean source auditも成功。証拠は.cache/wip/mixed_records_integrated_20261107/focused_receipt.json。全件gateでは最終9testsを改めて実行する。原本CPP/公開headers/既存Proofsは未変更。inventoryのfull flagsは拡大せず、全137/Set一般caller/非companion移行/任意T/完全object lifetimeは残る。次は最新差分機密検査→新gateでall/package/archive/入力hash不変→stage/commit→毎回手動承認push→exact-SHA CI/release/ZIP。現在commit/pushなし、旧80528/62213を再pollしない。
-
-- **mixed/copy候補を正本変換器へ統合し登録検査中（2026-11-07、未commit）:** verifier/mixed_scalar_functions.pyとstrict_scalar_return.pyを追加し、template_class_irのcompanion経路を単一/複数field混在へ拡張した。SplitClassは内部strict_returnsを持ち、companionの複数fieldだけで全引数/全fieldの宣言順評価・同recordのtrivial copy/move返却を使う。既存public/非companionモデルは既存プログラムを維持し、移行は残件として明記。tests/lean/original_mixed_add_sum.lean（13一般callerモデル）とoriginal_mixed_set_sum_samples.lean（18モデル/38有限事例）、原本CPP witnessesを正本へ追加。既登録tests/test_nested_templates.pyへ3testsを追加し、全8testsを実80528でoffline/nice19/ionice3/固定kernel制限で実行中。次は同80528をpollし、入力を変更/重複起動しない。docs/original_template_classes.mdに対応構文・旧経路との差・未証明scopeを記録。全137目標は未達・active、commit/pushなし。
-
-- **RangeSetRangeSumのcopy/return x候補を検査（2026-11-07、私的候補）:** 原本CPPの通常/noop/負sizeは実90140終了0でnative/UBSan成功、旧strict候補はunknown constructor: void (RangeSum &&)で拒否。別名copy_return_class_split.py等へ、source-owned recordのtrivial copy/move/destructionを既存guardで確認し、暗黙copy/moveの署名・元parameterのfield IDを照合、全fieldを一度読んで投影する拡張を隔離。条件付きcopyは条件を一度評価し選択branchだけを実行する。実76231終了0で18モデル生成/native成功。最終sample実84454終了0・固定nanoda2062宣言、全18モデルを覆う38roots（composeのnoop全4組、applyのnoop両方/負・零size/overflow拒否/noop時の危険な積の非評価等）が成功。実39528終了0で原本CPPも同じnoop bypass/UBSan overflow拒否を確認。証拠はcopy_return_{set_sum,samples}_receipt.json、set_sum_{boundary,guarded_native}_receipt.json、CopyReturnSampleChecks.lean、copy_return_candidate_inputs.json。一般caller/単一object lifetime/任意Tは未証明、正本未統合。13モデル不変回帰check_copy_return_add_sum.pyは実65386終了0でIR/Lean byte一致/native成功。実87108終了0、独自copy/move/dtorとローカルobjectの4拒否境界も成功（copy_return_guards_receipt.json）。初回46194はmove fixtureにcopyが暗黙削除されwitness自体が不成立だったため、default copyを明記してmoveのみ非trivialなfixtureへ修正し再検査した。現在ローカル重処理/CI監視は全てterminal回収済み。137原本のfile-level flags/hashは不変、inventory --checkも成功。最新機密検査はmixed_candidate_docs_scan/secret_scan.jsonを現差分hash/manifestと照合して参照する。次はcopy返却の一般caller証明、正本への統合と登録回帰、単一object/lifetime/任意T対応。全137目標は未達・active。
-
-- **strict mixed全13モデルの一般caller証明が成功（2026-11-07、私的候補）:** 定数/e/defaultは実65691終了0・固定nanoda3599宣言。実22686終了0・3661宣言でRangeSum構築/op、RangeAdd構築/idまで確認し、composeを含む最終実48190は終了0・固定nanoda3673宣言。check_strict_mixed_complete.pyは現strict変換器から原本RangeAddRangeSum<long long>を再生成し、保存13モデルと全byte一致、13モデル→一般定理対応、source/witness/verifier/fixture入力hash不変を確認した。全fieldを評価する両投影について有効な任意callerのprepare/call終了、結果、元メモリ保持、work/space上界を証明。値渡しcomposeと非const receiverを保ち、負のint sizeも排除していない。初期の失敗はcallerP長補題・addEの名前解決・body定義簡約で、前提/結論/資源上限を弱めず修正。証拠はstrict_mixed_complete_{receipt,inputs}.json、StrictMixedCompleteFixture.lean、strict_candidate_inputs.json。正本verifier/libraryへは未統合であり、任意T/完全object lifetimeや原本全137件の完了ではない。ローカル48190はterminal回収済み。次はRangeSetの条件付きcopy/return x境界を調べ、拒否境界回帰と正本統合へ進む。
-
-- **096d290のCI/release/ZIP照合が完了（2026-11-07）:** watch実71596は終了0。対象run42310921310のverify-public/release-headersが成功し、読取照合実27349も終了0。GitHub APIのhead SHA/main/headers tag/release bodyが096d2902959f2607b39baee5c46e786feb31db70に一致。配布ZIP全59headerの各byteが同commitのtreeと一致、55630bytes/SHA256 3eaa84cbe59d59d6c3117cc2072056439a3e8c81182ea837171119a13261e6d4（ローカルZIPとも一致）。実CIログ4193386bytesからraw52299宣言監査、Proofs全件fresh Lean replay、固定nanoda49153宣言、proof security成功を確認。証拠はmonoid_lazy_original_review_20261106/gate/{ci_api_receipt,ci_audit_receipt,published_receipt}.jsonとci_job_096d290_api.txt。旧live監視記述は履歴であり再poll/再push不要。全137原本の目標は未達・active。
-
-- **strict applyの一般caller証明とconstructor境界が成功（2026-11-07、私的候補）:** 実54575終了0、StrictMixedBodyFixtureのfields_exec/apply_execは任意P/Rと有効な値について全field評価・結果・停止・メモリprefix保持・work/need上界を証明、固定nanoda2222宣言。実90377終了0、StrictMixedCallFixtureは非const receiverとlong long/intの値引数2つの準備/返却まで含み、apply2種を任意の有効callerで結果・停止・元メモリ保持・ScalarPost2 (1+e1.nodes+e2.nodes) 100として証明、固定nanoda3580宣言。boolで返すfieldを選び、積/和の型範囲条件は両方へ要求する。元CPP未変更・負のint sizeを除外していない。実56147も終了0、他field内7/valueの失敗、宣言順初期化（init listの逆順）、未初期化fieldのforward read拒否を16roots/固定nanoda2008宣言とnativeで確認。forward readはClangもuninitialized warning（期待した拒否）。strict候補は非委譲constructorも生成し、再生成した原本13モデルのbyteが一般証明の入力と一致。証拠はstrict_mixed_body_receipt.json/strict_mixed_call_receipt.json/strict_initializers_receipt.jsonと各Fixture/Correctness.lean。private strict_class_split.pyとstrict_mixed_template_class_ir.pyを更新したのでstrict_candidate_inputs.jsonを再記録。正本verifier/libraryには未統合。残件は全13モデルの一般証明（RangeSum構築/e/default/op、RangeAdd compose等）、関連の拒否境界/回帰、条件付きrecord返却/return x、任意T/完全object lifetime。CI096d290はwatch71596がlive、実CI/release/ZIP確認も残る。ローカル重処理は全てterminal回収済み。
-
-- **mixed RangeAdd/RangeSumの生成・投影境界・strict候補を確認（096d290後、未commit）:** 実42290終了0、原本CPP未変更でmixed_scalar_functions候補が13モデル生成/native/UBSan成功。check_mixed_projectionは最初にopen不足、次にWellFoundedなpexecをdecideだけで展開できず停止したが、式に沿ってpexecの等式をsimpした最終24419は終了0、固定nanoda1973宣言でoverflow時のx拒否/size=2を確認（CPPもUBSan拒否、演算範囲外の入力）。strict_class_split.pyは全constructor引数を一度評価し全fieldを宣言順で初期化してから結果を投影する候補。実50551終了0で13モデル/native成功、実83401終了0で両fieldのoverflow拒否と通常3/7/4→19/4を固定nanoda1978宣言で確認。証拠はmixed_add_sum_receipt.json/mixed_projection_counterexample.json/strict_mixed_add_sum_receipt.json/strict_mixed_projection_receipt.jsonと各Lean/IR。まだ私的候補で、一般caller/停止/メモリ保持/資源上界、拒否境界、条件付きrecord返却/return xの対応、正本統合は未完了。元CPPのAPI/Tを削らない。docs/experiments_findings.mdとinventoryのreview_notesへ投影の限界を記録し、full flagsはfalseのまま。ライブラリCPPを修正していないのでfixes表へ修正済みとはしない。096d290のCI42310921310はwatch71596がlive、次も同handleをpollしてrelease/ZIP照合まで確認する。新しいローカル重処理は全てterminal回収済み。
-
-- **096d290を通常push済み・新CIを監視中（2026-11-07）:** 実47341終了0、origin/main追跡参照も096d2902959f2607b39baee5c46e786feb31db70に一致。GitHub Actionsの実run42310921310が同じheadSha/in_progressと確認し、実71596で60秒間隔のgh run watch --exit-statusを開始、liveをpoll確認済み。次ターンは同71596をpollする。CI成功後にgate/verify_published.pyで対象SHAのverify-public/release-headers、full fresh Lean replay/固定nanoda、headers tag/body/ZIP全59header byteを照合する（まだ未確認）。gate/{push_receipt,ci_api_receipt,format_commit_receipt}.jsonが根拠。再pushは不要。現在のhandoff2追記はpost-commitのローカル記録で096d290には含まれない。旧322c987のCI/releaseは完了済み。全137原本目標は未達・active。ローカルの重い処理は全てterminal回収済みなので、CI待ちの間に隔離mixed_scalar_functions候補の検査へ進める。
-
-- **最終commit 096d2902959f2607b39baee5c46e786feb31db70を確認・push手動承認へ:** 修正commit096d290の全1959 tree blobが最終機密走査と一致し、親は90e3331。322c987からの累積差分の空白検査も成功、commit直後のtracked worktree/indexはcleanでMEMORY.mdのみ未追跡。gate/format_commit_receipt.jsonが根拠。61764の全件gate、書式差だけの67827回帰、最終機密走査/空白検査/全blob照合が完了。次は毎回手動承認付き通常push→096d290の実CI/release/ZIPを確認する。このpost-commit追記はローカルであり、096d290のtreeに含まれない。まだpushしていない。全137目標は未達・active。
-
-- **90e3331をcommit済み・未push、空白修正を追加検査済み（2026-11-07）:** 全件gate/機密走査した1959 tree blobと90e3331の全blob・親322c987の一致を確認。ただしstage後のdiff --checkでtests/lean/original_record_apply.lean:54の空行末尾空白とverifier/nested_templates.pyのEOF余分空行を検出し、検査の失敗を止める処理が不十分でcommitまで進んだ。まだpushしていない。2箇所を空白だけ修正し、Python AST一致/空白を除く文字列一致を確認。実67827終了0、最新5tests179.683秒/固定nanoda3600・3652・3606宣言成功。gateの1957入力はこの2書式差以外すべてhash不変。証拠はgate/{commit_receipt,whitespace_addendum,format_check_receipt}.json。これから最新機密再検査・stage全blob照合・diff --cached --checkを必ず成功確認して修正commitを追加し、その最終SHAを手動承認push→実CI/release/ZIP照合する。90e3331の段階を公開完了とはしない。MEMORY.md/cacheは公開しない。gate61764/回帰67827はterminal0回収済みで再pollしない。原本全137件の目標は未達・active。
-
-- **最新全件gate61764が終了0・全工程成功（2026-11-07）:** inventory137、public59、共有240、最終proof監査、package/archiveが成功。1957入力のhashは検査中/終了後とも不変。C++59は一致する成功cacheを利用、bridge59は今回再実行、共有240は237再実行/3cache。52299宣言のraw仕様/定義/公理監査と固定nanoda49153宣言は今回成功。Mathlib778module範囲照合、許可公理定義はhash不変の成功再利用、Lean replayは0 changed modulesでありfresh全moduleとはしない。STL契約依存2定理は別区分。all4721.241秒/全工程4729.500秒。全59header ZIPは55630bytes/SHA256 3eaa84cbe59d59d6c3117cc2072056439a3e8c81182ea837171119a13261e6d4、内容/コンパイル/実source byte照合も成功。証拠はmonoid_lazy_original_review_20261106/gate/{checks_state,final_gate_receipt,input_manifest}.jsonとall/archive.txt。61764はterminal0回収済み、再pollしない。次はこの記録を含む最新26差分の機密走査→stage/commit全blob照合→commit→毎回手動承認push→新SHAのCI/release/ZIP。現在commit/pushなし。原本monoid_lazy全体/任意T/完全lifetimeと全137目標は未完了・active。
-
-- **mixed scalar bundle候補を隔離準備（まだ未実行）:** gate61764は実pollでlive、Beats capacitiesを検査中。検査入力は未変更。monoid_lazy_original_review_20261106/mixed_scalar_functions.pyへ、Eraserで単一field receiverのthisを先に除去→SplitClassで複数field引数/返値を分割→残る単一field companion型を消去する候補を保存し、Python構文だけ確認した。split_oneへ渡す際はowner名/receiverのIDを維持し、未知constructorをEraserがそのまま保持する既存仕様を利用する。モデル生成/native/Leanは未実施で、gate terminalまでは実行しない。条件付きtrivial copy返値/return xは既存SplitClassが拒否するままなので、候補を全対応とは扱わない。次はgate終了後にsource hashを照合し、原本RangeAddRangeSumの混在recordを最初の対象として検査する。
-
-- **gate61764は52299宣言監査成功・独立kernel検査中:** 実handleはlive。bridge59と共有240checks全成功。監査側scratch build10.9秒、Mathlib/依存778module範囲、52299宣言のraw仕様/定義/公理依存監査が成功。許可公理定義はhash不変で既存成功を再利用し、Lean replayは0 changed modules（fresh全moduleとはしない）。STL契約依存2定理は別区分。export142.4秒時点で完了し固定独立kernelが開始、まだ終了は未確認。all/package/archive/入力hash不変性は残る。同61764をpollし入力を固定する。stage/commit/push未実行。終了後は最新機密走査→全blob照合→commit→手動承認push→exact-SHA CI/release/ZIPが必要。重い並行処理なし。
-
-- **全137原本の残件を現台帳で再確認:** docs/verification_inventory.jsonのfile-level reviewはpending125/partial12、cpp_tested true7/common_translator true5/lean_proved true2/include_verified true3/published true2（各flagの範囲は別々であり、2件を全要件完了とは扱わない）。source hash付きの全137状態をmonoid_lazy_original_review_20261106/remaining_inventory_snapshot.jsonへ保存した。公開59/局所有限モデル/現gateの成功を原本全137件の完了に読み替えない。gate61764はliveで、nested回帰成功後、scalar_choose28.991秒も通過し、original_template_classesを検査中。検査入力は固定、追加の重い処理なし。
-
-- **最新のnested/companion登録回帰5件が全件gate内でも成功:** 実61764は引き続きlive。all.txtでcheck:tests/test_nested_templates.pyが167.630秒でpassedとなり、次のtest_scalar_choose.pyへ進んだことを確認。source-pattern guard、mixed型のRangeSum一般証明、record型apply一般証明、12負例、flat scope/foreign specialization、schemaを含む最終5testsの成功であり、途中の古いコードの成功ではない。all/最終監査/package/archiveはまだ実行途中なので、同handleのterminal結果を待つ。入力は固定のまま、commit/pushなし。
-
-- **gate61764はbridge59件を通過して共有テストへ進行中:** 実handleのliveをpollで確認し、all.txtのC++ AST/Lean model一致markerを59件と照合。tests/test_nested_templates.pyから共有240checksへ進んだ。まだall/最終proof監査/package/archiveの成功ではない。引き続き同61764をpollし、入力を固定する。追加の重い処理や再起動はしない。
-
-- **全件gate61764の稼働を再確認・次工程の設計だけ隔離（2026-11-07）:** 実handleのpollでliveを確認し、allはbridge照合を進行中。検査対象は未編集、同gateの再起動は不要。待機中のソース確認をmonoid_lazy_original_review_20261106/mixed_bundle_design.mdとmixed_bundle_design_inputs.jsonへ保存した（未実装/未実行）。既存split_functionsのroots引数でErasedClass生成関数の複数field引数を分割し、分割後に単一field型を消去する案、RangeSet composeの条件付きtrivial copy返値とRangeSetRangeSum applyの可変な値引数/return xの未対応箇所を明記。元APIの型同一化やコピー効果削減で合わせない。gate terminal後にこの入力hashを照合して調査を続ける。61764以外の新しい重い処理は開始していない。
-
-- **最新全件gateを開始・実61764が稼働中（2026-11-07）:** monoid_lazy_original_review_20261106/gate/check.pyをoffline/nice19/ionice3/Python3.12/jobs1/7200秒で開始。inventory終了0（137原本のhash/参照成功）、allへ進行中。次ターンは同handleを実pollし、gate/{checks_state,input_manifest}.jsonとall.txtを確認する。同じgateを重複起動せず、検査中は入力を変更しない（handoff2だけ入力除外）。終了後はpackage/archive、最新機密走査manifestとstage/commitのblob照合、手動承認付き通常push、新SHAのCI/release/ZIPを確認する。直前の実65405終了0で最新26差分/前後全文は検出0、全公開treeは既知の公開rowKey SHA256だけ1誤検出/未分類0、control成功。証拠はnested_templates_diff_secret_scan_20261106/secret_scan.json。この開始追記は走査後なので公開前に再走査する。MEMORY.md/cacheは公開しない。現在commit/pushなし。旧322c987はCI/release/ZIPまで完了済みで再監視不要。全137目標は未達・active。
-
-- **companion境界回帰が最終guardで成功（2026-11-07）:** 実52479終了0、追加したtest_companion_scope_and_foreign_member（37.121秒）が成功。flat other::Box/OtherBoxを別型のまま5モデル生成し、両native/UBSanを確認。原本に手を入れずwitness側の明示的member specializationで結果10→106となる例は、原本の検証対象として拒否した。登録fixtureはtests/imports/{flat_companions.hpp,flat_companions.cpp,record_apply_specialized.cpp}。先行実94239は既存class_templates10tests/flat候補成功後、拒否理由をsource-pattern mismatchに限定した診断assertで終了1だった。実際はrequested member specialization is not instantiatedとして拒否済みで、frontendが受理したわけではない。診断条件を正しい拒否の両経路へ直し、最終52479で確認。member ASTの12改変/一般apply26roots/固定nanoda3606は46044の成功が根拠。証拠はcompanion_final_receipt.jsonとregistered tests/fixtures。全件gateは次に新しいgate directoryで実行する。現時点commit/pushなし、全137目標は未達・active。
-
-- **record型applyの正本経路と一般証明を登録（2026-11-07）:** translation_unitへkeyword-only companion_instances tupleを追加し、同じwitness/Clang TUの各controlled aliasからsource-ownedな複数recordを選ぶ。RecordArgument(index)だけをmemberのrecord型引数とし、actual TemplateArgumentのRecordType宣言ID、同じTU/source hash/record originを厳密照合。単一scalar field群のEraserへ全constructor/field/method IDを渡し、scopeを区切る型patternと衝突拒否を使う。原本のRangeAdd/RangeMax/RangeMinから13モデルを生成（実62530終了0）。非const receiver/値引数を保つapply2種は結果x+v・停止・元メモリ保持・ScalarPost2 (1+e.nodes) 100を一般callerで証明。元と同じ型範囲/加算条件とreceiver書込み権限が前提。原本CPP未変更。tests/lean/original_record_apply.leanの26rootsと固定nanoda3606宣言、CPP/UBSan、型ID/TU/source/body/patternの12負例/schemaが実46044終了0（2tests54.120秒）。先行27734も3606/10負例で終了0だが最新guardは46044が根拠。composeの一般証明、複数field record引数、条件付きrecord返却、任意T/完全object/lifetimeは残件。公開CPPのid/API/コピー差も未修正、fixesに修正済みとしない。
-
-- **member source所有性を補強・境界検査中:** generic memberのIDをsource_member_patternsで元primary recordから登録し、actual TemplateInstantiationPatternとforced sourceの定義位置を照合。witness側の明示的member specializationを元コードの証明と取り違えない。補強前の実97416は新規4tests128.667秒/従来10tests2.670秒成功、input hash不変。補強後は上記46044成功、現在の実94239が従来class_templates10tests、flat Box/OtherBoxの5モデル/native、witness specializationによる結果変更と拒否を順に検査中。次ターンは94239をpollし、{class_templates,flat_companions,member_specialization}_boundary.txtとcompanion_boundaries_receipt.jsonを確認する。現在の追加文書/fixtureを含む機密再検査・全件gateは未実施、commit/pushなし。全137原本目標は未達・active。
-
-- **record型applyのactual ID/本体とnativeを確認（2026-11-07）:** 実86119は終了0回収済み、再pollしない。同一TUのapply<RangeMax>/apply<RangeMin>は両方bodyあり、TemplateArgument.innerのRecordType.decl.idがouter内の別々のCXXRecordDeclを指す。型名文字列だけでなくこのIDを、controlled aliasとprimary/nested provenanceで選んだ各recordに照合できる。record_apply_capture.json/record_apply_roots.jsonに保存。原本のid/compose/apply2種/MaxMin e/op/defaultを使うnative/UBSanは成功し、原本hash不変。未lower・未Lean証明。次の拡張では同じtranslation_unitへ構造化したcompanion record要求とcontrolled aliasを追加し、全recordのIDを同時保持したbundleで既存Eraser/constructor/field対応を行う案を検討する。memberのrecord型引数はその束の選択IDだけを許可し、任意のC++型文字列を許すだけにしない。同名injected classが衝突する束もscopeを区別できるまで拒否する。現時点のproduction APIはまだrecord引数未対応。
-
-- **原本nested RangeSumの8モデルの一般証明を登録・成功（2026-11-07）:** tests/lean/original_nested_sum.leanの15rootsは、long long/intの混在値引数の準備/構築、単位元/委譲default両fieldの0、op2個のwhole NProgramと任意fuel callFuelの既存モデル一致、既存と同じ一般callerの結果・停止・元メモリ保持・資源上界を確認する。構築のpost70/op72を保持し、型の入力/中間加算の値域条件を狭めて合わせていない。隔離実33956終了0、固定nanoda3600宣言。正本回帰実52811も終了0、新規3tests93.460秒/既存class_templates10tests2.720秒、RangeSum3600とRangeMax3652宣言成功、入力hash不変（integrated_receipt.json更新済み）。原object全体の同時評価/完全lifetimeとは扱わない。inventoryは対象宣言のreview/evidenceだけ部分対応へ更新し、fileの検証済みフラグはfalseを維持。全件gateはまだ未実施、commit/pushなし。
-
-- **次のrecord型member applyの同一TU調査を開始:** 実86119でmonoid_lazy_original_review_20261106/capture_record_apply.pyをoffline実行中。原本RangeAddのapply<RangeMax>/apply<RangeMin>のactual TemplateArgument/RecordType宣言IDとbodyを採取し、native/UBSanを比較する。現行instantiate_membersはprimitive限定、lower_template_classは選択record1個だけで、相互参照する複数recordの型/constructor/field IDを同時に扱う経路が必要。文字列だけ許して所有性検査を省いたり、flat aliasで別型を潰したりしない。次ターンは同handleをpollし、record_apply_capture.json/roots.jsonを確認する。これは未lower・未証明の調査であり、元CPPは変更しない。
-
-- **正本nested回帰と既存関連回帰が最終形で成功（2026-11-07）:** 実10848終了0、tests/test_nested_templates.pyの3tests（93.657秒）とtest_class_templates.pyの10tests（2.971秒）が成功。RangeMax12roots/固定nanoda3652宣言、11 provenance負例、schema/別型名境界、2段nestedと複数field RangeSumの生成/nativeを確認した。verifier全Python/metadataと関係fixture/testのhashは実行中不変（monoid_lazy_original_review_20261106/integrated_receipt.json）。137原本のinventory/source hashも成功。既存C++や証明を変更して合わせていない。全件gateとRangeSumの一般Lean証明は未実施、任意T/完全lifetime/member apply/条件付きrecord返却の残件は保持。10848/92278/61485は全てterminal0回収済み、再pollしない。次はRangeSumの各モデルの一般証明と残るrecord型member applyへ進む。現在の差分でcommit/pushはしていない。
-
-- **nested frontend正本の登録回帰を追加・関連検査中（2026-11-07）:** tests/test_nested_templates.pyをsupport.checksへ登録（共有240）。原本RangeMaxの4モデル/12roots/固定nanoda3652宣言、native/UBSan、同一TU provenanceの11負例とschema/型名境界は実92278終了0（2tests/65.118秒）。元CPPを保ったRangeSumの8fieldモデルと2段namespaced型の3モデルも実61485終了0（1test/40.517秒、生成/nativeのみ、一般Lean証明とはしない）。現在は最終3testsと既存class_templates10testsを順に実10848でoffline/nice19/ionice3再実行中。次は同handleをpollし、monoid_lazy_original_review_20261106/{test_nested_templates_integrated,test_class_templates_integrated}.txtとintegrated_receipt.jsonを確認する。全件gateは未実施。追加fixtureと文書更新があるため、先の12差分機密検査は現差分全体を覆わず、commit前に再走査が必要。MEMORY.md/cacheは公開しない。record型member template apply、条件付きrecord返却/コピー効果、任意T/完全lifetimeは未完了。
-
-- **322c987のCI/release/配布照合を完了（2026-11-07）:** [CI42212895403](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42212895403) attempt1は対象SHA322c9873b802ea4141e4ae980c1509a356aa224dでverify-public/release-headersともsuccess。実job127875635911のAPIログで52299宣言監査、Mathlib778module範囲、full fresh Lean replay、固定nanoda49153宣言を確認。STL契約依存2定理は別区分。headers tag/bodyは同SHA、公開asset717319830（55630bytes）の全59header byteもcommitに一致。ZIP SHA256 3eaa84cbe59d59d6c3117cc2072056439a3e8c81182ea837171119a13261e6d4はローカルと同じ。証拠はmonoid_original_review_20261106/gate/{ci_api_receipt,ci_audit_receipt,published_receipt}.jsonとci_job_322c987_api.txt。watch11229/照合32971は終了0回収済みで再pollしない。現在のnested frontend/文書差分はこの公開に含まれない。全137原本目標は未達・active。
-
-- **現差分の機密情報検査が成功（322c987後、未commit）:** checksum照合済みGitleaks8.30.1をoffline・既定ルール・ignore/inline allow無効で実行。未追跡verifier/nested_templates.pyを含む12変更の差分と変更前後全文は検出0。公開予定1947ファイルは既知の公開検証用Proofs.MultiVecN.rowKeyのSHA256だけ1件で、定義・行・source hashを厳密照合し、未分類0。合成PATの検出control成功。MEMORY.mdは別走査0件、引き続き公開対象外。この追記も再走査対象とする。証拠は`.cache/wip/nested_templates_diff_secret_scan_20261106/secret_scan.json`。commit/pushは行っていない。
-
-- **nested frontendの正本統合を開始済み、検証未実施:** verifier/nested_templates.pyの追加とclass_templates/class_lowering/class_split/template_class_ir/support.tomlへの接続が作業treeにある。上記の「正本統合は次の作業」は統合開始前の記録。登録fixture・正本経路の回帰検査と全件gateはまだ未完了で、隔離候補の成功をこの差分の機能検証成功と扱わない。monoid_lazyの公開CPPは未修正。既存322c987のCI/releaseの最終確認も別途残る。
-
-- **原本nested RangeMaxの4モデルと一般CALLを隔離候補で検査成功:** monoid_lazy_original_review_20261106/nested_candidate.pyの構造化NestedInstanceと同一TU選択で、原本 `RangeAddRangeMaxMin<long long>::RangeMax` の値構築/委譲default/e/opを元CPP未変更で生成（実68121終了0）。alias→nested record ID→outer specialization ID→primary/generic record IDを結び、nestedのTemplateInstantiationPatternも対応するgeneric member IDと照合し、全定義のforced source帰属を要求する。実9296は終了0、4つのNProgram全体と任意fuel/caller/argsのcallFuelが322c987の検証済みMonoidMaxモデルとrflで一致。既存と同じ前提・結論の4 correct定理も移送し、CPP/UBSanと固定nanoda3652宣言を確認。証拠は同directoryのnested_max{.ir.json,.lean,_receipt.json,_proof_receipt.json}、NestedMaxCorrectness.lean、check_nested_max.py。任意T/完全object lifetimeのフラグはfalse。
-
-- **候補の負例/型名境界/多段選択も確認済み:** 実54547は終了0、aliasの誤ID、兄弟memberへのpattern差替え、outer pattern欠落、source/witness混同、macro由来、parent移動、canonical名不一致、重複record、primary所有の欠落、root名不一致の11改変と不正path4種を拒否。同名の他namespace/グローバル型を含む6 spellingは消去せず、正しい短い自己型と完全修飾型だけを扱った。厳しいguard追加後もモデルbyteは検証済み入力と一致（nested_selection_receipt.json）。実65398も終了0、名前空間・type/integer args・2段の `other::Outer<long long,3>::Middle::Leaf` は3モデル生成とCPP/UBSan成功（nested_depth_receipt.json、こちらの一般Lean証明は未実施）。全ローカル実プロセス92424/68121/9296/54547/65398はterminal0回収済み、再pollしない。
-
-- **正本統合は次の作業:** 現時点でproduction verifier/CPPは未変更、上記は隔離候補。TemplateInstanceへ既定空tupleのkeyword-only `nested_members` を足せば既存2引数と私的prototypeのsubclassを壊さず構造化要求を表せる。selectorは専用moduleへ移し、class_templatesのnested分岐から使用、coverageへ実選択したnested path/型を明記する。消去のpatternは完全修飾型とinjected class名を識別し、`::RangeMax`など別型を部分一致させない。SplitClassでも同じscope規則と既知canonical value_typesが必要で、複数field RangeSumはまだ未検証。record型member template applyと条件付きrecord返値・元のコピー効果は残件。fixtureを登録し、原本CPPの型/APIを変えず一般入口を進める。monoid_lazy公開CPPのid/API/コピー差は未修正なのでfixesへ修正済み記録しない。322c987のCI42212895403はwatch11229で引き続き監視し、最終ログ/release/ZIP照合を忘れない。全137原本目標は未達・active。
-
-- **monoid_lazyの原本API/コピー効果の差をnativeで確認（322c987後・未commit）:** 実23910は終了0、GCC13.3/C++17/UBSan/offlineの4比較を完了。原本RangeAddRangeMaxMin<long long>::RangeAdd::id()はcompile/run0、公開flat RangeAdd::idはメンバー欠落でcompile1（期待した診断）。コピーを数えるObserved型で原本RangeSet composeは結果2/copy3、公開版は結果2/copy2となり、値引数と返却のコピー効果が失われている。原本/公開CPPのsource hash不変。証拠は`.cache/wip/monoid_lazy_original_review_20261106/native_api_receipt.json`と各log/fixture。docs/experiments_findings.md、monoid_lazy.md、experiments_status.md、verification_inventory.jsonを部分対応へ訂正し、T固定という古い説明も実際のgeneric公開CPPに合わせた。137原本hash/参照チェックとdiff --checkは成功。CPP未修正のためfixesへ修正済みとは記録しない。任意T/完全object/lifetimeは未完了で、台帳のlean_proved/publishedはfalseを維持する。
-
-- **次の実装候補はnested具体化の一般入口:** 同directoryのbackend_notes.mdを参照。TemplateInstanceは現在末尾に型引数を付け、collect_template_recordはClassTemplateSpecializationDecl限定、member instanceはprimitive型限定である。outer<T>::Nestedという非template recordを構造化した要求で選び、同一TUのalias→nested record→outer instance→primaryのIDと元forced sourceへの帰属を確認する拡張が必要。元の4 outer/nestedの別型、static e/id、apply、値渡しを保ち、flat aliasで型を同一化して解決扱いにしない。まずRangeMax/Minなど単一fieldのnested型から隔離prototypeでAST・拒否境界・モデルを確認する。322c987のCI42212895403はwatch11229で引き続き監視中（verify-public job127875635911、準備とinventory成功後にall実行中）。次ターンは同watchを実pollする。現ローカル調査はそのCI/releaseには含まれない。全137件目標は未達・active。
-
-- **322c987の通常push成功、新CIを監視中:** 実31452は終了0、origin/main追跡参照も322c9873b802ea4141e4ae980c1509a356aa224dに一致。APIで同じSHAの[CI42212895403](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42212895403)がin_progressと確認し、実11229で60秒間隔のgh run watch --exit-statusを実行中。次は同watchを実pollし、対象CI→release→headers tag/bodyと全59header ZIPのcommit byte一致まで確認する。push済みのため同じpushを繰り返さない。証拠はmonoid_original_review_20261106/gate/{push_receipt,ci_api_receipt}.json。現CIは322c987のcommit treeを検査し、このpost-commit引継ぎと次のmonoid_lazy作業は含まない。全137原本の目標は未達・active。
-
-- **最新32ファイルをcommit済み、push手動承認へ:** `322c9873b802ea4141e4ae980c1509a356aa224d`（Restore Monoid API and verify original scalar instances）、親54da026。機密走査した全1946 tree blobとindex/commitが完全一致し、32変更だけをcommitした。commit直後のtracked worktree/indexはcleanでMEMORY.mdのみ未追跡、cacheとともに公開対象外。このpost-commit追記はローカル引継ぎで322c987には含まれない。証拠はmonoid_original_review_20261106/gate/{final_gate_receipt,staged_receipt,commit_receipt}.jsonとscalar_choose_20261106/diff_secret_scan/secret_scan.json。次は.codex/rules/git-push.rulesに従う毎回手動承認付き通常push→このSHAのGitHub Actions完了→headers tag/body/ZIP全59byte一致を確認する。push/新CI/releaseはまだ未確認。86819は終了0回収済み、再pollしない。原本全137件目標は未達・active。
-
-- **最新全件gate86819は終了0回収済み（再pollしない）:** inventory/all/package/archiveの全工程が成功。Python3.12.3/offline/jobs1/7200秒、all5266.488秒/全体5274.191秒。検査中の1944入力hashは全件不変。C++59は58今回実行/1成功cache照合、bridge59と共有239は今回すべて実行。独立screened build、52299宣言の固定仕様・定義・公理依存監査、Mathlib778moduleの監査範囲、Lean再検査11 changed modules/1 covering prefix、固定nanoda49153宣言が成功。許可公理定義はhash不変を照合して既存成功結果を再利用し、STL sort契約依存2定理は別区分。59header ZIPの内容/コンパイルも成功し、55630bytes/SHA256 3eaa84cbe59d59d6c3117cc2072056439a3e8c81182ea837171119a13261e6d4。証拠はmonoid_original_review_20261106/gate/{checks_state,final_gate_receipt,input_manifest}.jsonとall.txt/archive.txt。
-
-- **gate後は結果反映の4文書だけ更新:** docs/agent/fixes.md、docs/experiments_findings.md、docs/experiments_status.md、docs/verification_inventory.jsonの「gate待ち」を成功へ更新し、任意T/完全object/lifetimeの未完了状態は保持した。post_gate_status_addendum.jsonでこの4文書だけのhash差と、code/model/proof/test/metadataが検査入力と一致することを確認。inventoryの137原本hash/依存/参照照合も再実行成功。handoff2は元からgate入力の除外対象。次はこれらの最新差分を機密走査し、走査manifestとindex/commit全blobを一致させてcommit、ルールに従う毎回手動承認付きpush、新SHAの実CI/release/ZIPを確認する。現在は未commit・未push、137全原本目標は未達・active。
-
-- **次の原本monoid_lazyレビューを隔離準備:** `.cache/wip/monoid_lazy_original_review_20261106/{review.json,copy_effects.cpp,identity.cpp}`へ原本/公開source hashと2nativeケースを保存した。入れ子型/e/id/applyがflat APIへ変わり、原本composeの値引数が公開const参照とT再構築へ変わったことをソースで確認した。copy回数やnative成否はまだ未測定なのでreview.jsonのcpp_cases_executed/lean_verifiedはfalse。現gate86819のterminal回収後にnative比較を行い、必要な構文の一般拡張を優先する。tracked CPP/docsの検証入力は今回変更せず、原本全137件の目標は未達・active。 `backend_notes.md`には、現入口がnested非template型を選べないこと、member型引数がprimitive限定であること、複数record文脈の消去/分割対応が残件であることをソース確認に基づき記録した。構造化型要求と同一TUのalias/nested/outer/primary ID監査が次の候補であり、未実装・未実行。
-
-- **最新全件gateを開始、実86819が稼働中:** `.cache/wip/monoid_original_review_20261106/gate/check.py`をoffline/nice19/ionice3/Python3.12.3/jobs1/7200秒で開始し、inventoryは終了0/137原本hash照合成功、allへ進んだ。次ターンは同handleをpollし、gate/{checks_state,input_manifest}.jsonとall.txtを確認する。新しいgateを重複起動せず、検証中は入力を編集しない（handoff2だけ入力除外）。公開59/共有239/独立buildと固定公理・仕様監査/Lean replay/固定nanoda/配布ZIPのすべての終了結果を確認するまで成功やrelease完了とはしない。
-
-- **gate開始直前の32差分の機密再検査は通過:** 実24327は終了0。差分0、変更前後全文の2件は変更対象に加わったverification/statements.jsonの旧版/新版にある同じ既知公開digest、全treeの1件も同digestとして、各版のsource hash・定義source hash・行・値を厳密照合し未分類0。MEMORY.mdは別走査で0、公開対象外。初回13721はbefore_afterへの既知digest分類が未実装で停止し、HEAD旧版と新版の厳密な別reviewを追加して再検査成功（ignore/inline allowは引き続き無効）。証拠はscalar_choose_20261106/diff_secret_scan/{secret_scan,reviewed_false_positive,reviewed_false_positive_before}.json。本記録を含めた機密最終再走査は全件gate成功後に行う。commit/pushは未実行、137全原本目標は未達・active。
-
-- **Monoidの固定仕様マニフェストをレビューして更新済み:** 実14284は終了0、独立screened build1791 jobs/24.4秒と新environment採取が成功。旧environmentは旧固定6176宣言hashと全件一致した。既存変更10件は生成default3/op2、内部max_body/min_body2、同値なCore転送のbT/selBodyとGroup.nzの3件に限定。元の22 named theorem型は固定nanoda3696宣言で保持を確認済み。13 compiler生成rootのCoreへの移動は、binder名だけを除きCore namespaceを対応させた命題Exprが全件一致（実40331終了0、relocated_auxiliary_roots.json）。新規root8/旧補助root13移動でroot2486→2481、閉包6176→6178。公開定理・許可公理・契約や検査規則を緩めず、確認したnew_statements.jsonだけをverification/statements.jsonへ反映した。証拠はmonoid_original_review_20261106/contract_review/{review,relocated_auxiliary_roots}.jsonと新旧environment/manifest。最初19602はIntervalCallの間接importに依存して失敗し、MonoidCallの明示import1行を追加して全件buildを成功させた。
-
-- **次の全件gate準備:** monoid_original_review_20261106/gate/check.pyにinventory→公開全59/共有239/証明監査→header package/archiveの直列実行を準備。N=7200秒/jobs1/offline/nice19/ionice3、入力hashを前後で照合し、handoff2と公開しないMEMORY.mdを検証入力manifestから除外する。現在のローカルPythonは3.12.3（過去の3.11.3 runtimeは見つからず）、CIはgcc13.3-bookwormのPython3.11系なので、push後は対象SHAの実CI結果まで確認する。旧54da026のgateを今回の成功とは扱わない。全件gate後に必ず機密再走査→scan/index/commit blob一致→通常pushの毎回手動承認→新SHAのCI/release/配布ZIPを照合する。全137原本目標は未達・active。
-
-- **正本Monoidの関連検査は終了成功:** 実71599は終了0、scalar_choices5tests/27.645秒、原本7tests/210.058秒、monoid bridge/7.150秒が成功し、公開12 correct定理・3friend一致・共通補題の固定nanoda3668宣言も成功。証拠はmonoid_original_review_20261106/public_related/{receipt.json,*.log}。実48943は終了0、変更前の22 named theoremの前提・結論をそのまま要求する互換証明も固定nanoda3696宣言で成功（models/compatibility_receipt.json）。初回54900は隔離互換証明のnamespace不足で停止しopen Proofsを加えた。旧max_body/min_bodyは変更された生成bodyのshape定理として比較から除外する。公開C++/ASan/UBSan/template-firstの実61408も終了0。現在は実19602で固定マニフェストのレビュー材料を作成中。同directoryのreview_contract.pyが旧environmentと固定hash照合→独立screened build→新environmentをfile出力→小さいfingerprint表で差分抽出する。全JSONをメモリに同時保持せず、固定specはまだ変更しない。次は同handleをpollしてcontract_review/review.jsonを確認し、変更を説明できる定義/内部rootだけを反映して全件gateへ進む。全137件目標は未達、commit/pushは未実行。
-
-- **Monoidの公開CPPを復元し既存定理を接続中（54da026後・未commit）:** library/monoid.hppはhidden friend/元の委譲/generic max/minとADL/既存qualified opを保持する形へ変更し、修正直後にfixes表へ追記。local using std::min/maxだけをcompile-onlyとしてstripし、実callは同一TU監査を保つ。実68010で公開CPPのfresh loweringが検証済み候補15モデルとbyte一致、metadataのsource hashと全9公開宣言を更新。実61408でC++/ASan/UBSan/template-first成功。原本とのcopy/dtorイベント比較は別native fixtureに分離し、実71599の関連suiteで成功済み。同71599はscalar_choices5testsを終了0/27.645秒で回収後、原本Group/Mapping/Monoidの7tests→bridge→公開Monoidの固定nanodaを順次実行中なので同handleをpollする。全件gateはまだ実行していない。
-
-- **Monoid証明の循環import解消:** 新規Proofs/MonoidCallCore.leanへ共通補題を移し、GroupCallはCoreをimport。MonoidCallはCore/GroupCallをimportし、元の公開補題名は同じ型の転送theorem/abbrevとして保持する。新しいcopied selectorと3委譲defaultを接続し、12公開correct定理の前提・結果・post70/100は維持。3friend modelはqualified modelとrfl一致。最終の実65201はLean build終了0（logはmonoid_original_review_20261106/models/public_build.log）。途中58241はtheorem型省略のLean構文エラーで終了1となり、元の型を明記した転送定理に修正済み。元の22 named theorem型をそのまま要求するmodels/MonoidCompatibility.leanとcheck_compatibility.pyを準備し、関連suite終了後に独立kernelで確認する。max_body/min_bodyは変わった生成bodyのshape定理なので互換型比較から除外。固定statements.jsonは未更新で、全件gate前に実環境差分を確認し、公開仕様を緩めず変更された計算定義/補助rootをレビューする必要がある。最新変更は以前の機密検査の対象外なのでcommit前に再走査する。137全原本目標は未達・active。
-
-- **もう一方の原本MonoidMulも登録回帰成功:** 実68214は終了0・1test/42.615秒・C++/UBSanと固定nanoda3588宣言成功。legacy原本に加え `experiments/library/cpp/algebraic_structure/monoid.hpp` からもLL4モデルを再生成し、値構築/e/opの既存モデル一致と委譲defaultの任意caller/post0 70を確認した。共通check_monoid_mulを原本2系列の個別testから呼ぶ。証拠はscalar_choose_20261106/original_minmax/registered_library_mul_receipt.json。原本3クラスのLL有限具体化は登録したが任意T/完全object/lifetime/公開API復元は残件であり、137全件目標は未達・active。この更新を含む差分の機密再検査は `.cache/wip/scalar_choose_20261106/diff_secret_scan/secret_scan.json` のbase/manifestと照合する。正本公開CPP・commit/pushは今回変更していない。
-
-- **公開Monoidの隔離候補v2も15モデルの一致が成功（正本は未変更）:** `.cache/wip/monoid_original_review_20261106/monoid_candidate_v2.hpp`はhidden friend・元の委譲・generic Tのmax/minとADL・既存qualified opを保持し、runtime if constexprを除いたもの。暗黙変換/copy-only/qualifiedのnative3回帰は成功、共通lower_sourceで15モデル生成成功。全15モデルが原本各モデルとNProgram全体でrfl一致し、任意fuel/caller/argsのcallFuel一致30定理と原本一般caller定理を固定nanoda3676宣言で確認した（実77234終了0）。証拠は同directoryのcandidate_v2_{native,lowering}.jsonとmodels/candidate_v2_proof_receipt.json。正本への適用はまだでfixes.mdには記録しない。次は公開Monoidの既存default/op定理を新モデルへ接続し、宣言登録・公開C++/template test・独立kernelの全件gateを確認する。現在のGroupCallはMonoidCallに依存するため、委譲defaultの共通補題を再利用する際は循環importを作らない構成が必要。
-
-- **原本MonoidMax/Minの登録回帰が成功（未commit）:** `experiments/library/cpp/algebraic_structure/monoid.hpp`はhash266316533145db3cf6cb764e82c5e625d7fa621a6a398563c2cf1d4f9e3609d7のまま、各LL4モデルを共通入口で再生成。opは任意typed caller/両引数aliasを許して正しいmax/min・停止・元memory保持・ScalarPost2 0 100、既定構築は各端点・post0 70、値構築/eは既存モデル一致を証明した。実16674は終了0、1test/65.172秒、C++/UBSanと固定nanoda3634宣言も成功。tests/imports/original_monoid_{max,min}.cppとtests/lean/original_monoid_select.leanを既存test_original_template_classes.pyへ登録。最初の51610は生成Lean結合時の途中importで終了1となり、importを先頭へ集約して再実行成功。証拠は`.cache/wip/scalar_choose_20261106/original_minmax/{selection_exec_receipt,registered_selection_receipt}.json`。scalar_chooseの32/64 bit・alias・拒否境界5testsは前回16994終了0/28.389秒/固定nanoda2563宣言。対応構文と信頼境界はdocs/scalar_stl_contracts.mdへ追記。台帳137原本hash/coverage照合も成功。任意T・完全object/lifetime・公開CPPのAPI修正は未完了、lean_proved/publishedはfalseを維持する。最新機密検査後に編集したため、次のcommit前に再走査する。
-
-- **ユーザー指定の現在差分の機密情報検査を通過（54da026後、未commit）:** 変更15ファイル（新規5を含む）のdiffと変更前後全文はGitleaks8.30.1の既定ルールで検出0。公開予定全1941ファイルも走査し、1件は既知の公開仕様digest `Proofs.MultiVecN.rowKey` をsource/定義hash・行・値まで照合した誤検出で未分類0。offline/ignore・inline allow無効/合成PAT対照の検出成功。公開しないMEMORY.mdは別走査で検出0、cacheも公開対象外。証拠は`.cache/wip/scalar_choose_20261106/diff_secret_scan/{secret_scan,reviewed_false_positive}.json`。本記録を含めて再走査し、最終manifestを固定する。commit/pushは行っていない。この検査は機密情報のみで、新規変更全体のgateや証明の完了を意味しない。以後の編集は再走査が必要。
-
-- **54da026のリリース手順完了:** [CI42154367529](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42154367529) attempt1のverify-public/release-headersはsuccess。実job127684867148のAPIログで52274宣言監査/Mathlib778module範囲/full fresh Lean replay/固定nanoda49128宣言を確認した。STL契約依存2定理は別区分。headers tag/bodyは54da0269fd745b6642178ded99e4d56472d65f81に一致、公開asset715969666（55779bytes）の全59header byteもcommitと一致し、ZIP SHA256は09356f4777cc6fac6636e179bd5c45f6f684b85d8b431682ebfad013a451c939。証拠はtemplate_integration_20261106/gate/{ci_api_receipt,ci_audit_receipt,published_receipt}.jsonとci_job_54da026_api.txt。watch37114と配布確認49514は終了0回収済み、再pollしない。先行の配布確認23738はCIのfull-replayログ形式を取り違えた確認scriptのassertで終了1となり、parserを修正して最終49514で成功した（CI失敗ではない）。54da026後のMonoid/std::min/max追加は未commitでこの公開には含まれない。全137件の検証目標は未達・active。
-
-- **54da026後のMonoid作業（未commit、CI対象へ未反映）:** 原本2系列のhidden friendは`op(MonoidMul<int>(2),3)`と逆順を受けるが公開版は型推論で拒否し、原本Max/Minはcopy-only Tで動くが公開版はコピー代入を要求することを9比較で実証した。候補は両方と既存qualified opがC++/UBSan成功。証拠は`.cache/wip/monoid_original_review_20261106/native_api_receipt.json`。findings/status/monoid仕様の「済/機能削減なし」を部分対応へ訂正した。公開CPPはまだ変更していないのでfixesの修正済みとはしない。
-
-- **原本MonoidMulの4モデルは登録回帰へ移行:** 共通template入口で元のpublic x/hidden friend/委譲を保ち、値構築/e/opの全program/callFuel一致と、既定構築の任意typed callerの結果1・停止・元memory保持・ScalarPost2 0 70を証明。固定nanoda3588宣言成功。`tests/test_original_template_classes.py`へ1method、`tests/imports/original_monoid_mul.cpp`と`tests/lean/original_monoid_mul.lean`を追加し、実29114は終了0・1test/44.132秒（CPP/UBSanと独立kernelを含む）。同models/のregistered_original_mul_receipt.jsonとlogが証拠。元137ファイルcoverage/hashも成功。任意T/完全object/lifetimeは未達、台帳のfile/declaration lean_proved/publishedはfalseを維持。54da026の全件gate/機密検査はこの追加を含まないため、次の公開前に関連/全件gateと最新機密検査が必要。
-
-- **次のMonoid変換器残件:** 隔離候補monoid_candidate.hppはnative比較成功だが、runtime bodyを含むif constexprを現変換器が`if declarations and constexpr conditions are unsupported`で拒否した（models/lowering_receipt.json）。runtime bodyを消して通すことや、generic Tを代入可能/LLへ狭めて合わせることはしない。原本Max/Minのstd::max/minを元のまま扱う、同一TUのpinned宣言ID/primary/body監査とvalue消費文脈の対応を優先して検討する。参照を返すstd::max/minのalias、引数の副作用と評価回数を無条件の式複製で消さない。原本と同じgeneric max/minを残す候補、またはif constexprの選択bodyを効果・scopeごと正しくlowerする拡張が必要。現候補CPP/生成器は正本へ未適用。
-
-- **54da026を通常push済み、新CIを監視中:** 実41391は終了0、origin/main追跡参照も54da026へ更新。APIで対象SHA完全一致の[CI42154367529](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42154367529)がin_progressと確認し、実37114で60秒間隔のgh run watchを実行中。次は同handleをpollし、対象CI/release/配布ZIPまで確認する。証拠はtemplate_integration_20261106/gate/{push_receipt,ci_api_receipt}.json。下記のpush承認待ちは過去の記録であり同じpushを繰り返さない。このpost-commit記録と次のMonoid修正は54da026へ含まれない。全137件の目標は未達・active。
-
-- **19ファイルをcommit済み、push承認待ち:** `54da0269fd745b6642178ded99e4d56472d65f81`（Verify original library3 Group and Mapping instances）。親は96ecd58。全1936 committed blobが最新の機密走査manifestと一致し、全件gate終了0・差分/前後検出0・全tree既知公開digest1件/未分類0を確認した。証拠は`.cache/wip/template_integration_20261106/gate/{staged_receipt,commit_receipt}.json`とrelease_secrets/secret_scan.json。commit直後のtracked差分は0、MEMORY.mdは未追跡で保持。次は`.codex/rules/git-push.rules`に従い毎回の手動承認付き通常push→このSHAのCI/release/ZIPを確認する。この追記はcommit後のローカル引継ぎで、54da026へ含まれない。まだpush/新CIは未確認。全137件の目標は未達・active。
-
-- **最新全件gate実61257は終了0回収済み（再pollしない）:** CPython3.11.3/offline/jobs1/7200秒のinventory/all/package/archiveが全成功。all4835.601秒/全工程4843.550秒、1934検証入力hash不変。C++59は成功cache、bridge59は今回fresh、共有238は235今回実行/3成功cache照合。独立build1790jobs/Mathlib関連778module範囲、52274宣言の型/定義/公理依存監査、固定nanoda49128宣言が成功した。allowed axiom定義とLean replayは入力不変を照合して再利用し、変更module replay数0（fresh全module replayとはしない）。STL sort契約依存2定理は別区分。59header ZIPの内容/コンパイルも成功、SHA256は09356f4777cc6fac6636e179bd5c45f6f684b85d8b431682ebfad013a451c939。証拠は`.cache/wip/template_integration_20261106/gate/{final_gate_receipt,checks_state,input_manifest}.json`とall/archiveログ。次は最新の全tree機密検査→走査済みblobとindex/commitの一致確認→commit→ルールに従う手動承認付き通常push→新SHAのCI/release/ZIP照合。この記録時点でcommit/pushは未実行。全137原本の検証目標は未達・active。
-
-- **最新19ファイルと全公開予定1936ファイルの機密検査が通過:** `.cache/wip/template_integration_20261106/gate/release_secrets/secret_scan.json`を参照。公式checksum照合済みGitleaks8.30.1/offline/既定ルール/ignore・inline allow無効、合成PAT対照成功。差分・変更前後・公開しないMEMORY.mdは検出0、全treeの1件はProofs.MultiVecN.rowKeyの公開仕様digestとsource/定義hash/行/値を厳密照合した誤検出で、未分類0。raw findingは保持し、full-tree raw検出0とはしない。この記録を含めて再走査し、全blobが走査manifestと一致する19ファイルだけをstage/commitする。MEMORY.md/cacheは公開しない。現時点でcommit/pushは未実行、全137件の目標は未達。
-
-- **gate後のMonoidレビューを準備:** `.cache/wip/monoid_original_review_20261106/{review.json,implicit_conversion.cpp,nonassignable.cpp}`へ隔離。原本hidden friendと公開free function templateで`op(MonoidMul<int>(2),3)`の暗黙変換の受理範囲が異なる可能性と、原本Max/Minのcopyに対し公開版の`r.x=b.x`がcopy assignment不可のTを狭める可能性をソースから確認した。native比較は両方とも未実行。9比較（原本2系列・公開版・候補の暗黙変換、copy-only型、qualified op）をGCC13.3/C++17/UBSanで照合する`check_api.py`も準備済みで、gate終了後に実行する。`monoid_candidate.hpp`にhidden friend・元の委譲・generic max/minとLL専用witness・既存qualified opを保つ修正草案も隔離したが、未compile/未lowering/未証明である。gate後に比較し、実証後に台帳の「済/統合済み」と原API保持を見直す。修正ではhidden friend・元の委譲・generic Tのmax/minとADLを保ち、既存qualified呼出しも維持する。LL専用witnessや分岐を使う場合も生成モデル/旧定理を照合してから正本へ反映する。候補を現1934入力/commit予定19ファイルへ混ぜず、重い処理を並走させない。
-
-- **原本の有限具体化を登録回帰へ移した（未commit）:** `verifier/template_class_ir.py` に共通lowering入口と有限coverage（source/witness hash、具体的な型・member instance・モデル一覧、generic/full-object未達）を追加した。原本3種類のwitnessを`tests/imports/original_*.cpp`、一般証明を`tests/lean/original_*.lean`へ移し、`tests/test_original_template_classes.py`をsupportへ登録。実97717は終了0、3tests/93.402秒。原本27モデルを毎回生成し、全プログラム/callFuel一致、Sum invとMapping apply LL/intの任意typed callerの結果・停止・元memory保持・post80、C++/UBSanを確認。固定nanodaはAffine2548/Mapping3644/Sum3575宣言で成功した。境界回帰は共通入口の未具体化body拒否も追加し実18693終了0、10tests。metadata更新後のpublic_support18testsも実68377終了0。証拠は`.cache/wip/template_integration_20261106/{original_regression.log,original_regression_receipt.json,class_templates_final.log,class_templates_final_receipt.json}`。旧25268はtest discoveryの余分な実行を避けるため中断130回収済みで再pollしない。台帳は対象2ファイルをpartialへ更新したが、任意型を含むfile/declaration全体のlean_proved/publishedはfalseを保持。137原本のcoverage/hash検査も終了0。次は同folderのgate/でCPython3.11.3/offline/jobs1/7200秒の全件gateを実行し、成功後に最新機密検査と実commit入力の照合→commit→手動承認付きpush→対象SHAのCI/release照合へ進む。全137件の目標は未達・active。
-
-- **統合後の関連回帰は終了0:** 実10721はterminal終了0を回収済みで再pollしない。scalar_class_delegation 8tests/68.338秒（固定nanodaを含む）、standard_include_profile 4tests/44.910秒、public_supportが全て成功した。ログと各exit codeは`.cache/wip/template_integration_20261106/{related_receipt.json,test_*.log}`。新規class_templates 9testsも終了0。次は原本の具体化ファイル・27モデル・証明を登録できる共通lowering入口と有限coverage台帳の統合を進める。今回コード追加を含む8公開候補ファイルの差分/変更前後全文と、公開しないMEMORY.mdの別枠検査は同folderの`secret_scan.json`のpassedと内容hashを根拠にする。全件gateはこの追加後には未実行、commit/pushも未実行。旧137件全体の未達を維持する。
-
-- **原本template入口の正本統合を開始（未commit）:** `verifier/class_templates.py` と `vector_stl.translation_unit(template_instance=...)` に構造化した型/整数引数・専用witness Path・同一TU alias/primary/record ID・元forced source所有性・source/witness hash不変の検査を実装した。witness側や別includeの自由関数をcalleeへ採用しない。member instance選択と未具体化body拒否を明示的な前処理へ移し、既知trivial recordだけのcleanup envelope処理もclass_loweringへ移した。`tests/test_class_templates.py` の実Clang/9testsは終了0（2.430秒）、supportへ登録済み。旧GroupSum5/GroupAffine10/Mapping12モデルを正本モジュールで原本から再生成し、全27のIR一致とLean全文byte一致、元ヘッダーhash不変を実61937終了0で確認した。証拠は`.cache/wip/template_integration_20261106/{check_originals.py,original_models_receipt.json}`。既存の候補証明と同じモデルを作れた段階で、任意T/U・完全object/lifetime・原本モデル/証明の登録と共通lowering入口は未完了。関連suiteの最終状態は同folderのrelated_receipt.jsonと実handleのterminal結果を確認し、全件gate/最新差分の機密再走査を終えるまでcommit/pushしない。前回の機密検査は下記の文書2件だけであり、このコード追加を含まない。全137件の目標は未達・active。
-
-- **ユーザー指定の現差分機密検査:** 引継ぎ2文書の差分と変更前後の全文を、公式checksum照合済みGitleaks 8.30.1・offline・既定ルール・project ignore/inline allow無効で検査する。未追跡MEMORY.mdは別枠で検査し、公開対象には加えない。合成PATの検出対照、検査後のHEAD/内容hash不変確認も含め、実結果と対象manifestは`.cache/wip/diff_secret_scan_20261106/secret_scan.json`を確認する。この記録を含む検査でpassedの場合にのみ現差分の機密検査通過と扱う。今回の検査操作ではcommit/pushしない。
-
-- **96ecd58のリリース手順完了（2026-11-06確認）:** `96ecd58c45385b2d918617827c807ecff2732f23` を機密検査→commit→承認付き通常pushし、[CI42017723738](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42017723738) attempt1のverify-public/release-headersともsuccessをAPIで確認した。watch92883と配布照合75322、実jobログ取得46983は終了0、再pollしない。CIは共有236と公開59部品を検証し、最終監査はcacheではなくfresh実行。52274宣言の型/定義/公理、778Mathlib import範囲、full Lean kernel replay、固定nanoda49128宣言成功を実jobログで確認した。STL sort契約依存2定理は別区分。`headers` tagと本文は当該SHAに一致し、公開asset713398171の全59header byteがcommitと一致、ZIP SHA256はローカルと同じ09356f4777cc6fac6636e179bd5c45f6f684b85d8b431682ebfad013a451c939。証拠は`.cache/wip/scalar_erasure_effects_20261105/sequenced_gate/{ci_api_receipt,ci_audit_receipt,published_receipt,commit_receipt}.json`、実ログはci_job_96ecd58_api.txt。古いgh run view --logは空出力だったため実監査の根拠に使わない。これらのpost-commit追記はローカル引継ぎで、96ecd58へ追加済みとはしない。全137件の検証目標は未達・active。
-
-- **次の作業は旧library3の原本を保つtemplate検証候補の統合:** `.cache/wip/library3_template_witness_20261105/` の候補で原本Groupの15モデル、Mappingの12モデルを生成。元ヘッダーのAPI/T/値渡しU/fieldを変更せず、controlled implicit witnessのalias IDとprimary/record IDを同一Clang TU内で結び、元forced headerだけを採用する。生成時は同一TUのstd include/宣言監査を通す。GroupAffine10モデルのrfl/callFuel一致は固定nanoda2548宣言、GroupSum5モデルは他4モデルrfl＋原本e().x-xの一般caller/停止/元メモリ保持/ScalarPost2 0 80で固定nanoda3571宣言が成功。Mappingは10モデルrfl＋apply<long long>の一般caller/値渡し/同post80を固定nanoda3574宣言、apply<int>も中間積/和がLL範囲の全入力についてGCC signedDecode32の結果・停止・元メモリ保持・post80を固定nanoda3592宣言で成功（結果をint32範囲へ狭めていない）。証拠は各*_correctness_receipt.json、affine_model_equivalence_receipt.jsonと*_proof_check.txt。ローカルの重い処理は全て終了、13737/49935/26011/52824/11967等を再pollしない。LLとintのmember adapterはinstance欠落/未具体化/重複/非対応float/不正引数/名前衝突など8拒否、cleanup envelope候補は1受理/5拒否を確認済み。
-
-- **候補の残件と範囲:** 上記は隔離候補であり、compiler entry/証明はまだ正本へ未統合・未登録。selectorのsource所有性とinstance schemaの負例を含む回帰、typed-value準備の共通化、candidateの暫定witness入口を保守する設計へ移すこと、関連/全件gateが必要。doubleはnative結果だけでLean未検証、任意T、完全Cpp object/lifetime APIと元の全caller ASTも未完了。原本に手を入れてgetter/型T固定/値渡し削減で合わせない。公開96ecd58とこれらの未公開草案を混同せず、台帳のGroup/Mappingは一部のまま維持する。
-
-- **CI待機中の旧library3原本の検証候補（2026-11-05）:** `.cache/wip/library3_template_witness_20261105/` に隔離。元Group.hpp/Mapping.hppはbyte変更なし。primitive型/整数のtemplate引数を検査したcontrolled witnessで暗黙具体化し、witnessのaliasから同一Clang processのrecord ID・primary template IDを辿り、元forced header所有の宣言だけを選択する候補を作った。std include profile/宣言監査も同じTUで実行。明示的具体化はrecord位置がwitness側になるため、所有性検査を緩めて受け入れていない。既定構成子を使わないwitnessではbodyが未具体化のまま抜けることも確認し、要求APIのbody不足を拒否する。native3casesでpublic x/a/b・hidden friend・異型applyの結果を原本で確認済み。証拠はcomplete_implicit/{state,frontend_receipt}.json、lowering_receipt.json。
-- **原本Groupの15モデルまで進展（候補のみ）:** GroupAffineの10fieldモデルが既存モデルとrfl一致し、任意fuel/caller/argsのcallFuel一致も20roots/固定nanoda2548宣言で成功（affine_model_equivalence_receipt.json）。GroupSumはknown trivial recordのmaterializationだけを保ち、cleanup effects/BTE/未知の型/複数値を拒否する候補で5モデル生成した。cleanup controlsは1受理/5拒否成功。逆元は原本のe().x-xの一般callerについて結果-x・停止・caller memory保持・ScalarPost2 0 80を証明し、他4モデルのrfl一致とともに固定nanoda3571宣言成功（sum_correctness_receipt.json/sum_proof_check.txt）。原本のAPIやTを削っていない。ただし候補compiler entry/追加証明は未統合・未登録であり、完全なCpp object/lifetime APIや任意Tの検証完了とはしない。
-- **当時の候補とlive handle（現在は全て終了済み）:** Mappingのmember template applyが従来split経路では抜けることを確認し、候補では明示的instance schemaが無い限り拒否する。compilerが実体化したapply<long long>/apply<int>のbodyをID維持のまま選ぶ汎用adapterを隔離し、元の値渡しと戻り値Uを保って生成する実11967を実行中（member_template_lowering_receipt.json）。signed return conversionは既存GCC13.3/lp64契約を選択する。doubleのnative結果確認をそのLean証明済みとはしない。ローカルの重い処理はこの11967のみ。96ecd58の[CI42017723738](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42017723738)はwatch実92883がliveで、公開検証stepを実行中。CI/release/ZIPは完了未確認、旧gate35231は終了0回収済みで再pollしない。候補を公開treeへ混ぜず、CIの対象SHAとローカル草案の状態を区別する。
-
-- **96ecd58をpush済み・対象CIを監視中（2026-11-05）:** 通常push実51533は終了0、origin/mainも96ecd58へ更新された。対象[CI42017723738](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/42017723738)はAPIでheadSha完全一致/in_progressを確認。sequenced_gate/push_receipt.jsonとci_watch_96ecd58.txtへ記録。60秒間隔のgh run watchを起動した。下記承認待ちは過去の記録であり、同じpushを繰り返さない。CI/release-headersと公開ZIPのtag/body/全59headerをまだ未確認なのでリリース完了とはしない。この追記はcommit後のローカル引継ぎ。全137件の目標は未達・active。
-
-- **28ファイルをcommit済み、push承認待ち（2026-11-05）:** `96ecd58c45385b2d918617827c807ecff2732f23`（Restore Group APIs and preserve scalar construction order）。全1925 committed blobが直前の機密走査treeと一致し、親は21ef46fであることを確認した。証拠はsequenced_gate/{staged_receipt,commit_receipt}.json。commit時の作業差分は0、未追跡MEMORY.mdは保持。この追記はcommit後のローカル引継ぎであり、96ecd58のtreeへ追加済みとはしない。`.codex/rules/git-push.rules` に従い毎回の手動承認を求めて通常pushし、成功したら必ずこのSHAのCIとrelease-headers、配布ZIPのtag/body/全59headerのbyteを照合する。まだpush/新CIは未確認。全137件の目標は未達・active。
-
-- **公開前の機密再検査も通過（2026-11-05）:** 最終gate35231の終了後、現28変更ファイルの差分・変更前後全文・公開予定1925ファイルをGitleaks8.30.1/offline/既定ルール/ignore・inline allow無効で再走査した。差分0、全文の前後2件/tree1件は公開検証用rowKey SHA256と厳密照合した誤検出のみ、未分類0、合成control成功。証拠は`.cache/wip/scalar_erasure_effects_20261105/sequenced_gate/{secret_scan,reviewed_false_positive}.json`。この記録も含め再走査してから、その全blobに一致する28ファイルだけをstage/commitする。MEMORY.md/cacheは公開しない。現在commit/pushは未実行、全137件の目標は未達。
-
-- **最終全件gate35231は終了0回収済み（再pollしない）:** CPython3.11.3/offline/nice19/ionice3/jobs1/7200秒でinventory/all/package/archiveが全成功。all4605.389秒・全工程4613.081秒、固定1923入力のhash不変。C++59は成功cache、bridge59は今回の変換器で全件再実行一致、共有236成功（233再実行・3cache）、59header ZIPの内容/standalone・結合include検査が成功した。独立scratch buildは6.2秒で成功（成果物再利用でありcold buildとはしない）。最終proof-securityは成功cacheを使用し、1074入力のfingerprintをCPython3.11.3で再検証した。実監査の証拠はgroup_full_restore_20261105/canonical/gate/の52274宣言・778Mathlib import範囲・Lean replay・固定nanoda49128宣言であり、今回fresh実行とはしない。STL sortの契約依存2定理は別区分。ZIP SHA256は09356f4777cc6fac6636e179bd5c45f6f684b85d8b431682ebfad013a451c939。証拠は`.cache/wip/scalar_erasure_effects_20261105/sequenced_gate/{checks_state,final_gate_receipt,input_manifest,proof_cache_entry}.json` とall/archiveログ。次はこの記録を含む実公開差分の機密検査→stage/commit→ルールによる手動承認付き通常push→対象SHAのCI/release/ZIP照合。commit/pushはまだ未実行。全137件の検証目標は未達・active。
-
-- **追加後の機密検査28ファイルが通過（2026-11-05）:** 最終構築順修正を含むHEAD21ef46fとの差分・変更前後全文・公開予定1925ファイルをchecksum照合済みGitleaks8.30.1でoffline再走査した。差分0件、全文の検出は前後2件/tree1件で、すべて公開検証用SHA256 `Proofs.MultiVecN.rowKey` とファイルhash/定義/行を照合した誤検出。未分類0、合成control成功、既定ルール/ignore・inline allow無効。この追記も含めて再走査する。証拠は`.cache/wip/scalar_erasure_effects_20261105/secret_scan_sequenced/{secret_scan,reviewed_false_positive}.json`。これは機密検査の成功であり、未実行のsequenced_gateの成功ではない。次の全件gate後にも公開する実入力と走査manifestのhashを照合し、変更があれば再走査する。MEMORY.md/cacheは公開対象外。
-
-- **最終状態（2026-11-05、現在の重い処理なし）:** scalar構築順/helper効果/未使用引数の正本修正と回帰を追加し、CPython3.11.3の実64387は終了0、8tests/86.532秒。構築順5例（引数・field・両方の書込み、body内helper構築、初期化式内呼出し）はCPP/UBSanと固定nanoda2529宣言で成功。一般Group3624/単一2520/複数2663/未使用引数2527宣言も成功。sequenced_receipt.jsonとregression_sequenced.txtが最終コードの証拠。関連4suiteは実15383終了0（direct_file_ast5tests、inline_scalar_calls、template_call_ir、class_default_arguments）、related_receipt.jsonに記録。inventoryの137ファイルcoverage/source hashも成功したが、全137件の証明完了は未達・active。各終了済みhandleを再pollしない。
-
-- **旧最終gate61601は中断・終了130回収済み:** inventory/C++59/bridge59が成功し共有の最初へ進んだが、body内の別helper構築の影響を発見したため実handleへCtrl-Cで中断。CPP1/IR2の不一致を固定nanoda2517宣言で再現し、その後上記修正・再回帰を行った。final_gate/{interruption_receipt,checks_state}.jsonを参照。このgateは最終追加を含まず、all/最終監査/ZIPの成功とはしない。次の全件gateは`.cache/wip/scalar_erasure_effects_20261105/sequenced_gate/check.py`へ準備済み、まだ起動していない。CPython3.11.3/offline/nice19/ionice3/jobs1/7200秒、prepare/shared環境1thread・最終auditの既存内部設定2・固定nanoda通常stack/2threadsを維持し、入力manifestを固定して実行する。今回のコードで全件gate→最新機密再確認→stage/commit→ルールによる手動承認付き通常push→対象SHAのCI/release/ZIP照合が必要。MEMORY.mdは未追跡のまま公開しない。commit/pushは未実行。
-
-- **追加境界の途中snapshot（後続のhelper構築修正前）:** `.cache/wip/scalar_erasure_effects_20261105/` でnativeと生成モデルを比較し、helper独自copy（CPP2/IR1）、1bit field（CPP-1/IR1）、bodyの引数変更（CPP1/IR2）の不一致を固定nanoda2523宣言でも確認した。helper dtorの副作用と未使用引数randの消去もnative/IRで再現。全scalar消去recordでtrivial copy/move/dtor・base/bitfieldなしを確認するよう修正。単一fieldの状態変更/field参照を伴うbodyはfieldを先に局所保存してbody/returnを実行する。複数fieldの委譲では未使用を含む置換前引数もliteral-onlyと確認し、一般投影でも全field/bodyから未使用の引数を局所宣言として評価する。7/nの成功とゼロ除算を両fieldで検査した。一般投影のruntime effectsとbodyの状態変更はobject-state経路対応まで拒否し、元CPPのAPIは削らない。最終CPython3.11.3の回帰60738は終了0、8tests/79.916秒、固定nanodaは構築順2523・Group3624・単一2520・複数2663・未使用引数2527宣言で全成功（regression_complete.txt）。初回bridge94705は過剰拒否で終了1、this/fieldの読取りとeffectsを分離後の6918は公開59部品が全一致して終了0。この後に未使用引数の評価を追加したため、次の全件gateで最終入力を検査する。各終了済みhandleを再pollしない。旧79672の成功は今回の追加を含まない。最終gateは同final_gate/check.pyに準備、起動後は次の実handleを優先する。機密検査25ファイル後に追加しているため再走査も必要。commit/pushは未実行。
-
-- **旧library3の4比較も実確認済み（2026-11-05）:** `.cache/wip/group_legacy_api_review_20261105/receipt.json` は終了0。public field x/a/bは旧版でcompile/run成功・公開版compile失敗、異型applyは2/1、逆元の0の符号は正/負を確認。台帳の旧Group/Mapping「統合済み」を「一部」へ訂正し、違反一覧・findings・group仕様へ未解消差を記録した。元CPPを削らず、public field・template apply<U>・値渡し・ide/compose・元の逆元定義を保つクラスとして検証する。旧137件全体は引き続き未達。
-
-- **利用者指定の現差分の機密検査（25ファイル、2026-11-05）:** HEAD21ef46fとの差分、変更前後全文、公開予定1923ファイルをchecksum照合済みGitleaks8.30.1でoffline走査。差分は検出0。全文の検出は変更前後2件・公開tree1件で、すべてProofs.MultiVecN.rowKeyの公開検証用SHA256とファイルhash・定義・行を照合した誤検出。未分類検出0、合成controlの検出成功。既定ルール、ignore/inline allow無効。証拠は`.cache/wip/group_full_restore_20261105/canonical/gate/{secret_scan,reviewed_false_positive}.json`。この追記を含めて再走査する。MEMORY.md/cacheは公開対象外。機密検査の通過は変換器の追加境界の健全性確認を代替しないため、下記の公開前確認は維持する。commit/pushは未実行。
-
-- **全件79672は終了0（境界追加検査前のsnapshot）:** inventory/all/package/archiveが成功、all5260.139秒・全工程5268.147秒、1921入力hash不変。C++/bridge59・共有236、52274宣言の固定仕様/公理、778 import module範囲、Lean kernel replay（9 changed modules）、固定nanoda49128宣言、59header ZIPを確認した。証拠はgroup_full_restore_20261105/canonical/gate/{checks_state,input_manifest}.jsonとall/archiveログ。79672を再pollしない。この成功だけで未登録のhelper効果やbitfieldの健全性を判断せず、下記追加境界を実際に調べてから公開する。
-
-- **境界調査の準備時点の履歴（実証・修正は上記を優先）:** class_lowering.Eraser.constructはcopy-likeをuser constructor lookupより先にidentityへし、build_functionsはDestructorDeclを出力しない。委譲先factory内に別のscalar helperクラスを置いたとき、その独自copy/dtorの影響が落ちないかを確認する必要がある。2入力を.cache/wip/scalar_erasure_effects_20261105/へ準備した。重い検査79672のterminal後にCpp/IRを比較し、誤受理ならCPPの元APIを削らず、消去経路を明記したtrivial copy/move/dtorの部分言語に制限するか効果を完全にモデル化して回帰を追加する。確認/必要な修正と再検証が終わるまでcommit/pushしない。現行の全件gateだけではこの未登録入力への健全性を判断しない。
-
-- **全137件向け次の調査（全件gate待機中のソース確認のみ）:** library3のAlgebraicStructure/Group.hppはpublic field x/a/bを持ち、Mapping.hppのAffineはtemplate<class U> U apply(U x)とide/composeを持つ。現行groupのgetter/const T& applyとは同じAPIではない。GroupSum::invも旧3はe().x-x、library版は-xであり、浮動小数のsigned zeroを含め単純な同一実装とは仮定しない。4比較ケースのCPPを.cache/wip/group_legacy_api_review_20261105/へ準備したが、重い検査は79672だけとするためnativeは未実行。gateのterminal後にこの4ケースを逐次実行し、台帳の旧3「統合済み」を実証された範囲へ訂正する。フィールドをgetter代理へ変えたりapply<U>をTに固定して解決しない。必要なら元APIを持つ別namespaceのクラスとして保持し、共通変換器のメンバー関数テンプレート対応と証明を進める。
-
-- **Groupの正本統合と固定仕様レビュー完了（2026-11-05）:** library/group.hpp・Generated/Group・GroupCallと共通変換器3ファイルへ復元候補を反映し、fixes.mdへ実CPP修正を記録。元ソースは維持。正本のC++/template-firstと29モデルのbridgeが成功。共有回帰test_scalar_class_delegation.pyを登録し、CPython3.11.3で5tests成功（57.144秒）、一般構成子/friendの固定nanoda3624宣言、単一field/別クラスの生成例2520/2663宣言、原本とのevent列比較を確認した。direct_file_ast5tests、inline_scalar_calls、template_call_ir、group_apply_referenceも成功。詳細はgroup_full_restore_20261105/canonical/のcpp/bridge/delegation_tests/direct_ast/related_stateログ。独立scratch1790jobsのbuild成功後、52238→52274宣言をstreamingで比較し、既存の型/定理の変更・削除は0、既存計算定義はSum/Mul既定構築の2モデル本体だけが変わった。追加モデル8件/追加roots26件を個別に確認してverification/statements.jsonを更新した。frozen_update_receipt.json/contract_review.json/statement_text_receipt.jsonが根拠。一括accept-changedは使っていない。
-- **79672開始時の記録（現在は終了済み）:** inventoryは終了0、all以降は未確認。gate/checks_state.jsonとall.txtを参照し、実handleをpollしてterminalを回収するまで重複起動しない。以下の開始準備の構成で実行中。
-- **全件gate開始準備:** .cache/wip/group_full_restore_20261105/canonical/gate/check.pyはCPython3.11.3、jobs1/7200秒、offline/nice19/ionice3、Lean1thread/固定nanoda2threads・通常stackでinventory→全59部品/共有236検査/最終監査→ZIP生成/検査を逐次実行する。成功した正当な検査cacheは使うが、Group証明変更後の最終監査は必要。input_manifest.jsonはhandoff2文書とMEMORY.md以外の全入力を固定する。実行handle/terminalは次の追記を参照し、同じ検査を重複起動しない。機密検査はこの新しい24件超の差分では未実行で、旧10ファイル走査を流用しない。全件gate後に最新差分/公開treeの検査→commit→承認付き通常push→対象SHAのCI/releaseを確認する。全137件は未達のまま。
-
-- **Groupの元構築/APIを保つ統合候補が検証成功（2026-11-05）:** `.cache/wip/group_full_restore_20261105/` のrestored.hppは元のhidden friend、3クラスのe()への委譲、暗黙return、Affineの波括弧returnを復元し、既存namespace opとLL限定compile-time witnessを維持する。GCC13.3.0/C++17で元のAffine<Traced>と既定構築/e()の全event列が一致し、既存groupテストと追加API（raw値両方向・異型整数・変換proxy・qualified op・local型）のUBSanも成功。新しい共通class_split.pyは同一クラスのtrivial copy/move/dtor、空body、引数なし静的factoryの単一return、全fieldのliteral-only初期化を検査した委譲を扱い、この形では値/既定構成子のfieldモデルも生成する。型の同一性にはClangのdelegating initializerが持つ修飾済み型を使い、cp固定の推測を避けた。旧CPPの生成結果はbyte同一、復元候補は29モデル。うち既存19/friend4/Affine既定2の25個が既存モデルとLean rfl一致。変更されたSum/Mul既定構築は既存と同じ一般caller条件・結果0/1・ScalarPost2 0 70を維持して再証明し、Affineの値構築/既定構築4定理も一般caller/有効な引数・メモリ保持・定数work/peakで証明した。共通prepare_values2は既存prepare_op2を型Tyへ一般化したもの。これら31 rootの固定nanoda3679宣言、別クラスの具体例15定理（結果/状態保存/work≤40/peak≤20）の固定nanoda2663宣言が成功。Clangの受理6/拒否10ケース（改名、namespace、定数変更、3field、混在幅、未使用fieldを含むゼロ除算、body副作用、独自copy/dtor、属性/引数ありfactory）と別クラスnative UBSanも成功。追加の再帰factoryも実際に有限時間で拒否した。全検査は終了済み、稼働中handleはない。final_receipt.json、regression_state.json、recursive_state.json、native_state.json、compile_state.json、guarded_kernel_state.json、case_compile_state.json、case_kernel_state.jsonに証拠を保存。
-- **候補時点の統合計画（正本への反映は上記）:** 正本のlibrary/group.hpp・GroupCall/Generated・変換器3ファイルはまだ未変更。restored.hppの旧Differencesコメントは候補作成前の記述なので採用前に書き直す。class_lowering.py/class_split.py/ast_stream.pyの差分を正本へ移し、Groupの既存2既定構築定理をRestoredCheck.leanの同条件の証明へ置き換え、共通default_*・prepare_values2/value2_correctと新Affine構成子4定理を追加する。29モデルを正本namespaceへ生成、public宣言9件/ソースhash照合、元API/Traced比較と変換器の受理/拒否/独立kernel回帰を登録する。CPPを実際に直した時点でfixes.mdへ追記し、group.md/違反一覧の残件を実状態へ更新する。既存定理の前提/結論/上界を弱めず、固定仕様は変更2モデルとcompiler生成rootの影響を個別に照合してから更新する。現行一般定理はLLのfield投影に対するもので、任意Tや任意callerの完全なC++ object/lifetime ASTの証明を済みとしない。関連suite/全件gate→最新差分と公開treeの機密再検査→commit/push→対象CI/release確認が必要。全137件は未達のまま継続する。
-
-- **取得済み参照保持を正本へ反映済み（2026-11-05）:** copy_observers_20261104/observers.patchの4ファイルを正本へ適用し、docs/context_class_converter.mdに対象と限界を追記。MemberCopy.PreservesReferences/ready_preserves_references/source_copy_preserves_observersと生成copy_observers_of_fieldsを追加し、stale借用headerからのread保持4回帰とC++/UBSanを既存suiteへ組み込んだ。正本の初回11testsは実50804終了0、固定nanoda3798宣言も成功。ただし一部経路にLean1threadを継承し忘れたため、全経路へ明示する実27132も終了0（87.558秒、11tests成功、固定nanoda3798宣言成功、入力5件のSHA256不変）。既存UF生成の全文照合も成功。証拠はcanonical_check.py/canonical_serial_regression.txt/canonical_regression_state.json。50804/27132を再pollしない。現在、ローカル重い検査は動かしていない。入力5ファイルのSHA256はcanonical_input_manifest.json。この追加を含む全件gateとcommit/pushは未実行、旧137件全体も未達。公開CPPは未変更なのでfixes.mdへのCPP修正行は追加していない。追加後の機密検査の結果と最終入力hashは.cache/wip/diff_secret_scan_observers_20261105/secret_scan.jsonで確認する。次はGroupの元API・2field委譲構築の共通対応、関連回帰、追加全体の全件gate→機密再確認→commit/push→対象CI/release確認を進める。
-- **委譲構築の共通変換候補（隔離のみ）:** .cache/wip/group_delegation_20261105/class_lowering.pyは単一scalar fieldの同一クラスへの空body委譲を扱う。trivial copy/move/dtorと後処理なしを検査し、非空body/独自copy/非trivial dtor/後処理付き一時値を拒否。実Clangの受理2・拒否4ケース、native UBSan、生成されたfactory/既定構築の結果7・終了・callerメモリ/slot保持・work≤40/peak≤12の具体例2定理がLeanと固定nanoda2520宣言で成功。regression_state/compile_state/guarded_kernel_stateに証拠。これは一般callerの証明でも2fieldの委譲対応でもなく、正本CPP/変換器には未反映。Groupの元API/汎用性の差は引き続き残る。
-
-- **リリース照合済み（2026-11-05）:** 21ef46fb9a9b8d752703521244ea42a621304a92のCI41852024210 attempt2はverify-public/release-headersともsuccess。attempt1のcacheから224成功検査を復元し、独立prebuild9.7秒、最終監査側build14.0秒。最終監査は省略せず52238宣言の固定仕様/定義/公理、778 import module範囲、fresh Lean kernel replay、固定nanoda49092宣言を実行成功した。STL契約依存2定理は別区分。公開tag/bodyのSHAとZIP全59headerのbyte一致を実照合し、ZIP SHA256もローカルと同じ6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e。証拠はci_timeout_20261104/gate/{attempt2_receipt,published_receipt}.jsonとjob_21ef46f_attempt2.txt。CI監視は不要。全137件の検証目標は未達のまま続行する。
-
-- **利用者指定の現差分の機密検査（2026-11-05）:** HEAD21ef46fに対する変更5文書をGitleaks8.30.1でoffline検査。差分および変更前後全文は検出0。公開対象1919ファイルも検査し、既知の公開検証用SHA256指紋1件だけを元ファイル/定義/行/digestで照合して誤検出と確認、未分類検出0。合成controlの検出も成功。ignore/inline allowは無効。証拠は`.cache/wip/diff_secret_scan_20261105/secret_scan.json`。この記録を含む当時の5文書を再走査して通過済み。その後の参照保持の正本追加等は別の検査が必要。未追跡MEMORY.mdは公開対象に含めず、この5文書検査ではcommit/pushしていない。
-- **group修正候補の到達点:** group_api_review_20261105/hidden_guarded.hppは元のhidden friendを戻し、既存namespace関数テンプレートを維持、LLだけcompile-time witnessで本文を具体化する隔離案。ast_stream_guarded_candidate.py/class_split_witness_candidate.pyで、実行しない型宣言/関数宣言/static_assertと空のconstexpr分岐を扱い、モデル名衝突を避ける。旧生成結果byte同一、25モデルのLean rfl一致、公開宣言9件の一致、10回帰（VLA/実行時init/constexpr runtime body/false assert/属性を誤って消さない）、既存group C++/追加API UBSanが成功した。cpp native state/compile_rules_receipt/guarded_model_compile_stateに保存。元と同じreturn表記（Affineはbraces）へ揃えた後も再生成/25モデルrfl/既存C++とAPI UBSanが成功。固定nanoda745依存宣言も成功した。正本CPP/変換器/固定仕様は未変更。委譲候補hidden_delegateは既存モデル2件で一時セルを増やしたため採用しない。ただし既定構築/e()の汎用型でのコピー・構築順の差は候補にも残るため、元の委譲構築/波括弧を復元する変換経路と回帰を先に整える。
-- **CI再実行（2026-11-05）:** 21ef46fのCI41852024210 attempt1は7200秒制限で失敗。独立buildは4414.6秒で成功、C++/bridge119検査と共有105検査の計224件を保存し、328961109bytesのcache保存成功をログで確認した。uniform_scalar_peakで時間切れ、最終監査/releaseは未実行。失敗jobログ/receiptはci_timeout_20261104/gate/{job_21ef46f_attempt1.txt,attempt1_receipt.json}。保存済み進捗の実確認後に同SHAのfailed jobを再実行し、APIでattempt2/in_progressを確認、当時のwatch実84661（ci_watch_21ef46f_attempt2.txt）。現在は上記の成功結果を優先する。旧watch96359はツールhost停止で失効、APIでattempt1 terminal failureを確認済みなので再pollしない。
-- **新たな未修正API差（2026-11-05）:** GroupSum/GroupMulの元hidden friendでは`op(a,3LL)`/逆順が通るが、公開版の関数テンプレートでは推論失敗になることをGCC13.3.0/C++17/offlineで再現した（original compile/run0、published compile1）。証拠はgroup_api_review_20261105/{original.cpp,published.cpp,state.json}。docs/group.mdの「機能を減らしていない」を訂正し、experiments_statusの一部/違反一覧とexperiments_findingsへ未commit追記した。C++は未修正なのでfixes.mdには記載しない。これら3文書は21ef46f後の新しい調査差分で、そのcommitの検証/機密走査の対象外。当初の隔離候補86773は終了済み。現在は下記最新の候補記録を参照。正本C++と既存公開定理を維持しながら共通ASTで本文を具体化する経路を調べる。remote CIは上記のとおり終了成功。
-- **隔離候補の統合用回帰も成功（2026-11-05）:** copy_observers_20261104/observers.patchは生成器/既存test/Lean fixture/新C++ fixtureの4ファイル案。新しい一般参照保持root・stale header回帰4定理・native UBSanを既存独立kernel testへ追加したdraftで、11tests終了0（104.514秒）。独立kernel宣言数は3798。draft_receipt.jsonとdraft_regression.txtに証拠を保存。当時は正本未反映でCI21ef46fの対象外だった。その後の正本反映と検査は冒頭の取得済み参照保持の記録を参照する。ローカル重い検査は全て終了済み、remote CIは上記のとおり終了成功。
-- **最新push後の状態:** `21ef46fb9a9b8d752703521244ea42a621304a92` を通常pushし終了0（実49242）。ローカル追跡参照も一致。検査した全1919blobとcommit treeが一致し、12ファイルのみをcommitした。対象[CI41852024210](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41852024210)はattempt2でCI/release成功、公開assetも照合済み（上記）。旧watch96359を再pollしない。この追記はcommit後のローカル記録として保持する。
-- **今回の機密確認:** 12変更ファイルの差分/前後内容は検出0。全公開予定1919ファイルの1件は、既知のProofs.MultiVecN.rowKeyの公開検証用SHA256としてsource/定義/行/digestを厳密照合した誤検出。未分類検出0で通過した。公式checksum照合済みGitleaks8.30.1をoffline/既定ルール/ignore無効化/redact100で使用し、合成controlの検出も確認。raw findingを維持しており、Gitleaksのraw full-tree結果を検出0とは扱わない。証拠はci_timeout_20261104/gate/{secret_scan,reviewed_false_positive}.json。今回のcommit準備snapshotであり、commit/push状態はgitと対象SHAのCIを照合する。
-- **全件gate27768はterminal終了0を回収済み。再pollしない。** CPython3.11.3/cache有効/jobs1/7200秒でinventory/all/package/archiveが全成功。all3963.578秒、全工程3972.946秒。C++59/AST59/共有235、52238宣言の固定仕様/定義/公理監査、Mathlib関連778module範囲、Lean kernel replay（8変更module/1prefix）、固定nanoda49092宣言、59header ZIPを実確認。proof-securityはcacheではなく今回実行した。1917入力hash不変。ZIP SHA256 6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e。証拠は`.cache/wip/ci_timeout_20261104/gate/{checks_state,final_gate_receipt,input_manifest}.json`と各txt。これは21ef46f前の検証記録。以後の機密検査/commit/push/CI/releaseは上記のとおり完了。現在の未commit追加は冒頭を参照する。
-- **修正前push`c319aeafcab2ac7e231d141255b76f3c07b394bd`のCIは失敗、リリース未完了だった。** [CI41813361669](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41813361669)は7200秒の全体制限で終了1、release-headersはskip。watch85409とログ取得27898は終了済み、再pollしない。remote main/ローカル追跡参照の反映は確認済み。全文は`.cache/wip/release_20261103/ci_fix_supervisor/job_c319aea.txt`。
-- **失敗箇所:** 独立scratch1790jobsは4789.4秒で成功、C++/AST59も成功後、共有235件の84番目test_ret_unit_ir.pyで残時間を使い切った。そのテスト固有の無限ループや証明不成立を確認した結果ではない。前CI4129afeのbuildは2611.7秒。module時刻比較は`.cache/wip/ci_timeout_20261104/ci_build_comparison.json`。
-- **ローカルのキャッシュなし検査とcold buildを区別する。** c319aea反映前33537はCPython3.11/`--no-cache`で全件成功したが、独立scratchのbuild成果物は再利用していた（all.txtのbuildは9.0秒）。1790jobsという完了表示は全モジュールの新規コンパイルを意味しない。C++/AST59、共有235、52238宣言監査、Mathlib関連778module範囲、Lean replay、固定nanoda49092、59header ZIPは成功済み。反映後10899は実行器変更後の全件/ZIP成功、証明入力1005件不変でproof-security成功cacheを使用した。両handleは終了0で回収済み。これらは下記の新しい未commit差分の全件結果ではない。
-- **21ef46fに収録済みの修正:** GroupCall/IntervalCall/ScalarRefs/RatioCallの7個のmax不等式を外側から明示的に辿る証明へ変更した。前提・結論・計算定義は維持。IntervalCallの同一source profileは233.125秒→2.922秒、olean約1.92MBのまま。7定理をまとめた固定nanoda2162依存宣言が成功（標準stack/2threads、基礎3公理のみ）。単純なomega候補は70.870秒/20.55MBで不採用。FindCycleOuterのlocal irreducible候補は103.533秒でcompileしたが、改善比較が未了なので正本未反映。
-- **CIの重複計算を減らす差分:** 各checkの開始/終了/経過時間をflush表示。workflowへ独立scratch buildと成功検査のcheckpoint保存/復元を追加。tools/ci_check_cache.pyは最終proof-securityを保存/復元の両方から除外し、kernel module cacheも保存しない。保存はmainのpushのみ、attemptごとのkeyを使い、失敗後も成功した部分を残す。入力fingerprint・ソース監査/Lake照合・最終固定仕様/公理/両kernelは維持する。cold CIが一度で7200秒へ収まる保証ではない。再試行前には対象SHAのcache保存成功と実際に進んだ検証範囲を確認し、同じ高コスト処理を漫然と再実行しない。
-- **新差分の部分検証:** 正本SupportTestsは追加のcheckpoint回帰を含め18tests終了0。保存済み成功の再利用、変更入力の再検査、誤って混入した最終監査entryの拒否、欠損/不正JSONを確認。実Lakeの小プロジェクトでも、復元したbuildの再利用、変更依存で不成立になった証明の拒否、正しい変更/欠損成果物の再buildを確認した。YAML/POSIX sh構文とdiff --checkも成功。証拠はci_timeout_20261104/{peak_kernel_state,support_state,lake_restore_receipt}.json。部分検査は全て終了済み。全件gateは上記27768。
-- **21ef46fのリリース手順は完了。** gate27768→機密検査→commit/push→対象SHAのCI/releaseと配布ZIP照合まで成功。現在の未commit追加の検証は冒頭を優先する。
-- **c319aeaの機密検査:** 変更15ファイルの差分/前後内容は検出0、公開予定1918ファイルの1件はverification/statements.jsonのProofs.MultiVecN.rowKeyの公開SHA256指紋として実検証環境から再計算して一致を確認した誤検出。未分類検出0。既定ルール/ignore無効化/raw findingを維持した。検査treeと実commit全1918blobの一致も確認済み。証拠はrelease_20261103/ci_fix_supervisor/{secret_scan,reviewed_false_positive,staged_receipt,commit_receipt}.json。MEMORY.md/cache/ローカル測定値を公開しない。
-- **全137旧ファイルの目標は未達・active。** 公開59部品の成功を全体完了としない。元API/汎用性、caller AST、child入力、Safe、assignment/move/destruction、混在寿命列、償却、他の未対応ライブラリの残件は維持する。
-- **次の隔離候補:** `.cache/wip/copy_observers_20261104/` は、取得済み整数参照のreadをcopy後も保つ一般定理とstale借用header回帰4定理がcompile/固定nanoda2872宣言成功。生成wrapperも2879宣言成功、既定UF生成はbyte同一、C++/UBSanと候補moduleによる既存11回帰も成功。まだ正本へ反映しておらず、全caller/寿命列の検証完了とは扱わない。MEMORY.mdは古い未追跡のまま保持。
-
-以下は記録時点の履歴であり、現在の再開手順として扱わない。
-
-## 反映後gate10899実行時の記録（各記録時点の状態）
-
-- **現在の重い検査は実10899のみ。** `.cache/wip/release_20261103/ci_fix_supervisor/check.py` をCPython3.11.3で実行中。inventory成功→反映後all（cache有効/jobs1/7200秒）→ZIP作成/検証。ログ/状態/入力manifestは同ci_fix_supervisor/。nice19/ionice3/offline/Lean build1thread、固定nanodaは通常stack/2threads。実handleを確認してterminal結果を回収し、同じ検査を重複起動しない。
-- **10899の途中確認:** C++/template-first59が再実行成功、AST59は成功cacheで照合済み。共有ログは登録96番目のtest_class_copy_audit.pyまで進み、次はunion_find_copy_peak/preserve/receiver。1916入力は途中照合で全hash一致。cache有効のrunでは未実行の項目も前runのfingerprintに一致し得るため、旧observe_shared.pyの二分探索結果を現runの完了件数に使わない。最終判定は実handleのterminalとchecks_state/allログで行う。
-- **キャッシュなし全件33537は終了0を回収済み。再pollしない。** ci_fix_py311/checks_state.json: C++/template-first59、AST/Lean照合59、共有235、独立build1790jobs、52238宣言の固定仕様/公理監査、Mathlib関連778module範囲、Lean kernel replay、固定nanoda49092宣言、59ヘッダーZIPが全成功。all5432.667秒/全工程5440.876秒、1915入力は終了時hash一致。STL契約依存のsort work定理2件は別区分のまま。ZIP SHA256は `6a1de0f778436f64b13c654b35c1a136b43449910f37f825212feac1b018626e`。
-- **子孫回収を正本へ反映済み。** tools/process_supervisor.pyを追加し、check_cache.run_tracedが専用Linux subreaper/親死亡通知を使うよう変更。別sessionの子・成功後の残子・timeout・割込み・親group SIGKILLをkill/reapする。trace hookに停止例外を飲まれず、監視設定/procfsが使えない時は実コマンドを開始しない。エラー理由も親へ渡す。tests/test_public_support.pyの既存suiteへ回帰を追加し、正本で17tests成功。新実行器がcache依存に記録されることも確認した（ci_fix_supervisor/support_tests_receipt.json）。共有check数235は維持する。
-- **反映前後の検証範囲を区別する。** 33537は上の実行器反映前の全件成功。反映後もProofs/verification等の1005入力はhash不変なので、10899では正当な成功cacheを有効にして全件を再確認している。まだ10899の終了は未確認。重い検査の予算は増やしていない。
-- **今回の他の変更:** Python3.11のAST未完了文字列captureを修正し、CIのproof build前に境界テストを追加。CppFrameResolveExtensionを登録し、member copyが任意Element/root/借用childの成功済みresolveを保つ一般定理と生成wrapper、二段の借用header回帰を追加した。旧定理/既定生成経路と元C++は維持。詳細は [CI専用引継ぎ](ci_release_handoff_20261103.md) とlessons。
-- **まだcommit/pushしていない。** 最新push4129afeのCI41757715784はAST trailerで終了1、releaseはskip。次は10899のterminal結果とmanifest→最新差分の機密再検査→対象stage/commit→通常pushの手動承認→新SHAのCIとrelease-headersを完了まで確認する。古いwatch32873/診断/33537は終了済み。MEMORY.md、cache、ローカル測定値を公開しない。
-- **全137旧ファイルの目標は未達・active。** 公開59部品の成功を全体完了としない。元API/汎用性、caller AST、child入力、Safe、assignment/move/destruction、混在寿命列、償却、他旧ライブラリの残件は維持する。捕捉整数参照の保持草案はcopy_observers_20261104/に隔離したまま未compile/kernel/native。新実行器の旧候補と登録用草案はtraced_deadline_probe/に保存したが、正本へ移したものを再適用しない。
-
-以下は各記録時点の履歴であり、現在の再開手順として扱わない。
-
-## 全件33537終了前後の記録（各記録時点の状態）
-
-- **重い検査は実33537のみ稼働中。** 実handleを再確認済み。CPython3.11.3で `.cache/wip/release_20261103/ci_fix_py311/check.py` を実行している。inventory成功、全件は`--no-cache --jobs 1 --timeout-seconds 7200`、続いてZIP作成/検証。nice19/ionice3/offline/Lean1thread、固定nanodaは通常stack/2threadsを維持する。状態/ログは同ci_fix_py311/。同じ検査を重複起動しない。
-- **現在の到達点:** C++/template-firstとAST/Lean照合は各全59部品成功。共有検査も全235項目が成功（現Python3.11の成功fingerprint一致と、制御が最終監査へ進んだことを確認）。現在は最終仕様/公理/両kernel監査中。独立scratch1790jobsとMathlib関連778moduleの範囲確認が成功し、全監査・ZIPの終了はまだ未確認。manifest1915入力は再確認時に全てhash一致（進捗用handoff2文書とMEMORY.mdは対象外）。gate完了まで対象入力を変更しない。
-- **最新pushは4129afe、CI41757715784は失敗・releaseはskip。** watch32873は終了1回収済みで再pollしない。独立build1789jobsは2611.7秒で成功後、bellman_fordのAST trailerで停止。全文ログはrelease_20261103/job_4129afe.txt。今回のローカル修正はまだcommit/pushしていない。
-- **AST修正:** CPython3.11.3で既存stream3testsの30 failures/87 errorsと実AST失敗を再現した。SKIP外側の`*+`だけ`*`へ変えると3testsと95rootのサイズ/hash比較が成功。CIにproof build前のstream境界検査を追加した。証拠と詳細は [CI専用引継ぎ](ci_release_handoff_20261103.md) とlessonsを参照する。
-- **新しいコピー保持証明:** `CppFrameResolveExtension.lean` をRoot/supportへ登録。member_exports経路に任意Element/root/child headerの成功済みresolveを保つPreservesContainersと生成wrapperを追加した。既定生成経路と旧Keeps/定理は維持。二段の借用headerを持つ具体例も独立kernel回帰へ登録。関連3suiteはcontext11/Beats4/layout4の計19tests成功、固定nanoda3781宣言成功（実25170）。compileを1threadへ統一した後の結果は実33537で確認する。元C++は変更していない。
-- **次の手順:** 33537のterminal結果と入力manifestを確認→下記traced実行器の修正・回帰登録と必要な再検証→最新差分の機密再検査→対象stage/commit→通常pushの手動承認→新SHAのCIとrelease-headersを終了まで確認。機密検査の前回結果はci_fix_py311/secret_scan.json（12ファイル、差分/前後内容とも検出0）で、以後のhandoff追記は最後に再検査する。`MEMORY.md`、cache、ローカル測定値は公開しない。
-- **全137旧ファイルの目標は未達・active。** 公開59部品の成功を全体完了としない。元API/汎用性、caller AST、child入力、Safe、assignment/move/destruction、混在寿命列、償却、他の旧ライブラリの残件は維持する。child入力ではCppNestedCallのvectorChildだけでなく、BeatsInputPrepare/MatMulPrepare.VOKG/CppRootModelのroot限定モデルも拡張する必要がある。
-
-- **次の証明案（未検証）:** `.cache/wip/copy_observers_20261104/` にReady列が捕捉済み整数参照の成功readを保持する `PreservesReferences` とsource_copy_preserves_observersの草案を用意した。外側rowをreserveして借用child headerがstaleでも、子の別allocationへの捕捉参照はliveのまま、という具体例とC++/UBSan用コードを含む。まだcompile/kernel/nativeを実行していない。33537が終了するまで重い検査を重複起動せず、次の段階で確認する。正本には反映していない。
-
-- **traced実行器の子停止漏れ（正本未修正）:** `tools/check_cache.py:run_traced` のsubprocess.runはtimeoutで親だけを止める。証拠/候補は `.cache/wip/release_20261103/traced_deadline_probe/`。元再現state.jsonでは.2秒timeout後も子がmarkerを記録。単純なgroup停止候補bounded_capture.pyは通常の子には効いたが、別sessionの子では漏れた（escape_state.json、戻りも.656秒）。**この単純候補を最終修正として採用しない。**
-- **子孫回収の新候補:** 同cacheのprocess_supervisor.pyはLinuxの専用subreaper/親死亡通知を使い、監視役も別sessionへ分離。親groupごとのSIGKILLでも監視役が子孫を回収する。CPython3.11.3/offlineでsupervisor_cases.pyの8ケース（stdin/stdout、失敗17/負signal、通常/別session子のtimeout、成功後の残子、割込み、親group SIGKILL）が成功。check_cache_candidate.pyの連携も成功/失敗出力・終了コード、成功だけのcache保存、hit維持、別session子timeoutの非保存を確認した（integration_state.json）。停止例外はtrace hookのexcept Exceptionに飲まれないBaseException派生。prototype_receipt.jsonに最終source hashを保存。まだ正本へ反映/CI確認していない。
-- **回帰登録の準備済み:** 同cacheのtest_public_support_candidate.pyは既存の登録済みSupportTestsへ8ケース/cache連携を追加する草案。run_support_draft.pyで候補check_cache/moduleを注入し、Python3.11.3/offlineで既存16+追加1の17testsが全成功した（support_draft_state.json、prototype_receipt.jsonのsource hash）。正本反映時はtools/process_supervisor.pyの追加、tools/check_cache.pyの呼出し変更、tests/test_public_support.pyの追加method/import/fixtureだけを移す。独立test_process_supervisor.pyはcache内の準備用で、正本へ重複登録しない。共有check数235と既存support manifestを維持でき、必要な再検証では変更のない証明の成功cache利用を正確に区別する。
-- **33537終了後の順序:** 新候補を正本toolsへ統合して専用回帰を登録し、適切な再検証（現在gateで証明sourceと両kernelが成功した場合は、その後の非変更とcache利用を明記）を行う。その後に機密再確認→commit/push→新SHAのCI/release。進行中33537の1915入力を変えない。診断・候補の子プロセスは全て終了済み。
-
-以下の再開記録とCI経過の「稼働中」「未確認」「次は」は各記録時点の状態であり、現在の再開手順として扱わない。
-
-## 2026-11-04の再開記録（各記録時点の状態）
-
-- 実33537は今回の復帰時にも実handleで稼働を確認。キャッシュなし全件検査はC++/template-firstが44/59まで成功（同時点のlog 1469584bytes）、bridge/共有/最終監査はまだ未確認。ローカル重い検査を追加起動せず、対象入力を維持して待つ。
-- 次段階のchild入力について、`CppNestedCall.resolve`/`bindOne` はflat vectorの`.vectorChild`を扱える一方、`BeatsInputPrepare.prepared`/`MatMulPrepare.VOKG`と`CppRootModel.Flat.tag`はroot tagを要求する。借用子をrootと仮定して既存構築定理へ渡すことはできない。保持の新補題だけでchild入力対応済みとせず、呼出し準備・状態表現を合わせて拡張する。
-
-- **現在の重い検査は実33537のみ。** CPython3.11.3で `.cache/wip/release_20261103/ci_fix_py311/check.py` を実行中。inventory成功→全件 `--no-cache --jobs 1 --timeout-seconds 7200`→ZIP作成/検証の順。nice19/ionice3/offline/Lean1thread、変更後入力manifest付き（進捗用handoff2文書とMEMORY.mdは対象外）。ログ/状態は同ci_fix_py311/、まだall終了未確認。33537の実handleを確認し、stateだけで稼働/停止を判断しない。CI監視32873と診断/関連検査はすべて終了済み。次はこの結果→機密検査→対象のcommit/push→新SHAのCI/release確認。旧137件目標は未達のまま。
-
-- 借用参照保持の関連検査25170は終了0。context11/Beats4/layout4 tests成功、共通部の固定nanoda3781宣言成功。実prepare73194のscratch1790jobs/テスト用imports配布も成功。Root登録と新補題・生成器・回帰はローカル未commit。以後の全件検査では独立回帰のLean compileを1threadに統一（nanoda2threadsは維持）する。
-- CIのAST失敗はPython3.11.3で再現し、SKIP外側のpossessive repetitionだけ通常greedyへ修正。3.11のstream3tests成功、実Bellman AST95rootsのhash/sizeが従来版と全chunk一致。CIにもbuild前の軽い境界検査を追加した。詳細はCI専用引継ぎとlessons。旧137件全体・caller AST・混在寿命等の残件は維持する。
-
-- **CI 41757715784/watch32873は終了1。** 独立scratchの1789jobsは2611.7秒で成功したが、その後bellman_fordのAST bridgeでinvalid translation-unit trailer。releaseはskip。ログはrelease_20261103/job_4129afe.txt、最新CI状態は専用引継ぎを参照。32873を再pollしない。新しい借用参照回帰の初回は#guard禁止のsource auditで失敗し、通常定理へ修正後に実25170で関連3suiteを逐次再検査中。AST修正はこの重い検査と重複起動せず、終了後に再現する。
-
-- 借用header保持候補をローカル正本へ統合中。`Proofs/CppFrameResolveExtension.lean` をRoot/supportへ登録し、member_exports経路に `PreservesContainers` / `ready_preserves_containers` / `source_copy_preserves_containers` と生成wrapper `copy_containers_of_fields` を追加した。旧Keeps・旧定理・既定生成経路は維持。`tests/lean/member_copy_containers.lean` を既存独立kernel回帰へ組み込んだ。実73194で監査済みscratchからtest import準備→context/Beats/layoutの関連検査を逐次実行中（各ログ・状態はborrowed_resolve_20261104/）。CI監視32873も稼働中。まだ追加分の全件gate/commitは行っていない。
-
-- 機密検査の再確認: `4129afe` の変更前後43blobのSHA256が検査記録と一致。現在の引継ぎ2文書の5289bytes差分もGitleaksで検出0・終了0（`diff_secret_scan_4129afe/current_worktree_receipt.json`）。この追記はその再検査後のローカル記録。
-- CI待機中の旧137件向け候補は `.cache/wip/borrowed_resolve_20261104/` に隔離。`BorrowedResolveProbe.lean` はExtendsの下で任意Element・root/borrowed-child headerの成功済みresolveを保持する補題で、Lean終了0、source audit、固定nanoda1871宣言成功（export1.204秒/kernel0.202秒、基礎3公理・通常stack）。まだ正本へ追加していない。生成member copyへの接続候補 `CopyContainerProbe.lean` も実59175終了0（2.329秒）、独立検査12851終了0/2845宣言成功。初回67061はoverlay import不足等で終了1、修正後に成功した。二段の借用子header・入れ子型・捕捉した整数参照・scalarを含む3field copyの具体例 `CopyContainerFixture.lean` は実80939終了0（0.416秒）。ローカル候補検査は全て終了し、稼働中はCI監視32873のみ。次はこの候補の正本module/生成器への統合と専用回帰が必要で、全caller AST・寿命・Safe等の完了とは扱わない。
-
-- **機密検査後にcommit/push済み。** 現行SHAは `4129afe52b30e94585dd2ffd0411586b752b6fe3`。Gitleaks 8.30.1で `38e0171..4129afe` の22ファイル差分・差分全文・変更前後43版（8.11MB）が検出0、合成markerによる検出器の動作確認も成功した。結果は `.cache/wip/release_20261103/diff_secret_scan_4129afe/summary.json`。通常pushは終了0。対象[CI 41757715784](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41757715784)は進行中で、CI/release-headersは終了未確認。下の「未commit」はその記録時点の状態。
-
-- CI修正後の全件gate実56399は終了0を回収済み。C++/AST59部品、共有235項目、独立source build、52228宣言の仕様/公理監査、Lean kernel replay、固定nanoda49088宣言、59ヘッダーZIP検証が成功。ローカル検査は終了し、対象CIはwatch実32873で監視中。
-- 詳細・失敗候補・証拠は [CI専用引継ぎの最新状態](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を優先する。ローカルの成功cacheを再利用した検証であり、cold CIの実行時間は別途確認が必要。
-- この記録時点では修正は未commit。次は機密再確認→対象ファイルのstage/commit→手動承認付きpush→対象SHAのCI/release-headersを終了まで確認する。`MEMORY.md` と各cache・ローカル測定値は公開対象から除外する。
-- 公開59部品の成功と、旧137ファイル全体の検証完了を区別する。元API・汎用性・class copyのcaller AST/寿命・Safe導出/任意長操作列/償却等の残件は維持する。
-
-## CI修正の経過（以下は各記録時点の状態）
-
-- 全件57874は終了1回収済み。正本1789jobsは成功、共有196/235のtest_vector_construction.py中で7200秒上限。正本module時間合計3690秒へ改善したが、全件/CIは未成功。追加の状態表現最適化とテスト重複計算を調べる。最新結果は [CI専用引継ぎ](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を優先し、57874を再pollしない。
-
-- CI性能修正を正本10ファイルへ反映し、不要simp引数のstyle診断だけをLake/scratch設定で無効化した。公理・固定仕様・両kernelの判定は維持。現在実57874で1thread/jobs1/7200秒の全件gateとZIP検証を実行中。ログはrelease_20261103/ci_fix_statefold/、詳細と最新状態は [CI専用引継ぎ](ci_release_handoff_20261103.md#再開時に最初に確認する状態)。同じ検査を重複起動しない。
-
-- CI時間切れの修正継続で、AA/UM/UNの元の全定理を保つ候補 `attribute [local irreducible] gS VVB` が1thread/通常linterで46.9/28.5/30.4秒の型検査に成功した。宣言名・型・計算定義の一致も終了0確認。現在の独立kernel検査と正本反映状況は [CI専用引継ぎの最新状態](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を優先する。
-
-- CI修正を継続再開。最新の診断・正本への反映・検証状態は [CI専用引継ぎの再開後最新状態](ci_release_handoff_20261103.md#再開時に最初に確認する状態) を更新する。write_argument_traceの実26318を60秒の有界診断として起動した。下記の全停止は前回引継ぎ時点の記録。
-
-- **CI修正・リリースの再開は [CI専用引継ぎ](ci_release_handoff_20261103.md) を最優先する。** commit/push済みの38e0171のCI41603164208は初回Lean build約118分後、C++テスト中の7200秒制限で失敗した。Release更新はskip、リリース未完了。正本への性能修正はまだ反映していない。
-- **検査・監視・ログ取得はすべて終了済み。稼働中の検査はない。** 最後のcost_context_bounds診断35752もAAを120.025秒でkillpg/reap、Lean終了-9/timed_out=trueを回収済み。UM/UNは未実行。wrapper終了0をLean成功と混同しない。専用引継ぎに全診断の結果・失敗候補・次の手順・ログの場所を記録した。
-- この最新引継ぎとCI専用文書は利用者の指示でローカル更新したもの。まだcommit/pushしていないため、同じworkspaceの他agentは読めるが、別checkout/別環境へは文書と必要な.cacheログを共有する必要がある。下の「稼働中」「未確認」は経過履歴であり、現在の状態ではない。
-
-- 最新CI41603164208/watch36152は終了1を回収済み。初回Lean build1789jobsが08:28→10:26 UTC、約118分/994 Proofs modules累計7053秒。全体7200秒制限が次のcpp:floyd_warshall sanitizer compile中に切れた。C++/Lean内容エラーとは区別し、制限は増やさず本質改善を調査中。release-headersはskip。gh run view --log-failedはHTTP2 CANCEL、HTTP1 unexpected EOFで取得失敗し、ジョブ単体APIの実24083は終了0、全文58,749,084bytesをrelease_20261103/job_38e0171.txtへ保存した。58MBを丸ごと表示しない。遅いmoduleはBeatsExecAA1006秒、UN623秒、UM566秒、IntervalCall296秒、TreeFullDpExec224秒。
-- 診断linter_probe: CalcLoopIterDsetは同じsource/1threadで通常18.460秒/警告2,306,987bytes、unusedSimpArgs無効9.658秒/7,883bytes（実29284終了0）。AAの同条件比較実11922は両方120秒でkillpg/reapし、時間上限を増やしていない。宣言・証明項比較補助CompareDeclarations.leanは最初List.qsort import不足で失敗、Array.qsortへ修正済み（比較は未完了）。AA/UM/UNの最終simp at *; omegaを費用/領域仮定だけへclear * -で絞る候補をcost_context_probe/Proofs/へ作り、実62549で通常linter/1thread/各120秒診断中。公開正本にはまだ適用していない。
-
-- 最新修正commit `38e01716c2cce45d7dbfbcbff824b18d56ba6387` は機密走査検出0・cached差分check成功後に作成、手動承認付きpushは終了0（e62828c→38e0171）。CI https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41603164208 をwatch実36152で監視中。ログci_watch_38e0171.txt。CI/release-headersは未確認。先の7099/27532は終了1回収済みで再pollしない。このpush後記録はローカル差分として保持する。
-
-- 順序修正後の実96035は終了0回収済み（3157.625秒）。order_fix/checks_state.json: inventory0、all0/3149.547秒、package0、archive0。Leanを先にbuildした全件59部品/共有235checksが成功、正本未変更のproof-securityは成功cache。ZIPの内容・単独/全体include compile実行も成功。追加の順序/失敗時停止の回帰は8tests終了0。次は機密再確認・commit/pushと修正SHAのCIを監視する。96035は再pollしない。
-
-- 再CI41595322068/watch7099は終了1を回収済み。所有者設定・inventory・C++59部品・AST照合成功後、Lean本体build前にtests/test_mat_pow_kernel.pyとtest_cpp_constructor_multi_finish.pyがimportしてunknown module prefix Proofsとなった。ci_failed_e62828c.txt保存。check_public.pyでbuild_leanを分離し、全件のテスト前に実行、証明監査はテスト後に維持した。test_public_support.pyで順序/ビルド失敗時停止を追加、8tests成功。ローカル全件/ZIP検証は実96035で実行中、ログ/状態はrelease_20261103/order_fix/。旧17394の成功記録は上書きしていない。
-
-- CI41594742022/watch27532は終了1を回収済み。検証開始前のgit ls-filesがcontainer内のdubious ownershipで停止し、release-headersはskip。ci_failed.txtに保存。workflowへGITHUB_WORKSPACEだけのsafe.directory登録を追加。一時repoで異なる所有者の拒否を再現し、POSIX shで修正後成功・別repoは拒否を確認した。C++/Lean/固定仕様は未変更なので全件の重複実行はせず、修正SHAのCIで全件確認する。
-
-- リリースcommit `3aaa6e69bd946e8b9d68ad64acf84ae14a5c12b0` を作成し、手動承認付き `git push origin main` は終了0。remote mainは013cf1f→3aaa6e6へ更新済み。対象CIは https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/41594742022 （run41594742022）、watch実27532で監視中。ログは.cache/wip/release_20261103/ci_watch.txt。CI/release-headersはまだ成功未確認。push後のこの記録はローカル差分として保持する。MEMORY.mdもローカル未追跡のまま。
-
-- リリースのステージ確認: index全1914ファイルが最終機密走査のSHA256と一致し、検出0。変更1737ファイル、325976追加/1146削除。MEMORY.mdと.cache/.tools/.lake/benchmarks/localは除外。git diff --cached --checkは引継ぎ済み追加ファイルの行末空白・末尾空行を報告した（ログはrelease_20261103/staged_whitespace.txt）。今回それらを整形せず検証済み内容を維持した。構文sh -nは成功。commit/push後の対象SHAとCI結果は引き続き確認する。
-
-- **全件gate実72559は終了0を回収済み（4636.309秒）。再pollしない。** `.cache/wip/check_public_after_wide_call_fix{.txt,_state.json}` に実結果を保存。C++/bridge59、共有235checks、正本/scratchのLean build各1789targets、Mathlib778modules、52228宣言の公理依存・固定仕様監査、Lean kernel replay、未改変固定nanodaの **49088宣言** がすべて成功した。export917517490bytes、nanoda.stderr.logは0bytes。証明監査開始から773.7秒でreplay完了、832.7秒でexport完了、1044.2秒で独立検証完了（各値は開始からの累積時間）。2threads/標準16MiB stackを維持した。以下の72559「稼働中」は終了前の観測履歴。
-- **公開59部品のgate成功は、旧137ファイル全体の検証完了ではない。** 元のAPI/汎用性/入力範囲、Beatsの公開切替・class copyのcaller AST/寿命・Safe導出/任意長操作列/償却、他の未対応ヘッダーやドライバの残件を維持する。gate成功後に下記「copy本体のlive領域と3種peak」まで証明追加・関連検査を進めた。全件gate72559はこの追加前の結果として区別する。
-- 利用者から「キリが良くなったら、機密確認→git commit→git push」の指示を受けた。copy本体のpeak証明を一区切りとし、リリース前の監査・全件検査へ移る。git_workflow.mdに従いpush後は対象SHAのCI/ヘッダーリリース結果を確認する。旧137件の検証目標はこのリリースと区別して継続する。作業記録は `.cache/wip/release_20261103/`。初回機密走査はtracked/nonignored作業木1938候補と未push2コミットの追加/変更blobを対象に2154版・1955内容を確認し、検出0、binary/symlink0。秘密値を出力しない検出器を使用した。ステージ後も対象を再確認する。ローカルの古いMEMORY.mdは公開対象へ含めず保持する。
-- リリース前の実17394は終了0を回収済み（987.181秒）。137件inventory、追加後の全件all（59部品/235checks/Lean build1789、変更のない正本のproof-securityは成功cache利用）、59ヘッダーZIPの作成、ヘッダー単独/全体includeのcompile・実行がすべて成功した。ログはrelease_20261103/{inventory,all,package,archive}.txtとchecks_state.json。APIで確認したremote mainはローカルorigin/mainと同じ013cf1ff7b67d9683c23ac398eadc257a5bf8a06で、既存未push2コミットとの分岐はない。機密確認とstaged差分確認を終えてcommit/pushし、当該SHAのCIとrelease-headersの終了結果まで確認する。実17394は再pollしない。
-- **MatPowの未完了診断を再検証済み**。元の `Proofs.MatPowExec.pow_while` は固定nanodaで4809宣言成功、kernel単体23.450秒（標準16MiB/2threads/50秒窓内）。費用計算の小補題化候補も4810宣言成功したが、元の証明が成功するため**適用していない**。元ソースSHA256は `6fcfc7c5dfaef29ad6398e63acbde7a58b85878f879679e7512a7697952ef3d4` のまま。range診断で50秒窓の末尾に残ることをstack overflowの根拠としない。比較・判断は `.cache/wip/matpow_while_repair/{review,original_state,decision}.json`。
-- `tests/test_mat_pow_kernel.py` を共有checkへ追加した。元のpow_whileとpow_finalの依存閉包4964宣言を固定nanodaで成功、1test28.947秒。許可公理は基礎3件のみ、標準stack/2threads、export/kernel各120秒、非0/不正な成功メッセージを拒否する。公開59/共有876/checks **235**/docs106、995Lean source audit、固定baseline byte一致、Python構文・diff確認も成功。原本SquareMatrixクラス全体の証明が完成したとは扱わない。
-- 次の全件検査に備え、失敗28093の917519177bytesのexportを `.cache/wip/proof_security_failure_28093/` へrenameで保管した。archive.jsonにSHA256を記録。nanoda.original.jsonは元configのbyte同一コピー、nanoda.jsonは保管先exportを参照する診断用config。今後、昔の宣言indexを調べるときはこの保管先configを使い、次回監査が上書きするscratchのconfigを使わない。
-- WideCall修正後の全件検査wrapper `.cache/wip/check_public_after_wide_call_fix.py` はall/jobs1/14400秒、nice19/ionice3/offlineで実行し、実72559の終了0を回収済み。ログ/状態は `.cache/wip/check_public_after_wide_call_fix{.txt,_state.json}`。この終了済みハンドルを再pollせず、次の作業は最新のcopy証明の節から再開する。
-- 更新済みAGENTS.md・lessons・本書を確認して単独で復帰した。以下の「稼働中」「次は83949をpoll」は過去の観測であり、現在の再開指示として扱わない。復帰時のプロセス一覧にlean/lake/leanchecker/nanodaはなく、重い検査は起動していない。
-- 有界宣言別診断は7ログ分まで終了済み。`.cache/wip/full_export_failure_probe/coverage.json` で49086宣言中49084の完了を記録し、未完了はindex38602 `Proofs.BeatsWideCall.call` とindex38780 `Proofs.MatPowExec.pow_while`。これは診断用の集計であり、全件独立成功でも、元のstack overflowの原因確定でもない。
-- 前回のWideCall修正は実ソースにも反映済み。`Proofs/BeatsWideCall.lean` のSHA256は `24d3b4c99ea7697114a8be09e10ef17577f5e3f85ff87e9a2be4f3a407fd0315` で、独立検証済み候補と一致する。費用不等式を小補題へ分け、call/allocated_callの型とprogram本体は不変。`.cache/wip/wide_call_stack_repair/` のstate/review/final_auditを確認し、固定nanodaの6672宣言成功（16.669秒）、回帰2tests成功（19.105秒）、固定baseline不変を確認した。kernel_replay.txtは空で終了コードの記録が確認できないため、その検査の成功は追加主張しない。
-- 次の独立検証の調査対象は `MatPowExec.pow_while`。資源上限を増やさず証明項を局所化する。全件監査28093は終了1のままで、全137ファイルの検証目標も未達。class copy先の一般表現・総資源・寿命、Beatsの公開切替と他の旧ライブラリの残件も維持する。
-
-## 継続目標と作業制約
-
-利用者の目標は `experiments/` の過去のライブラリすべての検証と、必要に応じた重複の統合。元の137ファイル全体が対象であり、公開59部品のgateや現在のBeatsだけを完了条件にしない。全目標は未達・active。
-
-- `AGENTS.md` と [lessons](lessons.md)、[全件計画](../verification_plan.md)、[台帳](../verification_inventory.md)、[違反・残件](../experiments_status.md)を参照する。
-- 元のAPI/型/機能/入力範囲を保つ。未完成の候補は `experiments/`。sorry/未説明公理を証明済みと扱わない。
-- 利用者のcapacity指示により単独agentで進め、subagentは起動していない。重い検査は重複起動せず、nice19/ionice3/jobs1を使う。資源不足をメモリ/stack/heartbeat/深度の増加で回避しない。
-- 大量の作業中・未追跡ファイルにClaude CodeとCodexの成果がある。reset/clean/一括削除をしない。コミット/pushはしていない。Git操作を伴うときはgit_workflowを読む。
-- テスト/CIはネットワークを使わず、この環境からコンテストへ提出しない。
-
-## 独立検証: 公開59部品の全件gate成功・旧137件全体は未完了
-
-最新の全件成功は冒頭の72559を参照。以下は構築定理修正と、全件成功前の失敗・診断の履歴である。
-
-**2026-11-02の最新結果**: `Proofs.BeatsRep.segment_tree_beats_new0` と容量分離版 `Proofs.BeatsSeparate.segment_tree_beats_new0` を合わせた依存閉包 **6824宣言** が、未改変の固定版nanodaで終了0、`Checked 6824 declarations with no errors`。export込み13.758秒。2threads/標準16MiB stackを維持し、前提・結論・費用上界を変更していない。全件gate Bの失敗と同じ式かは未確認であり、全件成功とは扱わない。以下の20457は修正前の失敗履歴。
-
-**全件gate32702は終了1を回収済み（4628.227秒）。再poll/再起動しない。** C++/bridge59・登録234checks・正本とscratchのLean build1789targets・Mathlib監査範囲778modulesまでは通過したが、公開rootの一致検査で停止した。旧固定契約2461rootsに対して実環境2460rootsで、自動生成補題 `Proofs.BeatsSeparate.segment_tree_beats_new0._proof_1_4` が消えた差分だった。独立kernelには到達しておらず、全件成功ではない。ログ/状態は `.cache/wip/check_public_after_new0_fix{.txt,_state.json}`。以下の生存確認の箇条書きは終了前の観測履歴。
-
-**全件証明監査28093は終了1を回収済み（16741.732秒）。再poll/同条件の再起動をしない。** wrapper `.cache/wip/check_proof_security_after_aux_review.py`、ログ `.cache/wip/proof_security_after_aux_review.txt`、状態 `.cache/wip/proof_security_after_aux_review_state.json`。scratch build1789targets、Mathlib778modules、root一致、52226宣言の公理依存・固定仕様監査を通過し、1371.2秒でLean kernel replay成功、1432.0秒でexport完了後、固定nanodaのthread_0がstack overflow/SIGABRT(-6)で失敗した。export917519177bytes、nanoda.stdout.logは0bytes、stderrはstack overflow。資源上限を上げず、宣言別・項別の診断へ進む。旧new0単独の修正成功と同じ失敗箇所であるとはまだ確認していない。全件独立成功/全件all成功ではない。以下や各節の「28093稼働中」は終了前の観測履歴。
-
-- 有界診断 `.cache/wip/probe_full_export_failure.py`、実50330はwrapper終了0を回収済み。子probeは50秒でkill/reapし、12558宣言が完了、index12558/12559のApplyLoop_ch5補助proofが処理中だった。そこでstack overflowを起こしたとはまだ言えない。ログ/状態 `.cache/wip/full_export_failure_probe/`。診断probeは未改変の固定nanoda rlibのcheck_declarを呼び各START/ENDを記録するもので、独立成功の代替ではない。
-- 完了したprefixを繰り返さず、同export/configのindex12558以降を診断した実35616はwrapper終了0を回収済み。50秒で子をkill/reap、5494宣言が完了し、index18045のUfMethodPreparePeak.prepare_fields_peak._proof_1_2と18053のprepare_same_peak._proof_1_2が未完了だった。これらがstack overflow原因とはまだ確定していない。range.rsは同じ未改変rlibにlinkする診断wrapperで、2threads/16MiB・50秒を維持する。ログ/状態同folderのfrom_12558/。
-- 次の `.cache/wip/full_export_failure_probe/run_range.py 18045` を実83949で開始した。次は同83949をpollする。ログ/状態from_18045/。最小未完了indexから再開しており、長時間の全件検査は再起動していない。
-
-- 継続turnでも32702を同じ実ハンドルでpollし、55秒待機後も稼働を確認した。C++/bridge後のPython検査中で、最新traceはUnion-Find関連から `tests/test_context_method_selection.py` へ進んだ（確認時のtrace更新から0.5秒）。check_cache.run_tracedは成功した検査の出力をcaptureして表示しないため、gateログがbridge末尾のままでも停止とは限らない。検証対象のLean/C++/testsはこの継続turnでは編集していない。
-- 元137ファイルのハッシュを再照合し、台帳との差分0を確認。`.cache/wip/inventory_remaining_20261102.json` に現在の手動レビュー状況を保存した。JSON台帳はpending130/partial7、明示的verification_target5件、記録上のlean_proved/publishedは各2件のままである。これは実装全体の新しい検証結果ではなく、台帳の未同期・未レビューを含む記録値。公開59登録から元137ファイルの網羅を自動推論せず、元ファイル/宣言と検証先の対応をレビューして更新する残件を維持する。状態の自動昇格はしていない。
-
-- 原因箇所: `beats_call_unit` の最後の引数、`r.cost + 2*16 + [].length + 2 ≤ 4*n*45414+100+34` のインライン `by simp; omega`。大きな係数を含む費用式の証明項でnanodaがstackを消費した。`SegmentTreeBeatsCall.lean` のprivate補題 `new0_extra_bound` はcost/boundを抽象化して同じ不等式を証明し、両構築定理で `h5` に適用する。既存hp_new0/wr_new0も再利用した。診断用の構築call分割・任意progへの一般化は失敗箇所特定のためだけに試し、最終コードには残していない。
-- 最終のexport/config/stdout/stderr/state: `.cache/wip/nanoda_declaration_probe/both_constructors/`。export 65133853bytes、SHA256 `e14046dc6909056a0a4c59ba456e76e1e9c059994faf94c60a8e9d92d7d2a7d6`。実36053は旧定理単独6584宣言成功、実30884内の両構築検査も成功。実30884の最終監査結果は同directory親のfinal_audit.jsonを参照。
-- 再発防止: 既存 `tests/test_beats_capacities.py` に固定版exporter/nanodaで両構築定理を検査する120秒上限の回帰を追加。標準stackのまま、非0・timeout・不正な成功メッセージを拒否。最終2testsは終了0/15.693秒、`.cache/wip/nanoda_declaration_probe/regression_both.txt`。登録check数は234のまま。
-- 最終正本build実96389終了0/1048targets。直列実30884は両構築独立・上記2tests・変更module直接型検査15.526秒・Lean kernel replay4.590秒・両定理の仕様hash照合・995files source audit・59/876/234/106のregistry確認を終了0で回収した。旧定理hash `fbd875a5a450a03c4acfcc2ab89e1fff4907609cd50e7b3581e8bbba97104c36`、分離版hash `5fa576d08700a1e526ed6fe7ff8dbaf7c99b745fee8886951cdb626ae8fe4b8f` は固定契約と一致し、statements.jsonはreviewed baselineとbyte同一。実67506のsecurity suiteも終了0。新しい証明資源上限指定なし、新/変更moduleのwarningなし、git diff --checkと変更5filesの空白確認も成功。C++変更はないためfixes表への追記対象ではない。
-- 診断: 同directoryのprobe.rs/run.pyは未改変rlibのcheck_declarを呼び、2threads/16MiBで各宣言の開始終了を記録。旧exportの6579依存宣言は終了し、旧new0本体だけ未完了と特定。別のphase_checkerはソースコピーへログだけ加えた診断専用で、ARG36の推論中にstack overflowを再現。診断用checkerの結果を独立検証成功とは扱わず、`.tools/nanoda_lib` の原本/binaryは変更していない。試行・timeoutは各state.jsonに残し、元の長時間検査は再起動していない。
-
-**実ハンドル20457は終了1を回収済み**。旧公開定理 `Proofs.BeatsRep.segment_tree_beats_new0` だけを対象にした独立nanoda検査が、12450.545秒後にnanodaのSIGABRT（-6）で失敗した。stderrは **thread_0 has overflowed its stack / fatal runtime error: stack overflow, aborting**。全件gateではなく、独立成功とも扱わない。
-
-- 起動script: `.cache/wip/check_beats_new0_independent_resume.py`
-- ログ: `.cache/wip/beats_new0_independent.txt`
-- export/config/stdout/stderr/state: `.cache/wip/beats_nanoda_new0_probe/`
-- exportは63203870bytes、SHA256 `fed9607931696cb4c76012ed80ba8abf84c3b0ed89d4bdcff50cda77faeb11be`。
-- 20457を再poll/再起動しない。`full_check_state.json`は修正前のfailed、stdout空、stderr94bytesを保存した。旧new0は上記の小補題化で解消した。全件BのSIGABRTと同じ宣言・式であることまでは未特定。
-- 以前の全件gate B（30374）は終了1、nanodaがSIGABRT。C++/bridge59、227checks、Lean build1736、49923宣言監査、183変更moduleのLean kernel replayまでは成功した。独立成功/全件成功ではない。B/30374を再pollしない。
-- 診断保存を `tools/check_proof_security.py` に追加済み。nanoda stdout/stderrをファイルへ書き、非0と不正な成功メッセージを拒否する。関連10tests成功。cache更新は独立成功後のみ。
-- 旧chmin_exec単独は独立6483宣言成功、wf/nb_chminは704宣言成功。旧new0の40秒probeはtimeoutだったが、今回の長時間検査でstack overflowの診断を回収した。現在、追跡中の独立検証プロセスはない。
-
-## 証明監査の資源・観測改善（2026-11-02）
-
-- pinned leancheckerのソースを確認し、各argvをNameのprefixとして扱い、prefixごとに全search pathを再走査することを確認した。現在の変更236moduleには集約Proofsが含まれるため、236対象をProofsの1prefixへ圧縮しても検査集合は同じ。compact_replay_targetsを追加し、同名の先頭文字列だけが似た兄弟を混同しないこと・空/重複・全128部分集合でcoverage同一を回帰確認した。実プロジェクト995moduleでも同一集合を確認。次回は--verboseと開始時の対象数を表示する。現在の28093は起動時の旧236指定のまま完了まで追跡する。
-- scratchのcompiled modulesは当初996で、監査ソース995に対してProofs.Probeだけが古い生成物だった。kernel replay完了後、独立kernelが読むexportには触れず、Probe.ilean/Probe.oleanを.cache/proof-security-retired/へ保管した。現在のactive compiled modulesは全995sourceと一致。次回sync_scratchでもソースが消えたProofs配下のolean/server/private/ileanを保管する。現行sourceの生成物、集約Proofs、他のnamespaceを残す回帰も成功。
-- 監査済みのrowsをkernel起動前に解放するようにした。export対象名とunsupported-name拒否を先に確定し、不要な宣言bodyと外部checkerの式表を同時に保持しない。上限値を増やした変更ではない。環境dumpのfile保存/逐次解析、root差分診断も維持する。
-- 追加した上記2回帰は終了0（0.014秒）、Python構文確認とdiff --checkも成功。旧security10testsは前turnで成功しており、今回の追加2件だけを単独実行した。新helper追加による登録check数の変更はない。現行の28093の結果を、改善後スクリプトを再実行した結果とは扱わない。
-- scope診断: .cache/wip/kernel_replay_coverage_probe.json、kernel_replay_built_module_scope.json、kernel_replay_scope_after_cleanup.json。最後のfileはactive995と保管した2partsを記録する。
-
-## 不具合修正と次の残件
-
-### Fenwickの汎用性修正（2026-11-02・公開版へ反映済み）
-
-元の `BinaryIndexedTree<T>` は `+=` と `-` が使える型を受けるが、公開 `FenwickTree<T>` のvector構築子だけが `tree[j] = tree[j] + tree[i]` と書き換えられ、追加の `operator+` を要求している。元の汎用性を狭める不具合として、現在は元と同じ+=へ修正済み。`Additive`（+=/-/0からの構築はあるが+はない）の同じ使用例が元ソースでcompile/run終了0、現公開版でoperator+不在のcompile終了1となることを実78246で回収した。
-
-- 再現・候補・確認scriptは `.cache/wip/fenwick_generic_review/`。`state.json` が元と公開の差、`patch_state.json` が候補の結果。公開headerの確認時SHA256は `3dc3e09ffab4175f7b123003b37412962a67d2d35aff4806b35ff3a5df146147`。
-- 候補 `fenwick_tree.hpp` は当該代入だけを `tree[j] += tree[i]` に戻す。custom型のcompile/run成功。元公開版と候補からlower_sourceで生成した **全4関数のIRが完全一致**し、long longの既存モデルは変わらない。実28100終了0。候補hashは `600824e69d490149f51d3c76012f99aacd549bad2a5bcc3050ed6d987fd70966`。
-- `fenwick_tree_test.cpp` は既存tests/fenwick_tree.cppの全ケースにAdditiveWithoutPlusの全3構築子・add・両sumの回帰を加えた草案。実67948終了0で全ケースのUBSan確認済み（回復なし）。`prepare_regression.py` と `regression_state.json` に記録。元ソース/公開header/TOML/既存testsはこの確認中に変更していない。custom型のLean証明が済んだという意味ではなく、従来のlong longモデルとの同一性と元APIのC++汎用性を確認したもの。
-- **32702の終了後に公開版へ反映済み**。headerの+=、TOML source_sha256、新custom型を含む既存C++回帰、部品doc、fixes表の5ファイルを、事前hashを全件確認して同時更新した。新header SHA256は `b6e1924976db63c81429650545062cc65b68df01d373f282c3fcbc0b438819f5`。古い「元が範囲外へ書く」という説明も修正済み。実32269終了0で対象componentのC++（sanitizers/template-firstを含む）とbridge、security10testsを確認。logsは同cacheのpublic_cpp.txt/public_bridge.txt/security_tests.txt（10tests11.318秒）。long longのモデル・Lean定理は変更していない。現在の全件all成功を、変更前32702の部分成功から主張しない。
-- 実32702はこのturnの55秒poll後も稼働中。最新traceは `test_uf_object_constructed_state.py` → `test_uf_object_trace.py` → `test_context_method_ir.py` と進み、最後の確認時trace更新から0.1秒だった。別の重い検査やgateの再起動はしていない。
-
-### SquareMatrixの既存最小修正候補のAPI・費用回帰（2026-11-02・追加確認）
-
-原本の比較演算子（存在しないxへの参照）とpowの不要な最終二乗は、このturnで修正・C++回帰済み。既存 `.cache/wip/square_matrix_source_repair_20261031.hpp` を読み、公開候補を丸ごと移すのではなく、元のグローバルSquareMatrix<T,n>・pow(ll) const・公開mat配列・行配列参照・aggregateを保った最小修正候補であることを再確認した。この候補は比較を各要素へ直し、powは指数を右シフトして残りがあるときだけ二乗する。既存の単項マイナス修正は保持している。
-
-- `.cache/wip/square_matrix_source_review/check.py` とregression.cppに、既存の修正候補ケースへ追加した回帰を保存。実8000終了0。UBSan（回復なし）で、比較/各要素の違い/EqualityOnly型/Fibonacci行列の累乗/LLONG_MAXとLLONG_MINの指数0・1/大指数の-1を確認した。
-- static_assertでpowのmember pointerが `SquareMatrix<long long,2> (SquareMatrix<long long,2>::*)(ll) const`、mutable/constの行参照型、公開matの型、aggregateを確認。mod17の独自要素型で指数0/1/2/3/4/8/31/LLONG_MAXを評価し、実乗算回数がpopcount(e)+floor(log2(e))（e=0は0）となり、不要な最後の二乗がないことも確認した。
-- state.jsonに原本hash `469543532af6e6c0b266474a14dc3cc6af0594dfe2127e896ed95e1b25a32588` と候補hash `7ff812ae0566f16867e522c19c3ccc2b026d5f07f31da9ebe2fc658d3f7c72ab` を記録。この段階の候補は現在の原本へ反映済みだが、クラス全体のAST→Lean証明は未完了。以下に実反映後の検査を記録する。
-- 最新の32702は同ハンドル55秒poll後も稼働中。traceはクラスmove→ret_unit→ `tests/test_cpp_nested_invoke.py`（登録Python検査88/234）へ進み、確認時のtrace更新から1.8秒。検査対象のC++/Lean/testsは今回も変更せず、小さな候補C++確認だけを別cacheで直列実行した。
-
-### SquareMatrixの原本反映と台帳更新（2026-11-02・最新）
-
-- 原本experiments/library/cpp/number/square_matrix.hppへ、確認済み最小候補を事前hash確認後に反映した。比較、不要な最終二乗、非負指数assertを修正し、pow(ll)、行参照、公開mat配列、aggregate/trivial/standard-layoutを維持。新hashは7ff812ae0566f16867e522c19c3ccc2b026d5f07f31da9ebe2fc658d3f7c72ab。今turnの元137件の修正はこの1ファイルだけで、過去の「137hash不変」はこの修正前の確認。
-- tests/imports/square_matrix_source.cppを追加。既存候補の81行列/6561組の全操作・自己alias・境界powに、pow型/行参照/公開配列/trait、EqualityOnly、Countedの乗算回数を追加した。比較の旧negative compile期待を正常compileへ変更し、原本power/unaryも正常結果の回帰として実行する。element_countの元の不具合は未修正のため、従来のnegative期待を維持した。
-- 実44307終了0。check_import_element_count.pyとcheck_import_square_matrix.pyで原本/C++候補を通常・ASan/UBSanで確認した。logsは.cache/wip/square_matrix_source_review/element_count_checks.txt、source_checks.txt。2原本検査の入力はproof auditの保護対象Proofs/verification/public headersと重ならず、進行中nanodaのexport/configは変更していない。
-- 候補experiments/verification/number/square_matrix.hppもpowをlong longへ、matをメンバー初期化子なしへ戻し、追加の次元static_assertを外した。標準C++での正次元の前提は文書化。tests/imports/square_matrix.cppにpow型とaggregate/trivial/standard-layoutの回帰を追加。実6488終了0で候補の型と全ケースも通常・ASan/UBSanで確認した（最初の補助実行はclang_astのimport path不足で検査前に終了1、pathを直して再検査した）。
-- 同6488で原本1ヘッダーだけを再走査し、18宣言・GCC構文passed・Clang scan passed。docs/verification_inventory.jsonのsource hash/declsを更新し、partial/既知bug fixed/C++・include確認だけを記録した。common_translator/lean_proved/publishedはFalseのまま。137fileのinventory --checkとtest_import_inventory.pyの5testsも終了0。ログは同cacheのinventory_refresh.txt、inventory_tests.txt、inventory_state.json。
-- fixes表、findings、square_matrix_experiment、verification_inventory、experiments_statusを更新した。公開square_matrixのfree functionsから元のクラスへ戻す残件は維持し、C配列/非型テンプレート/行参照/初期化状態を変換器で扱う方針へ明確化した。公開matをvectorへ置換して終える案は採らない。クラス全体のLean正しさ・停止・UB不在・時間/領域の証明と公開は未完了。
-- 最終監査実34545終了0、.cache/wip/square_matrix_source_review/final_audit.json。995Lean source audit、59/876/234/106の登録、固定2460roots/6140閉包と最新baselineのbyte一致、更新済み137fileのsource hash一致を確認。原本hashは上記7ff812...、候補の最終hashは5729e2641799a305c9e8a68a0fae5d9f209e23891697e8d55b010ebc28feb213。Python構文確認、変更ファイルの空白確認、git diff --checkも成功。最新の同28093の55秒pollでは独立kernelが稼働中で、まだ終了結果は回収していない。
-
-## 現在の登録と固定仕様
-
-### copy本体のlive領域と3種peak（2026-11-03・最新）
-
-- scalarPeakBound/storagePeakBound/peakBoundは、初期状態のlive領域・peak・storage baselineと予算Wから上界を計算する。SpaceBoundsはbaseline保存、scalar/storage live、scalar/storage/全体peakをまとめ、各primitiveを加算予算で合成する。ready_space/source_copy_spaceと生成するcopy_space_of_fieldsは、初期Good/Sourcesから従来の全copy結果とSpaceBounds before after (copyWork before fields)を導く。scalar liveSはmemoryとbindingsを含む。nested StateのliveSpaceを使い子headerの二重計上を避け、baselineの飽和減算を維持した。
-- 草案実59440は展開不足とvectorResultの明示不足で終了1。展開後の実27312は一括omegaが標準200000 heartbeatに達した。上限を上げずscalar/storage/全体の単調性と推移へ分解し、Nat.le_transの明示後に実99079が終了0、固定nanodaで **3082宣言** 成功（5.207秒）。失敗・timeoutは `.cache/wip/member_copy_peak/{first_*,arithmetic_timeout_*,monotone_first_compile.stdout}`、成功はstate.json/check.txt/exportに保存。
-- 組込み後の実44387は共通部と既存UFの2検査が成功（独立 **3735宣言**）し、非0baselineの具体例のrecord改行構文だけが失敗。fixtureをletによるrecord構築へ直し、実71688は終了0、1test14.585秒。baseline=0/非0でscalar/storage/全体peakとwork増分18を確認し、C++ UBSanも成功した。実65597のBeats統合は終了0、1test72.854秒。一般17field copyの結果にSpaceBoundsを加え、従来の全14メソッド/構成子/descriptor一致、一般receiver証明、copy trace[6,5,6]とC++ UBSanも成功した。
-- 最終監査実47728は終了0、同folderのfinal_audit.json。995Lean sourceと生成共通部/具体例/receiver/copy fixtureのsource audit、59公開/876共有modules/235checks/106docs、固定baseline byte一致、Python構文・diff確認を実施。生成共通部をMemberViewSupportAudit.leanへ保存し、docs/constructor_stage_methods.mdも更新した。基礎3公理のみ、標準stack/2threads/各120秒を維持し、新資源指定はない。全件gate72559は今回の証明追加前の結果である。
-- copy本体の値・metadata・分離・仕事量・peakが揃った。任意caller AST、borrowed childを含む全保持、assignment/move/destruction、Beats child入力/Safe/任意長列/償却と公開切替、他の旧137件は残る。次の作業前に、上記利用者指示のリリースを進める。
-
-### copy metadataと初期sourceからの正確な仕事量（2026-11-03・最新）
-
-- Copiedのvector後置条件へcapacity=元要素数、limit=元limit、epoch=0、buffer.owner=binding.ownerを追加し、source/targetのKeepsと宣言順の合成を通じて最終ObjectCopiesへ引き継いだ。実行定義や公開C++/Lean正本は変更していない。既存wrapperはこの強化されたObjectCopiesを返す。
-- fieldWork/copyWorkは初期sourceからscalar=2、vector=元要素数+3を合計する。初期SourcesとKeepsからfield_work_kept/copy_work_keptを導き、ready_workで各primitiveの実work増分を合成した。source_copy_workと生成するcopy_work_of_fieldsは、従来の成功/保持/値・権限・metadata/配置/確保数に、after.work=before.work+copyWork before fieldsまで返す。中間状態のサイズや成功を初期条件へ追加していない。固定幅要素のcopy本体の仕事量を扱い、fuel・実測時間やcallerの全体費用とは区別する。
-- 草案実49432は未importのcongrArg₂とvectorResultの明示不足で終了1。単純な等式書換えと型の明示で修正し、実90348は終了0、依存 **3032宣言** が固定nanodaで成功（3.803秒）。`.cache/wip/member_copy_work/` にfirst_*の失敗、候補state.json/check.txt/exportを保存。資源上限は変更していない。
-- 組込み後の実37836は3tests37.723秒・3682宣言の独立成功で終了0。その後、非0の初期workからのscalar差分、3vector/3scalarのcopy work増分18、reserve後のcapacity/epochからコピー先のcapacity=サイズ・epoch=0・limit保持を確認する例を追加。C++/UBSanでも予約後のコピーを確認した。最終の実50707は終了0、3tests38.060秒、共通部と具体例の独立 **3684宣言**。基礎3公理のみ、標準stack/2threads/各120秒、新資源設定なし。最終logはfinal_integrated_tests.txt。
-- Beatsのcopy_from_owned_fieldsを新wrapperへ接続し、従来の一般入力からの17field copy、保持/metadata/配置/15owner・2cellの確保に正確なwork差分まで追加。実31084は終了0、1test77.947秒、同folderのbeats_test.txt。全14メソッド・構成子・descriptor一致、既存一般receiver/構築→更新→query証明、copy trace[6,5,6]とC++ UBSanも成功した。
-- 最終監査実84340は終了0、同folderのfinal_audit.json。995Lean sourceと生成共通部/具体例/receiver/copy fixtureのsource audit、59公開/876共有modules/235checks/106docs、固定baseline byte一致、Python構文・git diff --checkを確認。独立検査した共通部と具体例はMemberViewSupportAudit.leanに保存し、docs/constructor_stage_methods.mdも更新した。全件gate72559は今回の証明追加前の結果である。
-- 次はcopyのscalar/storage/全体peakと、borrowed childを含む任意caller保持、caller AST、assignment/move/destructionへ接続する。metadataや本体仕事量の成功を全寿命・全体資源の完成としない。Beats child入力/Safe/任意長列/償却・公開切替、他の旧137件の検証も継続する。
-
-### copy先owner/addressの正確な配置と分離（2026-11-03・最新）
-
-- MemberCopy.Position/Placementsは、宣言順の各fieldの実slot、vector binding/bufferのowner、scalar bindingのaddressと所有root scopeを記録する。ready_placementsは各primitiveのコピー先をtailのKeepsで保持して合成し、ready_countsはstorage objects数とscalar memory長の増分をvector/scalar field数へ一致させた。placements_atにより、各owner/addressを初期長+そのfieldより前の同種field数として取り出せる。
-- vectorOwner/scalarAddressは実vectorSlot→typed resolve、またはscalarCellからIDを取り出す。vector_owners_distinct/scalar_addresses_distinctは異なるコピー先fieldの実IDが異なることを示し、vector_old_separated/scalar_old_separatedは初期storage/memory長未満の既存IDと重ならないことを示す。単なるslot番号の相違ではない。source_copy_positionsと生成するcopy_positions_of_fieldsは、初期Good/Sourcesだけから従来の成功・保持・値/権限対応にPlacementsと正確な確保数まで返す。既存wrapperの型、実行定義、公開C++/Lean正本/固定仕様は変更していない。
-- 草案実70988はfilterのtrue側の簡約不足で終了1、List.filter_consを明示して実34956は2969宣言成功。分離補題追加時の実41119は帰納仮説の引数指定とunused simpで終了1となり、固定引数の整理後の実96648は終了0、配置と分離の5rootsの依存 **2994宣言** が固定nanodaで成功（3.757秒）。`.cache/wip/member_copy_fresh/` にfirst_*/rank_first_*の失敗とpositions_*の中間成功、最終state.json/check.txt/exportを保存。資源上限は増やしていない。
-- 正本組込み後の実98803は終了0、3tests36.696秒。共通view/copy部と具体例の独立 **3618宣言**、複数vector/const/mutableコピーとC++ UBSan、既存UF全モデル一致を確認。許可は基礎3公理のみ、標準stack/2threads/各120秒を維持。Beatsのcopy_from_owned_fieldsへ新wrapperを接続し、一般入力から実17fieldのcopy・保持・値/権限・配置と、正確な15owner/2scalar cellの増加を導いた。実5668は終了0、1test74.554秒、全14メソッド/構成子/descriptorの一致、既存一般証明、copy trace[6,5,6]とC++ UBSanも成功した。
-- 最終監査実27780は終了0、同folderのfinal_audit.json。995Lean sourceと生成共通部/具体例/receiver/copy fixtureのsource audit、59公開/876共有modules/235checks/106docs、固定baseline byte一致、Python構文・git diff --checkを確認。検査した共通部と具体例はMemberViewSupportAudit.leanへ保存した。docs/constructor_stage_methods.mdへ配置と分離の範囲を追記。全件gate72559はこれらの追加前の成功結果で、今回の変更後の全件再実行ではない。
-- 次はcapacity/limit/epoch等のmetadataを含む一般class表現と、総仕事量/peak、任意caller AST、assignment/move/destructionへ進む。領域分離だけで全寿命や資源まで証明済みとしない。Beats child入力/Safe/任意長列/償却・公開切替、他の旧137件の検証も引き続き未完了である。
-
-### copy先全fieldの値・権限と返却ObjectRef（2026-11-03・最新）
-
-- MemberCopy.Copiedは元fieldの実読取りに対し、コピー先のtyped scalar値・権限、またはvector内容・権限・元caller scopeの所有rootを対応付ける。初期Sourcesが実読取りの存在を保証する。copied_source_kept/target_keptとready_keepsを使い、後続copyから先行fieldを保ってready_targetsへ合成した。中間状態の成功やコピー先の値を利用者の追加前提にしていない。
-- FieldsCopiedは2つのリストを同じ順序で対応付ける帰納的述語。ObjectCopiesは宣言順からvector/scalarで選別した元field列と、返却ObjectRefの実slot配列を要素ごとに結び付ける。targets_at/selected_targets/targets_objectで、単なる所属関係ではなく配列順序まで示した。source_copy_valuesと各クラスに生成するcopy_values_of_fieldsは、初期Good/Sourcesから実copy成功・Good/Keeps・slot数/scope・ObjectCopiesを返す。既存copy_of_fields/copy_layout_of_fieldsの型、実行定義、既定1vector出力、公開C++/Lean正本/固定仕様は維持した。
-- 草案実36535は終了1（rflで消去されたbinder名と未importのList.Forall₂参照）。明示的な変数消去と独自のFieldsCopiedへ修正し、実71480は終了0、2959宣言が固定nanodaで成功（3.302秒）。`.cache/wip/member_copy_values/` に初回first_*、修正後check.txt/state.json/exportを保存。Leanのエラー回復のsorry警告は失敗時だけのもので、成功・証明として扱わない。
-- 組込み後の実50895は終了0、3tests37.150秒。共通部3384宣言の独立成功、3vector/3scalarのconst/mutable copyとC++ UBSan、既存UFの全モデル一致を確認した。tests/lean/member_copy_values.leanを追加し、readonly sourceからの正常copy、ObjectRefの順序入替えの拒否、コピー先権限の誤りの拒否を証明した。初回の具体例はGoodのDecidable推論/長さ正規化/未importのnorm_numで終了1となったため、定義に沿う単純な還元・具体的な不等値へ修正。実41332は型検査終了0・出力0bytes、実61249は独立 **3582宣言** と1test3.795秒で終了0。許可は基礎3公理、標準stack/2threads/各120秒を維持した。
-- Beatsのcopy_from_owned_fieldsを新wrapperへ接続し、元の任意15所有vector/2scalarから、実17field copyと保持・配置・返却ObjectRef全fieldの値/権限/root scope対応まで導く。実81670は終了0、1test65.653秒、同folderのbeats_test.txt。全14メソッド・構成子・descriptor一致、一般receiver/構築→更新→query証明、copy trace[6,5,6]とC++ UBSanも同時成功した。
-- 最終監査実69407は終了0、同folderのfinal_audit.json。995Lean sourceと生成共通部/具体例/receiver/copy fixtureのsource audit、59公開/876共有modules/235checks/106docs、固定baseline byte一致、Python構文・git diff --checkを確認した。検査した共通部と具体例の全文はMemberViewSupportAudit.leanへ保存し、docs/constructor_stage_methods.mdも更新した。全件gate72559はこれらの追加前の成功結果で、変更後の全件再実行とは扱わない。
-- 次はowner/cellの非alias、各新fieldの正確なowner/address・capacity/limit等を合成して一般class表現を補い、総仕事量/peak、任意caller ASTとassignment/move/destructionへ接続する。ObjectCopiesの値・権限・scope対応だけで全寿命や資源まで証明済みとしない。Beats child入力/Safe/任意長列/償却・公開切替と、他の旧137件の検証も継続する。
-
-### copy先のprimitiveと全copy配置（2026-11-03・最新）
-
-- `verifier/class_copy_layout.py` のMemberCopy共通部へ5補題を追加した。scalar_destinationは新slotのtyped scalar読取り・値・権限・cell address、resolved_payloadは実resolveからpayload契約、vector_destinationは新slotからcopyBindingとコピー内容への実resolveを示す。ready_shapeは宣言順の全Readyからslot数のfield数だけの増加とscope不変を示し、source_copy_layoutは初期Good/Sourcesから実copy成功・Good/Keepsとこの配置条件まで導く。中間状態の成功・copy先表現は初期前提へ加えていない。
-- 各opt-inクラスへcopy_layout_of_fieldsを生成し、実copyFields/copyFuel/返却ObjectRefへ配置条件を渡した。既存copy_of_fieldsの型と実行定義、既定の1vector出力、公開C++/Lean正本/固定仕様は変更していない。新規copy先の全fieldの値・権限を最終ObjectRefへ対応付ける合成と、新owner/cellの非alias、総仕事量/peak、caller AST/assignment/move/destructionはまだ残る。primitive成功と全copyの配置だけで一般class表現の完成とは扱わない。
-- 草案の実20908はscalarStepのCppState.State.observe展開不足で終了1。資源を上げずその定義を追加し、実50444は終了0、補題5件の依存2870宣言が固定nanodaで成功（compile/export込み3.131秒）。初回の状態・ログは `.cache/wip/member_copy_destination/first_*`、修正後はstate.jsonとcheck.txtに保存した。候補check.pyは失敗時も状態をfailedに記録するようにした。
-- 正本組込み後の実98496は終了0、3tests35.319秒。共通view/copy部の独立 **3317宣言**、3vector/3scalarのconst/mutableコピーとC++ UBSan、既存UFの全モデル一致を確認。許可は基礎3公理のみ、標準stack/2threads/export・kernel各120秒を維持し、新資源指定はない。logは同folderのintegrated_tests.txt。
-- `tests/lean/beats_member_copy_proof.lean` は元の任意15所有vector/2scalarからのcopy成功・元読取り保持に、slot数+17とscope不変を追加した。実54183は終了0、1test68.523秒、同folderのbeats_test.txt。全14メソッド・構成子・descriptorの一致、既存の一般receiver/構築→更新→query証明、copy traceとC++ UBSanも同時成功した。
-- 最終監査実82599は終了0、同folderのfinal_audit.json。995Lean sourceと生成共通部/一般receiver/copy fixtureのsource audit、59公開/876共有modules/**235checks**/106docs、最新固定baselineのbyte一致、Python構文・git diff --checkを確認した。独立検査した生成共通部はMemberViewSupportAudit.leanに保存した。docs/constructor_stage_methods.mdへ現在の暗黙copyの範囲と未証明の後置条件を追記した。
-- 次はprimitiveのコピー先の値・権限・新slotを宣言順に合成し、tailのKeepsで先行fieldを保存して最終ObjectRefの全field表現を構成する。slot数/scopeやfuelと、値・非alias・仕事量/peakを区別する。旧137ファイル全体の目標は引き続き未達である。過去の「草案未型検査」「72559稼働中」はこの節で更新された。
-
-### 初期sourceから全copy成功と元の読取り保持（2026-11-03・最新）
-
-- MemberCopy.Good（frame wellFormed/rootWritable長一致）とSources（typed scalarCell、所有vector rootのslot/resolve/header/対応型）を定義した。sourceのwritableは要求しない。resolve_root_kept、vector_slot_prefix、scalar_keeps/vector_keepsを使い、copy/declareによる元のscalarと所有rootの正確なbinding/bufferの読取り保持Keepsを合成する。source_validatedに相当する実名はsources_validated。
-- sources_ready/source_copy_completeは**初期Good/Sourcesだけ**から全中間状態のReadyと実copy成功・Good/Keeps保持を導く。中間状態の読取り条件やprimitive成功を利用者の前提に追加しない。各生成クラスのcopy_of_fieldsで、監査済みcopyFieldsとcopyFuel・実ObjectRefへこの証明を渡した。full copy先fieldの一般値/配置・仕事量/peakはまだ別の残件である。
-- 実53168終了0/3tests23.694秒、`.cache/wip/copy_initial_source_final_regressions.txt`。共通部のsource_copy_completeまで固定nanodaで **3290宣言** が独立成功（基礎3公理のみ、標準stack/2threads/120秒）。3vector/3scalarのコピー独立性・const/mutable回帰、UF登録モデル全文一致も通過した。前段実93950は共通部3290宣言が独立成功したが、生成wrapper末尾のpureとfinishedのdefinitional equalityを閉じておらずtest終了1。rflで修正した。
-- 新fixture `tests/lean/beats_member_copy_proof.lean` は、任意の15所有vectorのVOKG（writable/maximumの両方を関数引数としreadonlyも許す）と2scalarのtyped読取りから、targetConstの両場合の17field copy成功・元の読取り保持を導く。BRepや各中間状態の成功を前提にしない。実66711終了0/1test69.710秒、`.cache/wip/beats_copy_initial_sources_proof_fixed_test.txt`。全14メソッド・構成子・descriptorの一致、従来の一般call/構築→更新→query証明とcopy trace[6,5,6]のLean/C++ UBSanも同時成功した。初回64671は証明自体は通ったがunnecessarySeqFocus警告でtest終了1、`;`へ修正して警告なしにした。
-- 最終監査実94437終了0、`.cache/wip/member_copy_initial_sources_final_audit.json`。995Lean sourceと共通部/一般receiver/copy fixtureのsource audit、59/876/234/106のregistry、固定baseline byte一致、Python構文確認・git diff --checkを確認した。共通部は `.cache/wip/member_copy_initial_sources/MemberViewSupportAudit.lean`（SHA256 8457980b6c73eebda91dec884a6d307b706f04ba8c98e1b834ac705ddfb2ee0c）。公開C++/Lean正本/固定仕様・資源上限は変更していない。
-- 次は新規copy先の各fieldの値・slot/binding/owner配置と一般class表現を構成し、仕事量/peak、caller AST、assignment/move/destructionへ進む。元の全scalar/所有rootのKeepsと、borrowed child headerを含む任意callerの全保持は区別する。Beats child入力/Safe/任意長列/償却、公開切替、他137件も継続する。全件独立28093はstack overflow/終了1を回収済みで、冒頭の有界宣言別probeへ切り替えた。
-- 2026-11-03の全件検査待機中に次の証明の接続先を確認した（まだ新しい証明は実装していない）。scalarコピー先のmemory/binding/slotは `CppClassCopyCommands.scalar_step_fields`、vectorコピー先の実resolveとpayloadは `CppFrameCopy.copied_resolve` を再利用できる。後者は `CppCopyStatementFacts.result` のrelease/chargeを正規化してMemberCopy.vectorResultへ渡す。宣言順の帰納法で各stepの新slotを元slots.length+ordinalと照合し、tailのKeepsで先行コピー先のtyped scalar/所有rootを保持すれば、最終ObjectRefに全fieldの値と権限を結び付けられる。新owner/新cellの非aliasと正確な配置、仕事量/peakは別途示す。既存source_copy_completeの成功だけからcopy先の表現を仮定しない。
-- 同待機中に `.cache/wip/member_copy_destination/MemberCopyDestination.lean` へprimitive単位の草案を用意した。scalar_destinationは新scalar slotの型・値・権限・address、resolved_payloadは実resolveからpayload契約、vector_destinationは新vector slotと新copyBinding/コピー内容のresolveを述べる。**未型検査・未独立検証で、正本の生成器には未適用**。続けて `MemberCopyDestinationFull.lean` に現在のMemberCopy共通部と上記草案、Readyの帰納法によるslot数/scope保存、初期Good/Sourcesから実copy成功とこの配置条件まで返す草案をまとめた。両fileのsource policy監査だけは成功したが、**型検査・独立検証は未実行**。全件検査終了後はFullの草案を標準資源で検査し、その後に宣言順の全fieldの値・権限・非aliasと最終ObjectRefへ合成する。README.txtにも同じ保留条件を記録した。重い検査を並走させていない。
-
-### 複数vectorクラスの暗黙copy命令とtyped Ready（2026-11-03・最新）
-
-- member_exports経路にConstruction.copyFields/copyFuelを追加した。暗黙copyの監査済みFieldDeclの宣言順で、通常NStmtのscalar declare/vector copyを生成する。copy先の実slotも宣言順からObjectRefへ戻す。const sourceから通常copyを作る場合も新規root/cellはコピー先の宣言・const/mutableに従う。const viewの制限をsourceへ適用してコピー先までreadonlyにする処理ではない。既定の1vector経路と公開C++は維持した。
-- MemberCopy.validateは全sourceのkind/type/slotを最初の確保前に検査する。後のfieldの不正slotが先行コピーで有効になる問題を防ぐ。invalid_sourceはcommandを実行する前のfaultを示す。command_complete/copy_completeは実primitive Stepsの宣言順合成を示す。Ready/ready_steps/copy_ready_completeは中間状態のtyped source cell/buffer、対応vector型、frame配置から各primitiveの成功を既存定理で導き、fields.length+1のfuelで合成する。**一般の初期クラス表現だけから全中間状態のReadyを導くことと、全copy後の一般表現・総仕事量/peakは未完了**。fuelを計算量とは扱わない。
-- 実5805終了0/1test15.358秒、`.cache/wip/multi_member_copy_runtime_test.txt`。3vector/3scalarのconst source→通常copy→const copy、copy先だけのmutable更新、元の値・owner保持、宣言順の実slot、将来有効になる不正vector/scalar sourceの拒否をLean/C++ UBSanで確認。実26302終了0/3tests31.450秒、`.cache/wip/multi_member_copy_support_regressions.txt`で旧alias/void/growthとUF登録モデル全文一致も維持した。この時点のview/copy共通部は3072宣言の独立成功。
-- Readyを追加した最終共通部は実35049終了0/2tests20.205秒、`.cache/wip/multi_member_copy_ready_tests.txt`。fixed nanodaは **3233依存宣言** を `Checked 3233 declarations with no errors`。許可は基礎3公理のみ、標準stack/2threads/120秒上限を維持した。CPPの同じ実コピー回帰も再確認した。CppClassCopyCommandsのscalar_run、CppCopyStatementFacts.completes、primitive_run/sequence_runを使い、primitive成功自体をReadyの仮定にしない。
-- 新fixture `tests/lean/beats_member_copy.lean` を候補生成checkへ追加。実99183終了0/1test87.070秒、`.cache/wip/beats_member_copy_final_test.txt`。Beats実構築→15vector/2scalar copy→copy先query/chmin/query→元queryのtrace[6,5,6]をLeanとC++ UBSanで照合した。全14メソッド・構成子・descriptorの一致、6操作の一般Outcome等式と既存の構築→更新→query一般証明も同じ検査で成功。traceは有限実行回帰であり一般copy後置条件の証明とは区別する。前段実69249終了0/1test70.674秒、実11160終了0/1test79.302秒も成功済み。
-- 最終監査実95266終了0、`.cache/wip/member_copy_final_audit.json`。995Lean source、view/copy共通部と一般receiver fixtureのsource audit、59/876/234/106のregistry、固定baselineのbyte一致を確認した。共通部は `.cache/wip/member_copy_support/MemberViewSupportAudit.lean` に保存（SHA256 06b87a87574f720df9d14934071c147e82cc565de7396722dade9a4a755ae398）。Python構文確認・git diff --checkも成功。公開C++/Lean正本/固定仕様・資源上限は未変更。
-- 次は初期の一般source述語から、scalar_step_keepsやvector copyのFrame Extends/既存read保持を使って全Readyを構成する。その後、copy先の一般field表現・旧source保持・仕事量/peak、caller AST、assignment/move/destructionへ接続する。const参照view、Beatsのchild入力/Safe/任意長列/償却、他の旧137件も残る。最後の同28093pollは稼働中で、全件独立の終了結果は未回収。重複起動しない。
-
-### 複数vectorのconst構築viewと一般権限証明（2026-11-03・最新）
-
-- `class_copy_layout` のmember_exports経路へ `*_exportViewFuel(..., targetConst)` を追加した。構築本体の通常権限を保ち、終了時に各宣言のconst/mutableに従ってvector/scalarのviewを制限する。通常のexportFuelと既定のContext/copy profileは維持する。既存オブジェクトへのconst参照viewや任意caller ASTへの自動接続まで済んだものではない。
-- 生成する共通MemberViewはrestrictVectors、finishView、constructViewFuelと一般定理を持つ。restrict_propertiesはowner/element/header不変、要求したwritable値、件数、権限非昇格を示す。scalarは既存CppConstructorView.restrictValuesを使い値/型を保持する。finishView_okは元のscope/prefix/field match/root Modelsと実permission制限から、終了成功・選択rootと無関係rootの保持・更新済みcallee prefixとfield値・元caller bindings/新規view flags/scopeを導く。finish成功自体は前提にしない。constructView_of_stepsは通常終端とbare returnの両方を扱う。
-- 新test_member_view_support_independent_kernelはこの生成共通部の8定義・定理を別moduleへ型検査/exportし、未改変の固定nanodaへ渡す。実59343終了0/1test3.742秒、依存閉包 **3037宣言** を `Checked 3037 declarations with no errors`。`.cache/wip/member_view_independent_test.txt`。許可は基礎3公理のみ、2threads/標準stack、120秒上限、非0/不正な成功メッセージを拒否する。全件独立成功とは扱わない。
-- 実74229終了0/3tests38.787秒、`.cache/wip/multi_member_const_view_complete_regressions.txt`。3vector(int/long long混在)/3scalarのconst構築、構成子中の書込みとreturn;、mutableのみの更新・通常fieldへのwrite拒否、通常viewと従来exportの同一結果をLean/C++ UBSanで確認した。別の2vectorクラスでは外部scalar書込み・元readonly別名の保持・new fieldsだけのconst制限も確認。従来UFの登録モデル全文一致も通った。最初の実44658はdeprecated if_pos警告によりtest終了1、ite_eq_leftへ修正後は警告なし。実27738は1test13.460秒、実92470は強化した一般権限/無関係rootの定理込み3tests36.551秒で成功済み。
-- 実67603終了0/1test75.346秒、`.cache/wip/beats_member_const_view_regression.txt`。Beats全14メソッド・構成子・descriptorの一致、6操作の一般Outcome等式、生成構築→chmin→calc_maxの意味と更新後receiverの回帰を確認した。この後のconstructView_of_stepsのreturn場合一般化は上記74229/59343でも型検査・独立検査した。公開C++/Lean正本/固定仕様・資源上限は変更していない。
-- 最終監査実28061終了0、`.cache/wip/member_const_view_final_audit.json`。995Lean source auditと生成共通部source audit、59/876/234/106のregistry、最新固定baselineのbyte一致、Python構文確認・git diff --checkも成功。独立検査した共通部のソースを `.cache/wip/MemberViewSupportAudit.lean` に同じ内容で保存した（SHA256 6f20249fb37bcab4e4717d47ae473e581665bef8e4517f1cba15191884362422）。最後の同28093pollも稼働中で、全件独立の終了結果は未回収。
-- 次は既存オブジェクトのconst参照/任意caller AST、複数vectorのclass copy/move/assignment/destruction、export込み総資源、child header入力、Safe導出/任意長列/償却、公開切替と他の旧137ファイルの残件を進める。独立監査28093は同ハンドルで稼働確認済みで、終了結果は未回収。重複起動しない。
-
-### 生成receiver引数と既存6操作Callの一般接続（2026-11-02・最新）
-
-- `emit_member_methods` は各methodについてarguments_of_fieldsを生成するようになった。任意のvector/scalar slot列と外部引数数から実adapterの引数列を示す。fieldのscalarReference/元型のvariable式を保持し、値のghost置換はしない。実41620終了0、2vector/2scalarの任意slotのalias引数写像と従来のLean/C++ UBSanの一連の回帰を1test25.577秒で確認。`.cache/wip/multi_member_field_mapping_test.txt`。
-- 最初のBeats回帰実24418終了0/1test88.019秒、`.cache/wip/beats_member_field_mapping_test.txt`。続く実70850終了0/1test77.205秒、`.cache/wip/beats_member_receiver_general_test.txt`ではvector slotを連続配置へ限定せず、任意写像slとして6つの生成callFuelと既存CallのOutcome全体の一致を証明した。receiver/fuel/引数式も任意。実構築のObjectRef=sourceReceiverのrfl一致も確認した。
-- 新fixture `tests/lean/beats_member_receiver.lean` は、生成chmin→生成calc_maxの一般合成を型検査し、結果の数学的意味・Scalars/BVecsまで引き継ぐ。次のreceiverの成功や表現を仮定し直さず、1段目から導出する。元の4*n<2^31、各Safe/値域/添字の前提を維持する。任意長列・償却・総資源の証明へ拡大解釈しない。
-- 同fixtureのgenerated_construct_update_queryは元callerの実root入力grantから、生成構築→生成chmin→生成calc_maxの一般接続を示す。実5626終了0/1test72.859秒、`.cache/wip/beats_member_construct_operations_test.txt`。構築成功/field reads/次receiverの表現を仮定せず、元の入力と各Safeから導く。最終queryの数学的意味・実ObjectRef・Scalars/BVecsを返す。全14メソッド/構成子/descriptorの一致と6つの一般Outcome等式も同じ回帰で再確認した。
-- 実43699終了0、995Lean source auditに加えて新fixtureもsource audit成功。59公開/876共有modules/234checks/106docs、最新固定baselineのbyte一致を確認し、`.cache/wip/member_receiver_final_audit.json`へ保存した。Python構文確認・git diff --checkも終了0。公開C++/Lean正本/固定契約・資源上限は変更していない。最後の同28093pollも稼働中で、終了結果は未回収。重複起動しない。
-- 次はsource bundleのconst view/copy/move/destructionとexport込み総資源、child header入力、Safe導出・任意長操作列・償却、公開切替/全件独立監査、他の旧137ファイルの残件を進める。今回の生成呼出しの一般接続だけで全体完了と扱わない。
-
-### 複数vectorクラスの構築・メソッドbundle（2026-11-02・最新）
-
-- `emit_context_class(..., member_exports=True)` を追加した。既定のContext/1vector copy profileは維持し、新経路は複数flat vectorとscalarが入り交じる元FieldDeclを監査し、型付き構築配置からmulti finishのexportを生成する。同じObjectRefのvectorSlots/scalarSlotsを実NProgramのfield引数へ渡すため、void更新やpush_backも既存評価器の対応範囲で扱える。receiverConst/引数数/各種field数を検査し、非const methodのconst receiver呼出しは拒否する。copy auditの複数vector指定は各宣言の監査用で、複数vector class copy実行の証明ではない。
-- `class_copy_layout` の構築this helperも既存inlinerへ渡した。最初のBeats bundle生成（実57129終了1）はこの準備がなくstd::vector以外のmember callとして拒否された。修正後の実49549終了0で596108文字のbundleを生成した。全14メソッド（内部helper含む）と構成子を生成し、宣言を黙って落としていない。
-- 標準深度での初回型検査実4095は終了1。apply_op/chmin/chmax/add_val/update_valのsequenceで深度超過し、後続のunknown identifier/sorry警告はこの失敗からのLeanエラー回復だった。成功・証明として扱わない。ログ `.cache/wip/beats_member_bundle_direct.txt`。資源上限は上げず、`share_commands=True` で同じ右結合の命令木を32命令ごとにprivate Commandへ分割した。新bundle生成は603119文字/67共有定義、実26561終了0。実72933終了0で標準上限のLean型検査が通り、ログ `.cache/wip/beats_member_bundle_shared_direct.txt` は0bytes。新経路はset_optionを出力しない。既定経路の出力は維持する。
-- 分割前後のNProgram全体のrfl一致は、分岐の両側に70代入がある生成ソースで実11547終了0/1test11.129秒。`.cache/wip/constructor_command_sharing_test.txt`。2vector/2scalarの同じ実クラスで構築helper/参照引数更新/void更新/const query/field自身へのscalar参照alias/vector伸長のLeanとC++/UBSanも実51541終了0/1test22.332秒。`.cache/wip/multi_member_class_helper_test.txt`。
-- 最終関連回帰のwrapper `.cache/wip/check_multi_member_regressions.py` は実78306終了0を回収済み。状態と各ログは `.cache/wip/multi_member_regressions/`。クラス9tests139.793秒、従来method6tests、copy audit7tests、構築配置4tests、multi finish5tests25.563秒の合計31testsが直列で成功した。wrapper側の各コマンド経過時間はstate.jsonに保存した。独立監査28093は同ハンドルで稼働確認済み、重複起動しない。
-- 実37099終了0、追加Beats bundle検査1test61.729秒、`.cache/wip/beats_member_bundle_source_match_test.txt`。新bundleの構成子とBeatsConstructCall.program、全14メソッドと既存BeatsInstance、15vector/2scalarのdescriptorがすべてrfl一致した。生成出力にset_optionがないことも検査する。関連回帰は計32tests成功。実3522終了0で995Lean source audit、59/876/234/106のregistry、最新固定baseline全同一を再確認し、`.cache/wip/multi_member_final_audit.json` に保存した。共有bundle SHA256は0fb812bb365a39a57cb758d5cac435d7a4d9dcc9281937d51c410d697921cf93。Python構文確認・git diff --checkも終了0。
-- 最後の同28093pollも稼働中で、独立kernelの終了結果はまだ未回収。次はこの同ハンドルの追跡を続け、新bundleの返却receiverから既存Beatsの6操作Call/更新後receiverへの一般接続、const viewとcopy/move/destruction、export込み総資源の未完了箇所を進める。全137件の目的をこのbundleの一致だけで完了としない。
-- 公開C++/Lean正本/固定契約は変更していない。新経路の任意caller AST、const view、copy/move/assignment/destruction/総資源、child header入力、公開版への切替・全件監査、BeatsのSafe導出/任意長操作列/償却と全137旧ファイルの検証は未完了。
-
-### 復帰後の構成子export生成（2026-11-02）
-
-- 更新済みAGENTS.md・lessons・この引継ぎを確認して単独で復帰した。独立監査28093は同じ実ハンドルで生存を確認した。ログはexport完了後の独立kernel開始のままで、終了結果は未回収。重複起動・資源上限変更はしていない。
-- 途中だった `verifier/nested_ir.py` の修正を確認した。構築段階の実fieldから型付きconstruction_layoutを生成し、opt-inの `emit_lean(..., constructor_exports=True)` でvectorFields/scalarFields/exportMembersFuelを出力する。既定のLean出力は維持し、テンプレート構成子exportは未対応として明示的に拒否する。既存class bundle全体やBeats公開版へ切り替えたものではない。
-- `tests/test_cpp_constructor_multi_finish.py` に不正な配置情報の拒否・既定出力維持を追加した。実86356終了0、3tests14.355秒、ログ `.cache/wip/constructor_generated_export_all_tests.txt`。実C++の2vector/2scalar構成子から生成したexportのLean実行とC++/UBSan、参照引数の書込み・返却field参照を含む。docs/constructor_stage_methods.mdを更新した。公開C++・Lean正本・固定契約は変更していない。クラス全体のcopy/move/destruction・総資源と全137件の検証は引き続き未完了。
-- 続く実32859終了0、候補生成1test34.584秒、`.cache/wip/beats_generated_constructor_export_test.txt`。Beats候補から生成した実15vector/2scalarのdescriptorと既存BeatsConstructorFields、および任意fuel/caller/引数について生成exportとBeatsConstructCallの構築・終了処理がrfl一致することを確認した。テスト内で手書きdescriptorを再構築する処理は除いた。既存のwide式・stage全文・非構成子全関数の一致も同じ検査で維持する。
-- 実93387終了0、追加の入り交じるconst/nestedフィールド1test10.568秒、`.cache/wip/constructor_mixed_fields_test.txt`。const scalar/二重vector/mutable scalar/const vectorを宣言順に持つクラスの型付き配置・返却slot・scalar権限・vector権限・子buffer内容とwellFormedをLeanで確認し、C++/UBSanでも値・型・mutable更新を照合した。const vectorへのモデルwriteは失敗する。
-- 実90651終了0、既存構築段階5tests39.957秒、`.cache/wip/constructor_export_stage_regression.txt`。公開Beatsの既定生成stage/本体が登録済みLeanファイルと全文一致すること、helper/alias更新、scalarのみのクラス、再帰拒否も通った。C++/Lean正本・固定契約はこのturnでも変更していない。次は既存class bundleの複数vector対応とcopy/move/destruction・総資源への接続を進める。現状の生成export一致だけでクラス全体の完了とは扱わない。
-- 実32432終了0、証明監査器の全12tests14.984秒、`.cache/wip/proof_security_twelve_tests.txt`。先のprefix圧縮・stale生成物保管の追加2件も含む。実60586終了0、995Lean source audit・59公開/876共有modules/234checks/106docs・最新固定baseline完全一致を再確認し、`.cache/wip/constructor_export_final_audit.json` に保存した。Python構文確認・git diff --checkも終了0。最後の同28093pollは稼働中で、独立検査の終了結果は未回収。
-
-公開59部品、共有876Lean modules/234checks/106docs。現在の固定契約は **2460roots/6140閉包**。
-
-- 最新baseline: `.cache/wip/beats_aux_reviewed_statements_20261102.json`。`verification/statements.json`とbyte同一。旧 `.cache/wip/beats_caps_reviewed_statements.json`（2461/6141）は履歴として保持し、現在の完全一致baselineに使わない。
-- compiler補題のレビュー: `.cache/wip/nanoda_declaration_probe/contract_root_review.json` と `.cache/wip/beats_old_root/aux_review.json`。名前付きの公開定理・計算定義の変更0。旧Separate._proof_1_3（WrM）は既存BeatsRep.wr_new0を再利用、旧Separate._proof_1_4（need上界100→112）は新Separate._proof_1_3へ移動、BeatsRep._proof_1_3は束縛名だけが変化。旧ソースを別module出力へ再構築して旧固定hashと一致することを確認し、Exprの束縛名だけを除く構造比較で3命題が保持されることを確認した。他のhash変更/追加/削除0。固定契約はこの自動生成のroot1削除/hash2更新だけを同期した。checkerの厳密なroot一致・型/定義hash・kernel検査は緩めておらず、--accept-changedも未使用。
-- 監査器はInspectEnvironmentの出力をscratch/environment.jsonlへ保存し、1行ずつ解析するよう改善した。巨大なstdoutと解析表の重複保持を避け、失敗時にも宣言一覧を残す。重複拒否は維持し、root不一致エラーにはmissing/addedを表示する。security10tests成功。
-- 最終軽量監査は実32064終了0、`.cache/wip/aux_fenwick_final_audit.json`。995Leanファイルsource audit、59/876/234/106のregistry、2460/6140の最新baseline一致、Fenwickの実headerと登録hash一致、元137ファイルのhash不変を確認した。git diff --checkも終了0。SquareMatrixの元ファイルはまだ変更していない。
-
-- 以下は容量分離の追加時点（2461/6141）の履歴。baseline: `.cache/wip/beats_caps_reviewed_statements.json`
-- 旧2419roots/6090閉包から追加のみで、既存hashの変更/削除0。追加42rootsはProofs.BeatsSeparateの15Fresh projections、Env、7公開Call、19補助proof。
-- review: `.cache/wip/beats_caps_contract_review.json`。`--accept-changed`は使っていない。
-- この後のslot/index補助・実構築stageはsupportへの追加で、現JSONはbaselineと全同一をassert済み。現在は上記のauxレビュー後baselineを使う。過去の2417/6088や2419/6090も完全一致baselineには使わない。
-- 最新の全59件bridgeは実81615終了0、log `.cache/wip/constructor_stage_all_bridge_retry.txt`。初回53629は全体240秒で38件後timeout。同じ制限で成功cacheを使って残りも検査した。全件all/230checks/独立kernel成功ではない。
-
-## Beatsで登録済みの証明と生成
-
-[部品doc](../segment_tree_beats.md) と履歴に詳細。
-
-1. `BeatsCapCtor/Chmin/Update1/Update2/Update3/Calc` はnode容量Lとstack容量Sを分離する。中点分割Shapeから高さを抑え、実stack256で構築/全6操作の生成本体・表現保存を扱う。
-2. `SegmentTreeBeatsCall.lean` の `Proofs.BeatsSeparate` 名前空間に構築/全6操作の公開Callを追加した。旧 `Proofs.BeatsRep` 側は保持。準備/正常終了/意味/caller保持/仕事量と領域を含む。
-3. 旧Lensは全stackにもLを要求し、L≥8*n+8からn≥32の実状態と矛盾した。新BRepS/BFreshSはSを分離してこれを避ける。n=32/L=264/S=256の生成構築とFresh条件を `test_beats_capacities.py` で確認済み。
-4. 実初期化を含む `Proofs/Generated/BeatsConstructionStage.lean` を登録。readonly入力aはslot0、15vector fieldsはslots1..15、inf/nは16/17。先頭15fillVector後の本体は旧bodyのvector slots i<16を(i+1)%16へ写したIRと完全一致する。scalar slots16以降は同じ。実ソースとの全文生成一致・型検査を要求する。[構築stageの範囲](../constructor_stage_methods.md)。
-5. `BeatsSlotCycle.lean` は16slotsの置換/逆、typed scalar/vector読取り、envOf、payload/仕事量/peak/slot数の保存を示す。`CppSlotRename.lean` は任意添字写像の式変換、scalar補助denote・nodes/scalarOnly保存を示す。**BeatsSlotEval/Stmt/RunでContainer/NExpr全構文のevalと、CoreCommand範囲のrunFuelまで接続済み**。実wide構築本体がこの範囲に入ることも証明済み。[範囲](../beats_slot_cycle.md)。BeatsInlineFrame/Execで実15確保・初期Frame・インラインstage全文の実行/表現まで接続済み。
-6. BeatsAllocation/Layout/ArgsとBeatsInlineFrame/Execで実15確保、BFreshS/CVecs、実FrameのFWM/QSとインラインstage全文の正常終了/表現/全16buffer内容を合成済み。root入力のreadonly prepareまで接続済み。確保とroot prepareを含む仕事量/peakも接続済み。child header入力、class export/copy/move/寿命とその資源、公開版切替、独立監査/全件allは未完了。償却O(log² n)も未証明。
-
-## 元の入力範囲へ戻す構築候補（今回の主な前進）
-
-**公開版の入力範囲縮小はまだ未解消**。元は4*n確保で、n=2^28なら4*n/2*n0/木添字はi32内。一方公開版の8*n+8はi32を超える。違反一覧・findings・部品docに記録し、巨大配列なしの算術回帰を追加した。8*n+8<2^31を前提にするだけで完了としない。
-
-- 候補: `experiments/verification/segment_tree_beats_wide.hpp`。12本の確保長と、構成子の全4*n走査で使う子添字2個だけをunsigned 64-bit化。公開ヘッダー/生成モデルは未切替。
-- 操作側まで広げた初期案は `.cache/wip/segment_tree_beats_wide_broad_20261101.hpp` に保存した。**現候補へ戻さないこと**。高さを使うと操作側のint子添字は元のサイズ範囲で安全なので、この変更は不要だった。
-- `Proofs/BeatsIndexHeight.lean` を登録。`idx_of_height`、`original_range_child_indices`で4*n<2^31なら全実節点の子添字がINT_MAX未満と証明。constructor走査のk/intと8*n+8≤2^32の境界、`idx_min`、`Capacities.shrink`、`BRepS.cap_indices`も証明。
-- 既存の操作証明には、物理配列長がint上限を超えても、BRepSの下界をmin L INT_MAXへ縮めて渡せる。データ・意味・S・資源を変えない。構築の成功自体を仮定して解決済みとはしない。
-- `tests/test_beats_wide_candidate.py` 3tests成功: 既存3000×60操作+大値の通常/ASan/UBSan、巨大配列なしの境界、実候補のstage/body生成・Lean型検査。構成子以外の全生成関数は公開版と完全一致する。実93348終了0、3tests28.587秒、log `.cache/wip/beats_wide_candidate_test.txt`。
-- index補題の最終build実46107終了0/1039targets、新module警告なし。最新容量回帰実27886終了0/1test2.023秒、log `.cache/wip/beats_wide_capacity_test.txt`。実使用配列を大きく確保した検査ではない。
-- [候補doc](../beats_wide_candidate.md)。Cpp候補の全範囲構築実行/意味/資源証明は未完了。構成子だけが変わるため、次はphase1でn/kのi32境界と64-bitの確保長/子添字を分離する。phase2のentered nodesには数学的な実木のidx境界を渡す。6操作の実行モデルを変更せずに接続する方針。
-- `Proofs/BeatsWideExec.lean` を追加登録。u64の変換/literal/cast/localと、実候補の `2ULL*(unsigned long long)k+d` の補助評価を証明した。元の4*n範囲と走査位置から、wrapなしの数学的な値と確保長内の境界を得る。子添字にint上限を課さない。実ソースの2つの生成式と定理中の式のrfl一致、INT_MAXを超える4294967288の境界例も既存候補テストへ追加。新module build実30156終了0（871targets、新module警告なし）、候補3tests実26161終了0/27.976秒、log `.cache/wip/beats_wide_exec_test.txt`。構築ループ/命令列全体への接続はこれからであり、公開Cppは未変更。
-- 同moduleの `vden_wide_count` は実入力vectorの長さから `8ULL*a.size()+8ULL` を評価する。元の4*n<2^31の範囲でsize/unsigned cast/積/和/最後のcastを扱い、実stageの12本すべての確保長式と `wideCount 0` のrfl一致を追加した。n=536870911で長さ4294967296を得る抽象vectorの回帰例も成功（巨大確保なし）。最終build実94529終了0/871targets、新module警告なし、候補3tests実3901終了0/26.335秒、log `.cache/wip/beats_wide_count_test.txt`。初回91931終了1は境界例のsimp onlyが数値式を簡約しなかったためで、通常simpへ修正して再検査した。registry/source audit/diffcheck成功、公開仕様baseline全同一。確保自体の成功/費用・初期表現・ループ全体は未完了。独立20457は当時稼働中だったが、後にstack overflowで終了1。詳細は冒頭。
-
-### wide構築の最初の走査まで接続
-
-- `BeatsExec_WideCtLoopDefs/Ch0..12` と `BeatsExec_WideCtLoop` の15modulesを追加。候補の49命令を最大4命令ずつ13補題に分けた。pexecMでの1回の走査について正常終了・状態/配列・仕事量≤20580・storage work≤12を示す。u64 localへのcast付き添字も `den_idx64u_cast` で扱う。**新16modulesにmaxRecDepth/maxHeartbeats/maxMemoryの指定はない**。旧生成補題の上限設定はコピーしていない。
-- `Proofs/BeatsWideCtorLoop.lean` に `ct_iter_wide` と `ct_loop_wide` を追加。CtInvから1回の実行条件を導き、更新後のCtInv・ValidOK・分離したCapS・lo/hiの長さを保つ。残りd回の最初のwhileを停止まで合成し、fuel≤d+1、仕事量≤d*20620+20、storage work≤d*12。物理配列長L<2^31の仮定を外し、**4*n<2^31**を使う。旧ct_iter_separate/ct_loop_separateは変更していない。
-- 正本build実80293終了0/889targets、実99454終了0/1055targets、新modules警告なし。logs `.cache/wip/beats_wide_vc/canonical_build.txt` と `phase1_build.txt`。候補3testsの最終実78758終了0/27.564秒、`phase1_candidate_test.txt`。通常/ASan/UBSan・算術境界に加え、候補ソースの49命令と条件/scopeを含むwhile全体が正本定義とrfl一致することを確認。registry/source audit/diffcheck成功、公開仕様baseline全同一。
-- 試作用の生成器/モデルは旧cacheを保ったまま `.cache/wip/beats_wide_vc/` に分離。草案は全13chunks/mainとも標準上限で終了0。正本では未使用の引数名/simp引数/tryを整理して警告も除いた。
-- 残りは後半のentered nodesの集約処理、実確保から初期CtInv/Frameを作ること、実caller/runFuel/export/寿命と構築全体の資源、公開版切替・独立監査。phase2で使うentered indexが実木の節点であることを示し、`BRepS.cap_indices` 等のint境界を接続する。最初のwhileの補助実行モデル上の証明だけで構築全体を完成扱いにしない。独立20457は当時稼働中だったが、後にstack overflowで終了1。詳細は冒頭。
-
-### wide構築本体・表現まで接続済み（最新）
-
-- `Proofs/BeatsWideCtorExec.lean` を追加。`rngOf_index` の既存の不等式から、内部節点eなら **2*e+2<4*n** を導く `inner_children_lt_four_n` が得られた。CtInv/mem_LLrがentered listの内部節点条件を与えるため、phase2へは `C=min L 2147483647` を渡せばよい。4*n≤C、各子添字<C、ne≤C、Capacities.shrinkを示し、既存ct_upd_all_separateを変更せず再利用した。SameLenで結果の物理容量Lを戻す。**phase2のための新しいInSk対応証明は不要だった**。
-- `ct_exec_wide` は両ループと本体初期化を合成し、WideCtorCmdの正常終了、HRel/数学的な木との一致、ValidOK/分離容量/lo/hi/LenOK、仕事量≤4*n*45414+100、storage work≤4*n*18+10を示す。`ctor_rep_wide` は高さ/添字を加えてBRepSとneed≤P.length+100を構成する。L<2^31は使わず、4*n<2^31を使う。新moduleに資源上限指定はない。Nbを一括decideした草案15909は再帰深度に達したので、構文別のsimpへ変更し、上限もneedの100も増やさず解消した。
-- 正本build実59903終了0/1057targets、新module警告なし、log `.cache/wip/beats_wide_vc/exec_build.txt`。候補3testsの最終実35478終了0/27.664秒、`exec_candidate_test.txt`。実候補の全文生成構築本体とWideCtorCmd 16のrfl一致を追加。記号的な実初期配列から任意の元サイズ範囲へctor_rep_wideを適用するfixtureと、n=2^28/L=2147483656の論理的な境界例も成功（巨大配列を実確保/走査した検査ではない）。registry/source audit/diffcheck成功、公開仕様baseline全同一。
-- **公開Cpp/modelは未切替**。残件は実15確保からFrame/初期表現を構成すること、slot置換のeval/runFuel全体、実caller/export/copy/move/寿命と確保費用、公開定理・生成モデルへの切替/独立監査/全件gate。旧公開new0の証明は旧source bodyへの依存があるため、切替時にはimportの循環を避ける整理と、固定仕様の変更箇所の明示的なレビューも必要。独立20457は当時稼働中だったが、後にstack overflowで終了1。詳細は冒頭。
-
-## 共有変換器の修正と検査
-
-### スロット置換の状態付き式評価
-
-- `Proofs/BeatsSlotEval.lean` を追加登録。EvalRelは、renameした評価結果の状態置換と元の式の評価の一致、および評価中のslots不変を組にする。bind/precharge/変換/Frame操作を合成して、**Container/NExprの全構文**（row/size/read、cast/targetCast/unary/binary/divrem/短絡logicalを含む）を相互再帰で証明した。`container_eval_permute` / `expr_eval_permute` はOption全体の等式、`expr_fault_permute` は失敗の同値。成功やwellFormedを仮定せず、16slotsの存在だけを要求する。Frameの新binding、権限・参照先・全カウンタも対応する。
-- 新module build実15428終了0/32targets、新module警告なし、log `.cache/wip/beats_slot_eval_build.txt`。新規登録 `tests/test_beats_slot_eval.py` 1testは終了0/0.968秒、log `.cache/wip/beats_slot_eval_test.txt`。異なる16vectors+末尾scalarの複合read/size、範囲外read、短絡で失敗右辺を飛ばす式、rowの新bindingとsize/readを実評価し、結果状態全体とカウンタ等を照合する。初回はテストのmap内でPropをBool化していなかったため失敗し、decideを付けて修正した。
-- 宣言/書込み/scope/while/runFuelは未接続。次はrotateとslots末尾追加、release/declared/leftの対応を示し、Beats構築本体で使う命令列へ式評価の定理を適用する。独立20457は当時稼働中だったが、後にstack overflowで終了1。詳細は冒頭。
-
-### スロット置換の宣言・代入・書込み・scope終了
-
-- `Proofs/BeatsSlotStmt.lean` を追加。rotate_append、release_permute、declared_permute、enter_permute、**leave_permute**を証明。leaveはscalar prefix型検査、戻りvectorの移譲とscope破棄を含む実定義に対し、任意の戻り値でOption全体が対応する。leave自身に16slotsの前提は不要。状態のrecord projectionsを明示化せずifをrewriteするとDecidable側の表現が揃わなかったため、outer/innerを構成要素へ分解して解消した。
-- declare_run_permute / assign_run_permute / write_run_permuteはNStep全体の対応。宣言の末尾slotとscalar追加、writable/変換失敗を含む代入、右辺先行評価→container→index→elementRef→実Frame.write→release→chargeまでを扱う。値だけの一致や成功前提にしていない。新moduleに資源上限指定なし。
-- 正本build終了0/35targets、新module警告なし、log `.cache/wip/beats_slot_stmt_build.txt`。既存登録test_beats_slot_eval.pyを2testsに拡張し、最終実32010終了0/2.007秒、`beats_slot_stmt_test.txt`。宣言先slot17と値、通常/readonly/型変換失敗の代入、対象vectorの実更新と他vector保持、row書込み後の一時binding除去、scope終了によるslot/scalar復元とprefix失敗を確認。新fixtureは `tests/lean/beats_slot_stmt.lean`。
-- 次は命令のrename定義と、Beats本体で使うprimitive/sequence/scope/branch/whileのrunFuel対応を合成する。full statement/command一般の意味保存、vector確保命令、実15確保からのFrame/初期表現とclass export/寿命は未完了。独立20457は当時稼働中だったが、後にstack overflowで終了1。詳細は冒頭。
-
-### スロット置換のrunFuelとwide構築本体（最新）
-
-- `Proofs/BeatsSlotRun.lean` を追加登録。CppSlotRename.stmt/commandは構文の置換を定義するが、意味対応は **CoreStmt/CoreCommand** で範囲を明示する。skip/declare/assign/write/check/ret/retVector/retUnit、sequence/scope/branch/while/breakを扱う。vector確保・reserve/append/copy等とinvokeScalarは述語が拒否し、一般全構文を証明済みとはしない。
-- stmt_long/run_longは成功後も16slotsを保つ。**run_permuteは任意のfuelで、正常終了・fault・exhaustedの全Outcomeを対応させる**。outcomeViewは状態だけをpermuteし、return/breakの制御情報を保つ。成功だけを前提にせず、scope復元とloop継続も扱う。全新補題は標準資源上限で通過した。
-- BeatsWideCtorExecにwide_ctor_core/wide_ctor_cycle_runFuelを追加。実WideCtorCmdがCoreCommandの範囲に入ることを証明し、その本体へrunFuelの対応を適用した。候補ソースの15確保後の全文が **CppSlotRename.command cycle (WideCtorCmd 16)** とrfl一致する生成回帰も追加した。
-- 最終build実97387終了0/1062targets、新moduleと変更module警告なし、`.cache/wip/beats_slot_run_build.txt`。slot回帰3tests実65991終了0/3.129秒、`beats_slot_run_test.txt`。毎回localを破棄するloopの実配列更新、break/return後の無効check省略、branch fault、有限fuel/無限loopのexhaustedを確認。候補3tests実20062終了0/28.083秒、`beats_slot_run_wide_test.txt`（通常/ASan/UBSanと実stage本体の命令置換一致も含む）。registry/source audit/diffcheck成功、公開仕様baseline全同一。
-- **次は実15確保からFrame/16slots/初期表現を構成し、上記の状態付き本体へ接続する**。確保を含む全体資源、class export/copy/move/寿命、公開Cpp/modelへの切替・固定仕様レビュー、独立監査/全件gateは残る。独立20457は当時稼働中だったが、後にstack overflowで終了1。詳細は冒頭。
-
-- `ast_stream.class_construction_stages` に宣言順の実field局所変数 `_all_fields` を付け、direct_functionsから同じClang IDのhelperをcommon inlinerへ渡す。helper自体は出力rootにしない。
-- `_read_only_fields` は可変scalar参照引数があるクラスでscalar値渡し最適化を行わない。inspect(count)がcountを9にしてから読む例で旧値5を返す不具合を確認し、参照保持で修正した。
-- 新規constructor-stage5tests、UF構築3tests、constructor layout1test、Context methods6testsが直列実97944終了0。既存UFモデルのbyte/rfl一致も維持。ログ名は `constructor_stage_methods_test.txt` と `ctor_stage_{uf,layout,context}_regression.txt`。
-- registry/source audit/git diff --check成功。Cpp public sourceはこの作業で変更していない。fixes表のwide候補は「候補のみ・公開未反映」と区別している。
-
-## 次の作業と全件の残件
-
-### 6操作後のBVecs/Scalarsと次receiverの復元（2026-11-02・最新）
-
-- `Proofs/CppCallUnitFrame.lean` を追加登録。既存CppCallFrameのscalar-result用call_headersをunit-resultへ拡張した。NoResizeScope.Allowed、callerの全context上界、実prepare/body/finish成功からCallEffects（全buffer headers・flags・vector/scalar bindings・slots・scope・base・memory長・scalar live）を導く。finish_unit_frameは戻りnone/some unitを扱う。scalar値不変は主張せず、参照引数への更新も許す。旧CallEffects/CallFrameの型・証明は変更していない。
-- `Proofs/BeatsReceiverRestore.lean` を追加登録。scalar_cell_eq/scalars_keptはCallEffectsと明示的なmemory等式から、任意slotのscalarCell同値とINF/nの読取りを導く。restore_bvecsは更新後payloadとwellFormed、SameHeadersのlimit/size等、flags/bindings/scope/baseから新BVecsを導く。更新後BVecsを前提にしない。
-- 6操作の同名拡張定理（新namespace）を追加。従来のprepare/callFuel成功・query/更新意味・BRepS・ScalarPostMBを残し、CallEffects・Scalars・新buffer familyのBVecsも返す。unit4種は新helper、scalar2種は既存call_headersを使う。各Safe/i32境界/x値域は従来どおり明示前提で、物理L<M31を要求しない。元4*n範囲と操作用min L INT_MAXを保つ。
-- Allowedの更新4関数の一括simp/decideとcanonical ApplyOpCmd/ALoopの一括rflは標準再帰深度に達した。上限を増やさず、SimのAllowed保存、W6/初期化/ALoop/ULoopの合成と既存ApplyLoop14chunksの小補題へ分割して解消。query2種は標準decide成功。初回6拡張headerではCppNestedEvalのopen不足でenvOfが未解決だったため明示した。新2modulesに資源上限指定なし。
-- 正本最終の直列実88157はbuild1187targetsと新2modules direct型検査を終了0で回収。新module警告0、direct出力各0bytes。build `.cache/wip/beats_receiver_restore_build.txt`、direct `cpp_call_unit_frame_direct.txt` と `beats_receiver_restore_direct.txt`。unit helper初回の未使用liftChecked simp引数2個を除いてから最終build/directを確認した（実装の挙動変更なし）。
-- 新fixture `tests/lean/beats_receiver_restore.lean` は任意receiver/区間/値と従来Safeからchmin出力のScalars/BVecsをcalc_maxへ渡し、意味と次BVecsを導く。更新後receiverの成功・表現を追加前提にしていない。`tests/lean/cpp_call_unit_frame.lean` はvectorを書き換え、scalar参照引数7→9とreadonly aliasへの反映、bindings/slots/epoch/limit保持、none/some unitのfinish一致・型違いreturn拒否を確認。metadata保持だけから値不変を誤推論しない例でもある。
-- 既存のreceiver method trace checkに2fixturesを追加し、単独実93835終了0/1test22.551秒、`.cache/wip/beats_receiver_restore_test.txt`。C++/UBSanとの同一objectの6操作trace照合も含む。全回帰実11949終了0/10tests70.191秒、`.cache/wip/beats_receiver_restore_allocation_tests.txt`。candidate生成一致検査へ新moduleをimportし、実99067終了0/1test24.502秒、`.cache/wip/beats_receiver_restore_source_test.txt`。新2modulesのwarning除去後には最終build/directを再確認し、実行コードが変わらない全runtime回帰の重複はしていない。
-- registry（59公開/876共有modules/234checks/106docs）、995Leanファイルsource audit、公開仕様baseline全同一、git diff --check終了0。公開C++/生成モデル/固定仕様は未変更。全件all/独立nanodaは再実行せず、旧new0のstack overflowも未解消。追跡中の検査プロセスはない。
-- **次は各Safeを明示した任意長操作列の意味・総資源の合成、または公開切替に残るconverter/寿命と独立new0の改善**。各stepのBVecs/Scalarsは復元できたので、旧stateを仮定し直さず次callへ渡せる。全操作列の一般証明はまだなく、現在の一般検査は2段階、実traceは固定有限列。CallEffects.transは全headers/metadataを合成する基礎として使える。配列下界min L INT_MAXの反復はidempotentとして整えるとよい。各Safeの一般入力からの導出、constructor export込み/操作列/寿命の仕事量・peak、全無関係vector内容保持、child header入力、class converter/copy/move/destruction、公開版切替・固定仕様レビュー、旧new0の独立stack overflow解消と全137旧ファイルの検証も残る。
-
-
-### 実scalar fieldsを読む6操作の呼出し（最新）
-
-- `Proofs/BeatsReceiverCalls.lean` を追加登録。infExpr/sizeExprはbase+15/base+16の実variable式で、Scalarsは実scalarCellの成功を保持する。scalars_of_layoutとconstruct_argumentsは元callerからの実構築成功・BRepS・BVecsと同時にScalarsも導く。inf_denote/size_denoteはenvOfからINF/nを読み、構築時定数への置換をしない。
-- chmin/chmax/add_val/update_val/calc_max/calc_minの6定理を追加。2field式と任意scalar-onlyなqa/qb/x式を既存の生成NProgramへ渡し、実prepare/callFuel成功、query/更新意味、更新後BRepS、ScalarPostMBの全結果（caller memory/slots/scope・配列内容・仕事量とpeak等）を引き継ぐ。従来の各Safe・qa/qbのi32境界・x値域を明示前提として保つ。物理容量L<M31は要求せず、4*n<M31からBRepS.cap_indicesでmin L INT_MAXへ**操作用の下界だけ**縮める。実buffer/入力範囲を狭めない。
-- 正本最終build実82778終了0/1176targets、新module警告0、`.cache/wip/beats_receiver_calls_build.txt`。初回草案は不要なCppRootModelのopenでHeapがBT用Heapと衝突したため除去した。新moduleに資源上限指定なし。旧6定理や公開C++/生成モデル/固定仕様は変更していない。
-- 新fixture `tests/lean/beats_receiver_calls.lean` と既存確保checkの1methodを追加。1つの実prepare→構築→exportの状態からquery2種、chmin/chmax/add_val/update_valとqueryを続け、毎回INF/nをfieldから読み、更新後状態を次の呼出しへ渡す。結果[6,5,5,5,8,3,7]と元scalar別名/slots/bindings/input bufferの保持、wellFormedを確認。同じtraceをtemplate-first includeした候補C++/UBSanで照合する。nのcellを2へ実代入するとsizeExpr.denoteも2になる例でghost定数化を検出する。単独実34806終了0/1test20.489秒、`.cache/wip/beats_receiver_calls_test.txt`。
-- 確保/構築/操作の全回帰実25701終了0/10tests64.140秒、`.cache/wip/beats_receiver_calls_allocation_tests.txt`。candidate source一致検査にも新moduleをimportし、stage/program/descriptor・非constructor全生成関数の旧モデルとの一致を検査。実45997内で終了0/1test22.903秒、`.cache/wip/beats_receiver_calls_source_test.txt`。同じ直列実45997の新module direct型検査も終了0・出力0bytes、`.cache/wip/beats_receiver_calls_direct.txt`。ヘッダー単独Clang AST取得時の既存#pragma once警告のみ。通常/ASan/UBSanの全3000×60操作は今回は再実行せず、既存記録を保持した。
-- registry（59公開/874共有modules/234checks/106docs）、993Leanファイルsource audit、公開仕様baseline全同一、git diff --check終了0。全件all/独立nanodaは再実行せず、旧new0のstack overflowも未解消。追跡中の検査プロセスはない。
-- **次は一般の更新後receiverの復元と操作列**。6wrapperは各Safeを従来どおりの明示前提とし、一般入力からのSafe導出は未完了。runtime traceの複数操作の成功を、任意長の操作列の一般証明とは扱わない。ScalarPostMBはscalarMemory・slots・scope・vector bindings・配列items等を返すが、scalar bindings/base・root flags/strict・buffer limit/Validを次のBVecs/Scalarsとしてすべて返す型ではない。実call/finishのmetadata保持、最終FWMの追加結果を別の拡張補題で取り出して、既存公開型を保持しながら次の入口へ渡すとよい。scalarCell条件の保持を先に一般化すればfield式の読取りを継続できる。constructor export込み総資源、全無関係vector保持、child header入力、class converter/copy/move/destruction、公開版切替と独立監査/全137旧ファイルも継続。
-
-
-### export後のbuffer契約・全scopeと6操作用BVecs（最新）
-
-- `Proofs/CppConstructorRetirement.lean` を追加登録。retired_context_someはwell-formedなforestで退役後に残るroot/子vectorのcontextが元と同じで破棄scopeとは異なることを示す。context_noneとownerの強帰納法を使い、未知ownerのrootOwnerを再帰simpし続けない。movedFrame/movedAll_scope_leとfinished_scope_leはroot移譲→callee scope破棄後の全ownerのscope上界を導く。finished_bufferは選択rootの**buffer全体**（items/capacity/limit/epoch/owner）の保持を示す。最終helper buildは実コマンド終了0/120targets、`.cache/wip/constructor_retirement_build.txt`。草案のparentOKのprojection前の明示展開と、一般Models.tagの名前空間指定を修正した。資源上限指定なし。
-- ExportLayoutへFieldBuffersとstrictを追加。finish_from_layout_fullは最終FWMの各field bufferのValid/標準limit/owner/内容長<2^64を実退役後まで保ち、scopeも最終FWM/QSと実移譲・破棄から導く。元callerへ新条件を追加しない。congr_fieldsとconstruct_fullもこれらを保持する。最終FWMにある契約をexport後へ仮定し直す形にはしていない。
-- BeatsConstructReceiver.field_buffer_factsは実lookupから選んだfieldBufferと、Modelsが持つpayload bufferが同一であることを照合する。receiver_bvecs/construct_readyは元callerから構築成功・BRepS・既存6操作の**BVecs全条件**を導く。返却slots/bindings、相異なるowner、writable/max grant、実lookup、Valid/limit/owner/small、全scopeのstrictとscalar baseを含む。ctyと操作用btyはi<15で一致。最終build実85271終了0/1175targets、`.cache/wip/beats_receiver_bvecs_build.txt`、新/変更modules警告0。
-- 新fixture `tests/lean/cpp_constructor_retirement.lean` を既存roots checkに追加。nested rootとflat rootのbuffer全体保持、退役対象とは異なる大きいscope8のrootもcontextを保持する例、一般finished_scope_leを確認。実82955内で終了0/1test1.154秒、`.cache/wip/constructor_retirement_test.txt`。
-- 既存receiver fixtureへ、実prepare→構築→export後の全15bufferのValid/limit/owner/small、全ownerのscope上界・base、および一般callerでconstruct_readyからBRepS/BVecsを同時に得る例を追加。単独実82955内で終了0/1test11.613秒、`.cache/wip/beats_buffer_contracts_test.txt`。確保/構築全回帰も実9472終了0/9tests43.498秒、`.cache/wip/beats_buffer_contracts_allocation_tests.txt`。
-- 生成モデル一致・candidate stage/program/descriptorの型検査は直列実1466内で終了0/1test23.026秒、`.cache/wip/beats_buffer_contracts_source_test.txt`。同じ実1466で新helper/BeatsConstructorFields/BeatsConstructCall/BeatsConstructReceiverのdirect型検査も終了0・各出力0bytes。logsは `.cache/wip/constructor_retirement_direct.txt` と `beats_buffer_contracts_{fields,call,receiver}_direct.txt`。Cpp source未変更のため通常/ASan/UBSan全操作は今回は再実行せず、既存成功記録を保持した。
-- registry（59公開/873共有modules/234checks/106docs）、992Leanファイルsource audit、公開仕様baseline全同一、git diff --check終了0。公開C++/生成モデル/固定仕様は未変更。全件all・独立nanodaは再実行せず、旧new0のstack overflowも未解消。追跡中の検査プロセスはない。
-- **次は返却scalar fieldsから各method引数の式を作り、区間/値域/Safe条件と実call・更新後receiverへ接続する**。BVecsの入口条件は揃った。INF/nはExportLayout.infCell/nCellとCppNestedEval.envOfからvariable式のdenoteへ渡せる。既存Proofs.BeatsSeparateの6定理はBeatsPrepare.vargs sl 0 15と4/5scalar値を受ける。大きい物理容量にはBRepS.cap_indicesを使い、操作用下界をmin L INT_MAXへ縮め、元4*n範囲を狭めない。n/stack256/qa/qbのi32境界、各Safeとscalar式の意味を実receiverへ結ぶ。総資源（export込み仕事量/peak）、元callerの全無関係vector保持、child header入力、converterの複数vector bundle、copy/move/destruction、公開版切替と独立監査/全137旧ファイルの検証も残る。
-
-
-### 返却fieldの配置・実resolveとscalar別名保持（最新）
-
-- `BeatsConstructorFields.ExportLayout` を追加。返却memory/scalar bindings/vector bindings/slots/scope/scalar baseline、15fieldのtrueな最大書込み権限、rootWritable表の長さ、実vectorSlot/binding lookup、INF/nのscalarCellをまとめる。finish_from_layout_fullは共通multi finishのrestored結果と最終FWM/QSから導き、ExportFacts/stage_export_fullへ残す。construct_fullは元callerからこの配置を導き、memory=元caller.memory+[INF,n]、新owner=旧objects数+iへ揃えた結果を返す。従来のfinish_from_layout/constructは元の型の射影として維持。congr_fieldsはi<15の範囲で等しいowner写像へ配置を移す補題。
-- `CppConstructorRoots.movedAll_length` を追加し、任意root列の移譲でforest objects数が変わらないことを示した。実retireScopeでもobjects数が変わらないことと合成し、export後のrootWritable長の整合を最終FWMから導く。移譲中にpayloadコピーを追加したものではない。資源上限指定なし。
-- `Proofs/BeatsConstructReceiver.lean` を追加登録。resolve_field/construct_fieldsはExportLayoutとfield Modelsから**実返却slot→writable root binding→実buffer**のresolve成功とpayload一致を導く。old_scalar_keptは元callerで成功していた任意scalarCellの読取りが、同じbinding/readonly権限・同じcellで成功することを示す。別名を含む。元の無効addressの失敗まで同値とは仮定しない。
-- 最終build実6497終了0/1174targets、`.cache/wip/beats_construct_receiver_build.txt`、新/変更modules警告0。途中の草案はList.map_congr_leftが関数であること、baseのrfl不足、mv.nvの明示、normalizeのslot permuteまでの明示展開、Option.bindの型クラスBind.bindの明示で修正した。資源上限を増やす失敗回避はしていない。
-- 既存root構築checkへ `tests/lean/beats_construct_receiver.lean` を追加し、同じmethodのimport先をBeatsConstructReceiverにした。返却vector slotで最大値6を読み、同じ実参照で12へ書き換えて読み直し、他field/元入力buffer保持、readonly入力へのwrite拒否を確認。一般callerでconstruct_fieldsからmemory配置、任意の有効old scalar参照保持、全15fieldの実resolveまで導くfixtureも型検査。初回fixtureは結果に使わない存在変数bufferの型が未指定だったため失敗し、実resolveの返却bufferを等式に含めて修正した。最終単独実74815終了0/1test10.396秒、`.cache/wip/beats_construct_receiver_test.txt`。
-- 確保/構築全回帰実16657終了0/9tests43.297秒、`.cache/wip/beats_construct_receiver_allocation_tests.txt`。source-matched candidate NProgram/stage/descriptorの生成型検査も実40116内で終了0/1test22.875秒、`.cache/wip/beats_construct_receiver_source_test.txt`。Cpp sourceは未変更のため今回は既存通常/ASan/UBSan全操作の再実行はせず、前turnの3tests成功記録を保持した。既存#pragma onceのClang警告だけでLean側警告なし。
-- 同じ直列実40116でCppConstructorRoots/BeatsConstructorFields/BeatsConstructCall/BeatsConstructReceiverのdirect型検査も終了0・各出力0bytes。logsは `.cache/wip/beats_construct_receiver_{roots,fields,call}_direct.txt` と `beats_construct_receiver_direct.txt`。registry（59公開/872共有modules/234checks/106docs）、991Leanファイルsource audit、公開仕様baseline全同一、git diff --check終了0。全件all/独立nanodaは再実行せず、旧new0のstack overflowも未解消。追跡中の検査プロセスはない。
-- **次は既存6操作の入口に必要な残りのbuffer Valid/limit・strict/base等の条件と総資源**。いま返却fieldのslots/bindings/最大権限/Modelsとresolve、scalar配置・old scalar別名は一般証明済み。FWMにはbuffer Valid/limitもあるが、退役後の各field bufferのmetadata保持を外へ取り出す補題が必要。strictは元callerのscope上界→移譲→callee scope破棄の全owner条件として接続する。元callerの無関係vector全体保持、export込み総仕事量/peak、child header入力、converterの複数vector bundle、copy/move/destruction、公開版切替と独立監査/全137旧ファイルの検証も残る。fieldへの直接write回帰はgrant検査であり、書換え後のBRepS保持は主張しない。
-
-
-### 元callerからprepare・構築・exportを接続（最新）
-
-- `Proofs/BeatsConstructCall.lean` を追加登録。programはreadonly vector入力1本・unit結果・15確保を含むwide stage。initial_prefixは実preparedのmemory=callerPからcaller prefixの長さ・値を導く。constructは元callerのVOKG/内容/標準limit、1≤n、4*n<2^31、InRangeだけから、実program.constructMembersFuelの成功、15vector/2scalarのObjectRef、BRepS、全15fieldのcaller.scopeでのModelsを示す。wb/maximumは元grantの有効な任意の組合せで、slot/binding/owner番号や既存scalar別名を限定しない。calleeのreadonly化だけを行い、初期prefix長さ/型/scopeを利用者の追加前提にはしない。
-- `BeatsConstructorFields.ExportFacts/stage_export_full` は構築後の全16root Models、実scope、exportで元scope外の無関係なrootを保持する性質を返す。従来stage_exportは同じ型の射影として維持した。constructは入力owner<旧objects数、新規field owner≥旧objects数と、元入力scope≤caller.scope<callee.scopeを元VOKGから導き、**export後も入力rootの型/scope/内容が保たれる**ことも結果に含める。
-- 最終build実82290終了0/1173targets、`.cache/wip/beats_construct_call_build.txt`、新/変更modules警告0。草案は予約語prefixを局所名へ使った構文エラー、cty 15のsimp onlyでor_true不足を修正した。資源上限指定なし。公開C++/生成model/固定仕様は変更していない。
-- 既存確保checkへ新fixture `tests/lean/beats_construct_call.lean` と1methodを追加。owner2/binding3/slot2、scope2、既存3vectorとscalar別名のcallerで実constructMembersFuelを評価。可変入力、readonly binding、最大権限もreadonlyの入力、scalar別名を持つ4通りで、元memory/slots/bindings/権限/baseline/3buffers、15新rootと実resolve、返却INF/n、木の最大値6/最小値4を確認。fuel不足と型違いslotも拒否する。初回fixtureはctyの名前空間をBeatsPrepareと取り違えたため失敗し、BeatsRepへ修正。単独実99030終了0/1test8.572秒、`.cache/wip/beats_construct_call_test.txt`（後の最終検査で更新）。巨大確保なしのn=2^28でconstructを記号的に適用する例も追加した。
-- 確保/構築全回帰実45780終了0/9tests44.646秒、`.cache/wip/beats_construct_call_allocation_tests.txt`。候補生成検査へ**候補から生成したNProgram全体とBeatsConstructCall.programのrfl一致**を追加し、通常/ASan/UBSan・大値・境界・既存stage/descriptor一致を含む候補3testsも実45992終了0/30.180秒、`.cache/wip/beats_construct_call_candidate_tests.txt`。この全9回帰後に追加したn=2^28の記号的例を含め、最後の単独回帰と新/変更2modulesのdirect型検査を直列実27492で終了0まで回収した。direct logsは `.cache/wip/beats_construct_call_fields_direct.txt` と `beats_construct_call_direct.txt` で各出力0bytes。追跡中の検査プロセスはない。
-- registry（59公開/871共有modules/234checks/106docs）、990Leanファイルsource audit、公開仕様baseline全同一、git diff --check終了0。全件all/独立nanodaは再実行せず、旧new0のstack overflowも未解消。
-- **次はexportを含む総仕事量・peakと返却receiverから既存6操作への接続**。constructの一般結果はfieldと入力のModelsであり、元callerのすべての無関係な領域保持・返却field slots/grants・scalar layoutを一括で示す形への強化も残る。これらのmetadata保持は実回帰と共通multi finishの補題で確認したが、Beatsの最終定理へすべては公開していない。receiver接続にはfinish_from_layout_full等でgeneric finish_okのrestored結果/lookup条件も外へ出すとよい。child header入力、converterの複数vector class bundle、copy/move/destruction、公開版切替と独立監査/全137旧ファイルも継続。
-
-
-### Beatsの最終Frameから15vector/2scalarをexport（最新）
-
-- `BeatsInlineExec.FinalLayout` と body_exec_full/stage_exec_fullを追加。実構築の最終FWM(root tags/bindings/rootWritable/buffers)とscalar QS(CtCells INF n 0 (4*n))を保持する。従来body_exec/stage_execは同じ入力・結果型の射影として維持した。新成功条件を元callerへ追加せず、実runFuelの成功を引き続き導く。変更module build実63952終了0/1163targets、`.cache/wip/beats_final_layout_build.txt`。
-- `Proofs/BeatsConstructorFields.lean` を追加登録。final_modelsでviewによらない実Frameの全16flat rootモデル、final_lengthsで実slot/binding長を導く。final_field/final_vector_fieldsはslot循環置換とbinding indexの逆写像を通して、実slots1..15のvectorSlot/resolve/型/元scope headerを得る。最大権限とwritableの区別を保持する。scalar_cell_from_layoutは任意state/cellの抽象的なlookup補題で、これを使うfinal_scalar_fieldsは実slots16/17のINF/nを捕捉する。
-- final_rootsはFWMのdistから15ownerの相異性と元scopeのModelsを作る。finish_from_layoutは新multi finishの実成功、15rootのcaller.scopeでのModels、元scope外の無関係なrootの保持まで合成。**stage_exportは構築前のRealizes/Input/Entryと初期prefixの長さ/型/scopeから、実15確保→wide本体→15vector/2scalar exportの成功、BRepS、全field payloadの保持を導く**。構築後のFWM/field capture/finish成功を前提にしない。元の4*n<2^31を使い、8*n+8<2^31へ狭めていない。
-- 最終正本build実41726終了0/1171targets、`.cache/wip/beats_constructor_fields_stage_build.txt`、新/変更modules警告0。direct型検査実77072も両modules終了0・各出力0bytes、`.cache/wip/beats_final_layout_direct.txt` と `beats_constructor_fields_direct.txt`。途中は名前空間指定、List.mem_mapの局所仮説名の衝突で失敗し、明示的な名前へ修正した。scalar読取りをNat値で直接展開した草案はkernel深度に達したため、上記の一般cellの小補題へ分割し、**資源上限を増やさず**解消した。新moduleにmaxRecDepth/maxHeartbeats等の指定なし。
-- 新fixture `tests/lean/beats_constructor_fields.lean` と既存 `test_beats_allocation.py` の新methodを追加。長さ1/3の実prepare→stage→finishを評価し、全15rootのscope・返却vector/scalar slots・INF/n・入力buffer保持・field参照・binding/slot/memory長を確認。単独実23240終了0/1test18.956秒、`.cache/wip/beats_constructor_fields_test.txt`。確保/構築全回帰実55721終了0/8tests35.917秒、`.cache/wip/beats_constructor_fields_allocation_tests.txt`。
-- 候補の生成検査へ、実construction_fieldsと15vector/2scalar descriptorsのrfl一致を追加。既存のstage全文一致・通常/ASan/UBSan 3000×60操作・大値・巨大確保なし算術境界も含め、実8584終了0/3tests31.406秒、`.cache/wip/beats_constructor_fields_candidate_tests.txt`。ヘッダー単独Clang AST取得時の既存#pragma once警告のみでLean側警告なし。巨大配列を実確保した検査ではない。
-- registry（59公開/870共有modules/234checks/106docs）、989Leanファイルsource audit、公開仕様baseline全同一、git diff --check終了0。公開C++/生成モデル/固定仕様は未変更。全件all/独立nanodaは再実行せず、旧new0のstack overflowも未解消。
-- **次はBeatsInputPrepareの元callerから、このstage_exportへ初期prefix長さ/型/scopeを自動接続する**。現在は準備済み入力の段階での全stage+exportが接続済みで、root prepareを含む単一の最終呼出し定理はまだない。新multi finishを含む総仕事量・peak、返却ObjectRefから既存6操作へのreceiver接続、converterの複数vector bundle対応、child header入力、copy/move/destruction、公開版切替と独立監査/全137ファイルの検証も残る。
-
-
-### 複数vectorの実field slotsからcallerへの構築終了（最新）
-
-- `Proofs/CppConstructorMultiFinish.lean` を追加登録。VectorField(slot,element)の列から実NState.vectorSlot/Frame.resolveで型・権限・元scopeのroot headerを検査し、全vector bindingsとscalar値を捕捉してからfinishRootsを一度実行する。restoredはcallerの元metadataへvector/scalar bindings・slotsを追加し、vector headersをcaller.scopeへ張り直す。ObjectRefはvectorSlots/scalarSlotsの両列を返す。owner/element/writableとrootWritableを保持し、payloadをcopyしない。scalar memoryは**実calleeの更新済みcaller prefix**+捕捉field値。scalar baselineはcaller、storage baselineは終了Frameから保持し、管理処理のscalar仕事量をvector本数+scalar個数+1追加してobserveする。
-- finish_okはfield slot/resolve/型/headerの一致、scalar capture条件、相異なるowner列/正しいModelsから実finishの成功、全選択rootと元scope外の無関係なrootのModels、更新済みcaller memoryとcaller側のbindings/slots/scopeを導く。finish成功自体は前提にしない。restored_vector/restored_scalarは実lookup/cellを示す。NProgram.constructMembersFuel/construct_of_stepsで実prepare/runFuel/finishを接続する。旧1vector用finish/constructFuel・公開Cpp/modelは未変更。
-- 正本最終build実76207終了0/121targets、新module警告0、`.cache/wip/cpp_constructor_multi_build.txt`。direct型検査実61566も終了0・出力0bytes、`.cache/wip/cpp_constructor_multi_direct.txt`。初回26263はscalar slot証明でsimp後の余分なomegaだけが失敗したため除去した。資源上限指定なし。
-- 新規登録 `tests/test_cpp_constructor_multi_finish.py` の最終実67293終了0/2tests8.849秒、`.cache/wip/cpp_constructor_multi_test.txt`。nested root/子・readonly binding保持、slot/型/scope/権限/child header/重複owner/短いまたは型の違うcaller prefixの拒否、scalarのみ/vectorのみ/空layout、一般finish_okとlookup補題を確認。実C++の2vector/2scalar構成子を生成し、prepare→stage→新finishの成功、参照引数への9の書込み、元scalar別名/readonly cell・非ゼロbaseline・無関係vector・元7を捕捉した2fields・返却vector参照の実書込み・fuel不足を検査。同じCppをUBSanでも実行した。
-- 最初の2testsはfixtureがStoreのpeak/baseSpaceの位置を取り違えたことと、InhabitedのないVectorFieldへget!を使ったことで失敗した。Storeを名前付き指定へ変更し、重複fieldを明示して修正。前turnの共用roots fixtureもstore baseline=5/peak=100の名前付き指定に修正し、新2testsはそのfixtureも再検査済み。C++や実行モデルの不具合ではない。
-- registry（59公開/869共有modules/234checks/106docs）、988Leanファイルsource audit、公開仕様baseline全同一、git diff --check終了0。全件all・独立nanodaは再実行せず、旧new0のstack overflowも未解消。
-- **Beats class全体のexportはまだ未完了**。次はBeatsInlineExecの最終FWMから各fieldのModels/resolve/headerを取り出し、この新finishへ接続する。現body_exec/stage_execの公開結果はbuffer lookup/itemsを返すが最終root tagsやbindingsを外へ出していないため、それらを保持する拡張補題または追加の最終Frame条件が必要。元APIへ成功条件として押し付けない。converterの複数vector class bundleはまだ新entry pointを使わず、テストでconstruction_fieldsのslot表と手書きdescriptorを照合した段階。descriptor生成・copy/move/destruction/総資源、child header入力、公開版切替・独立監査と全137ファイルを継続する。
-
-
-### 複数rootの構築scopeからの移譲と一括破棄（最新）
-
-- `Proofs/CppConstructorRoots.lean` を追加登録。旧 `CppConstructorFinish.finish` は選んだ1本だけを移してscopeを破棄するため、そのままBeatsの15本へ適用しない。旧関数は変更せず、新transferAll/finishRootsでowner ID・element型の列を順に移譲し、すべて移譲した後に一度だけ元scopeを破棄する。実行関数の引数に論理的なvector内容は含めず、specsで証明用View列から実行用descriptor列へ対応させる。
-- transferAll_okは異なるowner列と元scopeのModelsから、実transferRoot列の成功、全選択rootの移譲先でのModels、無関係なrootのModels保持を導く。movedAll_layoutは移譲中のstorage全体・binding表・rootWritable表を保持する。finishRoots_okは実retireScope成功と選択rootの保持、元scope外の無関係なrootの保持を合成する。flat/rows両方を扱い、rowsの子bufferも保持する。空の選択も扱い、同じ元scopeの未選択一時rootは通常どおり破棄する。資源上限指定なし。
-- 正本build実6296終了0/119targets、log `.cache/wip/cpp_constructor_roots_build.txt`。direct Lean型検査も終了0・警告0、`.cache/wip/cpp_constructor_roots_direct.txt`。新規登録 `tests/test_cpp_constructor_roots.py` の最終実69327終了0/1test1.180秒、`.cache/wip/cpp_constructor_roots_test.txt`。15本のflat roots、nested root/子buffer、未選択一時rootの破棄、他scopeのデータ保持、epoch/権限/binding表を実評価し、重複owner・誤scope・child header・誤型の失敗と一般定理の適用を確認した。初回fixtureはList.mem_consのnil分岐と未使用simp引数で失敗し、修正後に成功を回収した。
-- registry（59公開/868共有modules/233checks/106docs）、987Leanファイルsource audit、公開仕様baseline全同一、git diff --checkが終了0。既存の公開C++/生成モデル/固定仕様は変更していない。全件all・独立nanodaは再実行していない。旧new0のstack overflowも未解消。
-- **まだclass export全体の完了ではない**。次は実field slotsからのroot capture、scalar値・更新済みcaller prefixを含むcaller再配置、Beats stageの最終rootモデルとの接続、copy/move/destructionとその仕事量/peakを進める。現transferAllはFrameのbinding表を保持するため、scope移譲後のcallee root bindingsはそのままcallerのobject参照として使わず、終了処理でcaller側のroot headers/slotsを再構成する必要がある。converterの複数vector export対応、child header入力、公開版切替・独立監査と全137旧ライブラリの残件も継続。
-
-
-### 確保・stage・root prepareを含む仕事量とpeak（最新）
-
-- `Proofs/BeatsAllocationResources.lean` を追加登録。fill_resourcesは実fillVectorの評価からscalar仕事量/peak、liveS保持、storage baseline保持、capacity+root headerを含む常駐領域とstorage仕事量増分、storage/全体peakを導く。既存clone_costと同じ実確保stateの式を照合してliveSpace増分を得るもので、実C++に余分なcopyを挿入していない。
-- Bounds.refl/trans、prefix_bounds/resourcesで15確保を合成。scalar仕事量増分≤319（2*count.nodes+2*value.nodes+3を15個足した上界）、常駐領域/storage仕事量増分=G=12*(8*n+8)+783。scalarPeak≤S=max 初期scalarPeak (liveS初期+319)、storagePeak≤T=max 初期storagePeak (初期liveSpace+G+1-初期baseSpace)、全peak≤Q=max 初期peak (S+T)。baseline減算は自然数の飽和減算のまま扱う。実成功を仮定するfill補助lemmaを使うが、prefix_resources自身はRealizes/Inputから実prefixの成功も導く。
-- stage_resourcesはstage_execの確保結果と同じ実prefix結果を照合し、実確保後outに依存しない閉じた上界へ合成する。scalar仕事量増分≤4*n*45414+419、storage仕事量増分≤G+4*n*18+10。stageScalar=Q+S+初期caller-memory長+100、stageStorage=T+初期liveSpace+G+1で各peakを抑え、全peakは両者の和以下。初期状態を固定したときnに線形である。
-- total_workはstage全体を**初期work+181824*n+1308**以下とする。prepare_resourcesはroot入力の実prepareとstage正常終了・BRepSも合成し、prepareの増分3を加えて**元caller.work+181824*n+1311**以下を得る。root prepare後のpeak式のcalleeは元callerから明示計算するpreparedであり、実確保後の未知状態ではない。抽象仕事量とcell領域であり実測時間/bytesではなく、class export/finish/copy/move/寿命の資源は含まない。
-- 正本build実45798終了0/1165targets、新module警告0、log `.cache/wip/beats_allocation_resources_build.txt`。新moduleに資源上限指定なし。確保/構築回帰の最終実62829終了0/7tests15.451秒、`.cache/wip/beats_allocation_resources_test.txt`。空入力/長さ3の実prefix、scalar/storage両baselineが非ゼロの状態で仕事量・liveS・liveSpace・storage work・各peakを照合し、閉じたstage/root prepare上界の一般適用を型検査した。
-- 初回回帰47436は新fixtureのrecord改行構文、次の99175はscalar StateのbaseMemory/peakの位置を取り違えたfixtureで失敗した。新fixtureを修正し、既存root caller fixtureもbaseMemory=0/peak=4へ直し、baseline≤memory長のguardを追加してから全7testsの終了0を回収した。C++や実行モデルの定義の不具合ではない。
-- registry（59公開/867共有modules/232checks/106docs）、986Leanファイルのsource audit、仕様baseline完全一致、新module警告0を確認。公開C++/生成model/固定仕様は未変更。新全件gate・独立nanodaは再実行していない。追跡中のbuild/testプロセスはない。
-- 次はnested rowのchild header入力、class export/finish/copy/move/寿命とその資源、公開版切替・固定仕様レビュー、旧new0の独立stack overflowの分割/改善と独立検証を進める。公開版のint確保長の入力範囲縮小は未解消。全137旧ファイルの検証も未完了。
-
-### 元callerからroot入力のreadonly prepareとstage
-
-- `Proofs/BeatsInputPrepare.lean` を追加登録。元callerのroot VOKGから、caller bindingのwritable=true/falseの両方を許して実prepareを導く。parametersは[vector s64 false]で、登録済みBeatsConstructionStage.SegmentTreeBeats_construct0.parametersとのrfl一致を回帰で要求する。slot/binding/owner番号、既存scalar/参照alias/scopeは任意で、元の最大権限とstorage/forest/rootWritableを保つ。callee bindingだけreadonlyとなる。
-- layoutは実prepared状態の1vector slot/binding、scalar formal bindingsなし、callerPのmemory prefix、同じbaseMemory、caller.scope+1を示す。prepared_family/real/input/entryで入力rootのモデルと正しいRealizes/Input/Entryを作り、strict/base条件も元callerから引き継ぐ。元callerへEntryの配置を追加で要求しない。prepared_workはprepareのscalar仕事量増分がちょうど3であることを示す。
-- prepare_stageは実prepareから実15確保とインラインstage全文の正常終了・BRepS・15fieldの実buffer内容と元入力buffer内容保持を導く。callerのowner数をそのままnew fieldの開始ownerとし、caller bindingsの並びや余分なrootsを削っていない。class objectとしてexport/finishする証明はまだない。
-- **root grantの範囲の入口接続**。nested vectorの行をborrowしたchild header入力は現Flat/FWMのroot tag条件では扱えず、元C++が許す利用形態として未検証のまま残る。row入力を削って解決扱いにしない。一般のborrowed flat-ownerモデル/readonly入力slotの表現と既存root用FWMの接続が必要。元の一般APIを狭めて公開版へ切り替えない。
-- 正本build実7468終了0/1164targets、新module警告0、log `.cache/wip/beats_input_prepare_build.txt`。確保/構築回帰6tests実43945終了0/14.778秒、`.cache/wip/beats_input_prepare_test.txt`。owner2/binding3/slot2、無関係scalarと参照alias、scope2のcallerを使い、可変/readonly参照から同じreadonly calleeを作ること、最大権限/storage/memory prefix/owner cursorの保持、prepareからstageまでの一般適用を確認。新moduleに資源上限指定なし。
-- registry（59公開/866共有modules/232checks/106docs）、985Leanファイルのsource audit、仕様baseline完全一致、新module警告0を確認。公開C++/生成model/固定仕様は未変更。新全件gate・独立nanodaは再実行していない。追跡中のbuild/testプロセスはない。
-- 次はrow等のchild header入力の一般性、確保中scalar仕事量/peakを含む全体資源、class export/copy/move/寿命、公開版切替・固定仕様レビューと独立監査を進める。公開版のint確保長の入力範囲縮小は未解消。全137旧ファイルの検証も未完了。
-
-### 実15確保とインラインstage全文の実行・表現
-
-- `Proofs/BeatsInlineFrame.lean` を追加登録。Entryは準備済み1vector入力の内部配置（p.slot=0、次binding=1、slot長=1、scalar formal bindingsなし）。allocation ownersとscalar caller-memory prefixは任意。normalized_frameは実binding表を先頭16個だけ回した表、allocated_slots/normalized_slotsは実slot表とidentity表、normalized_fwm/normalized_qsは実storage/権限/strict条件/全bufferと実memory/bindingsからFWM/QSを導く。prefix_environmentは初期callerから実15確保、最終Realizes/正確なstorage work、CVecs/FWM/QSを同時に作る。
-- `Proofs/BeatsInlineExec.lean` を追加登録。body_execはctor_rep_wideとsoundM_ownedを正しい初期FWM/QSへ適用し、両viewのOutcome等式から**実インライン本体の正常終了**を得る。BRepS、scope、全16vectorの実lookup/最終内容、本体scalar/storage workとpeakを扱う。追加のprepare/finishやscope増分はない。
-- stageは15本のfieldStmtの後へこの本体を直接つなぐ。field_control/prefix_continueは実prefixと本体の成功から、余分なskipを挟まないstage全文のrunFuelを構成する。stage_execは正しい初期caller/Entryから実15確保とstage全文の正常終了・BRepS・全16vector最終内容を導く。確保後の不変条件や成功は前提にしていない。n≥1、元の4*n<2^31と従来のInRangeを使い、8*n+8<2^31は要求しない。Entryを元callerからreadonly prepareで導く接続は未完了で、元APIに追加前提として押し付けて完了扱いにしない。
-- 本体scalar work≤4*n*45414+100、確保込みstorage workの増分≤12*(8*n+8)+783+4*n*18+10。peakは確保直後outを基準にscalarBound=out.peak+out.scalars.peak+caller-memory長+100、storageBound=out.storage.peak+out.liveSpace+1、全peak≤両者の和。確保中のscalar work/peakを初期callerだけの閉じた全体上界へ合成する部分は残る。モデル上の資源であり実測ではない。
-- Frame最終正本build実56325終了0/1162targets、`.cache/wip/beats_inline_frame_build.txt`。Exec正本build実15499終了0/1163targets、`.cache/wip/beats_inline_exec_build.txt`。新modules警告0、資源上限指定なし。草案はList.rangeのlookup補題へ必要なboundを明示し、prefixはrunFuelを全展開せずsequenceの一段だけをchangeして正常終了へ合成した。
-- 実52635終了0で直列回帰を完了。allocation/frame/stage5testsは12.110秒、candidate3testsは29.161秒、log `.cache/wip/beats_inline_stage_tests.txt`。通常/ASan/UBSanの既存3000×60操作と大値、元サイズ境界、構成子以外の生成関数一致に加え、**候補からのstage全文とBeatsInlineExec.stage 0 15のrfl一致**を要求する。n=2^28のstage正常終了の記号的適用例、実normalized Frameのbindings/slots/scalars/scope/storage/work保持も成功。巨大配列の実確保/測定はしていない。
-- registry（59公開/865共有modules/232checks/106docs）、984Leanファイルのsource audit、仕様baseline完全一致、新modules警告0を確認。公開C++/生成model/固定仕様は未変更。新全件gate・独立nanodaは再実行していない。追跡中のbuild/testプロセスはない。
-- 次は元callerからのreadonly prepare/Entryの導出、確保中scalar仕事量とpeakを含む全体資源、class export/copy/move/寿命、公開Cpp/model切替と固定仕様レビュー・独立検証を進める。公開版のint確保長の入力範囲縮小はまだ未解消。全137旧ファイルの検証も未完了。
-
-### binding viewとCoreCommand全体のrunFuel
-
-- `Proofs/BeatsBindingRun.lean` を追加登録。CoreStmt/CoreCommandは既存BeatsSlotCycleの定義をそのまま使い、skip/declare/assign/write/check/ret/retVector/retUnit、sequence/scope/branch/while/breakを扱う。vector確保/reserve/append/copy等とinvokeScalarはこの述語が拒否する。全構文一般の意味保存とは扱わない。
-- stmt_long/run_longは各実成功後も16bindings以上を保つ。release_longは評価後/開始時の両方の長さ、leave_longは内側/外側の両長さを使い、rowの一時bindingとscope復元後も後続へ条件を渡す。stmt_commuteはretVectorもinverse binding番号から同じowner/elementを返す。run_viewは任意fuelでNState全体/returned/breakingに加えfault/exhaustedも対応するOutcome等式で、全体の成功を仮定しない。
-- `BeatsWideCall.body_view/inline_body_view` を追加。実WideCtorCmdがCoreCommandの範囲に入ることを使い、slot位置の置換とbinding viewの両方を実インライン本体へ合成した。元の状態からview(permuted state)への実runFuel対応で、余分なprepare/finishやscope増分はない。**まだview後の初期FrameからFWM/QSを構成していない**ため、数学的本体証明との合成・実stage全体の成功/表現/資源は未完了。
-- 最終正本build実94415終了0/1160targets、新/変更modules警告0、log `.cache/wip/beats_binding_run_build.txt`。初回83399はwrapperでprogram.bodyを明示展開していなかったためrewrite失敗、simp only [program]へ修正後に成功。新moduleに資源上限指定なし。
-- 実63279終了0で直列回帰を完了。slot/binding/scope8testsは8.643秒、allocation/call4testsは9.213秒、log `.cache/wip/beats_binding_run_tests.txt`。複数fuelでloopの局所宣言/実書込み/scope復元、break/return/check省略、fault/exhausted、vector/unit returnと無効slotをOutcome全体で比較し、実wide本体の両view合成も一般例で型検査した。
-- registry（59公開/863共有modules/232checks/106docs）、982Leanファイルのsource audit、仕様baseline完全一致、新/変更module警告0を確認。公開C++/生成model/固定仕様は未変更。新全件gate・独立nanodaは再実行していない。追跡中のbuild/testプロセスはない。
-- 次は実15確保後のFrameについてview(permuted state)のbinding表/slotsを示し、FWM/QSとsoundM_owned、数学的なwide本体を実stageへ合成する。元callerからreadonly入力prepare、確保を含む全体資源、class export/copy/move/寿命、公開版切替・独立監査と全137旧ファイルは未完了。
-
-### binding viewと宣言/代入/書込み・release/leave
-
-- `Proofs/BeatsBindingStmt.lean` を追加登録。rotate_takeは先頭16bindingsの回転と16以上のprefix takeの対応を示す。release_viewは評価後の一時binding解放、declared_view/enter_viewはscalar宣言とscope進入を対応させる。declare_run_view/assign_run_view/write_run_viewはOption/NStep全体の等式で、型変換・権限・添字等の失敗も含む。
-- writeは右辺→container→添字の順を保ち、実Frame.elementRef/write、実配列更新、一時bindingの解放と課金まで接続する。commit_bindings/write_bindingsとwriteValue_growthで途中のbindings条件を引き継ぎ、最後はtoReleasedStepで元のbinding長へ戻す。解放後の長さが途中の長さ以上とは仮定しない。
-- leave_viewはouter/innerの16bindings以上を条件に、任意のRet（戻りvectorを含む）と成功・失敗を対応させる。exitFrame_rebind/exitFrame_bindingsは実transferRoot/retireScopeに基づき、leave_normalはhelperと元NState.leaveの実定義の一致を示す。scalar memory長/型prefixの検査を保ち、vectorの所有権移譲とscope破棄も扱う。元のCppNestedProgram側の定義は変更していない。
-- 正本build実96988終了0/38targets、新module警告0、log `.cache/wip/beats_binding_stmt_build.txt`。slot回帰7tests実39014終了0/7.282秒、`.cache/wip/beats_binding_stmt_test.txt`。宣言/代入/実配列書込み、readonly/変換失敗、rowのRHS/target両方で増えた一時bindingの解放、正常/異常scope復元、内側のvectorが実際に外側へ移る返却を確認した。新moduleに資源上限指定なし。
-- registry（59公開/862共有modules/232checks/106docs）、981Leanファイルのsource audit、仕様baseline完全一致、新module警告0を確認。公開C++/生成model/固定仕様は未変更。新全件gate・独立nanodaは再実行していない。追跡中のbuild/testプロセスはない。
-- 次はcheck/ret/retVector/retUnit/skip等のprimitiveと16bindings条件の保存、制御全体のrunFuelを合成する。初期実Frame/FWM/QS、soundM_owned、元インラインstageのrunFuel、readonly入力prepare、確保を含む全体資源、class export/寿命、公開版切替・独立監査と全137旧ファイルは未完了。
-
-### binding viewとContainer/NExpr全構文の実評価
-
-- `Proofs/BeatsBindingExpr.lean` を追加登録。bindChild/child/size/readValueのFrame対応とbindings長の単調性を証明した。rowの新bindingは旧bindings長（16以上）へ追加され、uncycleでも同じ番号になる。container結果はuncycle、整数結果はidで写すEvalRelを用い、bind/precharge/finish/frameStepからContainer/NExprの全構文を相互再帰で合成した。cast/targetCast/unary/binary/divrem/logical、size/read、再帰的rowを含む。
-- expr_eval_view/container_eval_viewはOption全体の等式で、初期16bindings以上だけを要求し、妥当性や成功を仮定しない。Frameの新binding/権限/storage、scalar状態、仕事量/peakを含む結果NState全体が対応する。expr_fault_viewは失敗の同値、expr_binding_growthは実成功後のbindings長単調性。元のBeatsSlotCycle側の式評価/命令runFuelは変更していない。
-- 正本build実13172終了0/37targets、新module警告0、log `.cache/wip/beats_binding_expr_build.txt`。slot回帰6tests実81386終了0/5.853秒、`.cache/wip/beats_binding_expr_test.txt`。算術/型変換/targetCast/divrem/短絡、型変換・ゼロ除算・範囲外失敗、rowの新binding16と値/長さ、readonly親から子bindingへの権限継承、全結果状態の対応を確認した。
-- 草案ではsizeの固定u64判定を分岐ごとに直接展開するとkernel深度に達したため、Bool判定と整数値を抽象化したchecked_frame/checked_growthの小補題を適用し、標準資源上限のまま解消した。成功を追加前提にしたり判定を省いたりしていない。新moduleに資源上限指定なし。
-- registry（59公開/861共有modules/232checks/106docs）、980Leanファイルのsource audit、仕様baseline完全一致、新module警告0を確認。公開C++/生成model/固定仕様は未変更。新全件gate・独立nanodaは再実行していない。追跡中のbuild/testプロセスはない。
-- 次はbinding viewに対する宣言・代入・書込み・release/leaveと命令run/runFuelを合成する。初期実FrameからのFWM/QS、soundM_owned、元stageのrunFuel全体、readonly入力prepare、確保中を含む全体資源、class export/寿命、公開版切替・独立監査と全137旧ファイルは未完了。
-
-### binding参照の対応と同一scope所有の実行定理
-
-- `Proofs/BeatsBindingCycle.lean` を追加登録。rebindは先頭16bindingsをrotateし、Reference.slotと各vector slotにuncycleを適用する。resolve/elementRef/grant/read/write/commit/updated/addBindingのOption全体の対応を証明し、readonly/古いepoch/誤ったowner/範囲外の失敗も含む。owner・buffer・forest・権限は同一。16以降のbindingはそのままで、末尾追加にも対応する。rebind/restoreとreference/unreferenceの逆変換も証明した。
-- viewはslotの位置を変えず、binding番号を写す。scalarSlot/scalarCell、vector slot→resolve、work/charge/observeとslot長を保つ。通常の確保後状態を既存BeatsSlotCycle.permuteで見るとslots=[1..15,0]で、さらにviewを適用してidentityのbinding番号と回転した表へ対応する。**まだ式eval・命令run/runFuel・scope/leave・一時bindingのrelease全体のview対応はない**。Frame primitivesの対応だけでインライン本体全体を完成扱いにしない。
-- 追加でscopeの差を特定した。旧MultiVec.soundMはmv.sc≤sc、FWM.strictは全context<mv.scなので、context=scで確保したfieldにはそのまま適用できない。`Proofs/MultiVecOwnedSound.lean` のfresh_ownedはmv.sc≤sc+1から内側scope sc+1にrootがないことを導く。soundM_ownedはこの条件で同じRunsTo/QpostM（状態・正常実行・仕事量・領域）を証明する。旧soundM/FWM/公開定理の型は変更せず、成功やscope退出を追加で仮定しない。新2modulesとも資源上限指定なし。
-- binding正本buildは実コマンド終了0/36targets、log `.cache/wip/beats_binding_cycle_build.txt`。scope正本の最終build実86337終了0/71targets、`.cache/wip/multivec_owned_sound_build.txt`。新modules警告0。slot回帰を5testsへ拡張し、最終実86462終了0/4.765秒、`.cache/wip/beats_binding_owned_test.txt`。binding順だけの変更で古いgrantが無効になる例、両方を写した読書き/他owner保持、各種失敗、tail binding/逆変換、slotとbindingの別写像、同一scopeのrootを保持する実leave、owned soundnessの一般適用を確認した。初回scope fixtureは不足したnamespace openで失敗し、修正後に全5testsの終了0を回収した。
-- registry（59公開/860共有modules/232checks/106docs）、979Leanファイルのsource audit、仕様baseline完全一致、新modules警告0を確認。公開C++/生成model/固定仕様は未変更。新全件gate・独立nanodaの成功は主張しない。追跡中のbuild/testプロセスはない。
-- 次はviewを式/命令列/leave/releaseへ合成し、soundM_ownedと初期配列/実Frameからインライン構築stageのrunFuelを導く。readonly入力prepare、確保を含む全体資源、class export/copy/move/寿命、公開版切替、独立検証と全137旧ファイルの残件も継続。
-
-### 正規化したwide構築本体の実prepare/callFuel
-
-- `Proofs/BeatsWideCall.lean` を追加登録。programはparameters=vparams cty cw 0 16、result=unit、body=WideCtorCmd 16。writable_bodyを標準上限で証明。prepare_frameは実prepareの新binding表bl cty V vsc cw 0 16、同じstorage/rootWritable、slots=slN 16 0、scope=caller.scope+1とFWMを導く。実callerの入力→fieldのbinding表を、field→入力の表と同一視していない。
-- callはCVecs/BFreshSから元の4*n<2^31でprepare/callFuelの正常終了、BRepS、ScalarPostMBを導く。L<2^31は使わない。本体+呼出しのscalar仕事量≤4*n*45414+134、storage仕事量≤4*n*18+10、元caller memory/bindings/slots/scopeの復元を含む。allocated_callは実fillPrefixの正常終了とこの明示的呼出しを合成し、全16vectorの最終内容とstorage仕事量（確保分storageWork n 0 15を加算）を得る。確保中のscalar work/peakはまだ全体上界に合成していない。
-- **これは確保後の本体を独立した呼出しで実行する中間モデル**。候補のインライン構築stageが余分なprepare/finishを持つとは扱わない。scope、scalar prefix、binding表、仕事量を含む状態/view対応を示し、元stage全体のrunFuelへ接続する作業は残る。元callerからreadonly入力参照をprepareする接続、class export/copy/move/寿命、公開版切替・固定仕様レビュー・独立監査も残る。
-- 正本build実69575終了0/1156targets、新module警告なし、log `.cache/wip/beats_wide_call_build.txt`。確保回帰4tests実75771終了0/9.159秒、`.cache/wip/beats_wide_call_test.txt`。実prepareのbinding順[1..15,0]、元caller順[0..15]、identity slots、storage/権限保持、readonly入力、scope増分、初期callerから実確保+正規化呼出しの正常終了/表現/復元を得る一般例を確認した。programの引数が旧generated new0と、bodyがWideCtorCmdとrfl一致することも要求する。
-- registry（59公開/858共有modules/232checks/106docs）、977Leanファイルのsource audit、仕様baseline完全一致、新module警告0を確認。新moduleの資源上限指定なし。公開C++/生成model/固定仕様は未変更。全件gate・独立nanodaは再実行していない。追跡中のbuild/testプロセスはない。全137旧ファイルの検証は未完了。
-
-### 実確保からCVecs全条件と初期fresh条件
-
-- `Proofs/BeatsAllocationArgs.lean` を追加登録。slot/binding/owner/scopeを別々のoffset関数として定義し、initialの各fieldが実fillPrefixの内容と一致するinitial_field/ctor_fieldを証明した。cvecs/prefix_cvecsは正しい初期callerから実runFuel 16の正常終了と全16vectorのCVecs（ok/dist/items/valid/limit/owner/small）を導く。実Frame.bindingsの順を入れ替えたり、slot番号とbinding番号を同一視したりしていない。
-- initial_valid/initial_capacities/initial_freshは実node容量8*n+8とstack容量256のBFreshSを示す。元の4*n<2^31を使い、8*n+8<2^31は要求しない。CVecsの入力p.writable=falseは構築用に準備済みのreadonly参照の条件で、p.maximumは保持する。入力buf.limit=sizeLimit(s64)は通常のstd::vector初期契約であり、fieldのlimitは実配置から導く。prefix_argumentsまでの一般証明は入力writableを限定していない。元callerからreadonly参照をprepareする接続を公開API制約と取り違えない。
-- 最終正本build実10112終了0/1132targets、新module警告なし、log `.cache/wip/beats_allocation_args_build.txt`。確保回帰を3testsへ拡張、最終実12902終了0/6.331秒、`.cache/wip/beats_allocation_args_test.txt`。genericな初期callerからのCVecs、slot/binding/owner/scopeが異なるoffset例、全16配列の内容、n=2^28の記号的fresh例を確認した。新moduleに資源上限指定なし。草案のfresh証明は通常simpによるreplicate展開で深度に達したため、長さのsimp onlyへ分けて解消。初回の新fixtureはrecord構文/未指定数値引数で失敗し、修正後に全3testsの終了0を回収した。
-- registry（59公開/857共有modules/232checks/106docs）、976Leanファイルのsource audit、仕様baseline完全一致、新module警告0を確認。公開C++/生成model/固定仕様は未変更。独立nanodaと新全件gateは再実行していない。追跡中のbuild/testプロセスはない。
-- 次はこのCVecsをprepare/実binding表/構築本体へ接続し、確保を含む全体資源とclass export/寿命を扱う。新旧binding表の順の差は未解消。全137旧ファイルの検証も継続中。
-
-### 確保前からのscope/base条件と16vectorの引数条件
-
-- `BeatsAllocationLayout.fill_layout` はscalar memory/bindings/scopeに加えbaseMemoryの保持を示す。`declareRoot_strict` は最終rootのlookup/parentから既存root・新root・範囲外を分類し、旧子vectorを含む全ownerのscope条件を保つ。未知ownerのcontext/rootOwnerを再帰simpし続ける形にはしていない。
-- `prefix_conditions` は初期callerのstrict(scope)とbaseMemory≤memory.lengthを実fillPrefixの正常終了後まで引き継ぐ。`input_argument` は保持された実入力bufferのVOKG/Buffer.Valid/items/ownerを導き、p.writable/p.maximumをそのまま保つ。`prefix_arguments` は確保前の条件のみから実runFuel 16、最終Realizes、正確なobjects/storage work、15fieldと入力のVOKGを同時に導く。確保後のstrict/baseや成功を仮定しない。**CVecsのdist/items/valid/limit/owner/small全体の合成とbinding順のviewは引き続き残る**。
-- 正本build実64299終了0/954targets、変更module警告なし、log `.cache/wip/beats_allocation_conditions_build.txt`。確保回帰2tests実85672終了0/4.321秒、`.cache/wip/beats_allocation_conditions_test.txt`。初期条件から全16vectorのVOKGを得る一般例と、既存root/子vector/新root/範囲外ownerのcontext例を追加した。証明器の資源上限は変更していない。公開C++/生成model/仕様baselineは未変更。新全件gate・独立検証の成功は主張しない。
-- registry（59公開/856共有modules/232checks/106docs）、975Leanファイルのsource audit、レビュー済み仕様JSONとの完全一致、git diff --checkは終了0。新規登録ファイルはなく、既存moduleと既存回帰fixtureを拡張した。追跡中のbuild/testプロセスはない。
-
-### 確保後の正確なbuffer配置と呼出し条件
-
-- `Proofs/BeatsAllocationLayout.lean` を追加。Flatモデルにはcapacity/limit/epochがないため、CVecsのlimit条件を仮定で埋めず、**実fillVectorの結果からobjects配列・forest・storage work・scalar memory/bindings/scopeを取り出すfill_layout**を証明した。prefix_layoutは15確保を合成し、古いobjectsにfieldBuffer列をappendすることとstorageWorkの正確な増分を示す。新bufferはcapacity=count、limit=sizeLimit(fieldTy)、epoch=0。buffer_atで新lookup、old_bufferで既存bufferの全metadata保持を得る。
-- storageWork_fifteenは **12*(8*n+8)+783**。これは保存処理の実行モデル上の仕事量で、scalar評価を含む全work/peak上界ではない。field_argumentはactual_fieldと正確なbufferを組み合わせ、15fieldのVOKG、Buffer.Valid、limit/ownerを構成する。通常のcaller条件strict(scope)とbaseMemory≤memory.lengthは明示的に要求し、prefixがこれらを引き継ぐ証明はこれから。入力vectorを含む16個のCVecs全体はまだ構成していない。
-- 正本build実85022終了0/954targets、新module警告なし、`.cache/wip/beats_allocation_layout_build.txt`。test_beats_allocation.pyを2testsへ拡張、最終実84097終了0/3.980秒、`beats_allocation_layout_test.txt`。全bufferのcapacity/limit/epochとobjects配列、storage work、既存inputのcapacity=5/limit=7/epoch=9を保持するmodel上の例、genericなprefix実行→field引数条件を確認。初回の回帰例でomegaが不要な大きい状態仮説まで展開して再帰深度に達したため、Nat.add_assocを使う直接の等式変形へ修正した。資源上限は変更していない。registry/source audit/diffcheck成功、公開仕様baseline全同一。
-- 同じturnで独立20457の終端を回収した。**旧new0単独はSIGABRT/stack overflow**。詳細は冒頭。各節の稼働中の記録は当時の観測であり、現在の状態ではない。
-
-### 実15確保とFrameへの接続
-
-- `Proofs/BeatsAllocation.lean` を登録。fieldTy/fieldCount/fieldValueとcountCode/valueCode/fieldStmt/fillPrefixは実candidate stageの15確保と全文rfl一致する。12node配列は8*n+8、stack3本は256、lvalだけINF。型・値・sizeLimit、実入力sizeからcount/valueの評価を元の4*n<2^31で証明した。
-- statesが各確保後の論理状態を記録し、states_inputは入力slot/parameter/内容を保つ。input_of_realにより入力owner<次ownerは正しいcaller表現から導ける。**prefix_actualはRealizes/Inputから実runFuel 16の正常終了、15owner/15binding/15slotsの増加を導く**（確保成功を前提にしない）。開始slots=1なら終了16。actual_fieldは全fieldのFlat実Frameモデル・writable root binding・slot・rootWritable、actual_inputは入力内容保持を示す。物理配列を仮定してBFreshSとするだけの証明から前進した。
-- 正本build実44392終了0/952targets、新module警告なし、`.cache/wip/beats_allocation_build.txt`。新規登録test_beats_allocation.py実81857終了0/1test2.004秒、`beats_allocation_test.txt`。空入力/長さ3のreadonly入力から15確保を実評価し、全配列の初期値・型・権限・owner/binding/slot、入力保持と燃料不足を確認。候補3tests実93608終了0/29.325秒、`beats_allocation_wide_test.txt`。実sourceの15確保prefixとfillPrefix 0 15のrfl一致を追加。registry/source audit/diffcheck成功、公開仕様baseline全同一。
-- **次の接続でbinding順の差を同一視しないこと**。入力だけを登録した通常の開始状態では、prefix後のFrame.bindingsは入力→15fields、slotをcycleで見ると[1..15,0]を参照する（一般のcallerについてはstates_binding/actual_fieldのoffsetを使う）。一方、旧MultiVec.FWM.bindings（MultiVec.lean:105）はList.range nvをbindOfへmapし、slN（同:28）はvector indexとbinding indexが同じ順を仮定する。新actual_fieldから柔軟なCVecs（SegmentTreeBeatsCall.lean:345、sl/vb/Vを別に取る）を組むか、binding表のviewと評価対応を追加して本体へ接続する。slot置換だけで旧FWMを満たすと扱わない。
-- 確保を含む全体のwork/peak上界、class export/copy/move/寿命、公開Cpp/modelへの切替と固定仕様レビュー、独立監査/全件gateは残る。新moduleは標準資源上限で証明し、大規模配列を実確保する検査はしていない。独立20457は当時稼働中だったが、後にstack overflowで終了1。詳細は冒頭。
-
-1. 独立new0のstack overflowを依存宣言・式の分割で特定・改善する。20457は終了1を回収済み。上限を増やしたり同じ長時間検査をそのまま再実行したりして解決扱いにしない。
-2. wide候補の公開版への切替を完成させ、元のintサイズ範囲を復元する。補助実行モデルでは構築本体全体とBRepSまで接続済み。次は実確保/Frame/callerとの接続と、旧model依存の整理を進める。
-3. slot置換はCoreCommand範囲のrunFuel全体、実15確保は正確なbuffer/Frame/初期配列/16slots、初期scope/base条件の引継ぎと15field/入力のVOKGまで接続済み。入力を含むCVecs全条件と実初期配列のBFreshSまで接続済み。正規化した明示的callのprepare/binding表/FWM/本体/復元までは接続済み。binding表/保存参照のFrame primitives対応と同一scope所有のsoundM_ownedまで追加済み。Container/NExpr全構文のeval view対応まで追加済み。宣言/代入/書込みとleave/releaseのview対応まで追加済み。CoreCommand全体のrunFuelと実wide本体の両view合成まで追加済み。view後の実初期FWM/QSとインラインstage全文まで追加済み。root callerのreadonly入力prepare/Entryも接続済み。stageとroot prepareを含む仕事量/peakの閉じた上界も追加済み。次はchild header入力、class export/寿命とその資源をつなぐ。型検査・構文一致だけで完了としない。
-4. 新正本のLean kernel replay/独立監査/全件all/台帳を確認する。全件中は正本を固定し、実terminal0を回収する。
-5. 他の旧API/型/機能/入力範囲の違反と未検証ヘッダーを続ける。lazy/segment treeの汎用M/Fと述語検索、Tree全体、SquareMatrixクラス、set/multiset/geometry等、多数未完了。[違反一覧](../experiments_status.md)が現対象。sum版Beatsも別途未検証。
-
-旧SquareMatrix比較/.pow最終二乗の修正候補もcacheにあるが、元ファイルは未修正。Fenwick構築・SquareMatrix単項マイナスはClaude Codeが修正済みで、inventory hash/回帰checkも更新済み。詳細・過去の全ログ/ハンドルは履歴の該当節を検索する。
+# 作業引き継ぎ
+
+更新: 2026-11-09。時系列ログを圧縮して上書きした。目的は **experiments の全137ファイルを検証し、元API・機能・汎用性を保って移植すること**。一部のモデルやCI成功だけで完了としない。
+
+## 現在の作業
+
+1. `library/`の59部品を原本に似た12分野へ移動し、隣接するTOML・source/include・テスト・文書・再帰登録/cache・配布ZIPを更新済み。本handoffも原本ごとの表へ圧縮済み。
+2. 配置変更で見つかった旧ModIntモデルのずれとnested oracleの旧パス参照を解消。最新の全件gateは実75688が終了0（853.562秒）。inventory137・Lean1793build・59CPP/59bridge・共有242checks・52416宣言の命題/定義/公理依存・両kernel（nanoda49238宣言）・ZIP59header単独/一括includeが成功。証拠は `.cache/wip/library_layout_20261109/final_gate/{checks_state.json,all.log,package.log,archive.log}`。この成功は原本137ファイル全体の移植完了を意味しない。
+3. `monoid_lazy`の元nested API候補（experiments/verification/algebraic_structure/monoid_lazy.hpp、原本とnamespace/includeだけ異なる）を検証中。1field値構築とRangeAdd::idの任意caller証明を追加し、原本/候補の6型ずつを検査した実46323は2tests/380.630秒終了0。kernel3857×8/3885×4・C++/UBSan・入力hash不変。値構築総IR work≤引数式nodes+6（literalは7）、idは変換/scope込み≤9、raw need=P.length+7。scalar/vector・権限・const結果・scope/peakを保持。RangeSetのvalue/default/id（2field）を27rootsで共通化し、3入口のprepare→body→field export・const/scalar/vector保持・work/peakがLean compile成功。総IR workは値構築≤式nodes+9、既定≤9、id≤10。実5160で原本/候補両familyの再生成/kernel/UBSan検査中（`.cache/wip/set_record_ctor_20261109/registered/active_job.json`）。対象を固定し同じhandleをpollする。Sum構築/e/op/apply・MaxMin op/e/apply・Add/Set composeは既存一般証明へ接続済み。任意T/M・strict identity/lifetime・公開切替・原本全体は未完了。全件gateは後続変更前のsnapshot。原本1ファイル全体の移植完了前にはpushしない。
+
+## 判定と作業制約
+
+- **公開59部品**と**原本137ファイル（header66/template6/driver65）**は別の単位。公開部品の検証があっても元class/API・任意T・全lifetimeの完了を意味しない。表の「部分」は原本全体未完了。
+- 既存の大量の変更を保持する。`MEMORY.md`、cache、ツール実体、ローカル測定値は公開候補に含めない。新commit/pushなし。HEADは `5bf952dff99f102e9aea74aa0d096ac953c5cdec`、最後に確認したorigin/mainは `096d2902959f2607b39baee5c46e786feb31db70`。
+- push粒度は原本1ファイル全体の移植完了。機密情報検査→commit→手動承認push→対象SHAのActions/配布物終了確認。[Git手順](git_workflow.md)を守る。
+- リクエスト量を抑え、agentを増やさない。重いjobは1本、低優先度・offline。Lean1thread、nanoda固定2threads/既定16MiB。資源不足は上限増加で回避しない。観測timeoutだけでjobを再起動しない。
+- コンテストサイトへテスト/CIから通信せず、この環境から提出しない。機密値をログへ出さない。
+
+## 重点項目・再開地点
+
+| 項目 | 確認済み | 残件・次の手 |
+| --- | --- | --- |
+| monoid_lazy / Sum | RangeSum構築、friend op、Add/Set compose、Add/Set applyの全fieldを任意callerへ接続。readonly/alias・const結果・scalar/vector保持とwork/peak | 任意T/M・厳密object identity/lifetime・元のnested class公開API全体を復元 |
+| monoid_lazy / MaxMin | Add/Set×Max/Minのop/e一般callerとmember templateの全field返却。RecordArgumentで同一TUの宣言ID/patternを照合しmember pointer型もcompilerで確認 | Add/Set apply<M>は任意caller exportまで一般証明済み（work≤14/21）。元nested API候補はexperimentalへ配置済み。候補のSum/MaxMinとcomposeは一般証明接続済み。1field値構築/RangeAdd idも一般caller済み。RangeSet value/default/id、任意T/M・strict identity/lifetime・公開切替は未完了。copy/値構築のconditionalは選択枝だけ実行。副作用条件・入れ子record conditional等は未対応として拒否 |
+| Group/Monoid | hidden friend・既定構築・汎用型制約を復元。LLモデルと一般caller、float単位元C++回帰 | 任意T・浮動小数Lean契約/誤差・strict lifetime。原本2系統の差を保って監査 |
+| ModInt | 原本/移動後ヘッダはバイト同一、移動前配置と移動後からの生成モデルも同一 | 生成モデル11定義を再生成済み。Powのloop一般定理を追加セルのscope除去込みで更新し従来の数値上界を維持。Div/全Opsの一般定理もbuild成功。独立kernel36roots/6172宣言も成功。全件gateも成功。評価を消して照合だけ合わせない |
+| Beats | 元構築の15vector/2scalar、初期callerからの資源上界、export・buffer保持・6操作の呼出し/receiver復元 | Safe条件導出、任意更新列・償却、全無関係vector保持、child入力、class converter/寿命・公開切替・独立監査 |
+| Tree | 利用者のLCA上限を実表size()-1へ修正した変更を保持。全小木/境界/任意root・全対C++、全行降下の一般数学定理 | 元class全体のC++由来生成、build_ancestorのsingleton assert、cost_depthの型、直径/全API・lifetimeは未 |
+| Fenwick/UnionFind | 公開クラスで元APIの保持を改善。Fenwick構築の範囲外と+=のみの型を修正。UnionFindの元class/コピー/receiverを監査 | 原本ファイル全体の完了監査、任意型/厳密lifetime。部分関数の成功を全API完了にしない |
+| SegmentTree/Lazy | 現公開policy版は部分的に検証済み | 元のobject型・全操作/search左右・汎用性を狭めた違反を解消。クラスを関数ごとのファイルへ分割しない |
+| SquareMatrix | 比較/powの不具合とpow(ll)/traitを修正、C++/UBSan比較済み | 候補全範囲の一般証明・原本APIそのままの公開判定 |
+
+## 検査証拠
+
+- `.cache/wip/scalar_record_ctor_20261109/registered/`: 実46323は2tests/380.630秒終了0。原本/候補6型ずつ、kernel3857×8/3885×4、C++/UBSan・入力hash不変。新12rootsの値構築は純粋scalar式を取り総work≤nodes+6、6rootsのRangeAdd idは総work≤9。全field exportと元scalar/vector・const権限・scope/peak。任意T/M/lifetime/全体は未完。
+
+- `.cache/wip/monoid_lazy_candidate_sum_20261109/registered/`: 実70126は7tests/507.224秒終了0。kernel4316×3（原本1/候補Sum構築2）、4086×2（Sum op）、4117×4（MaxMin op/e）、4072×2（Add compose）、4102×2（Set compose）、4126/4104（Sum apply）。C++/UBSan・入力hash不変。原本/候補で同一の証明fixturesを使用。任意T/M・strict lifetime・全体未完はreceiptに明記。
+
+- `.cache/wip/monoid_lazy_api_20261109/registered/`: 実97763は5tests/418.354秒終了0。新idの原本/候補API/copy回帰・旧id2件のcompile負例、旧frontend3673、Add compose/id4072×2、原本/候補MaxMin apply各4080/4080/4100/4100。C++/UBSan・入力hash不変、receiptは任意T/M/lifetime/全体未完を明記。共有検査は新API check追加で243件（全件gateは未再実行）。
+
+- `.cache/wip/extrema_set_general_20261109/registered/`: 実76341はfresh原本4具体化のkernel4080/4080/4100/4100・C++/UBSan・入力hash不変で166.179秒終了0。Add/Set applyの任意caller・全scalar/vector保持・const結果・scope/peak・総work増分≤14/21。Set rawはnoop9/代入12、need≤P.length+13、prepare2参照+1値は7work。privateのraw/prepare単体は2759×2、caller草案もcompile成功。全体未完了と任意T/M/lifetime未検証はreceiptに明記。
+
+
+
+- `.cache/wip/contract_review_20261109/`: 旧モデル/Pow/Call/Opsと現Componentを別olean領域へbuildし、旧契約2481宣言を不一致0で再現。既存named theorem133件の型変更は9件。公開ModInt34件では本体等式1件以外同一。tail/加減乗/汎用callerの正確な状態にcaptureセルを含め、除算callerのhbodyはcapture2回へ更新、入力/結果/数値上界は保持。review.jsonにソース/契約hashと判断、旧契約はstatements.before.json。契約のroot2481件は不変、14変更5追加のみ同期。
+
+- `.cache/wip/library_layout_20261109/`: 旧doublingパスと変異scratch配置を修正。full_gateの実54494は共有242件成功後に最終closure照合で終了1。secrets/check.pyは変更対象全ファイルの変更前後・差分・未push履歴を検査（件数とhashはreceipt/inputs.json）。全ファイル版の生検出2件は変更前後のProofs.MultiVecN.rowKeyの公開宣言digestで、HEAD/現契約/検査済Lean環境からの再計算一致を確認。認証情報0件、疑似tokenの対照1件。生検出と根拠はnoncredential_findings.jsonに保持。inputs.jsonのhash時点の検査根拠であり、その後の編集には適用しない。
+
+- `.cache/wip/modint_discard_20261108/`: 元モデル/Pow/Call/Opsのsnapshotとbuild harness。37305はPow build終了0。penv_pushed/returnedCopies/pushedCopies/returnedCopies_execを共通化し、div_exec_copiesで戻り値コピー数≤2を扱う。実16423のCallと23883のOpsがbuild成功。pushed/returnedCopiesでret captureを全PS・費用・領域に含め、従来の数値上界は維持。実41493のregistered_check.pyはbuild/bridge/CPP/36roots6172宣言のkernelと入力hash不変で終了0。registered/{inputs,receipt}.json参照。旧full_gate/run_checks.pyの実58423は終了1。配置変更の残存パス修正後、20261109の別dirで再検査する。次段の未検証draftは.cache/wip/extrema_template_general_20261108/{add_raw,prepare_ref_value}.draft.lean。検査対象へは未反映、全件gate後にfresh生成モデルでcompile/kernel検査してから登録する。C++原本/公開headerは今回変更なし。
+- `.cache/wip/library_layout_20261108/`: moves.jsonで118ファイルの移動とヘッダ58同一/1include変更を確認。登録59・登録基盤19tests成功。実38333はinventory0/all1（全件gate未完）。all.logは59CPP成功とModInt橋渡し失敗を記録。modint_relocation.jsonで同じ旧配置でも生成差分が存在することを確認。実70116は58bridge/ZIP収録59件・単独/一括include検査をすべて終了0で回収済み。relocation_state.json参照。この旧配置検査のjobは終了済み。機密検査は同dir secrets/check.py、inputs.json/receipt.jsonで最終hashと結果を確認。
+- `.cache/wip/member_template_result_20261108/new/`: 新3tests/161.944秒終了0。元Add/Set×Max/Minはnanoda2825宣言×4、custom2field copy/constructは2817。native/UBSan、未具体化型・不正要求・副作用条件の拒否、入力hash不変が成功。
+- 同 `related/`: 実29467は18tests/350.508秒終了0。nanoda 2815/2811/4126/4104/4102/4102/4072/4072/4086/4316/2834/2648/2820。Sum caller・const/prefix・constructor/factory・class-copy/union_find・同名record拒否が成功。私的harnessの旧base置換漏れで古いrelatedのinputs/logを上書きしたため、今回の正本をこの新relatedへ複写済み。旧16testsのreceiptだけはlegacy_related_receipt_84162.json、旧hash根拠には使わない。
+- `.cache/wip/member_apply_call_20261108/registered/`: Sum applyとcomposeの3tests/209.825秒終了0。Set apply4126/Add apply4104、compose4072×2/4102×2。Add総IR work増分≤24/Set≤25。新共有prepare補題の最終proof-security/root照合と全件gateも20261109に成功。
+- `.cache/wip/tree_lca_rows_20261108/registered/`: 新3rootsと既存LCA callerのnanoda5277、2tests/11.602秒終了0。旧上限だけ戻した4頂点負例は境界assertで失敗、修正後成功。TreeLcaCallのbuildも成功（既存依存の非推奨警告あり）。
+- 配置変更前の共有240 checksの旧結果は、現在の成功根拠には使わない。現在の全件成功は20261109/final_gate。機密検査の現時点の根拠は20261109/secretsのinputs.jsonであり、後続変更は最終hashで再検査する。
+
+## 原本ごとの進捗と懸念
+
+L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分ありでも元class全体の検証は未完了。詳細・証拠は [原本台帳](../verification_inventory.json)、[移植違反一覧](../experiments_status.md)、[問題点](../experiments_findings.md)、[修正記録](fixes.md)。
+
+| 原本 | 進捗 | 懸念・残件 |
+| --- | --- | --- |
+| `L/algebraic_structure/group.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/algebraic_structure/monoid.hpp` | 部分 | 公開APIを復元しLLモデル/一般caller・浮動小数単位元のC++回帰済み。任意T/浮動小数のLean・lifetimeは未 |
+| `L/algebraic_structure/monoid_lazy.hpp` | 進行中 | Sum applyの任意caller接続済み。MaxMin apply<M>はLL全入力（Addは加算範囲内）・任意caller接続まで。元API候補はexperimentalにあり、任意T/M・lifetime・公開切替は未 |
+| `L/array/cumulative_sum.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/array/doubling.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/array/element_count.hpp` | 部分 | 候補あり。原本API全体の生成/証明/公開判定は未 |
+| `L/array/search_util.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/array/sort_util.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/fps/convolution.hpp` | 未 | NTT/FPSの元API・modint依存と計算量の生成/証明は未 |
+| `L/geometry/line.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/geometry/polygon.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/geometry/vector.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/graph/bellman_ford.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/graph/dijkstra.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/graph/edge.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/graph/edge_flow.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/graph/find_cycle.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/graph/graph_flow.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/graph/graph_list.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/graph/graph_matrix.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/graph/lowlink.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/graph/prim.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/graph/topological_sort.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/graph/warshall_floyd.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/interval/interval.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/interval/interval_union.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/modint/dynamic_modint.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/modint/modint.hpp` | 部分 | 公開ModIntの11モデル/一般証明を更新、bridge/kernel成功。全件gate成功。原本class全API/汎用型の移植は未完 |
+| `L/number/ratio.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/number/square_matrix.hpp` | 部分 | 比較・powの不具合とAPI型/traitを修正。候補の全class一般証明/公開切替は未 |
+| `L/number_theory/enumerate_quotients.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/number_theory/factorize.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L/number_theory/floor_sum.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/number_theory/is_prime.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/random/xorshift.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/segment_tree/binary_indexed_tree.hpp` | 部分 | 公開Fenwickクラスに構築3種/add/sum2種、+=のみの型を保持。任意T・厳密lifetimeは未 |
+| `L/segment_tree/lazy_segment_tree.hpp` | 部分 | 公開chmin/maxの部分検証。元のobject/全作用/search左右・汎用性は未 |
+| `L/segment_tree/segment_tree.hpp` | 部分 | 公開版は値/静的policyへ変更。元のモノイドobject・search左右・全汎用性の復元は未 |
+| `L/segment_tree/segment_tree_beats.hpp` | 進行中 | 構築→15vector/2scalar export・6操作→receiver復元まで。Safe導出・任意操作列・償却/総資源・全lifetime/公開切替は未 |
+| `L/segment_tree/segment_tree_beats_sum.hpp` | 未 | 別原本の全API/償却・重複統合を未確認 |
+| `L/set/multiset.hpp` | 未 | std::multiset契約・元APIの変換/証明が必要 |
+| `L/set/set.hpp` | 未 | std::set契約・元APIの変換/証明が必要 |
+| `L/string/char_count.hpp` | 部分 | 局所監査のみ。標準string操作と汎用性の生成/証明は未 |
+| `L/string/rolling_hash.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/tree/tree.hpp` | 部分 | LCA上限修正と全行降下定理/全対C++成功。元class全体・singleton構築・cost型/直径等は未 |
+| `L/union_find/disjoint_set_union.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/union_find/union_find.hpp` | 部分 | 公開クラスの経路圧縮/統合・5scalar/3vector連携を検証。全原本/汎用型/lifetime監査は継続 |
+| `L3/AlgebraicStructure/Group.hpp` | 部分 | 有限LL・Affine<int>の生成/一般caller済み。任意T・全object/lifetimeは未 |
+| `L3/AlgebraicStructure/Mapping.hpp` | 部分 | Affineの値渡し/型変換を維持して有限具体化。任意T/全objectは未 |
+| `L3/AlgebraicStructure/Monoid.hpp` | 部分 | library3の有限LL具体化を監査。任意T・全object/lifetimeは未 |
+| `L3/Array/CumulativeSum.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/Array/SortUtil.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/Geometry/Point.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L3/Graph/BellmanFord.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/Graph/Dijkstra.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/Graph/GraphL.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L3/Graph/GraphM.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L3/Graph/Lowlink.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/Graph/Prim.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/Graph/TopologicalSort.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/Graph/UnionFind.hpp` | 部分 | 有限クラス変換と公開版との差を確認。元版の全API/検証完了監査は未 |
+| `L3/Graph/WarshallFloyd.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/ModInt/ModInt.hpp` | 部分 | 公開ModIntのモデルずれは単体検査成功。元版の全API/汎用型への適用は未完 |
+| `L3/NumberTheory/Factorize.hpp` | 未 | 原本API/依存型の変換・Lean証明・C++/include検査が必要 |
+| `L3/NumberTheory/IsPrime.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L3/SegmentTree/SegmentTree.hpp` | 部分 | 元版の全API/型の保持と公開版との差の解消が必要 |
+
+テンプレート6件（L/L3各3件）とdriver65件は原本台帳で別管理。テンプレート自体の全検証と型/マクロ/乱択契約は未完。driverのコンパイル成功は依存ライブラリの証明には数えない。
+
+## 詳細資料
+
+- [元template class](../original_template_classes.md)、[class copy/constructor監査](../class_copy_audit.md)、[Beats候補](../beats_wide_candidate.md)、[信頼境界](../trust_policy.md)
+- [CI/リリース記録](ci_release_handoff_20261103.md)は過去の経過資料。現行のpush粒度と再開地点はこの文書を優先する。
+- 古い履歴は [11月1日以前](handoff_history_20261101.md)。今回の上書き前snapshotは `.cache/wip/library_layout_20261108/handoff_before.md`（ローカルのみ）。

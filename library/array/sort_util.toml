@@ -1,0 +1,14 @@
+name = "sort_util"
+source = "array/sort_util.hpp"
+dependencies = []
+translation = "nested_ir"
+lean_namespace = "Proofs.SortUtilInstance"
+proof = "Proofs/SortUtilCall.lean"
+model = "Proofs/Generated/SortUtil.lean"
+bridge = "verifier/nested_bridge.py"
+tests = ["tests/sort_util.cpp"]
+sanitizers = true
+spec = "docs/sort_util.md"
+standard = "c++17"
+source_sha256 = "616eab99ed4adc3fdf2b2889bbc5fe76fc765db4a515c4177254198c8da41a7e"
+public_declarations = ["FunctionTemplateDecl:inv_perm<vector>", "FunctionTemplateDecl:compress<vector>", "FunctionTemplateDecl:sort_vector<vector>", "FunctionTemplateDecl:dedup_vector<vector>"]

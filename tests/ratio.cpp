@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/ratio.hpp"
+#include "../library/number/ratio.hpp"
 #include <numeric>
 #include <random>
 

@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import nested_ir
 from offline import disable_network
 
-SOURCE = ROOT / 'library/mod61.hpp'
+SOURCE = ROOT / 'library/modint/mod61.hpp'
 
 
 class BitwiseTests(unittest.TestCase):

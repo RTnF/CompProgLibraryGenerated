@@ -9,8 +9,8 @@
 | 元ヘッダー | 状況 | 公開部品／残りの理由 |
 | --- | --- | --- |
 | algebraic_structure/group.hpp | 一部 | `group`。2026-11-05にhidden friend・元の委譲構築/returnを復元し、LL構成子のfieldモデルと一般定理を追加。統合後の全件検証中。任意Tや完全なobject/lifetime ASTの証明は未完了 |
-| algebraic_structure/monoid.hpp | 一部 | `monoid`。公開版のhidden friend暗黙変換とcopy-only Tの制約違反は2026-11-06に再現し、正本C++で復元。原本Mul/Max/MinのLL各4モデルを生成し、既存モデル一致および一般callerのop・既定構築と資源上界を独立kernelで確認。公開版の新モデルの全件gateは成功。任意T/完全object/lifetimeと原本全体の検証は未完了（docs/original_template_classes.md、docs/experiments_findings.md） |
-| algebraic_structure/monoid_lazy.hpp | 一部 | `monoid_lazy`のflat APIのみ。2026-11-06に原本のstatic idが公開側にないことと、RangeSet composeの値渡しをconst参照へ変えたためコピー効果が異なることをnative比較で確認。nested型/e/id/applyと元のコピー意味を保つ検証・復元が未完了（docs/experiments_findings.md） |
+| algebraic_structure/monoid.hpp | 一部 | `monoid`。公開版のhidden friend暗黙変換とcopy-only Tの制約違反は2026-11-06に再現し、正本C++で復元。原本Mul/Max/MinのLL各4モデルを生成し、既存モデル一致および一般callerのop・既定構築と資源上界を独立kernelで確認。公開版の新モデルの全件gateは成功。2026-11-08に原本/公開版のMax/Min浮動小数単位元を修正し、非浮動小数の旧APIを保持。両版のnative回帰とLL生成/証明、公開ASan/UBSan/template-first・fresh bridge・固定nanoda3639/3668宣言が成功（handoff参照）。任意T/完全object/lifetimeと原本全体の検証は未完了（docs/original_template_classes.md、docs/experiments_findings.md） |
+| algebraic_structure/monoid_lazy.hpp | 一部 | `monoid_lazy`のflat APIのみ。2026-11-06に原本のstatic idが公開側にないことと、RangeSet composeの値渡しをconst参照へ変えたためコピー効果が異なることをnative比較で確認。原本Add/SumのLL13モデルとSet/SumのLL18モデルは一般callerの結果・停止・元メモリ保持・IR資源上界を登録検査済み。Set/MaxMinのLL18モデルも16モデルの全program/callFuel一致とapply2の一般callerを登録し、Add/MaxMinのcomposeの値渡し一般callerの登録漏れも補った。Set/SumのRangeSetは非投影の2field object構築/copy/権限/scopeを既存評価器へ接続して検査済み。RangeSumのLL委譲構築もfactory返却の全field生成とtrivial move/copyを保持するstageで検査済み。LL/intの既定・値構築とe()は任意callerでの全field exportと旧scalar/vector観測保持を証明。Add/Sum・Set/Sum両方のfriend opもtypedな2object参照からprepare/run/exportまで任意callerへ接続し、両和の型有効性の下で全field結果・入力保持・IR work増分25以下とpeakを証明（固定nanoda4086宣言）。Add/Set×RangeMax/RangeMinの4原本モデルも全field生成と任意入力本体（選択結果・prefix保持・work/need上界）を証明。原本4箇所の浮動小数単位元の不具合を修正し、負値・両無限大と非浮動小数APIのnative回帰を追加（関連検査の最新結果はhandoff参照）。Max/Minの全object呼出しも任意callerのprepare/run/exportへ接続し、旧scalar/vector観測保持とIR work増分47以下・peakを証明（固定nanoda4117宣言ずつ）。trivial record値引数の全fieldコピーを追加し、元Add両系統のcompose/id全object返却を有限ケースで検査（2823宣言ずつ）。変更後の関連15testsも入力不変で成功（handoff参照）。Addの値引数も任意callerへ接続し、両値と和の型有効性だけで旧scalar/vector観測保持・work E+12以下（ObjectRef snapshotでは14以下）とpeakを証明（固定nanoda4072宣言ずつ）。Set composeの条件付き全fieldコピーも元両系統から生成し、bool両組合せ・非ゼロnoop値・極値・alias/const/id・不正入力を固定nanoda2828宣言ずつとnative/UBSanで有限検査。新3testsと既存一般caller/構築/コピーの関連12testsも入力不変で成功。Setも任意入力本体のwork20/need P.length+21と全PS一致、任意callerの旧scalar/vector観測保持・work増分32以下/peakを証明し、両原本freshモデルの固定nanoda4102宣言ずつとAdd/RangeSum回帰が成功。途中更新/異なるrecordのapply、C++厳密identity/lifetime/総費用は未完了。nested型/e/id/applyの公開API復元、任意T、完全object lifetime/総費用、member templateの任意Mの検証は未完了（docs/original_template_classes.md、docs/experiments_findings.md） |
 | array/cumulative_sum.hpp | 一部 | `cumulative_sum`（クラス `CumulativeSum<T>` と `CumulativeSum2D<T>`） |
 | array/doubling.hpp | 済 | `doubling`, `bit_width_u64` |
 | array/element_count.hpp | 一部 | `run_length`（出力は呼び出し側が用意した 2 本の vector） |
@@ -21,11 +21,11 @@
 | graph/bellman_ford.hpp | 一部 | `bellman_ford`（辺の平行配列、親配列と負閉路の印 `-inf` を含む。元の `NEGATIVE_CYCLE` の値でなく `-inf`） |
 | graph/dijkstra.hpp | 一部 | `dijkstra`（CSR 配列、`priority_queue` の代わりに線形探索の O(n²+m)。親の配列 `parent` を含む。2026-10-29） |
 | graph/edge.hpp, edge_flow.hpp | 対象外（方針） | 利用者の決定（2026-10-12）: 標準入出力（`operator<<`）と ID 管理（静的カウンタ `next_id`）は本質から外れるので Lean の証明は要らない。辺は端点・費用（・容量）の配列で表すグラフアルゴリズムの正しさと計算量を優先する |
-| graph/find_cycle.hpp | 一部 | `library/find_cycle.hpp`（CSR・反復 DFS。閉路の有無と、閉路の頂点列を返す仕様、`O(n+m)` の仕事量まで証明。辺の構造体の配列で返す元の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の形を頂点列に変更） |
-| graph/graph_flow.hpp, graph_list.hpp, graph_matrix.hpp | 一部 | `library/csr_build.hpp`（`graph_list` の辺リストから CSR 配列を作る計数ソート。辺の属性と `vector<vector<>>` の形は未。違反一覧: `ListGraph` クラスを辺リスト→CSR の関数に変更）。`graph_flow`/`graph_matrix` は未（`vector<vector<>>`、`map`、構造体の vector） |
+| graph/find_cycle.hpp | 一部 | `library/graph/find_cycle.hpp`（CSR・反復 DFS。閉路の有無と、閉路の頂点列を返す仕様、`O(n+m)` の仕事量まで証明。辺の構造体の配列で返す元の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の形を頂点列に変更） |
+| graph/graph_flow.hpp, graph_list.hpp, graph_matrix.hpp | 一部 | `library/graph/csr_build.hpp`（`graph_list` の辺リストから CSR 配列を作る計数ソート。辺の属性と `vector<vector<>>` の形は未。違反一覧: `ListGraph` クラスを辺リスト→CSR の関数に変更）。`graph_flow`/`graph_matrix` は未（`vector<vector<>>`、`map`、構造体の vector） |
 | graph/topological_sort.hpp | 一部 | `topological_sort`（CSR 配列、カーンの方法のキュー版。辞書順最小版は未） |
-| graph/lowlink.hpp | 一部 | `library/lowlink.hpp`（CSR 配列・反復 DFS。橋と関節点の同値、ord/par/low/sep の仕様と `O(n+m)` の仕事量まで証明。元の「ソート済みの配列を返す」形、`ListGraph` の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の配列を呼び出し側の配列に変更） |
-| graph/prim.hpp | 一部 | `library/prim.hpp`（配列版 CSR、`O(n²+m)`、最小全域森の最適性まで証明。`priority_queue` 版と `ListGraph` の形は未。違反一覧: 元の `O((n+m) log n)`・`ListGraph` を CSR 配列・線形探索に変更） |
+| graph/lowlink.hpp | 一部 | `library/graph/lowlink.hpp`（CSR 配列・反復 DFS。橋と関節点の同値、ord/par/low/sep の仕様と `O(n+m)` の仕事量まで証明。元の「ソート済みの配列を返す」形、`ListGraph` の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の配列を呼び出し側の配列に変更） |
+| graph/prim.hpp | 一部 | `library/graph/prim.hpp`（配列版 CSR、`O(n²+m)`、最小全域森の最適性まで証明。`priority_queue` 版と `ListGraph` の形は未。違反一覧: 元の `O((n+m) log n)`・`ListGraph` を CSR 配列・線形探索に変更） |
 | graph/warshall_floyd.hpp | 一部 | `floyd_warshall`（非負の辺、親の行列は含めない。平らな形と `vector<vector<T>>` の形） |
 | interval/interval.hpp | 済 | `interval` |
 | interval/interval_union.hpp | 一部 | `interval_union`（組を 2 本の vector に分け、結果は呼び出し側の 2 本の vector に書く。挿入ソート `O(n²)`） |
@@ -34,7 +34,7 @@
 | number/ratio.hpp | 一部 | `ratio`（符号と大きさの形、`normalize` のみ） |
 | number/square_matrix.hpp | 一部 | `square_matrix`（`mat_mul`・`mat_add_assign`・`mat_sub_assign`・`mat_zero`・`mat_negate`・`mat_identity`・`mat_equal`（`==`、`!=` 相当）・`mat_pow`（冪。作業用 vector を引数に取る）。値を返す演算子は未）。原本の比較・不要な最終二乗は2026-11-02に修正してC++回帰済み。原本クラス全体の変換・Lean証明は未完了 |
 | number_theory/enumerate_quotients.hpp | 済 | `enumerate_quotients` |
-| number_theory/is_prime.hpp | 済 | `library/is_prime.hpp`（`mul_mod_u64`・`pow_mod_u64`・`mr_base`・`mr_witness`・`is_prime`）。`__uint128_t` は 2 倍法で置き換えた。素数は常に `true`（無条件）、`true` なら素数は仮説 `MRWitnessSet`（公表済みの計算。未証明）の下で証明 |
+| number_theory/is_prime.hpp | 済 | `library/number_theory/is_prime.hpp`（`mul_mod_u64`・`pow_mod_u64`・`mr_base`・`mr_witness`・`is_prime`）。`__uint128_t` は 2 倍法で置き換えた。素数は常に `true`（無条件）、`true` なら素数は仮説 `MRWitnessSet`（公表済みの計算。未証明）の下で証明 |
 | number_theory/factorize.hpp | 未 | 再帰・ラムダ・`sort`（ポラードのロー法）。`is_prime` は上の部品を使える |
 | number_theory/floor_sum.hpp | 済 | `floor_sum`, `floor_sum_unsigned`, `safe_mod` |
 | random/xorshift.hpp | 済 | `xorshift` |
@@ -45,32 +45,32 @@
 | set/set.hpp, multiset.hpp | 未 | `std::set`/`map`/`multiset`（STL の契約が未登録） |
 | string/char_count.hpp | 一部 | `run_length`（文字列ではなく `long long` の vector） |
 | string/rolling_hash.hpp | 一部 | `rolling_hash`（`RollingHash<int>`。構成子と `hash(l, r)`/`hash(a)`。文字列版、`match` 系、`starts_with`/`ends_with` は `std::string`/`npos` が未対応で未） |
-| tree/tree.hpp | 一部 | `library/tree_arcs.hpp`（辺リスト版コンストラクタの辺（両方向）の並べ方。辺の費用の写しは `library/tree_arc_costs.hpp`、`Cost = long long`）と `library/tree_find_root.hpp`（根なし親配列版コンストラクタの根の決定）と `library/tree_edges.hpp`（`Tree(root, parent)` の隣接リスト構築のうち、親配列から辺（両方向）を並べる部分。`csr_build` と合成して CSR にする）と `library/tree_height.hpp`（`Tree::height` の最後のループ `h[i] = max(cd0[i], cd1[i])`。直径の両端を求める部分は未）と `library/tree_distance.hpp`（`Tree::distance`。`lca` を引数に取る）と `library/tree_lca_same_depth.hpp`（`Tree::lowest_common_ancestor` の深さを揃えたあとの部分。深さを揃える前半は `tree_ancestor` で別関数に分けている）と `library/tree_ancestor.hpp`（`Tree::ancestor`。ダブリング表を引数に取り、ビット判定を `(i / j) % 2 == 1` に変えている。`i` 個先の祖先を返すことまで証明）と `library/tree_path.hpp`（`Tree::path`。`tree_root` の親配列を `to` から `from` までたどって `out` に書き、長さを返す。元の経路と同じ頂点列）と `library/tree_root.hpp`（`Tree::build_depth` の `parent_`/`depth_`/`cost_depth_` を CSR 配列と手動スタックで求める。`Cost` はテンプレートのまま、検証した具体化は `long long`。到達性・辺と深さと費用の関係・`O(n+m)` の仕事量まで証明。違反一覧: `diameter`・`height` を 1 関数としての形（直径の両端を求める合成）・`height`・`path` の 1 関数としての形（深さ優先探索で復元する元の形。到達不能な `to` に空の経路を返す部分）・`build_ancestor`/`lowest_common_ancestor`/`distance` の 1 関数としての形・`full_tree_dp` の一般の関数オブジェクト `P`（反復版 `library/tree_full_dp.hpp` は `DpHeight<long long>` で追加済み。`ord` は `library/tree_order.hpp` が幅優先の並びとして作る）・辺リスト/親配列のコンストラクタ・`ListGraph`/`Edge` の形・根ごとの `vector<vector<int>>` は未） |
+| tree/tree.hpp | 一部 | `library/tree/tree_arcs.hpp`（辺リスト版コンストラクタの辺（両方向）の並べ方。辺の費用の写しは `library/tree/tree_arc_costs.hpp`、`Cost = long long`）と `library/tree/tree_find_root.hpp`（根なし親配列版コンストラクタの根の決定）と `library/tree/tree_edges.hpp`（`Tree(root, parent)` の隣接リスト構築のうち、親配列から辺（両方向）を並べる部分。`csr_build` と合成して CSR にする）と `library/tree/tree_height.hpp`（`Tree::height` の最後のループ `h[i] = max(cd0[i], cd1[i])`。直径の両端を求める部分は未）と `library/tree/tree_distance.hpp`（`Tree::distance`。`lca` を引数に取る）と `library/tree/tree_lca_same_depth.hpp`（`Tree::lowest_common_ancestor` の深さを揃えたあとの部分。深さを揃える前半は `tree_ancestor` で別関数に分けている）と `library/tree/tree_ancestor.hpp`（`Tree::ancestor`。ダブリング表を引数に取り、ビット判定を `(i / j) % 2 == 1` に変えている。`i` 個先の祖先を返すことまで証明）と `library/tree/tree_path.hpp`（`Tree::path`。`tree_root` の親配列を `to` から `from` までたどって `out` に書き、長さを返す。元の経路と同じ頂点列）と `library/tree/tree_root.hpp`（`Tree::build_depth` の `parent_`/`depth_`/`cost_depth_` を CSR 配列と手動スタックで求める。`Cost` はテンプレートのまま、検証した具体化は `long long`。到達性・辺と深さと費用の関係・`O(n+m)` の仕事量まで証明。違反一覧: `diameter`・`height` を 1 関数としての形（直径の両端を求める合成）・`height`・`path` の 1 関数としての形（深さ優先探索で復元する元の形。到達不能な `to` に空の経路を返す部分）・`build_ancestor`/`lowest_common_ancestor`/`distance` の 1 関数としての形・`full_tree_dp` の一般の関数オブジェクト `P`（反復版 `library/tree/tree_full_dp.hpp` は `DpHeight<long long>` で追加済み。`ord` は `library/tree/tree_order.hpp` が幅優先の並びとして作る）・辺リスト/親配列のコンストラクタ・`ListGraph`/`Edge` の形・根ごとの `vector<vector<int>>` は未） |
 | union_find/disjoint_set_union.hpp, union_find.hpp | 一部 | `union_find`（クラス。構成子 2 種、`unite`、`same`、`root`、`size`、`num_groups`。木の数は `ps` の最後の要素に持つ。`unite`/`same`/`size` は経路圧縮をしない） |
 
 ## experiments/library3/cpp（旧版）
 
-`library3` は `library` の旧版で、同じ名前の機能を持つ。`library` 側の公開部品と重複する場合は、命名規則を含めて `library/` を優先する（AGENTS.md 方針）。`Group`, `Monoid`, `CumulativeSum`, `SortUtil`, `BellmanFord`, `Dijkstra`, `GraphL`, `GraphM`, `Lowlink`, `Prim`, `TopologicalSort`, `UnionFind`, `WarshallFloyd`, `ModInt`, `Factorize`, `IsPrime`, `SegmentTree` は上の表の同名ヘッダーと同じ状況。`Mapping`（アフィン写像など）は `library/group.hpp` と一部対応するが、下表のAPI/型の差が未解消。`Geometry/Point` は整数の点で象限を `int8_t` に持つ（`int8_t` は生成器の型表に無く、象限による `operator<` の比較も未対応）ため未。
+`library3` は `library` の旧版で、同じ名前の機能を持つ。`library` 側の公開部品と重複する場合は、命名規則を含めて `library/` を優先する（AGENTS.md 方針）。`Group`, `Monoid`, `CumulativeSum`, `SortUtil`, `BellmanFord`, `Dijkstra`, `GraphL`, `GraphM`, `Lowlink`, `Prim`, `TopologicalSort`, `UnionFind`, `WarshallFloyd`, `ModInt`, `Factorize`, `IsPrime`, `SegmentTree` は上の表の同名ヘッダーと同じ状況。`Mapping`（アフィン写像など）は `library/algebraic_structure/group.hpp` と一部対応するが、下表のAPI/型の差が未解消。`Geometry/Point` は整数の点で象限を `int8_t` に持つ（`int8_t` は生成器の型表に無く、象限による `operator<` の比較も未対応）ため未。
 
 ### library3 の対応表（2026-10-12 時点で全ファイルを確認）
 
 | library3 のファイル | 対応 | 状況 |
 | --- | --- | --- |
-| AlgebraicStructure/Group.hpp | `library/group.hpp` | 一部。旧版のpublic field `x/a/b` は公開版へ未復元。原本を変更せずLLの15モデルを生成する共通入口と独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。任意Tと完全object/lifetimeは未完了。`GroupSum<double>::inv` は旧版の `e().x-x` と公開版の単項minusで正の0の符号が異なる |
-| AlgebraicStructure/Mapping.hpp（`Affine<T>`） | `library/group.hpp` の `GroupAffine` | 一部。原本のpublic field・ide/compose・値渡しapplyを保持し、LLの12モデルとapplyのLL/intに一般callerの証明・独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。元APIの公開版への統合、任意T/U、完全object/lifetimeは未完了。`Affine<long long>(2,1).apply(0.5)` は旧版2・公開版1で、doubleはC++回帰のみ |
-| AlgebraicStructure/Monoid.hpp | `library/monoid.hpp` | 一部。原本MonoidMulのLL具体化4モデルを生成し、既定構築の一般callerと他3モデルの一致を独立kernelで確認。原本hidden friendの暗黙変換は公開C++で復元。公開版の全件gateは成功。任意T・完全object/lifetimeは未完了 |
-| Array/CumulativeSum.hpp | `library/cumulative_sum.hpp` | 統合済み（`CumulativeSum2D` を含む） |
-| Array/SortUtil.hpp | `library/sort_util.hpp`, `search_util.hpp` | 統合済み。`arg_sort` 系は未（ラムダ比較の `stable_sort`） |
+| AlgebraicStructure/Group.hpp | `library/algebraic_structure/group.hpp` | 一部。旧版のpublic field `x/a/b` は公開版へ未復元。原本を変更せずLLの15モデルを生成する共通入口と独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。任意Tと完全object/lifetimeは未完了。`GroupSum<double>::inv` は旧版の `e().x-x` と公開版の単項minusで正の0の符号が異なる |
+| AlgebraicStructure/Mapping.hpp（`Affine<T>`） | `library/algebraic_structure/group.hpp` の `GroupAffine` | 一部。原本のpublic field・ide/compose・値渡しapplyを保持し、LLの12モデルとapplyのLL/intに一般callerの証明・独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。元APIの公開版への統合、任意T/U、完全object/lifetimeは未完了。`Affine<long long>(2,1).apply(0.5)` は旧版2・公開版1で、doubleはC++回帰のみ |
+| AlgebraicStructure/Monoid.hpp | `library/algebraic_structure/monoid.hpp` | 一部。原本MonoidMulのLL具体化4モデルを生成し、既定構築の一般callerと他3モデルの一致を独立kernelで確認。原本hidden friendの暗黙変換は公開C++で復元。公開版の全件gateは成功。任意T・完全object/lifetimeは未完了 |
+| Array/CumulativeSum.hpp | `library/array/cumulative_sum.hpp` | 統合済み（`CumulativeSum2D` を含む） |
+| Array/SortUtil.hpp | `library/array/sort_util.hpp`, `search_util.hpp` | 統合済み。`arg_sort` 系は未（ラムダ比較の `stable_sort`） |
 | Geometry/Point.hpp | なし | 未（`double`、`atan2` 系の偏角ソート） |
-| Graph/BellmanFord.hpp | `library/bellman_ford.hpp` | 一部（辺の平行配列。親配列と負閉路の印は `-inf`） |
-| Graph/Dijkstra.hpp | `library/dijkstra.hpp` | 一部（CSR、O(n²+m)、親あり） |
-| Graph/TopologicalSort.hpp | `library/topological_sort.hpp` | 一部（辞書順最小版なし） |
-| Graph/WarshallFloyd.hpp | `library/floyd_warshall.hpp` | 一部（非負の辺、親なし。平らな形と `vector<vector<T>>` の形） |
-| Graph/UnionFind.hpp | `library/union_find.hpp` | 一部（対応先を共有。元`DisjointSet::getNum()`の選択生成・元field条件からの実call/復元・仕事量/3peakと原本C++ UBSanを確認。元constructor/残りAPIと任意caller ASTは未検証。経路圧縮・別カウンタ・元の入力範囲の公開版復元も未完了） |
+| Graph/BellmanFord.hpp | `library/graph/bellman_ford.hpp` | 一部（辺の平行配列。親配列と負閉路の印は `-inf`） |
+| Graph/Dijkstra.hpp | `library/graph/dijkstra.hpp` | 一部（CSR、O(n²+m)、親あり） |
+| Graph/TopologicalSort.hpp | `library/graph/topological_sort.hpp` | 一部（辞書順最小版なし） |
+| Graph/WarshallFloyd.hpp | `library/graph/floyd_warshall.hpp` | 一部（非負の辺、親なし。平らな形と `vector<vector<T>>` の形） |
+| Graph/UnionFind.hpp | `library/union_find/union_find.hpp` | 一部（対応先を共有。元`DisjointSet::getNum()`の選択生成・元field条件からの実call/復元・仕事量/3peakと原本C++ UBSanを確認。元constructor/残りAPIと任意caller ASTは未検証。経路圧縮・別カウンタ・元の入力範囲の公開版復元も未完了） |
 | Graph/GraphL.hpp, GraphM.hpp, Lowlink.hpp, Prim.hpp | なし | 未（追記 47 の機能待ち） |
-| ModInt/ModInt.hpp | `library/modint.hpp` | 一部（`+ - * /`、入出力なし） |
+| ModInt/ModInt.hpp | `library/modint/modint.hpp` | 一部（`+ - * /`、入出力なし） |
 | NumberTheory/Factorize.hpp, IsPrime.hpp | なし | 未（`__uint128_t`、ミラー–ラビン） |
-| SegmentTree/SegmentTree.hpp | `library/segtree_sum.hpp` | 一部（和のみ。任意のモノイドは構造体の要素が要る） |
+| SegmentTree/SegmentTree.hpp | `library/segment_tree/segtree_sum.hpp` | 一部（和のみ。任意のモノイドは構造体の要素が要る） |
 | Template/*（MMTemplate.cpp, Template.cpp, SmallTemplate.hpp） | 対象外 | テンプレート（マクロ・`using`）で、ライブラリではない。`tests/` はこの中の `small_template.hpp` を先に include する |
 | Verify/*.test.cpp, VerifyIgnored/, VerifyManually/ | 対象外 | 外部のジャッジの問題を使う確認用で、テストはコンテストサイトと通信しない規則（AGENTS.md）により公開側のテストには使わない。対応する手元のテストは `tests/*.cpp` |
 
@@ -551,3 +551,18 @@ CppConstructorRetirementでroot移譲後のbuffer全体保持とscope破棄後�
 BeatsReceiverCallsで返却inf/nを実scalar slotから読み、6操作の生成NProgramへ渡す定理を追加。物理容量L<2^31を要求せず、元4*n範囲から操作用下界だけmin L INT_MAXへ縮め、従来Safe等の前提下で成功・query/更新意味・BRepS・ScalarPostMBを引き継ぐ。構築後の同一状態へ6操作を続けるtraceはC++/UBSanと照合する。一般の更新後receiver/任意長操作列、Safe導出、class converter/寿命/総資源/公開切替/独立監査は未完了。
 
 2026-11-02: CppCallUnitFrameとBeatsReceiverRestoreで、unit/scalar戻りの操作後metadata、INF/nの実読取りと新BVecsを復元した。6拡張定理は従来の意味/BRepS/ScalarPostMBを残して次receiver条件を返す。一般receiverからchmin出力をcalc_maxの入力へ渡す例を型検査する。各Safeの導出、任意長操作列/総資源、全無関係vector内容保持、child header入力・converter/寿命/公開切替/独立監査は継続中。
+
+
+2026-11-08: 元Set/Sum・Add/Sumのrecord返却applyを、同一TUの異なるreceiver/result recordとして共通class-copy経路へ接続した。receiverは元fieldへの参照、RangeSum引数は全field値snapshotとし、前置更新後に全x/sizeを返す。const/noexceptを保持し、member pointer型のcompiler照合で別familyの同名record取り違えを拒否する。元ソースを変更せず、負size・noop時の未選択乗算・overflow・alias・const/readonly・不正slotと引数不変を有限LLのLean roots/native/UBSanで確認する。登録回帰と実行結果は[引き継ぎ](agent/handoff.md)を参照。applyの任意入力/任意caller一般定理、任意T/M・厳密object identity/lifetime、公開API復元、原本全体/全137は未完了。
+
+
+2026-11-08: Set/Sum・Add/Sumの元applyの本体について、任意prefixとreceiver位置、型付きv/x/sizeの一般定理を登録回帰へ追加。元の負sizeを許し、Setのnoopは未選択乗算の表現可能性を要求しない。コピー内の更新を含め全PSとprefix保持、結果・停止・IR work/needを示す。任意callerのmixed prepare→body→全field export、任意T/M・厳密identity/lifetime・公開API復元と原本全体/全137は未完了。最新結果は[引き継ぎ](agent/handoff.md)を参照。
+
+
+2026-11-08: 利用者による `tree/tree.hpp` のLCA降順開始段を `ancestor_.size()-1` とする修正を確認し、旧4頂点の範囲外を登録負例にした。TreeLcaMathの全行降下・添字範囲・同一頂点を含む最初の合流点3 rootsと既存公開LCA caller定理の固定kernel5277宣言、元classの全小木/境界形状/任意root・全頂点対のC++20/UBSan/境界検査が成功。元class全体の生成/寿命・公開API復元・singleton build_ancestorの境界等は未完了のままとする。結果は[引き継ぎ](agent/handoff.md)を参照。
+
+
+2026-11-08: 元monoid_lazyのSet/Sum・Add/Sum applyを任意callerのmixed準備→本体→全field object返却へ接続し、旧scalar/vectorの値と参照・readonly/alias入力・const結果・scope/storage work保持とIR総仕事量Add≤24/Set≤25・peakを示す。元の負sizeを許し、Setのnoop時に不要な乗算条件を課さない。登録回帰の結果は[引き継ぎ](agent/handoff.md)を参照。任意T/M・member template apply・厳密identity/lifetime・公開API復元・原本全体/全137は未完了。
+
+
+2026-11-08: 元MaxMin両系統の `apply<M>` も、明示具体化した元pattern/同一TUのrecord宣言IDとmember pointer型を照合し、全field object返却へ接続。Setの `noop ? x : v` は選ばれたimplicit copy/値構築だけを実行し、コピーを値構築子で作り直さない。新3testsで元Add/Set×Max/Minと2fieldのcopy対constructor・未選択overflow・const結果、native/UBSanと不正要求の拒否が成功。任意入力/caller一般定理、任意T/M・厳密identity/lifetime・公開API全体の復元と原本全体/全137は未完了。既存回帰と最新検査は[引き継ぎ](agent/handoff.md)参照。

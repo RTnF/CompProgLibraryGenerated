@@ -9,6 +9,7 @@
 ## 作業の進め方
 
 - 関連する作業では `docs/agent/lessons.md` を参照する。コミットや push を伴う作業では `docs/agent/git_workflow.md` に従い、push 後は対象コミットの GitHub Actions が完了するまで結果を確認する。
+- push は `experiments/` の原本1ファイルの移植完了を単位とする。元のAPI・機能・汎用性を保ち、そのファイル全体の必要な検証と公開側への移植が完了してからpushする。変換器整備・部分証明・進捗記録だけではpushせず、途中の変更はローカルcommitとして蓄積してよい。詳細は `docs/agent/git_workflow.md` に従う。
 - アルゴリズムごとに、用途、前提条件、計算量、境界条件を明確にする。
 - C++ 実装はライブラリ内のテンプレートと依存部品を順に include して使用できる形にする。公開部品は `library/`、未完成の実装は `experiments/` に置く。
 - C++ のスタイルでは旧 `a.cpp` 相当のマクロや `using namespace std` を使用してよい。テンプレートはライブラリ内に置き、公開部品は include と検証の条件を満たす形にする。

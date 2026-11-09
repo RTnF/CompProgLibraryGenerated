@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/gcd_u64.hpp"
+#include "../library/number_theory/gcd_u64.hpp"
 #include <climits>
 #include <numeric>
 #include <random>

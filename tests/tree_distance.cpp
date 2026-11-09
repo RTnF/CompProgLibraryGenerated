@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/tree_distance.hpp"
+#include "../library/tree/tree_distance.hpp"
 #include <random>
 #include <vector>
 

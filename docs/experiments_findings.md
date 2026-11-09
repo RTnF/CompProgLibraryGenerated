@@ -1,5 +1,27 @@
 # 持ち込みコードの検証で見つけた不具合・注意点
 
+## 2026-11-08: Max/Minの浮動小数単位元と修正範囲
+
+元の `monoid_lazy.hpp` のAdd/Set両系統で、RangeMax<double>::e()は最小の正の正規化数を返すため、
+負値-7に対して `op(a,e()).x == a.x` が偽になった。
+RangeMin<double>::e()も有限の最大値を返すため、正の無限大の入力で同じ単位元則が破れた。
+G++/UBSanで4例を再現した（`.cache/wip/extrema_object_factory_20261108/floating_identity.cpp`）。
+この原本4箇所は標準浮動小数型だけconstexpr分岐し、無限大対応型には±infinity、他ではlowest/maxを使うよう修正済み。
+非浮動小数の従来min/max経路を残し、演算子を持たないOpaque型でもe()が使えることを回帰した。
+修正の表とdriverは `docs/agent/fixes.md` / `tests/imports/monoid_lazy_floating_identity.cpp` を参照する。
+浮動小数のLean誤差/identity/lifetime全検証を完了したとは扱わず、NaNのmonoid則も主張しない。
+
+**追跡対象も修正・関連検査成功（2026-11-08）:** `library/algebraic_structure/monoid.hpp` と `experiments/library/cpp/algebraic_structure/monoid.hpp` の
+MonoidMax/MonoidMinにも同じmin/maxの不具合があった。
+`.cache/wip/extrema_object_factory_20261108/monoid_identity_followup.cpp` をG++/UBSanで実行し、
+public/originalのMax(-7)とMin(+infinity)の4例で単位元則が偽であることを確認した。
+両ファイルも同じ標準浮動小数のconstexpr分岐へ修正し、非浮動小数のAPIを保持した。
+新driver `tests/imports/monoid_floating_identity.cpp` は両版の修正前で終了1を確認済み。
+演算子を持たないOpaque型と、min/maxだけを持つnumeric_limits特殊化でもe()が使えることを含めて、
+native回帰と既存LL生成・証明、公開sanitizer/template-first/fresh bridgeと独立kernel検査が成功した。
+原本3639/公開3668宣言、入力hash不変を含む結果はhandoffを参照する。
+浮動小数を検証対象から外したり、-7を禁止したりして解消扱いにしない。
+
 ## 2026-11-05: groupの公開側で暗黙変換呼出しが失われている
 
 元のGroupSum/GroupMulの非テンプレートhidden friendと、公開版の関数テンプレートopでは、引数推論と暗黙変換の適用が異なる。元の`GroupSum<long long> a(2); op(a,3LL); op(3LL,a);`と`GroupMul<long long> m(2); op(m,3LL);`はコンパイル/実行に成功し、値5/5/6になる。公開版は同じ呼出しをコンパイルできない。これは元コードの不具合ではなく、公開側の書換えによる未修正のAPI縮小である。オブジェクト同士のlong long演算の既存証明を、この呼出しまで検証済みとは扱わない。
@@ -20,7 +42,7 @@ GCC 13.3.0/C++17/offlineでの再現とログは`.cache/wip/group_api_review_202
 
 ## 2026-10-31: Segment Tree Beats 公開候補の構築サイズ
 
-`library/segment_tree_beats.hpp` の構成子は、節点配列の長さを `8 * (int)a.size() + 8` で計算する。これは符号付き `int` の演算なので、`n >= 1` だけでなく `8*n+8 < 2^31` が必要である。サイズ計算を変更せず、`docs/segment_tree_beats.md` の前提を公開定理 `segment_tree_beats_new0` の `8*n+8 <= L < 2^31` と合わせた。大きい入力を実際に確保したとは扱わない。
+`library/segment_tree/segment_tree_beats.hpp` の構成子は、節点配列の長さを `8 * (int)a.size() + 8` で計算する。これは符号付き `int` の演算なので、`n >= 1` だけでなく `8*n+8 < 2^31` が必要である。サイズ計算を変更せず、`docs/segment_tree_beats.md` の前提を公開定理 `segment_tree_beats_new0` の `8*n+8 <= L < 2^31` と合わせた。大きい入力を実際に確保したとは扱わない。
 
 ## 2026-10-31: 修正済み持ち込みコードの追跡
 
@@ -173,3 +195,61 @@ Set版のRangeSum8モデルは、現変換器でAdd版/Set版を再生成し全N
 任意T、単一object lifetime/総費用、原本全137件の検証は引き続き未完了である。
 
 正本登録後のSet/Sum検査も実45891終了0（79.770秒）、固定nanoda3731宣言で成功した。全18モデルの38事例と12モデルの一般caller定理、および2fieldコピー/scope復元の依存閉包を同時に検査した。記録は同cacheの `registered_set_sum_receipt.json`。値構築・compose・applyの残る6モデルを証明済みとはしない。
+
+### 2026-11-07: Set/Sumの全18 fieldモデルの一般caller証明
+
+値構築2モデル、値渡しcompose2モデル、非const receiverのapply2モデルの一般caller証明を追加した。
+composeは条件を一度評価し、選ばれたrecordの全fieldをコピーする。applyは書込み可能なreceiver参照2個と値引数2個を維持し、元callerのメモリを変えずに値引数のxだけを更新する。乗算の型範囲はnoopがfalseのときだけ要求し、負のint sizeを許す。サイズ投影でも元の更新と全fieldコピーを評価する。
+
+`tests/lean/original_mixed_set_sum_{value_ctor,compose,apply}.lean` を既存の登録テストへ統合した。実2047は終了0（79.720秒）、固定nanoda3797宣言で全18モデルの一般caller証明と38事例の依存閉包を検査し、C++/UBSan、noop時の危険な積の非評価、更新時overflowの拒否も成功した。証拠は `.cache/wip/monoid_lazy_set_apply_20261107/registered_receipt.json`。compose単独の一般caller検査は実14377終了0/3581宣言、apply単独は実81314終了0/3604宣言。これらは原本CPPから再生成したモデルと対応付けている。
+
+原本CPPおよび公開headerは変更していない。任意T、各field投影を組み合わせた単一object全体の寿命・総費用、残る原本family、公開API復元と原本全137ファイルの検証は未完了。`monoid_lazy.hpp`全体の移植完了ではないためpushしない。
+
+### 2026-11-07: Set/MaxMinの条件付き構築呼出しは未対応
+
+元の `RangeSetRangeMaxMin<long long>` のRangeSet/RangeMax/RangeMinを同一witnessで具体化した。既定構築・id・compose両分岐・max/minのe/op・apply両分岐と値引数の元値保持はC++/UBSan実行で成功した。原本からのモデル生成は `calls in conditionally evaluated operands cannot be inlined` で拒否された。元の `apply<M>` の `return noop ? x : v;` は、選択した分岐でrecordを構築する形である。現在のinlinerは条件付きoperandの既知呼出しを無条件に前置せず拒否するため、この原本APIをまだ検証できない。
+
+修正前の再現は `.cache/wip/monoid_lazy_set_extrema_20261107/probe.py`、witnessは同folderの `witness.cpp`、修正前の入力hash・結果は `before_conditional/inputs.json` / `before_conditional/receipt.json`（後の成功結果と区別して保存）。実44214は終了0で、native成功とlowering拒否の両結果を記録した。原本の変更や入力制限は追加していない。次は条件の一度だけの評価と選択した分岐だけの構築を保つ変換を検討・検証する。モデル生成、Lean証明、任意Tと完全object lifetimeは未完了である。
+
+### 2026-11-07: 条件付き構築の変換とSet/MaxMinの証明登録
+
+`inline_ast.Inliner.conditional` を追加した。既知呼出しのある整数prvalueの条件式を結果localとIfStmtへ変換し、条件を一度評価し、選択したbranch内でだけoperandの呼出しを展開・代入する。参照/objectの条件式、short-circuit右辺、loop headerの拒否境界は維持する。入れ子の条件の実行回数、未選択側のゼロ除算を評価しないこと、選択側のゼロ除算がfaultになることを9事例とC++/UBSanで確認した。
+
+原本Set/MaxMinの18モデルを生成し、16モデルは既存MonoidInstance/SetSumとの全NProgram/callFuel一致、apply2モデルは元の書込み可能なreceiver参照2個と値引数1個を保つ一般caller定理で登録した。noopの分岐とbranch一時変数のscope終了後を含め、結果・停止・元メモリ保持・IRのwork/space上界を示した。原本の型・API・ソースは変更していない。
+
+実55798は終了0（379.581秒）でinline4＋nested10の14testsに成功し、全検査入力hashが不変。固定nanodaは2539/2008/3600/3673/3867/3652/3606宣言。Set/Sumの全18モデルの一般callerと38事例も合わせて再検査した。その後、宣言対応の点検でAdd/MaxMinのcompose一般callerが未登録と確認したため、`RecordComposeAudit.compose_correct` を追加した。値渡し引数と和の型範囲を保ち、任意callerで結果・停止・元メモリ保持・IR資源上界を示す。追加後の実3137は終了0（54.420秒）、freshなC++モデル再生成と固定nanoda3635宣言が成功した。
+
+証拠は `.cache/wip/monoid_lazy_set_extrema_20261107/final_focused_receipt.json` と同folderの `registered/` / `registered_record_compose/`。14tests後の入力変更はcomposeのfixtureと登録テストの2ファイルだけで、後の局所検査が両変更を覆い、他の入力は不変だった。任意T・任意M、完全object lifetime/単一objectの総費用、公開API復元、原本全137の検証は未完了。原本1ファイル全体の移植完了ではないためpushしていない。
+
+### 2026-11-07: RangeSetの非投影object構築/copyを接続
+
+原本RangeSetRangeSum<long long>::RangeSetの2構築と暗黙copyを、structured TemplateInstanceを通して既存class_copy_layoutのconstructor member export / MemberCopy評価器へ接続した。long long/boolの両fieldを1つのObjectRefで扱い、同一TUのfield/copy宣言IDと原本/witness hashを監査する。原本CPPと公開headerは変更していない。
+
+const元からmutableなコピーを作り、コピー先の両fieldを更新しても元は7/falseのままであること、const先への代入拒否、scope終了直後にコピー先slotへアクセスできず元の2field状態を保持することを9 Lean事例とC++/UBSanで確認した。生成されたcopyの一般layout/observer/value/position/work/space定理も固定nanodaで検査した。AST収集後のwitness改変とraw型要求を拒否する回帰を追加し、support.tomlに新testを登録した（共有241checks）。
+
+初回44145は終了1（unused permission binder警告とLean予約語scoped）であり成功扱いしない。生成時にzero-vectorの未使用引数名を修正し、fixtureを改名した後の実63216は終了0（106.356秒）、新4＋既存layout4の8tests、固定nanoda3329宣言、検査入力hash不変で成功した。証拠は `.cache/wip/monoid_lazy_object_layout_20261107/registered/{receipt,inputs}.json` と tests.log。
+
+RangeSumの既定構築はe()のclass返却とmove/委譲構築を持つため、同stage generatorが意図した理由で拒否する。原本ASTの形は同cacheのRangeSum_record.jsonとprobe.pyに保存した。委譲のcopy/move・一時objectの寿命を省いたfield投影で代用せず、次にこの実行経路を接続する。任意T/M、完全object lifetimeと単一object総費用、公開API復元、原本全137の検証は未完了。現在のfinite instanceのメタデータも両完了flagをfalseに保つ。
+
+### 2026-11-07: RangeSumのscalar委譲構築とfactory/body順序を保持
+
+原本RangeSumの委譲ASTを調べ、e()の返却objectをimplicit move構成子で受ける形と確認した。constructor_delegation.pyを追加し、same-recordのconstructor signature、factory宣言ID/source位置、trivial copy/move/destruction、builtin scalar fieldsを監査する。factoryの値引数と全fieldを1回構築し、factory側の構成子bodyを実行してから全fieldをtargetへ移し、外側bodyを実行する。直接委譲chainも値束縛と本体順序を保持する。独立した2つのfield投影へ置き換えていない。
+
+helper収集で旧constructor処理を重複させないようclass_method_functionsへinclude_constructorsを追加した（既定True、class_copy_layoutのstage helper収集はFalse）。構成子内の途中returnとfactory一時receiverのmember呼出しは別のcall境界が必要なので拒否し、追加処理のあるfactory、nontrivial特殊メンバー、ref引数、runtime effectのある引数、非scalar fieldも未対応のままにした。元の型/API/原本CPPは変更していない。
+
+原本の初回61111はfixtureのscalarFields修飾名、別class初回79687は冗長な旧constructor helper検査で失敗した。これらを成功扱いしない。修正後、実61955は終了0（138.812秒）、template layout7＋既存layout4＋constructor stage methods5の16tests、固定nanoda2815/2648/3300/3329宣言が成功し、manifest対象入力hashは不変だった。原本の全stage形とfield位置のrfl、default/負size/const/copy/一時回収、別classのfactory/body/chain5事例とcaller prefix保持、他fieldゼロ除算の4事例とUBSanの拒否、7つの未対応CPP境界を確認した。
+
+証拠は `.cache/wip/scalar_object_delegation_20261107/registered/{receipt,inputs}.json` とtests.log、tests/lean/original_delegating_object_layout.lean、scalar_delegation_bodies.lean、scalar_delegation_failure.lean。scalar一時領域はstage内で保持しfinishで非export分を回収する。C++の正確な特殊メンバーの時点/identity/総費用や任意T/Mの証明は完了しておらず、full flagsはfalseを維持する。公開API復元と原本全137の検証も未完了で、原本1ファイルの移植完了前なのでpushしていない。
+
+### 2026-11-07: RangeSum既定構築を任意callerからexportまで証明
+
+元CPPのdefault stageの全bodyを対応付け、任意Pのpure pexec本体（work14/need P.length+15）、prepareから通常runFuelへの接続、2fieldだけのfinish/exportを一般証明した。対象はlong long/intの具体化で、callerのmemory内容・長さ・binding数・scopeは任意。frameのwell-formed/rootWritable長/所有scopeとscalar baseの通常の条件を前提にし、未使用cell全件の型範囲は要求しない。
+
+const/mutableの両targetで旧scalar memory/binding/slotと既存scalar読取を保持し、0のlong long/intを各1cell追加して新fieldの型・権限で読める。有効frame、旧frame binding、storage object数・live/work、caller.scopeを保持し、prepare/body/export込みscalar work増分18以下とscalar/storage/outer peak上界を示した。これは抽象counter/cellの境界であり、C++実測値やバイト数の証明ではない。
+
+私的な本体/lift検査ではsimpの自己再展開で最大再帰へ達したため、上限を変えず状態等式をcongrArgで明示合成した。最終私的実54647は固定nanoda3695宣言で終了0。正本fixture original_delegating_constructor_general.leanへ移して既存testに統合し、実99895は終了0（45.767秒）、CPPモデルfresh再生成・Lean・固定nanoda4076宣言・C++/UBSan・manifest対象input hash不変が成功した。
+
+証拠は `.cache/wip/rangesum_constructor_general_20261107/registered/{receipt,inputs}.json` とtests.log。前turnの関連16tests成功後の変更はこのfixtureと該当testの統合であり、今回は対象1testを再検査した。任意T/M、値構築等の一般object caller、全frame観測、C++厳密lifetime/identity/総費用、公開API復元、全137は未完了。原本CPP/公開header未変更、完了flagsを拡大せずpushしない。
+
+
+2026-11-08: `tree/tree.hpp` のLCAループ上限は利用者が実表の最終行へ修正し、旧範囲外を負例で検査する（fixes.md参照）。元の `build_ancestor()` は頂点数1で `doubling(parent,0)` を呼び、同関数の `assert(kmax>0)` を満たさない。singletonでも同一頂点LCAの早期return自体は表に触れない。この既存の構築境界は今回の上限変更とは分けて未解消とする。

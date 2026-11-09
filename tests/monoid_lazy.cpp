@@ -1,5 +1,5 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
-#include "../library/monoid_lazy.hpp"
+#include "../library/algebraic_structure/monoid_lazy.hpp"
 #include <climits>
 #include <vector>
 
