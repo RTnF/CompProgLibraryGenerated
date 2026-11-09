@@ -18,6 +18,7 @@ def stmt (f : Nat → Nat) : NStmt → NStmt
   | .retVector i => .retVector (f i)
   | .check e => .check (expr f e)
   | .sortVec c ty => .sortVec (container f c) ty
+  | .sortPairs a b ty => .sortPairs (container f a) (container f b) ty
   | .dedupVec c ty => .dedupVec (container f c) ty
   | .appendRow c ty => .appendRow (container f c) ty
   | .copyVector c ty w => .copyVector (container f c) ty w

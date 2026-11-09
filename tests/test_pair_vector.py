@@ -70,7 +70,7 @@ template std::vector<std::pair<long long, long long>> interval_union_inclusive<l
         row0 = "(.row (.local 0) (.integer ⟨64, true, false⟩) (.literal ⟨64, false, false⟩ (0)))"
         ret_row = lambda which: f"(.row (.local 1) (.integer ⟨64, true, false⟩) (.literal ⟨64, false, false⟩ ({which})))"
         self.assertIn("[.nested ⟨64, true, false⟩ true],.vector (.vector (.integer ⟨64, true, false⟩))", model)
-        self.assertIn("(.sortPairs (.local 0) ⟨64, true, false⟩)", model)
+        self.assertIn("(.sortPairs " + row0 + " (.row (.local 0) (.integer ⟨64, true, false⟩) (.literal ⟨64, false, false⟩ (1))) ⟨64, true, false⟩)", model)
         self.assertIn("(.constructRows ⟨64, true, false⟩ true (.literal ⟨64, false, false⟩ (2)))", model)
         # the loop runs over the length of row 0 of v; l and r are read-only copies of rows 0 and 1 at the loop index
         self.assertIn(f"(.size (.integer ⟨64, true, false⟩) {row0})", model)

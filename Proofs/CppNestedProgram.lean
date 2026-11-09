@@ -162,6 +162,7 @@ inductive NStmt where
   | retVector (slot : Nat)
   | check (condition : NExpr)
   | sortVec (container : Container) (ty : Ty)
+  | sortPairs (first second : Container) (ty : Ty)
   | dedupVec (container : Container) (ty : Ty)
   | appendRow (container : Container) (ty : Ty)
   | copyVector (source : Container) (ty : Ty) (writable : Bool)
@@ -274,6 +275,11 @@ def NStmt.run (s : NState) : NStmt → Option NStep
   | .sortVec container ty => do
       let (next,owner) ← container.eval (s.charge 0 (container.nodes+2))
       let frame ← next.frame.sortAll owner ty
+      some ⟨(({next with frame := frame} : NState).release s).charge 1 1,none,false⟩
+  | .sortPairs first second ty => do
+      let (next,a) ← first.eval (s.charge 0 (first.nodes+second.nodes+3))
+      let (next,b) ← second.eval next
+      let frame ← next.frame.sortPairsAll a b ty
       some ⟨(({next with frame := frame} : NState).release s).charge 1 1,none,false⟩
   | .dedupVec container ty => do
       let (next,owner) ← container.eval (s.charge 0 (container.nodes+2))

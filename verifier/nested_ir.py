@@ -548,7 +548,8 @@ class NestedBody(Body):
             scalar = container['element']['vector']
             if not container['writable'] or scalar['width'] > 64:
                 raise ValueError('std::sort requires a writable vector of integer pairs')
-            return [dict(kind='sort_pairs', container=container, element=scalar)]
+            return [dict(kind='sort_pairs', first=self.pair_row(container, 0), second=self.pair_row(container, 1),
+                         element=scalar)]
         element = self.scalar_container(container)
         if not container['writable'] or element['width'] > 64:
             raise ValueError('std::sort requires a writable vector of integers')
@@ -712,7 +713,8 @@ def render_statement(statement):
     if kind == 'sort_vector':
         return f"(.sortVec {render_container(statement['container'])} {lean_type(statement['element'])})"
     if kind == 'sort_pairs':
-        return f"(.sortPairs {render_container(statement['container'])} {lean_type(statement['element'])})"
+        return (f"(.sortPairs {render_container(statement['first'])} {render_container(statement['second'])} "
+                f"{lean_type(statement['element'])})")
     if kind == 'assign_range':
         return (f"(.assignRange {render_container(statement['container'])} {statement['first']} "
                 f"{statement['last']} {lean_type(statement['element'])} "

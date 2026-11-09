@@ -169,6 +169,37 @@ def Frame.sortAll (f : Frame) (slot : Nat) (expected : Ty) : Option Frame := do
   let result ← sortFlat buffer (accepts (.integer expected)) binding.writable
   f.commit binding.owner (.integer expected) result
 
+/-- Lexicographic order on pairs `(first, second)`: the default `operator<` of `std::pair` (a pair is less when
+`first` is less, or `first` is equal and `second` is less). Used through the non-strict form for sorting. -/
+def pairLE (p q : Int × Int) : Bool := decide (p.1 < q.1 ∨ (p.1 = q.1 ∧ p.2 ≤ q.2))
+
+/-- The pair list `std::sort` produces: the stable merge sort by `pairLE`. As for `sortFlat`, the result is
+*defined* here (sorted order, permutation of the pairs); only the cost, `sortComparisons`, is a contract. -/
+def sortedPairs (pairs : List (Int × Int)) : List (Int × Int) := pairs.mergeSort pairLE
+
+/-- `std::sort(v.begin(), v.end())` on a vector of `std::pair<T, T>` modelled as two rows `first`, `second` of
+integers of equal length: both rows become the components of the sorted pairs. The sort is charged to the first row
+(`sortComparisons n + n`) and the move of the second row (`n`). -/
+def Frame.sortPairsAll (f : Frame) (first second : Nat) (expected : Ty) : Option Frame := do
+  let (bindingA,bufferA) ← f.resolve first (.integer expected)
+  let (bindingB,bufferB) ← f.resolve second (.integer expected)
+  if bindingA.owner ≠ bindingB.owner ∧ bindingA.writable = true ∧ bindingB.writable = true ∧
+      bufferA.Valid (accepts (.integer expected)) ∧ bufferB.Valid (accepts (.integer expected)) then
+    match bufferA.items.mapM Value.intOf, bufferB.items.mapM Value.intOf with
+    | some xs, some ys =>
+        if xs.length = ys.length then
+          let sorted := sortedPairs (xs.zip ys)
+          let resultA : Result Value Unit :=
+            ⟨{bufferA with items := (sorted.map fun p => Value.integer p.1)},(),
+              Proofs.StlContracts.sortComparisons xs.length + xs.length,bufferA.capacity+2⟩
+          let resultB : Result Value Unit :=
+            ⟨{bufferB with items := (sorted.map fun p => Value.integer p.2)},(),xs.length,bufferB.capacity+2⟩
+          let committed ← f.commit bindingA.owner (.integer expected) resultA
+          committed.commit bindingB.owner (.integer expected) resultB
+        else none
+    | _, _ => none
+  else none
+
 /-- `std::unique` followed by the matching `erase`: adjacent equal elements collapse to the first of each run. -/
 def uniqAdjAux : Int → List Int → List Int
   | _, [] => []
