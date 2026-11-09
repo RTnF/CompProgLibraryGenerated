@@ -38,3 +38,18 @@
 5. `interval_union_inclusive` の原本形を公開し、`Proofs/IntervalUnion*.lean` の既存の証明を再利用して結果を証明する。
 
 各段階はローカルコミットとして積み、`interval_union.hpp` が全体で完了した時点で、全件ゲートとチェックリストの更新を行う。
+
+## 進捗（2026-11-10）
+
+完了（ローカルコミット済み。`verification/statements.json` は NStmt の変更で古いため、`interval_union` 完了時に再生成し全件ゲートを通す）:
+
+- 段階1（`dcf0981`）: `std::pair` を `vector_stl.py` の `audit_pairs` で標準ヘッダーと照合（`pristine_pair`）。`std::vector<std::pair<T,T>>` の引数を2行の入れ子vector（`pair` 印つき束縛）として扱い、`v[i].first/second`、`size()`（行0の長さ）を下げる。
+- 段階2（`c0de675`）: 範囲for（イテレータ演算子は標準ヘッダーの宣言であることを確認、本体が対象vectorを使わないことを要求し、インデックスループに下げる）、`empty()`、`back().first/second` の読み書き、`emplace_back(a, b)`（変数の引数のみ、両行へ追加）、空の `vector<pair>` の宣言（空の2行）、`std::sort` の `sortPairs` 文。原本の `interval_union_inclusive` がそのまま生成され、構造を `tests/test_pair_vector.py` が検査する。公開59部品のbridge検査は変更なし。
+- 段階3（`0ec34d8`）: `NStmt.sortPairs`（`Proofs/CppNestedProgram.lean`）と `Frame.sortPairsAll`（`Proofs/CppNestedVectorBindings.lean`）。2行を辞書順に整列済みの組へ同時に置き換える（`pairLE`、`sortedPairs`＝stable merge sort。結果は定義、費用は既存契約 `sortComparisons`）。Lean全体（1794ジョブ）がビルドでき、生成モデルは型検査を通る。
+
+残り（段階4、`interval_union.hpp` を完了にするための本体）:
+
+1. `sortPairs` の補題: 整列済み・置換・行の長さ保持・資源上界（`VecWrite.lean` の `sortVec` 補題に倣う）。
+2. 生成モデル `interval_union_inclusive<long long>` の実行の証明: 範囲forのインデックスループ、`ret`（根＋2行の子）への追加（`append`）と最後の要素への `write`、`retVector`。`doubling` の入れ子vector証明（`Proofs/Doubling*.lean`、約3300行）に近い規模の見込み。
+3. 呼出し定理: 引数は書込み可能な2行の入れ子vector（行の長さが等しく、`l[i] ≤ r[i]` を前提）、結果は2行の根（`ret_l`, `ret_r` の仕様）。既存の数学層 `Proofs/IntervalUnionMath.lean`（`Cov`、`MInv`、`mfold_inv`）を再利用する。
+4. 公開: `library/interval/interval_union.hpp` を原本の形（`vector<pair<T,T>>`、`std::sort`）へ戻し、登録・文書・差分テスト・全件ゲート。
