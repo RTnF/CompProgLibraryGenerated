@@ -33,10 +33,10 @@
 | modint/modint.hpp | 一部 | `modint`, `mod61`, `pow_mod` |
 | number/ratio.hpp | 一部 | `ratio`（符号と大きさの形、`normalize` のみ） |
 | number/square_matrix.hpp | 一部 | `square_matrix`（`mat_mul`・`mat_add_assign`・`mat_sub_assign`・`mat_zero`・`mat_negate`・`mat_identity`・`mat_equal`（`==`、`!=` 相当）・`mat_pow`（冪。作業用 vector を引数に取る）。値を返す演算子は未）。原本の比較・不要な最終二乗は2026-11-02に修正してC++回帰済み。原本クラス全体の変換・Lean証明は未完了 |
-| number_theory/enumerate_quotients.hpp | 済 | `enumerate_quotients` |
+| number_theory/enumerate_quotients.hpp | 済 | `enumerate_quotients`。2026-11-10に「元のソースからの変更」を文書化し、元の関数の逐語コピーとの差分テスト（n≤3000全件・n<2^44の乱択）を追加 |
 | number_theory/is_prime.hpp | 済 | `library/number_theory/is_prime.hpp`（`mul_mod_u64`・`pow_mod_u64`・`mr_base`・`mr_witness`・`is_prime`）。`__uint128_t` は 2 倍法で置き換えた。素数は常に `true`（無条件）、`true` なら素数は仮説 `MRWitnessSet`（公表済みの計算。未証明）の下で証明 |
 | number_theory/factorize.hpp | 未 | 再帰・ラムダ・`sort`（ポラードのロー法）。`is_prime` は上の部品を使える |
-| number_theory/floor_sum.hpp | 済 | `floor_sum`, `floor_sum_unsigned`, `safe_mod` |
+| number_theory/floor_sum.hpp | 済 | `floor_sum`, `floor_sum_unsigned`, `safe_mod`。2026-11-10に「元のソースからの変更」を文書化（元ヘッダーと同一の生成モデルを毎回照合） |
 | random/xorshift.hpp | 済 | `xorshift` |
 | segment_tree/binary_indexed_tree.hpp | 済 | `fenwick_tree`（クラス。構築子 3 種、`sum(r)`、`sum(l, r)`、`add`。`T` はテンプレートのまま、検証した具体化は `long long`） |
 | segment_tree/segment_tree.hpp | 一部 | `segtree_sum`（和のみ）、`segment_tree`（クラス `SegmentTree<方針>`。モノイドは `value_type`・静的 `e()`・静的 `apply` を持つ方針として与え、`long long` の最大値 `SegMax<long long>` と最小値 `SegMin<long long>` を検証した。構成子・`set`・`get`・`product`・`product_all`。値ではなくモノイドのオブジェクトを持つ元の形、`search_prod_right`/`left`、他のモノイドの具体化は未） |

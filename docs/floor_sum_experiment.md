@@ -141,3 +141,14 @@ python3 tools/check_import_floor_sum_signed.py
 範囲外の unsigned-to-signed 変換は C++17 の実装依存である。`signed_conversion = "gcc13.3-lp64-twos-complement"` をメタデータで明示し、GCC 13.3.0 / x86_64 Linux / C++17 / LP64 を検査する共通規則を適用する。checked が既定であり、プロファイルが変われば生成モデルの全文照合で拒否する。signed 算術のオーバーフローを許可する設定ではない。別コンパイラでの範囲外結果の移植性は主張しない。
 
 `tests/floor_sum.cpp` は元実装の独立128 bit参照と同じ74,610入力（表現可能74,402、範囲外208）を公開APIへ適用する。通常実行、ASan/UBSan、テンプレート先行 include、全部品の同時 include を検査する。`tests/test_signed_floor_sum_proofs.py` は元ソースのモデル全文、91入力の数学的計算・生成モデル・C++ の一致、全入力証明の適用、callerの保持、燃料不足・不正入力の拒否、再生成した本体に対する4種類の改変拒否を扱う。公式問題・制限が未設定なので性能測定は未実施である。
+
+## 元のソースからの変更
+
+公開版（`library/number_theory/safe_mod.hpp`、`floor_sum_unsigned.hpp`、`floor_sum.hpp`）は、元の `experiments/library/cpp/number_theory/floor_sum.hpp` の3関数（`safe_mod`、`floor_sum_unsigned`、`floor_sum`）をそれぞれ1部品にしたもので、アルゴリズム・式・assert は元のままである。変更は次の3点だけで、いずれも元と同じ入力に同じ結果を返す。
+
+- 名前空間 `cp` に入れ、`ll`/`ull` を `std::int64_t`/`std::uint64_t`（LP64 では同じ型）に書いた。`inline` を付けた。
+- `floor_sum_unsigned` の `n = (ull)(y_max / m); b = (ull)(y_max % m);` の冗長な `(ull)` を外した（同じ型）。
+- `floor_sum_unsigned` の事前条件 `n < 2^32`、`0 < m < 2^32` をヘッダーに明記した（元は signed 版のみ assert）。
+
+元ヘッダーと公開実装は、共通変換器から同一の Lean モデルを生成することを `tools/check_floor_sum_model.py` と公開 bridge 検査（`FloorSumUnsigned`/`FloorSumSigned`/`SafeMod`）が毎回確認する。
+
