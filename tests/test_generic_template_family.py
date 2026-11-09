@@ -15,7 +15,8 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(ROOT / 'tests'), str(ROOT / 'verifier'), str(ROOT / 'tools')]
 import class_copy_layout as layout
-from class_templates import TemplateInstance
+from class_templates import TemplateInstance, RecordArgument
+import re
 from nested_ir import lower_source, emit_lean
 from test_scalar_ir import lean_environment
 from offline import disable_network
@@ -93,7 +94,8 @@ class GenericTemplateFamilyTests(unittest.TestCase):
             lake, env = lean_environment()
             result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
                                     capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0, result.stdout[:3000] + result.stderr[:3000])
+        errors = '\n'.join(line for line in (result.stdout + result.stderr).splitlines() if 'error' in line)
+        self.assertEqual(result.returncode, 0, errors[:3000])
         self.assertNotIn('sorryAx', result.stdout)
         self.assertNotIn('Lean.ofReduceBool', result.stdout)
         reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
@@ -127,6 +129,69 @@ class GenericTemplateFamilyTests(unittest.TestCase):
             result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
                                     capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+    def test_original_extrema_add_apply_equals_the_ty_family(self):
+        """`RangeAdd::apply` on `RangeMax`/`RangeMin` for every T (family and export views)."""
+        disable_network()
+        parts, checks, imports = [], [], []
+        fixture = (ROOT / 'tests/lean/generic_extrema_add_apply.lean').read_text()
+        prepare = (ROOT / 'tests/lean/original_extrema_member_prepare.lean').read_text()
+        split_at = fixture.index('namespace GenericAddApplyCall')
+        raw_names = [line.split()[1] for line in fixture[:split_at].splitlines() if line.startswith('theorem ')]
+        names = [line.split()[1] for line in fixture[split_at:].splitlines() if line.startswith('theorem ')]
+        prepare_names = [line.split()[1] for line in prepare.splitlines() if line.startswith('theorem ')]
+        with tempfile.TemporaryDirectory(prefix='generic-add-apply-') as directory:
+            count = 0
+            text = (ROOT / 'tests/imports/original_mixed_add_extrema.cpp').read_text()
+            for cpp, _, ty in EXTREMA_TYPES:
+                path = Path(directory) / f'witness_{count}.cpp'
+                path.write_text(text.replace('long long', cpp))
+                for kind in ('RangeMax', 'RangeMin'):
+                    instance = TemplateInstance((cpp,), path, nested_members=(kind,))
+                    receiver = TemplateInstance((cpp,), path, nested_members=('RangeAdd',))
+                    generated = layout.emit_class_layout(ORIGINAL, 'RangeAddRangeMaxMin', 'TemplateMemberResult',
+                        [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
+                        template_instance=instance, companion_instances=(('RangeAddRangeMaxMin', receiver),),
+                        receiver_methods=((1, 'apply', (RecordArgument(0),)),))
+                    namespace = f'Apply{count}'
+                    lines = generated.replace('TemplateMemberResult', namespace).split('\n')
+                    imports = imports or [line for line in lines if line.startswith('import')]
+                    parts.append('\n'.join(line for line in lines if not line.startswith('import')))
+                    program = re.search(r'^def «(' + kind + r'_factory_receiver1_apply[^»]*)» : NProgram',
+                                        '\n'.join(lines), re.M).group(1)
+                    group = f'GenericAddApplyCall{count}'
+                    raw = f'GenericAddApplyRaw{count}'
+                    prep = f'ExtremaPrepareGeneral{count}'
+                    parts.append(prepare.replace('ExtremaPrepareGeneral', prep))
+                    parts.append(fixture.replace('TemplateMemberResult', namespace)
+                                 .replace('GenericAddApplyRaw', raw).replace('GenericAddApplyCall', group)
+                                 .replace('open ExtremaPrepareGeneral', f'open {prep}'))
+                    checks.append(f'example : {namespace}.«{program}» = {group}.gApply {ty} := rfl')
+                    checks.append(f'example : {namespace}.«{program}_exportViewFuel» = {group}.gApplyView {ty} := rfl')
+                    checks.append(f'example : {namespace}.«{program}_exportObjectsFuel» = {group}.gApplyObjects {ty} := rfl')
+                    checks.extend(f'#print axioms {group}.{name}' for name in names)
+                    checks.extend(f'#print axioms {raw}.{name}' for name in raw_names)
+                    checks.extend(f'#print axioms {prep}.{name}' for name in prepare_names)
+                    count += 1
+            lean = Path(directory) / 'apply.lean'
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.MonoidLazyCall\nimport Proofs.CppScalarValuePrepare\n'
+                            'import Proofs.CppScalarContents\nopen Proofs.CppScalar\n' + '\n'.join(parts) + '\n' +
+                            '\n'.join(checks) + '\n')
+            lake, env = lean_environment()
+            result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
+                                    capture_output=True, text=True)
+        errors = '\n'.join(line for line in (result.stdout + result.stderr).splitlines() if 'error' in line)
+        self.assertEqual(result.returncode, 0, errors[:3000])
+        self.assertNotIn('sorryAx', result.stdout)
+        standard = {'propext', 'Classical.choice', 'Quot.sound'}
+        reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
+        self.assertGreater(len(reports), 40)
+        for line in reports:
+            if line.endswith('does not depend on any axioms'):
+                continue
+            used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
+            self.assertLessEqual(used, standard, line)
 
 
 
