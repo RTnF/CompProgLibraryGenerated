@@ -85,7 +85,7 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 | `L/graph/topological_sort.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/graph/warshall_floyd.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/interval/interval.hpp` | 完了（stream演算子は方針で対象外） | 2026-11-09 `==`/`!=`/`<`/`>`/`<=`/`>=` を追加し一般定理・全件gate成功（commit 171a6bb）。次は `L/interval/interval_union.hpp` など小さい原本から同じ流れ（C++追加→nested_irで生成→Lean定理→statements再生成→全件gate→commit） |
-| `L/interval/interval_union.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
+| `L/interval/interval_union.hpp` | 部分（着手調査済み） | 元APIの復元を選択（2026-11-09）。調査: `verifier/` に `pair` 対応が皆無。必要な拡張は (1) `vector<pair<T,T>>` を2要素recordの要素とするvector、(2) `std::sort` のpair比較契約（またはソートの内部モデル）、(3) 構造化束縛 `auto &&[l, r]`、(4) `emplace_back(l, r)` と `.back().second` 代入、(5) vectorの値返し。公開側は現状2本のvector＋挿入ソート（違反として一覧済み） |
 | `L/modint/dynamic_modint.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/modint/modint.hpp` | 部分 | 公開ModIntの11モデル/一般証明を更新、bridge/kernel成功。全件gate成功。原本class全API/汎用型の移植は未完 |
 | `L/number/ratio.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
