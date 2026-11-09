@@ -53,3 +53,9 @@
 2. 生成モデル `interval_union_inclusive<long long>` の実行の証明: 範囲forのインデックスループ、`ret`（根＋2行の子）への追加（`append`）と最後の要素への `write`、`retVector`。`doubling` の入れ子vector証明（`Proofs/Doubling*.lean`、約3300行）に近い規模の見込み。
 3. 呼出し定理: 引数は書込み可能な2行の入れ子vector（行の長さが等しく、`l[i] ≤ r[i]` を前提）、結果は2行の根（`ret_l`, `ret_r` の仕様）。既存の数学層 `Proofs/IntervalUnionMath.lean`（`Cov`、`MInv`、`mfold_inv`）を再利用する。
 4. 公開: `library/interval/interval_union.hpp` を原本の形（`vector<pair<T,T>>`、`std::sort`）へ戻し、登録・文書・差分テスト・全件ゲート。
+
+### 段階4の進捗（2026-11-10）
+
+- 単位1（`3d7ea65`）: `Proofs/SortPairsFrame.lean` の `sortPairs_ok`。2行が別オブジェクトの書込み可能な整数bufferで長さが等しいとき、`Frame.sortPairsAll` が整列済みの組の成分を2行へコミットした結果（`(f.updated A ..).updated B ..`）になる。`sorry` なし。
+- 単位2: 同ファイルの `sortedPairs_sorted`（`pairLE` で整列済み）、`sortedPairs_perm`（入力の置換）、`sortedPairs_length`、成分の所属補題。既存の数学層 `IntervalUnionMath.lean` の `Sorted`（`PLe a b = ¬ PLt b a` は `pairLE a b` と同値）へそのまま接続できる。
+- 次の単位: `NStmt.sortPairs` を `NStmt.run` と `Models`（`View.rows`）の上で述べる補題、続いて生成モデルのループ（インデックス `i`、`l`/`r` の読み、`ret` の2行への `append`、最後の要素への `write`、`retVector`）の実行の証明。不変条件は `IntervalUnionMath.MInv` を使う。`Proofs/DoublingNested.lean` の `RowsOK` と `Proofs/DoublingCall.lean` の呼出し定理の形が参考になる。
