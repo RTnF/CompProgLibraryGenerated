@@ -17,3 +17,14 @@ C++17 の `bit_width_u64` はゼロに0を返し、それ以外では2による�
 費用は `DoublingPost` に記録する。vector 側の追加仕事量は `(w+1)+(n+1)+(w-1)(2n+1)`（w は行数）で、ちょうどこの値に等しい。スカラー側の仕事量は `kexpr` の式の大きさに加えて `(w-1)(60n+200)+100n+1010` 以下、領域の peak は呼出し側の live 領域に `w + n·w + 3` を加えた値以下である。
 
 `DoublingProgram.body_eq` は、Lean の `bodyCmd` が生成物の本体と `rfl` で一致することを示す。生成物を変えるとこの検査が壊れる（`tests/test_doubling_proof.py` に改変の拒否検査がある）。呼出し側の `v` 以外の buffer が不変であることと、前提違反時に必ず fault になることは、この定理にまだ含めていない。
+
+## 元のソースからの変更
+
+元の `experiments/library/cpp/array/doubling.hpp` の `doubling(vector<int> &v, uint64_t kmax)` に対し、公開版 `cp::doubling` は名前空間 `cp` に入れ、次の点だけを変えた。いずれも元と同じ入力に同じ表を返す。
+
+- 引数 `v` を `const std::vector<int> &` にした（元の非 const 左辺値参照が受けるすべての引数を受け、右辺値や const な vector も受ける。`v` は読むだけ）。
+- C++20 の `std::bit_width(kmax)` を、検証済みの `cp::bit_width_u64`（同じ値、`kmax > 0`）に置き換えた。ヘッダーは C++17 で使える。
+- `int n = v.size()` の暗黙の縮小変換に対し、`v.size() <= INT_MAX` の assert を明示した（元は超過時に未規定）。
+
+`tests/doubling.cpp` の `check_against_original` が、元の関数の逐語コピー（`original::doubling`）と公開版の表を乱択と境界値（`kmax = 1`、`kmax = 2^64 - 1`）で比較して一致を確認する。
+

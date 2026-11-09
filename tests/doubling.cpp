@@ -31,7 +31,58 @@ void check_table(const std::vector<int> &v, std::uint64_t kmax) {
     }
 }
 
+namespace original {
+// std::bit_width is C++20 and this test is compiled as C++17: the same value from the compiler builtin.
+inline int bit_width(std::uint64_t x) { return x == 0 ? 0 : 64 - __builtin_clzll(x); }
+// Verbatim copy of experiments/library/cpp/array/doubling.hpp (the test is compiled without -I, so the header cannot
+// be included by its own relative include).
+using std::vector;
+using std::uint64_t;
+// ダブリング
+// 値が[0, n)である配列のそれぞれで
+// j = v[j] を 2**i 回繰り返した結果の2次元配列を作る
+// O(n log kmax)
+vector<vector<int>> doubling(vector<int> &v, uint64_t kmax) {
+  // 0:0 1:1 2:2 4:3 8:4 ...
+  assert(kmax > 0);
+  int n = v.size();
+  for (int i = 0; i < n; i++) {
+    assert(0 <= v[i]);
+    assert(v[i] < n);
+  }
+  int w = bit_width(kmax);
+  vector<vector<int>> ret(w);
+  ret[0].assign(v.begin(), v.end());
+  for(int i = 1; i < w; i++){
+    ret[i].reserve(n);
+    for(int j = 0; j < n; j++){
+      ret[i].emplace_back(ret[i-1][ret[i-1][j]]);
+    }
+  }
+  return ret;
+}
+} // namespace original
+
+// The original and the published version build the same table (the published parameter is const, which also accepts
+// the original's non-const lvalues).
+void check_against_original(std::vector<int> v, std::uint64_t kmax) {
+    const auto published = cp::doubling(v, kmax);
+    const auto expected = original::doubling(v, kmax);
+    assert(published == expected);
+}
+
 int main() {
+    {
+        std::mt19937_64 differential(20261110);
+        for (int round = 0; round < 200; ++round) {
+            const int n = 1 + static_cast<int>(differential() % 40);
+            std::vector<int> v(n);
+            for (int &x : v) x = static_cast<int>(differential() % n);
+            check_against_original(v, 1 + (differential() >> (differential() % 64)));
+        }
+        check_against_original({0}, 1);
+        check_against_original({0}, ~std::uint64_t{0});
+    }
     static_assert(cp::bit_width_u64(0) == 0);
     static_assert(cp::bit_width_u64(1) == 1);
     static_assert(cp::bit_width_u64(255) == 8);
