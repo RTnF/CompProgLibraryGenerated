@@ -68,13 +68,28 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                         parts.append('\n'.join(line for line in lines if not line.startswith('import')))
                         checks.append(f'example : {namespace}.«{kind}_factory_op».body = '
                                       f'Proofs.GenericExtrema.selectionBody {ty} {indices} := rfl')
+                        # The generic call theorems live beside this instance's own generated
+                        # MemberView/MemberFactory helpers and are tied to its exports by rfl.
+                        fixture = (ROOT / 'tests/lean/generic_extrema_object_call.lean').read_text()
+                        names = [line.split()[1] for line in fixture.splitlines() if line.startswith('theorem ')]
+                        group = f'GenericExtremaCall{count}'
+                        parts.append(fixture.replace('OriginalExtremaObject', namespace)
+                                     .replace('GenericExtremaCall', group))
+                        checks.append(f'example : {namespace}.«{kind}_factory_op_exportViewFuel» = '
+                                      f'{group}.gView {ty} {indices.split()[0]} {indices.split()[1]} := rfl')
+                        checks.append(f'example : {namespace}.«{kind}_factory_op_exportObjectsFuel» = '
+                                      f'{group}.gCombine {ty} {indices.split()[0]} {indices.split()[1]} := rfl')
+                        checks.extend(f'#print axioms {group}.{name}' for name in names)
             lean = Path(directory) / 'extrema.lean'
-            lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericExtrema\nopen Proofs.CppScalar\n' +
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.MonoidLazyCall\nimport Proofs.CppScalarContents\nimport Proofs.GenericExtrema\nopen Proofs.CppScalar\n' +
                             '\n'.join(parts) + '\n' + '\n'.join(checks) + '\n')
             lake, env = lean_environment()
             result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
                                     capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout[:3000] + result.stderr[:3000])
+        self.assertNotIn('sorryAx', result.stdout)
+        self.assertNotIn('Lean.ofReduceBool', result.stdout)
+        self.assertIn('depends on axioms: [propext, Classical.choice, Quot.sound]', result.stdout)
 
     def test_generated_programs_equal_the_ty_family(self):
         disable_network()
