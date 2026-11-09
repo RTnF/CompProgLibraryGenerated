@@ -19,7 +19,7 @@ from class_templates import TemplateInstance, collect_template_record
 from scalar_choose import lower_scalar_choices
 from scalar_assert import verify_scalar_asserts
 
-OPERATIONS = {'size', 'reserve', 'operator[]', 'begin', 'end', 'assign', 'emplace_back', 'push_back', 'erase'}
+OPERATIONS = {'size', 'reserve', 'operator[]', 'begin', 'end', 'assign', 'emplace_back', 'push_back', 'erase', 'empty', 'back'}
 ALGORITHMS = {'sort': 'verifiedStdSort', 'unique': 'verifiedStdUnique'}
 
 
@@ -517,8 +517,41 @@ def audit_vector_nodes(source,functions,roots,include_dirs=(),sorts=(),*,copy_as
                     call['verifiedVectorElement']=candidates[ty]
                     call['verifiedVectorConstructorDecl']=selected[0]['id']
     records=[]
+    std_ids={n['id'] for root in roots for n in walk(root) if 'id' in n}
+    range_exempt=set()
+    for function in functions:
+        for loop in walk(function):
+            if loop.get('kind')!='CXXForRangeStmt':
+                continue
+            parts=[c for c in loop.get('inner',[]) if c]
+            if len(parts)!=7 or [c.get('kind') for c in parts[:3]]!=['DeclStmt']*3 or parts[6].get('kind')!='CompoundStmt':
+                raise ValueError('unsupported range-for shape')
+            range_decl=parts[0]['inner'][0]
+            range_type=range_decl.get('type',{}).get('desugaredQualType',range_decl.get('type',{}).get('qualType',''))
+            if (range_decl.get('kind')!='VarDecl' or not range_type.endswith(' &') or range_type.startswith('const ')
+                    or range_type[:-2] not in candidates):
+                raise ValueError('range-for requires a writable audited vector reference')
+            origin=range_decl['inner'][0] if range_decl.get('inner') else {}
+            if origin.get('kind')!='DeclRefExpr':
+                raise ValueError('range-for requires a named vector')
+            cond,increment,declaration=parts[3],parts[4],parts[5]
+            decomposition=declaration['inner'][0] if declaration.get('inner') else {}
+            dereference=decomposition['inner'][0] if decomposition.get('inner') else {}
+            if (cond.get('kind')!='CXXOperatorCallExpr' or increment.get('kind')!='CXXOperatorCallExpr' or
+                    dereference.get('kind')!='CXXOperatorCallExpr'):
+                raise ValueError('range-for requires iterator operator calls')
+            for call in (cond,increment,dereference):
+                callee=call['inner'][0]
+                while callee.get('kind')=='ImplicitCastExpr' and len(callee.get('inner',[]))==1:
+                    callee=callee['inner'][0]
+                if callee.get('referencedDecl',{}).get('id') not in std_ids:
+                    raise ValueError('range-for iterator operators must be standard library declarations')
+                range_exempt.add(id(call))
+            loop['verifiedRangeFor']=dict(range=range_decl['id'],container=origin['referencedDecl']['id'])
     for function in functions:
         for call in walk(function):
+            if id(call) in range_exempt:
+                continue
             children=call.get('inner',[])
             if call.get('kind')=='CallExpr' and children:
                 callee=children[0]

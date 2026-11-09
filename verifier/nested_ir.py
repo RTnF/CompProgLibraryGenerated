@@ -16,6 +16,7 @@ from scalar_ir import expression, scalar_type, lean_type, lean_expression, TYPES
 from state_ir import ValueCalls, lean_statement
 from vector_bindings import bindings_from_audit, verify_type_probes
 from vector_ir import Body, unwrap_lvalue
+from scalar_stl import walk as walk_nodes
 from vector_stl import audit_vector_operations
 
 UINT64 = dict(width=64, signed=False, boolean=False)
@@ -52,6 +53,12 @@ def parse_element(spelling):
     match = re.fullmatch(r'std::vector<(.+)>', spelling)
     if match:
         return dict(vector=parse_element(match.group(1)))
+    pair = re.fullmatch(r'std::pair<(.+), (.+)>', spelling)
+    if pair and pair.group(1) == pair.group(2):
+        # std::pair<T, T> of a vector of pairs: the vector is two rows of T (first, second).
+        scalar = parse_element(pair.group(1))
+        if 'vector' not in scalar:
+            return dict(vector=scalar)
     raise ValueError('unsupported vector element type: ' + spelling)
 
 
@@ -129,7 +136,8 @@ class NestedBody(Body):
                 return dict(kind='local', slot=slot, element=dict(vector=binding['element']),
                             writable=binding['writable'], pair=binding.get('pair', False))
             slot, binding = self.binding(node, 'vector')
-            return dict(kind='local', slot=slot, element=binding['element'], writable=binding['writable'])
+            return dict(kind='local', slot=slot, element=binding['element'], writable=binding['writable'],
+                        pair=binding.get('pair', False))
         if (node['kind'] == 'CXXOperatorCallExpr' and node.get('verifiedVectorOperation') == 'operator[]'
                 and len(children) == 3):
             parent = self.container(children[1])
@@ -160,38 +168,54 @@ class NestedBody(Body):
             raise ValueError('integer vector operation requires a container of integers')
         return container['element']
 
+    def pair_row(self, container, which):
+        return dict(kind='row', parent=container, element=container['element']['vector'],
+                    writable=container['writable'], index=dict(kind='literal', type=UINT64, value=which))
+
+    def pair_size(self, container):
+        scalar = container['element']['vector']
+        return dict(kind='vector_size', type=UINT64, element=scalar, container=self.pair_row(container, 0))
+
+    def pair_member(self, node):
+        """`v[i].first`, `v[i].second`, `v.back().first`, `v.back().second` of a vector of std::pair<T, T>:
+        (row container, element index, scalar type)."""
+        base = unwrap_lvalue(node['inner'][0])
+        operation = base.get('verifiedVectorOperation')
+        children = base.get('inner', [])
+        if base['kind'] == 'CXXOperatorCallExpr' and operation == 'operator[]' and len(children) == 3:
+            parent = self.container(children[1])
+            index = self.expr(children[2])
+            if index['type'] != UINT64:
+                raise ValueError('vector subscript requires size_type')
+        elif (base['kind'] == 'CXXMemberCallExpr' and operation == 'back' and len(children) == 1 and
+              children[0]['kind'] == 'MemberExpr' and len(children[0].get('inner', [])) == 1):
+            parent = self.container(children[0]['inner'][0])
+            index = dict(kind='binary', type=UINT64, operation='sub', left=self.pair_size(parent),
+                         right=dict(kind='literal', type=UINT64, value=1))
+        else:
+            raise ValueError('pair member access requires v[i] or v.back() of a vector of pairs')
+        if not parent.get('pair'):
+            raise ValueError('pair member access requires a vector of pairs')
+        scalar = parent['element']['vector']
+        if scalar_type(node) != scalar:
+            raise ValueError('pair member type mismatch')
+        row = self.pair_row(parent, 0 if node['verifiedPairField'] == 'first' else 1)
+        return row, index, scalar
+
     # --- expressions -------------------------------------------------
     def extension(self, node, slots):
         if node.get('verifiedPairField'):
-            # `v[i].first` / `v[i].second` of a vector of std::pair<T, T> (two rows of T, first and second).
-            base = unwrap_lvalue(node['inner'][0])
-            if not (base['kind'] == 'CXXOperatorCallExpr' and base.get('verifiedVectorOperation') == 'operator[]'
-                    and len(base.get('inner', [])) == 3):
-                raise ValueError('pair member access requires a subscripted vector of pairs')
-            parent = self.container(base['inner'][1])
-            if 'vector' not in parent['element']:
-                raise ValueError('pair member access requires a vector of pairs')
-            index = self.expr(base['inner'][2])
-            if index['type'] != UINT64:
-                raise ValueError('vector subscript requires size_type')
-            row = dict(kind='literal', type=UINT64, value=0 if node['verifiedPairField'] == 'first' else 1)
-            element = parent['element']['vector']
-            result = dict(kind='vector_read', type=element, element=element,
-                          container=dict(kind='row', parent=parent, element=element, index=row,
-                                         writable=parent['writable']),
-                          index=index)
-            if scalar_type(node) != result['type']:
-                raise ValueError('pair member type mismatch')
-            return result
+            row, index, scalar = self.pair_member(node)
+            return dict(kind='vector_read', type=scalar, element=scalar, container=row, index=index)
         if node.get('verifiedVectorOperation'):
             operation, container, args = self.operation(node)
             element = container['element']
             if operation == 'size' and not args and container.get('pair'):
                 # The number of pairs is the length of the first row.
-                scalar = element['vector']
-                row = dict(kind='row', parent=container, element=scalar, writable=container['writable'],
-                           index=dict(kind='literal', type=UINT64, value=0))
-                result = dict(kind='vector_size', type=UINT64, element=scalar, container=row)
+                result = self.pair_size(container)
+            elif operation == 'empty' and not args and container.get('pair'):
+                result = dict(kind='binary', type=BOOL, operation='eq', left=self.pair_size(container),
+                              right=dict(kind='literal', type=UINT64, value=0))
             elif operation == 'size' and not args:
                 result = dict(kind='vector_size', type=UINT64, element=element, container=container)
             elif operation == 'operator[]' and len(args) == 1 and 'vector' not in element:
@@ -329,6 +353,8 @@ class NestedBody(Body):
             fill_value = self.expr(fill_value)
             if fill_value['type'] != element:
                 raise ValueError('fill value type mismatch')
+        elif flat and element_spelling.startswith('std::pair<'):
+            pass
         elif flat:
             if 'vector' in element:
                 raise ValueError('default construction supports vectors of integers')
@@ -358,7 +384,13 @@ class NestedBody(Body):
                  f'static_assert(__is_same(decltype({"this->" if field else ""}{name}),{canonical}),"canonical local vector required");\n')
         self.probes.append((location['offset'] + location['tokLen'], probe))
         self.slots[declaration['id']] = len(self.bindings)
-        self.bindings.append(dict(kind='vector', element=element, writable=not readonly))
+        is_pair = flat and element_spelling.startswith('std::pair<')
+        self.bindings.append(dict(kind='vector', element=element, writable=not readonly,
+                                  **(dict(pair=True) if is_pair else {})))
+        if is_pair:
+            # An empty vector of pairs: the two empty rows (first, second).
+            return [dict(kind='construct_rows', element=element['vector'], writable=not readonly,
+                         count=dict(kind='literal', type=UINT64, value=2))]
         if copy:
             return [dict(kind='copy_vector', element=element, writable=not readonly, source=copy_source)]
         if fill:
@@ -381,6 +413,14 @@ class NestedBody(Body):
             return [self.vector_return(children[0])]
         if kind == 'BinaryOperator' and node.get('opcode') == '=' and len(children) == 2:
             left = unwrap_lvalue(children[0])
+            if left.get('verifiedPairField'):
+                row, index, scalar = self.pair_member(left)
+                if not row['writable']:
+                    raise ValueError('writable vector of pairs required')
+                value = self.expr(children[1])
+                if value['type'] != scalar:
+                    raise ValueError('pair member assignment type mismatch')
+                return [dict(kind='write', container=row, element=scalar, index=index, value=value)]
             if left.get('verifiedVectorOperation'):
                 operation, container, args = self.operation(left)
                 element = self.scalar_container(container)
@@ -401,7 +441,50 @@ class NestedBody(Body):
             return self.vector_update(node)
         if kind == 'CallExpr' and node.get('verifiedStdSort'):
             return self.sort_vector(node)
+        if kind == 'CXXForRangeStmt' and node.get('verifiedRangeFor'):
+            return self.range_for(node)
         return super().statement(node)
+
+    def range_for(self, node):
+        """`for (auto &&[a, b] : v) body` over a vector of pairs as an index loop; the body must not touch v."""
+        info = node['verifiedRangeFor']
+        parts = [c for c in node.get('inner', []) if c]
+        origin = parts[0]['inner'][0]['inner'][0]
+        container = self.container(origin)
+        if not container.get('pair'):
+            raise ValueError('range-for supports vectors of pairs')
+        decomposition = parts[5]['inner'][0]
+        names = [c for c in decomposition.get('inner', []) if c.get('kind') == 'BindingDecl']
+        if decomposition.get('kind') != 'DecompositionDecl' or len(names) != 2:
+            raise ValueError('range-for requires a structured binding of the pair')
+        body = parts[6]
+        for inner in walk_nodes(body):
+            reference = inner.get('referencedDecl', {}).get('id') if inner.get('kind') == 'DeclRefExpr' else None
+            if reference in (info['container'], info['range']):
+                raise ValueError('the range-for body must not use the iterated vector')
+        scalar = container['element']['vector']
+        saved_slots, saved_bindings = self.slots.copy(), self.bindings.copy()
+        index_slot = len(self.bindings)
+        self.bindings.append(dict(kind='scalar', element=UINT64, reference=False, writable=True))
+        index = dict(kind='variable', type=UINT64, slot=index_slot)
+        start = [dict(kind='declare', type=UINT64, writable=True, value=dict(kind='literal', type=UINT64, value=0))]
+        test = dict(kind='binary', type=BOOL, operation='lt', left=index, right=self.pair_size(container))
+        inner_slots, inner_bindings = self.slots.copy(), self.bindings.copy()
+        reads = []
+        for which, name in enumerate(names):
+            self.slots[name['id']] = len(self.bindings)
+            self.bindings.append(dict(kind='scalar', element=scalar, reference=False, writable=False))
+            reads.append(dict(kind='declare', type=scalar, writable=False,
+                              value=dict(kind='vector_read', type=scalar, element=scalar,
+                                         container=self.pair_row(container, which), index=index)))
+        iteration = self.scoped(body, True)
+        self.slots, self.bindings = inner_slots, inner_bindings
+        update = [dict(kind='assign', slot=index_slot, type=UINT64,
+                       value=dict(kind='binary', type=UINT64, operation='add', left=index,
+                                  right=dict(kind='literal', type=UINT64, value=1)))]
+        self.slots, self.bindings = saved_slots, saved_bindings
+        return [dict(kind='scope', body=start + [dict(kind='while', condition=test,
+                body=[dict(kind='scope', body=reads + iteration)] + update)])]
 
     def vector_update(self, node):
         operation, container, args = self.operation(node)
@@ -412,6 +495,19 @@ class NestedBody(Body):
             if 'vector' in element:
                 raise ValueError('empty row append requires a vector of integers')
             return [dict(kind='append_row', container=container, element=element)]
+        if container.get('pair') and operation == 'emplace_back' and len(args) == 2:
+            scalar = container['element']['vector']
+            values = []
+            for argument in args:
+                plain = unwrap_lvalue(argument)
+                if plain['kind'] != 'DeclRefExpr':
+                    raise ValueError('pair emplace_back requires plain variables as arguments')
+                value = self.expr(argument)
+                if value['type'] != scalar:
+                    raise ValueError('pair emplace_back argument type mismatch')
+                values.append(value)
+            return [dict(kind='append_reserved', container=self.pair_row(container, row), element=scalar, value=value)
+                    for row, value in enumerate(values)]
         element = self.scalar_container(container)
         if operation == 'assign' and len(args) == 2:
             endpoints = []
@@ -447,6 +543,12 @@ class NestedBody(Body):
         if endpoints[0] != endpoints[1]:
             raise ValueError('std::sort endpoints must belong to the same vector')
         container = endpoints[0]
+        if container.get('pair'):
+            # std::sort of std::pair<T, T> with the default lexicographic operator<: both rows are permuted together.
+            scalar = container['element']['vector']
+            if not container['writable'] or scalar['width'] > 64:
+                raise ValueError('std::sort requires a writable vector of integer pairs')
+            return [dict(kind='sort_pairs', container=container, element=scalar)]
         element = self.scalar_container(container)
         if not container['writable'] or element['width'] > 64:
             raise ValueError('std::sort requires a writable vector of integers')
@@ -609,6 +711,8 @@ def render_statement(statement):
         return f"(.dedupVec {render_container(statement['container'])} {lean_type(statement['element'])})"
     if kind == 'sort_vector':
         return f"(.sortVec {render_container(statement['container'])} {lean_type(statement['element'])})"
+    if kind == 'sort_pairs':
+        return f"(.sortPairs {render_container(statement['container'])} {lean_type(statement['element'])})"
     if kind == 'assign_range':
         return (f"(.assignRange {render_container(statement['container'])} {statement['first']} "
                 f"{statement['last']} {lean_type(statement['element'])} "
