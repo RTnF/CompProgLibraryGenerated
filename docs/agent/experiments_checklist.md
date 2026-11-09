@@ -6,7 +6,7 @@
 
 ## ヘッダー（66）
 
-- [ ] `experiments/library/cpp/algebraic_structure/group.hpp`
+- [x] `experiments/library/cpp/algebraic_structure/group.hpp` — 整数型の具体化セット（long long, int）。浮動小数Tは基盤整備後
 - [ ] `experiments/library/cpp/algebraic_structure/monoid.hpp`
 - [ ] `experiments/library/cpp/algebraic_structure/monoid_lazy.hpp`
 - [ ] `experiments/library/cpp/array/cumulative_sum.hpp`

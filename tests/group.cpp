@@ -71,8 +71,39 @@ void check_original_api() {
     assert(op(local, local).x().value == 4 && cp::op(local, local).x().value == 4);
 }
 
+// The int instances are verified like the long long ones; check them against direct arithmetic.
+void check_int_instances() {
+    using Sum = cp::GroupSum<int>;
+    using Mul = cp::GroupMul<int>;
+    using Affine = cp::GroupAffine<int>;
+    assert(Sum().x() == 0 && Sum::e().x() == 0 && Mul().x() == 1 && Mul::e().x() == 1);
+    const int values[] = {-1000, -7, -1, 0, 1, 2, 5, 1000};
+    for (int a : values) {
+        assert(op(Sum(a), Sum(7)).x() == a + 7 && Sum(a).inv().x() == -a);
+        if (a == 1 || a == -1) {
+            assert(Mul(a).inv().x() == a);
+        }
+        for (int b : values) {
+            if (a != 0 && b != 0) {
+                assert(op(Mul(a), Mul(b)).x() == a * b);
+            }
+            for (int c : values) {
+                for (int d : values) {
+                    Affine p(a, b), q(c, d);
+                    Affine r = op(p, q);
+                    assert(r.a() == a * c && r.b() == b * c + d);
+                    assert(r.apply(3) == q.apply(p.apply(3)));
+                }
+            }
+        }
+    }
+    assert(Affine().a() == 1 && Affine().b() == 0 && Affine::e().a() == 1 && Affine::e().b() == 0);
+    assert(Affine(1, 4).inv().a() == 1 && Affine(1, 4).inv().b() == -4);
+}
+
 int main() {
     check_original_api();
+    check_int_instances();
     using GroupMul = cp::GroupMul<long long>;
     using GroupSum = cp::GroupSum<long long>;
     using GroupAffine = cp::GroupAffine<long long>;

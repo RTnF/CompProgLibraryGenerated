@@ -4,7 +4,7 @@
 
 元のソースからの変更（2026-11-05に元の暗黙変換と構築形式を復元。正本追加後の全件検証は進行中）:
 
-- クラステンプレートの型パラメータ `T` を保ち、検証する具体化は `long long` とする。元の非テンプレートhidden friendを残し、`op(GroupSum<long long>(2), 3LL)` と逆順、`GroupMul`の混在引数、Affineへ変換できる型も受け付ける。既存のqualified `cp::op`用の関数テンプレートも維持する。
+- クラステンプレートの型パラメータ `T` を保ち、検証する具体化は整数型の `long long` と `int` とする（2026-11-09に `int` を追加。`double` など浮動小数の `T` は浮動小数の検証基盤が整うまで未検証）。元の非テンプレートhidden friendを残し、`op(GroupSum<long long>(2), 3LL)` と逆順、`GroupMul`の混在引数、Affineへ変換できる型も受け付ける。既存のqualified `cp::op`用の関数テンプレートも維持する。
 - namespace関数のLL具体化に、型宣言とstatic_assertだけのwitnessを置く。関数ポインタを非型テンプレート引数にして元のfriend本文もClangで具体化し、共通変換器で検証対象へ取り込む。他の `T` では分岐を破棄するため、新しい型の制約や実行時の操作を加えない。LLのfriend4モデルはnamespace版とプログラム全体が一致し、既存の一般定理をそのまま適用できる。
 - 3クラスの既定構成子を元と同じ `e()` への委譲へ戻し、暗黙returnとAffineの波括弧returnも戻した。汎用型で観測できたコピー回数と構築順の差を解消する。`tests/group.cpp`で暗黙変換・変換proxy・local型を検査し、`tests/test_scalar_class_delegation.py`で原本と公開版を同じ条件でコンパイルしてAffineの構築event列を比較する。
 - `GroupAffine::apply` は元と同じ `const T &x` で受け、引数のコピーを増やさない。
@@ -48,3 +48,8 @@ C++テストはメンバー関数の型のstatic_assertと、コピー回数を�
 ## library3旧版との未解消差
 
 ここで復元したAPIは `experiments/library/cpp/algebraic_structure/group.hpp` のもの。`library3` のGroupはpublic field `x/a/b` を持ち、MappingのAffineはpublic field `a/b`、`ide/compose`、値渡しの `template<class U> U apply(U)` を持つ。現行のgetterと `const T& apply` だけで同じAPIとはしない。異型引数0.5での適用結果とGroupSum<double>の逆元の0の符号にも差がある。詳細と実比較は `docs/experiments_findings.md` を参照する。旧版を含む全体の統合・検証は継続中。
+
+
+## 整数型の具体化セット（2026-11-09）
+
+`GroupSum`/`GroupMul`/`GroupAffine` の `int` 具体化（`template class ...<int>` と `op` の明示具体化）を追加した。生成モデルは `long long` 版と型幅（32 bit）と、`return 0` のような整数リテラルが `long long` では `cast` を挟み `int` では挟まない点だけが異なる。`Proofs/GroupCall.lean` の名前空間 `Proofs.GroupCallInt` に、`long long` 版と同じ全定理（`x`/`e`/既定構築/値構築/`op`/`inv`/`apply`/hidden friend の一致）を `i32` で証明した。前提は各演算の結果が `int` に収まること（`GroupMul::inv` は `x = 1, -1` のとき）で、`long long` 版と同じ。`tests/group.cpp` の `check_int_instances` が `int` を直接計算と照合する。

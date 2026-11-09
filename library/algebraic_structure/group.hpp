@@ -32,7 +32,7 @@ public:
   GroupSum inv() const { return -_x; }
 };
 template <class T> GroupSum<T> op(const GroupSum<T> &a, const GroupSum<T> &b) {
-  if constexpr (std::is_same_v<T, long long>) {
+  if constexpr (std::is_same_v<T, long long> || std::is_same_v<T, int>) {
     GroupSum<T> op(const GroupSum<T> &, const GroupSum<T> &);
     using Function = GroupSum<T> (*)(const GroupSum<T> &, const GroupSum<T> &);
     using ForceOp = std::integral_constant<Function, static_cast<Function>(&op)>;
@@ -56,7 +56,7 @@ public:
   GroupMul inv() const { return 1 / _x; }
 };
 template <class T> GroupMul<T> op(const GroupMul<T> &a, const GroupMul<T> &b) {
-  if constexpr (std::is_same_v<T, long long>) {
+  if constexpr (std::is_same_v<T, long long> || std::is_same_v<T, int>) {
     GroupMul<T> op(const GroupMul<T> &, const GroupMul<T> &);
     using Function = GroupMul<T> (*)(const GroupMul<T> &, const GroupMul<T> &);
     using ForceOp = std::integral_constant<Function, static_cast<Function>(&op)>;
@@ -83,7 +83,7 @@ public:
   T apply(const T &x) const { return _a * x + _b; }
 };
 template <class T> GroupAffine<T> op(const GroupAffine<T> &p, const GroupAffine<T> &q) {
-  if constexpr (std::is_same_v<T, long long>) {
+  if constexpr (std::is_same_v<T, long long> || std::is_same_v<T, int>) {
     GroupAffine<T> op(const GroupAffine<T> &, const GroupAffine<T> &);
     using Function = GroupAffine<T> (*)(const GroupAffine<T> &, const GroupAffine<T> &);
     using ForceOp = std::integral_constant<Function, static_cast<Function>(&op)>;
@@ -98,5 +98,11 @@ template GroupSum<long long> op(const GroupSum<long long> &, const GroupSum<long
 template GroupMul<long long> op(const GroupMul<long long> &, const GroupMul<long long> &);
 template class GroupAffine<long long>;
 template GroupAffine<long long> op(const GroupAffine<long long> &, const GroupAffine<long long> &);
+template class GroupSum<int>;
+template class GroupMul<int>;
+template class GroupAffine<int>;
+template GroupSum<int> op(const GroupSum<int> &, const GroupSum<int> &);
+template GroupMul<int> op(const GroupMul<int> &, const GroupMul<int> &);
+template GroupAffine<int> op(const GroupAffine<int> &, const GroupAffine<int> &);
 
 } // namespace cp
