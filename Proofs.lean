@@ -1169,3 +1169,4 @@ import Proofs.MonoidCallCoreInt
 import Proofs.CppScalarContents
 import Proofs.CppScalarValuePrepare
 import Proofs.GenericCall
+import Proofs.GenericLazy
