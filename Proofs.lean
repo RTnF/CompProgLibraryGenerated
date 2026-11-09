@@ -159,6 +159,7 @@ import Proofs.VecStraight
 import Proofs.VecCall
 import Proofs.VecKit
 import Proofs.VecWrite
+import Proofs.SortPairsFrame
 import Proofs.VecWriteCall
 import Proofs.MultiVec
 import Proofs.MultiVecCall
