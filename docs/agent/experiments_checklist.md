@@ -36,9 +36,9 @@
 - [ ] `experiments/library/cpp/modint/modint.hpp`
 - [ ] `experiments/library/cpp/number/ratio.hpp`
 - [ ] `experiments/library/cpp/number/square_matrix.hpp`
-- [ ] `experiments/library/cpp/number_theory/enumerate_quotients.hpp`
+- [x] `experiments/library/cpp/number_theory/enumerate_quotients.hpp` — 公開版との同値を差分テストで確認、変更点を文書化 — c03129d
 - [ ] `experiments/library/cpp/number_theory/factorize.hpp`
-- [ ] `experiments/library/cpp/number_theory/floor_sum.hpp`
+- [x] `experiments/library/cpp/number_theory/floor_sum.hpp` — 元ヘッダーと同一の生成モデルを照合 — 41f0120
 - [ ] `experiments/library/cpp/number_theory/is_prime.hpp`
 - [ ] `experiments/library/cpp/random/xorshift.hpp`
 - [ ] `experiments/library/cpp/segment_tree/binary_indexed_tree.hpp`
