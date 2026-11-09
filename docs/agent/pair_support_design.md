@@ -59,3 +59,12 @@
 - 単位1（`3d7ea65`）: `Proofs/SortPairsFrame.lean` の `sortPairs_ok`。2行が別オブジェクトの書込み可能な整数bufferで長さが等しいとき、`Frame.sortPairsAll` が整列済みの組の成分を2行へコミットした結果（`(f.updated A ..).updated B ..`）になる。`sorry` なし。
 - 単位2: 同ファイルの `sortedPairs_sorted`（`pairLE` で整列済み）、`sortedPairs_perm`（入力の置換）、`sortedPairs_length`、成分の所属補題。既存の数学層 `IntervalUnionMath.lean` の `Sorted`（`PLe a b = ¬ PLt b a` は `pairLE a b` と同値）へそのまま接続できる。
 - 次の単位: `NStmt.sortPairs` を `NStmt.run` と `Models`（`View.rows`）の上で述べる補題、続いて生成モデルのループ（インデックス `i`、`l`/`r` の読み、`ret` の2行への `append`、最後の要素への `write`、`retVector`）の実行の証明。不変条件は `IntervalUnionMath.MInv` を使う。`Proofs/DoublingNested.lean` の `RowsOK` と `Proofs/DoublingCall.lean` の呼出し定理の形が参考になる。
+
+### ループの証明に使える既存の足場（2026-11-10、調査）
+
+- ループ: `Proofs/CppNestedHoare.lean` の `RunsTo`、`RunsTo.whileLoop`（不変条件 `I : NState → Prop`）、`RunsTo.whileGhost`（`I : Nat → NState → Prop`、反復の残りの測度つき）、`RunsTo.sequence/scope/branch/primitive`。生成モデルの `whileLoop` はこれで接続する。
+- 行の読み取り: `Proofs/DynamicIndexRead.lean` の `read_row`、`Proofs/DynamicRowsRead.lean` の `eval_row_perm`、`Proofs/CppRowsStmt.lean` の `eval_row`（行数が動的な根）。`Proofs/CppRootModel.lean` の `Models`/`View.rows`/`append_frame_effect`/`updated_other` が、根と行のbufferの対応を与える。
+- 追加と最後の要素の更新: `Proofs/DynamicAppendIndex.lean`、`Proofs/DynamicFlatFamily.lean`（`Frame.append` の効果）、`Proofs/VecWrite.lean`（`write` の効果）。
+- 不変条件の案: 反復 `k` の後、`ret` の2行が `mstep` を畳み込んだ区間リスト `M`（`IntervalUnionMath.MInv M (D.take k)`）の左端列・右端列に等しく、`v` の2行は `sortedPairs` の成分、`i = k`。
+
+次の単位: 1反復の本体（2回の `declare` と `branch`、`append`×2 または `write`）が `mstep` に対応することを、`RunsTo` で述べる。
