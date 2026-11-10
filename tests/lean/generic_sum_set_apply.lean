@@ -26,7 +26,7 @@ abbrev cx (ty : Ty) (x : Int) : Cell := ⟨ty,x⟩
 abbrev cf (f : Int) : Cell := ⟨bl,f⟩
 variable (ty : Ty)
 def refs (a b : Nat) : List CppState.Binding := [⟨a,true⟩,⟨b,true⟩]
-def selected (v f x n : Int) : Int := if f=0 then v*n else x
+def selected (f x q : Int) : Int := if f=0 then q else x
 def product : NExpr := .binary ty .mul (.variable ty 0) (Proofs.GenericLazy.castTo ty i32 (.variable i32 3))
 def condition : NExpr := .unary bl .not (.variable bl 1)
 def arm : Command := .sequence (.scope (.sequence (.primitive (.assign 2 ty (product ty))) Sk)) Sk
@@ -40,10 +40,10 @@ theorem update_exec (P : List Cell) (a b : Nat) (v f x n : Int)
     (receiver : P[a]? = some (cx ty v)) (flag : P[b]? = some (cf f))
     (hv : ty.valid v = true) (hf : bl.valid f = true)
     (hx : ty.valid x = true) (hn : i32.valid n = true) (hnt : ty.valid n = true)
-    (hp : f=0 → ty.valid (v*n) = true) :
+    (q : Int) (hcm : f=0 → ty.convert (v*n) = some q) :
     ∃ r, pexec 1 (update ty) (ws P (refs a b) [cx ty x,cn n]) = some r ∧
       r.ret = none ∧ r.cost ≤ (if f=0 then 9 else 3) ∧ r.need ≤ P.length+12 ∧
-      r.ps = ws P (refs a b) [cx ty (selected v f x n),cn n] := by
+      r.ps = ws P (refs a b) [cx ty (selected f x q),cn n] := by
   let R := refs a b
   let L : List Cell := [cx ty x,cn n]
   have readf : (NExpr.variable bl 1).denote (penv (ws P R L)) = some f := by
@@ -56,17 +56,17 @@ theorem update_exec (P : List Cell) (a b : Nat) (v f x n : Int)
     have readn : (NExpr.variable i32 3).denote (penv (ws P R L)) = some n := by
       rw [den_variable]
       exact ws_env_loc P R L 1 (cn n) i32 rfl rfl hn
-    have mul : (product ty).denote (penv (ws P R L)) = some (v*n) := by
+    have mul : (product ty).denote (penv (ws P R L)) = some q := by
       rw [product,den_binary,readv,Proofs.GenericLazy.castTo_den ty i32 (.variable i32 3) _ n (by rw [den_variable]; exact readn) hnt]
-      simpa [binaryValue] using Ty.convert_of_valid ty (v*n) (hp zero)
+      simpa [binaryValue] using hcm zero
     have cond : condition.denote (penv (ws P R L)) = some 1 := by
       change ((penv (ws P R L) 1 bl).bind fun value => bl.convert (unaryValue .not value)) = _
       have envf : penv (ws P R L) 1 bl = some f := readf
       rw [envf]
       simp [zero,unaryValue,Ty.convert]
-    have st := pstmt_assign_ok (ws P R L) 2 ty (product ty) (v*n) mul ⟨P.length,true⟩ (cx ty x)
-      (by simp [ws,R,refs,L,List.range_succ]) (by simp [ws,L,cx]) rfl hx rfl (v*n)
-      (Ty.convert_of_valid _ _ (hp zero))
+    have st := pstmt_assign_ok (ws P R L) 2 ty (product ty) q mul ⟨P.length,true⟩ (cx ty x)
+      (by simp [ws,R,refs,L,List.range_succ]) (by simp [ws,L,cx]) rfl hx rfl q
+      (Proofs.GenericCall.convG ty q (Proofs.GenericCall.convert_valid ty _ _ (hcm zero)))
     have br := pexec_braced 1 (.assign 2 ty (product ty)) (ws P R L) _ st rfl
       (by simp) rfl
     have run := pexec_branch_true 1 condition (arm ty) Sk (ws P R L) 1 cond (by decide) _ br
@@ -91,17 +91,17 @@ theorem raw_exec (P : List Cell) (a b : Nat) (v f x n : Int)
     (receiver : P[a]? = some (cx ty v)) (flag : P[b]? = some (cf f))
     (hv : ty.valid v = true) (hf : bl.valid f = true)
     (hx : ty.valid x = true) (hn : i32.valid n = true) (hnt : ty.valid n = true)
-    (hp : f=0 → ty.valid (v*n) = true) :
+    (q : Int) (hcm : f=0 → ty.convert (v*n) = some q) :
     ∃ r, pexec 1 (rawBody ty) (ws P (refs a b) [cx ty x,cn n]) = some r ∧
       r.ret = none ∧ r.cost ≤ (if f=0 then 13 else 7) ∧ r.need ≤ P.length+13 ∧
-      r.ps = ws P (refs a b) [cx ty (selected v f x n),cn n,cx ty (selected v f x n),cn n] := by
+      r.ps = ws P (refs a b) [cx ty (selected f x q),cn n,cx ty (selected f x q),cn n] := by
   let R := refs a b
-  let y := selected v f x n
+  let y := selected f x q
   let L2 : List Cell := [cx ty y,cn n]
   let L3 : List Cell := L2 ++ [cx ty y]
   let L4 : List Cell := L3 ++ [cn n]
-  have hy : ty.valid y = true := by unfold y selected; split; exact hp ‹f=0›; exact hx
-  obtain ⟨u,qu,ru,cu,nu,pu⟩ := update_exec ty P a b v f x n receiver flag hv hf hx hn hnt hp
+  have hy : ty.valid y = true := by unfold y selected; split; exact Proofs.GenericCall.convert_valid ty _ _ (hcm ‹f=0›); exact hx
+  obtain ⟨u,qu,ru,cu,nu,pu⟩ := update_exec ty P a b v f x n receiver flag hv hf hx hn hnt q hcm
   have readx : (NExpr.variable ty 2).denote (penv (ws P R L2)) = some y := by
     rw [den_variable]
     exact ws_env_loc P R L2 0 (cx ty y) ty rfl rfl hy
@@ -199,7 +199,7 @@ theorem stage_ready (caller : NState) (receiverSlot flagSlot : Nat) (binding fla
     (flagFound : caller.scalarCell flagSlot bl = some (flagBinding,⟨bl,f⟩))
     (flagWritable : flagBinding.writable = true)
     (hx : ty.valid x = true) (hn : i32.valid n = true) (hnt : ty.valid n = true)
-    (hp : f=0 → ty.valid (v*n) = true)
+    (q : Int) (hcm : f=0 → ty.convert (v*n) = some q)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
@@ -207,14 +207,14 @@ theorem stage_ready (caller : NState) (receiverSlot flagSlot : Nat) (binding fla
     ∃ initial fuel callee, prepare caller (gSumApply ty).parameters
         [.scalarReference receiverSlot,.scalarReference flagSlot,.value (.literal ty x),.value (.literal i32 n)] = some initial ∧
       runFuel fuel (gSumApply ty).body initial = .finished ⟨callee,none,false⟩ ∧
-      StageState ty caller initial callee binding.address flagBinding.address (selected v f x n) n := by
+      StageState ty caller initial callee binding.address flagBinding.address (selected f x q) n := by
   obtain ⟨initial,prepared,slots,mem,bindings,bas,scope,frame,work,peak⟩ :=
     prepare_references2_values2 caller (gSumApply ty).parameters ty bl ty i32 rfl
       receiverSlot flagSlot binding flagBinding v f x n found writable flagFound flagWritable hx hn valid
   obtain ⟨receiver,hv⟩ := caller_cell caller receiverSlot ty binding v found
   obtain ⟨flag,hf⟩ := caller_cell caller flagSlot bl flagBinding f flagFound
-  have hy : ty.valid (selected v f x n) = true := by unfold selected; split; exact hp ‹f=0›; exact hx
-  obtain ⟨r,ran,ret,cost,need,ps⟩ := GenericSumSetApplyRaw.raw_exec ty (callerP caller) binding.address flagBinding.address v f x n receiver flag hv hf hx hn hnt hp
+  have hy : ty.valid (selected f x q) = true := by unfold selected; split; exact Proofs.GenericCall.convert_valid ty _ _ (hcm ‹f=0›); exact hx
+  obtain ⟨r,ran,ret,cost,need,ps⟩ := GenericSumSetApplyRaw.raw_exec ty (callerP caller) binding.address flagBinding.address v f x n receiver flag hv hf hx hn hnt q hcm
   have qs : QS initial [] caller.scalars.baseMemory (caller.scope+1)
       (ws (callerP caller) (refs binding.address flagBinding.address) [cx ty x,cn n]).mem
       (ws (callerP caller) (refs binding.address flagBinding.address) [cx ty x,cn n]).bs (ssl 4) := by
@@ -247,7 +247,7 @@ theorem stage_ready (caller : NState) (receiverSlot flagSlot : Nat) (binding fla
     (by unfold scalarBound; omega)
     (Nat.le_refl _) (by exact Nat.le_max_right _ _)
   obtain ⟨fuel,step,executed,returned,breaking,qsD,faD,cqD⟩ := run
-  have typed : StageState ty caller initial step.state binding.address flagBinding.address (selected v f x n) n := by
+  have typed : StageState ty caller initial step.state binding.address flagBinding.address (selected f x q) n := by
     refine ⟨?_,faD,?_,?_,hy,hn⟩
     · rw [ps] at qsD
       simpa [ws,fields,fieldBindings,ssl,refs] using qsD
@@ -459,7 +459,7 @@ theorem view_export_correct (caller : NState) (targetConst : Bool) (receiverSlot
     (flagFound : caller.scalarCell flagSlot bl = some (flagBinding,⟨bl,f⟩))
     (flagWritable : flagBinding.writable = true)
     (hx : ty.valid x = true) (hn : i32.valid n = true) (hnt : ty.valid n = true)
-    (hp : f=0 → ty.valid (v*n) = true)
+    (q : Int) (hcm : f=0 → ty.convert (v*n) = some q)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
@@ -469,11 +469,11 @@ theorem view_export_correct (caller : NState) (targetConst : Bool) (receiverSlot
       (gApplyView ty) fuel caller
         [.scalarReference receiverSlot,.scalarReference flagSlot,.value (.literal ty x),.value (.literal i32 n)] targetConst =
           .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 2) ∧
-      ExportState ty (selected v f x n) n caller initial out targetConst := by
+      ExportState ty (selected f x q) n caller initial out targetConst := by
   obtain ⟨initial,fuel,callee,prepared,ran,ready⟩ := stage_ready caller receiverSlot flagSlot binding flagBinding v f x n
-    found writable flagFound flagWritable hx hn hnt hp valid lengths strict base
-  obtain ⟨fin,post⟩ := finish_export (selected v f x n) n binding.address flagBinding.address caller initial callee targetConst ready base
-  refine ⟨initial,fuel,exported ty (selected v f x n) n caller callee targetConst,prepared,?_,post⟩
+    found writable flagFound flagWritable hx hn hnt q hcm valid lengths strict base
+  obtain ⟨fin,post⟩ := finish_export (selected f x q) n binding.address flagBinding.address caller initial callee targetConst ready base
+  refine ⟨initial,fuel,exported ty (selected f x q) n caller callee targetConst,prepared,?_,post⟩
   exact MemberView.constructView_of_steps (gSumApply ty) fuel caller initial callee _
     [.scalarReference receiverSlot,.scalarReference flagSlot,.value (.literal ty x),.value (.literal i32 n)] []
     (gApplyFields ty) [] (gPerm ty targetConst)
@@ -487,7 +487,7 @@ theorem object_export_correct (caller : NState) (targetConst : Bool)
     (flagWritable : flagBinding.writable = true)
     (sourceX : caller.scalarCell xSlot ty = some (bx,cx ty x))
     (sourceN : caller.scalarCell nSlot i32 = some (bn,cn n))
-    (hnt : ty.valid n = true) (hp : f=0 → ty.valid (v*n) = true)
+    (hnt : ty.valid n = true) (q : Int) (hcm : f=0 → ty.convert (v*n) = some q)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
@@ -498,11 +498,11 @@ theorem object_export_correct (caller : NState) (targetConst : Bool)
       (gApplyObjects ty) fuel caller
         [⟨[],[receiverSlot,flagSlot]⟩,⟨[],[xSlot,nSlot]⟩] targetConst =
           .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 2) ∧
-      ExportState ty (selected v f x n) n caller initial out targetConst := by
+      ExportState ty (selected f x q) n caller initial out targetConst := by
   have hx := (caller_cell caller xSlot ty bx x sourceX).2
   have hn := (caller_cell caller nSlot i32 bn n sourceN).2
   obtain ⟨initial,fuel,out,prepared,ran,post⟩ := view_export_correct caller targetConst receiverSlot flagSlot binding flagBinding v f x n
-    found writable flagFound flagWritable hx hn hnt hp valid lengths strict base
+    found writable flagFound flagWritable hx hn hnt q hcm valid lengths strict base
   have args : MemberFactory.objectArguments caller
       [(false,[(ty,true),(bl,true)]),(true,[(ty,true),(i32,true)])]
       [⟨[],[receiverSlot,flagSlot]⟩,⟨[],[xSlot,nSlot]⟩] =
