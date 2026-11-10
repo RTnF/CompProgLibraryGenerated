@@ -58,6 +58,51 @@ theorem raw_exec (ty : Ty) (P : List Cell) (a : Nat) (v x : Int)
   refine ⟨⟨ws P R L3,none,7,P.length+10⟩,?_,rfl,rfl,rfl,rfl⟩
   simpa [rawBody,ws,R,refs,L1,L2,L3,total,NExpr.nodes,Nat.add_assoc] using all
 
+theorem raw_exec_conv (ty : Ty) (P : List Cell) (a : Nat) (v x : Int)
+    (receiver : P[a]? = some (cx ty v)) (hv : ty.valid v = true)
+    (hx : ty.valid x = true) (s : Int) (hc : ty.convert (x+v) = some s) (hs : ty.valid s = true) :
+    ∃ r, pexec 1 (rawBody ty) (ws P (refs a) [cx ty x]) = some r ∧
+      r.ret = none ∧ r.cost = 7 ∧ r.need = P.length+10 ∧
+      r.ps = ws P (refs a) [cx ty x,cx ty s,cx ty s] := by
+  let R := refs a
+  let L1 : List Cell := [cx ty x]
+  let L2 : List Cell := [cx ty x,cx ty s]
+  let L3 : List Cell := [cx ty x,cx ty s,cx ty s]
+  have rv : (NExpr.variable ty 0).denote (penv (ws P R L1)) = some v := by
+    rw [den_variable]
+    exact ws_env_ref P R L1 0 a true ty v rfl receiver hv
+  have xx : (NExpr.variable ty 1).denote (penv (ws P R L1)) = some x := by
+    rw [den_variable]
+    exact ws_env_loc P R L1 0 (cx ty x) ty rfl rfl hx
+  have sum : (total ty).denote (penv (ws P R L1)) = some s := by
+    rw [total,den_binary,xx,rv]
+    simpa [binaryValue] using hc
+  have copied : (NExpr.variable ty 2).denote (penv (ws P R L2)) = some s := by
+    rw [den_variable]
+    exact ws_env_loc P R L2 1 (cx ty s) ty rfl rfl hs
+  have q0 := (pexec_prim 1 _ _).trans (ws_declare P R L1 ty (total ty) s sum (Ty.convert_of_valid _ _ hs))
+  have q1 := (pexec_prim 1 _ _).trans (ws_declare P R L2 ty (.variable ty 2) s copied (Ty.convert_of_valid _ _ hs))
+  have sc0 := pexec_scope 1 Sk (ws P R L3) _ (pexec_skip 1 _)
+  have sc : pexec 1 (.scope Sk) (ws P R L3) = some ⟨ws P R L3,none,1,P.length+7⟩ := by
+    simp only [List.take_length] at sc0
+    simpa [ws,R,refs,L3,Nat.add_assoc] using sc0
+  have all := seq_some q0 rfl (seq_some q1 rfl (seq_some sc rfl (pexec_skip 1 _)))
+  refine ⟨⟨ws P R L3,none,7,P.length+10⟩,?_,rfl,rfl,rfl,rfl⟩
+  simpa [rawBody,ws,R,refs,L1,L2,L3,total,NExpr.nodes,Nat.add_assoc] using all
+
+/-- Unsigned sums wrap modulo `2^width`: the result is the reduced sum. -/
+theorem raw_exec_wrap (ty : Ty) (P : List Cell) (a : Nat) (v x : Int)
+    (receiver : P[a]? = some (cx ty v)) (hv : ty.valid v = true)
+    (hx : ty.valid x = true) (hb : ty.boolean = false) (hu : ty.signed = false) :
+    ∃ r, pexec 1 (rawBody ty) (ws P (refs a) [cx ty x]) = some r ∧
+      r.ret = none ∧ r.cost = 7 ∧ r.need = P.length+10 ∧
+      r.ps = ws P (refs a) [cx ty x,cx ty ((x+v) % 2 ^ ty.width),cx ty ((x+v) % 2 ^ ty.width)] := by
+  refine raw_exec_conv ty P a v x receiver hv hx ((x+v) % 2 ^ ty.width) (by simp [Ty.convert, hb, hu]) ?_
+  have pos : (0 : Int) < 2 ^ ty.width := Int.pow_pos (by decide)
+  have h0 : 0 ≤ (x+v) % 2 ^ ty.width := Int.emod_nonneg _ (by omega)
+  have h1 : (x+v) % 2 ^ ty.width < 2 ^ ty.width := Int.emod_lt_of_pos _ pos
+  simp [Ty.valid, hb, hu, h0, h1]
+
 /-- A signed sum that leaves the range of `ty` faults at the first declaration. -/
 theorem raw_sum_overflow_faults (ty : Ty) (P : List Cell) (a : Nat) (v x : Int)
     (receiver : P[a]? = some (cx ty v)) (hv : ty.valid v = true) (hx : ty.valid x = true)

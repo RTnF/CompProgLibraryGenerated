@@ -88,6 +88,80 @@ theorem raw_exec (P : List Cell) (a : Nat) (v x n : Int)
   refine ⟨_,by simpa [rawBody,ws,L2,L3,L4,L5,L6,resultCells,R,refs,total,product,NExpr.nodes,Nat.add_assoc] using all,?h2,?h3,?h4,?h5⟩
   all_goals first | rfl | (simp [NExpr.nodes,ws,L6,resultCells,R,refs,total,product] <;> omega)
 
+theorem raw_exec_conv (P : List Cell) (a : Nat) (v x n : Int)
+    (receiver : P[a]? = some (cx ty v))
+    (hv : ty.valid v = true) (hx : ty.valid x = true)
+    (hn : i32.valid n = true) (hnt : ty.valid n = true)
+    (q s : Int) (hcp : ty.convert (n*v) = some q) (hcs : ty.convert (x+q) = some s)
+    (hq : ty.valid q = true) (hs : ty.valid s = true) :
+    ∃ r, pexec 1 (rawBody ty) (ws P (refs a) [cx ty x,cn n]) = some r ∧
+      r.ret = none ∧ r.cost ≤ 14 ∧ r.need ≤ P.length+16 ∧
+      r.ps = ws P (refs a) ([cx ty x,cn n,cx ty s,cn n,cx ty s,cn n]) := by
+  let R := refs a
+  let L2 : List Cell := [cx ty x,cn n]
+  let L3 : List Cell := L2 ++ [cx ty s]
+  let L4 : List Cell := L3 ++ [cn n]
+  let L5 : List Cell := L4 ++ [cx ty s]
+  let L6 := [cx ty x,cn n,cx ty s,cn n,cx ty s,cn n]
+  have rv : (NExpr.variable ty 0).denote (penv (ws P R L2)) = some v := by
+    rw [den_variable]
+    exact ws_env_ref P R L2 0 a true ty v (by rfl) receiver hv
+  have xx : (NExpr.variable ty 1).denote (penv (ws P R L2)) = some x := by
+    rw [den_variable]
+    exact ws_env_loc P R L2 0 (cx ty x) ty rfl rfl hx
+  have nn (L : List Cell) (found : L[1]? = some (cn n)) :
+      (NExpr.variable i32 2).denote (penv (ws P R L)) = some n := by
+    rw [den_variable]
+    exact ws_env_loc P R L 1 (cn n) i32 found rfl hn
+  have castn : ((Proofs.GenericLazy.castTo ty i32 (.variable i32 2))).denote (penv (ws P R L2)) = some n := by
+    exact Proofs.GenericLazy.castTo_den ty i32 (.variable i32 2) _ n (by rw [den_variable]; exact nn L2 rfl) hnt
+  have mul : (product ty).denote (penv (ws P R L2)) = some q := by
+    rw [product,den_binary,castn,rv]
+    simpa [binaryValue] using hcp
+  have sum : (total ty).denote (penv (ws P R L2)) = some s := by
+    rw [total,den_binary,xx,mul]
+    simpa [binaryValue] using hcs
+  have read3 : (NExpr.variable ty 3).denote (penv (ws P R L4)) = some s := by
+    rw [den_variable]
+    exact ws_env_loc P R L4 2 (cx ty s) ty rfl rfl hs
+  have read4 : (NExpr.variable i32 4).denote (penv (ws P R L5)) = some n := by
+    rw [den_variable]
+    exact ws_env_loc P R L5 3 (cn n) i32 rfl rfl hn
+  have q0 := (pexec_prim 1 _ _).trans (ws_declare P R L2 ty (total ty) s sum (Ty.convert_of_valid _ _ hs))
+  have q1 := (pexec_prim 1 _ _).trans (ws_declare P R L3 i32 (.variable i32 2) n (nn L3 rfl) (Ty.convert_of_valid _ _ hn))
+  have q2 := (pexec_prim 1 _ _).trans (ws_declare P R L4 ty (.variable ty 3) s read3 (Ty.convert_of_valid _ _ hs))
+  have q3 := (pexec_prim 1 _ _).trans (ws_declare P R L5 i32 (.variable i32 4) n read4 (Ty.convert_of_valid _ _ hn))
+  have sc0 := pexec_scope 1 Sk (ws P R L6) _ (pexec_skip 1 _)
+  have sc : pexec 1 (.scope Sk) (ws P R L6) = some ⟨ws P R L6,none,1,P.length+13⟩ := by
+    simp only [List.take_length] at sc0
+    simpa [ws,L6,R,refs,Nat.add_assoc] using sc0
+  have all := seq_some q0 rfl (seq_some q1 rfl (seq_some q2 rfl (seq_some q3 rfl (seq_some sc rfl (pexec_skip 1 _)))))
+  have hn' := Proofs.GenericLazy.castTo_nodes ty i32 (.variable i32 2)
+  simp only [NExpr.nodes] at hn'
+  refine ⟨_,by simpa [rawBody,ws,L2,L3,L4,L5,L6,R,refs,total,product,NExpr.nodes,Nat.add_assoc] using all,?h2,?h3,?h4,?h5⟩
+  all_goals first | rfl | (simp [NExpr.nodes,ws,L6,R,refs,total,product] <;> omega)
+
+
+/-- Unsigned products and sums wrap modulo `2^width`: the results are the reduced values. -/
+theorem raw_exec_wrap (P : List Cell) (a : Nat) (v x n : Int)
+    (receiver : P[a]? = some (cx ty v))
+    (hv : ty.valid v = true) (hx : ty.valid x = true)
+    (hn : i32.valid n = true) (hnt : ty.valid n = true)
+    (hb : ty.boolean = false) (hu : ty.signed = false) :
+    ∃ q s, ty.valid q = true ∧ ty.valid s = true ∧ ty.convert (n*v) = some q ∧ ty.convert (x+q) = some s ∧
+    ∃ r, pexec 1 (rawBody ty) (ws P (refs a) [cx ty x,cn n]) = some r ∧
+      r.ret = none ∧ r.cost ≤ 14 ∧ r.need ≤ P.length+16 ∧
+      r.ps = ws P (refs a) [cx ty x,cn n,cx ty s,cn n,cx ty s,cn n] := by
+  have pos : (0 : Int) < 2 ^ ty.width := Int.pow_pos (by decide)
+  have red (z : Int) : ty.convert z = some (z % 2 ^ ty.width) ∧ ty.valid (z % 2 ^ ty.width) = true := by
+    have h0 : 0 ≤ z % 2 ^ ty.width := Int.emod_nonneg _ (by omega)
+    have h1 : z % 2 ^ ty.width < 2 ^ ty.width := Int.emod_lt_of_pos _ pos
+    exact ⟨by simp [Ty.convert, hb, hu], by simp [Ty.valid, hb, hu, h0, h1]⟩
+  obtain ⟨cq, vq⟩ := red (n*v)
+  obtain ⟨cs, vs⟩ := red (x + (n*v) % 2 ^ ty.width)
+  obtain ⟨r, hr⟩ := raw_exec_conv ty P a v x n receiver hv hx hn hnt _ _ cq cs vq vs
+  exact ⟨_, _, vq, vs, cq, cs, r, hr⟩
+
 /-- A signed sum that leaves the range of `ty` faults at the first declaration. -/
 theorem raw_sum_overflow_faults (P : List Cell) (a : Nat) (v x n : Int)
     (receiver : P[a]? = some (cx ty v))

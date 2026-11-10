@@ -141,3 +141,5 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 2026-11-10: apply系の add フィクスチャ（`generic_extrema_add_apply`, `generic_sum_add_apply`）に、任意の符号付き `ty` で和が範囲外なら最初の宣言で fault する定理 `raw_sum_overflow_faults` を追加（`tests/test_generic_template_family.py` の該当2テスト成功、公理は標準3種以内）。未了: 引数スロット欠落の拒否、符号なしの折返し、`RangeAdd_id`/`RangeMax`/`RangeMin` の group/monoid 依存部、変換器の `prog (t : Ty)` 直接出力、公開側への切替。`monoid_lazy.hpp` は未完（`[x]` 未記入）。
 
 - 2026-11-10: apply系4フィクスチャに引数オブジェクトの拒否定理（`missing_argument_object_rejected`, `extra_argument_object_rejected`, `incomplete_argument_rejected`, `vector_argument_rejected`）を任意 `ty` で追加、該当4テスト成功。apply系の「受け手・引数スロット欠落」拒否は完了。残り: 符号なし折返し、`RangeAdd_id`/`RangeMax`/`RangeMin` の group/monoid 依存部、変換器の `prog (t : Ty)` 直接出力、公開側への切替、浮動小数 `T`。`monoid_lazy.hpp` は未完（`[x]` 未記入）。
+
+- 2026-11-10: add系2フィクスチャに、符号付き/符号なし/bool を一括して扱う `raw_exec_conv`（`ty.convert` の結果を仮定）と、符号なしの折返し（mod 2^width）を直接述べる `raw_exec_wrap` を追加。成功条件の一般化は本体（raw）層まで。`ObjectView` 層（`view_export_correct`/`object_export_correct`）の折返し版は未了。残り: `RangeAdd_id`/`RangeMax`/`RangeMin` の group/monoid 依存部、変換器の `prog (t : Ty)` 直接出力、公開側への切替、浮動小数 `T`。`monoid_lazy.hpp` は未完（`[x]` 未記入）。
