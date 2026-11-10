@@ -308,6 +308,65 @@ class GenericTemplateFamilyTests(unittest.TestCase):
             self.assertLessEqual(used, standard, line)
 
 
+    def test_original_scalar_record_constructors_and_id_equal_the_ty_family(self):
+        """One-field records (`RangeAdd`, `RangeMax`, `RangeMin`): value constructor and `RangeAdd::id()`."""
+        disable_network()
+        parts, checks, imports = [], [], []
+        ctor = (ROOT / 'tests/lean/generic_scalar_record_ctor.lean').read_text()
+        zero = (ROOT / 'tests/lean/generic_scalar_record_zero.lean').read_text()
+        ctor_names = [line.split()[1] for line in ctor.splitlines() if line.startswith('theorem ')]
+        zero_names = [line.split()[1] for line in zero.splitlines() if line.startswith('theorem ')]
+        cases = [('RangeAddRangeMaxMin', 'add_extrema', 'RangeAdd'),
+                 ('RangeSetRangeMaxMin', 'set_extrema', 'RangeMax'),
+                 ('RangeAddRangeSum', 'add_sum', 'RangeAdd')]
+        with tempfile.TemporaryDirectory(prefix='generic-scalar-ctor-') as directory:
+            count = 0
+            for family, kind, record in cases:
+                text = (ROOT / 'tests/imports' / f'original_mixed_{kind}.cpp').read_text()
+                for cpp, _, ty in EXTREMA_TYPES:
+                    path = Path(directory) / f'witness_{count}.cpp'
+                    path.write_text(text.replace('long long', cpp))
+                    instance = TemplateInstance((cpp,), path, nested_members=(record,))
+                    generated = layout.emit_class_layout(ORIGINAL, family, 'ValueObject',
+                        [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
+                        template_instance=instance)
+                    namespace = f'Scalar{count}'
+                    ctor_group, zero_group = f'GenericScalarCtor{count}', f'GenericScalarZero{count}'
+                    lines = generated.replace('ValueObject', namespace).split('\n')
+                    imports = imports or [line for line in lines if line.startswith('import')]
+                    parts.append('\n'.join(line for line in lines if not line.startswith('import')))
+                    parts.append(ctor.replace('open ValueObject', f'open {namespace}').replace('GenericScalarCtor', ctor_group))
+                    checks.append(f'example : {namespace}.«{record}_construct0» = {ctor_group}.program {ty} := rfl')
+                    checks.append(f'example : {namespace}.«{record}_construct0_exportViewFuel» = {ctor_group}.view {ty} := rfl')
+                    checks.extend(f'#print axioms {ctor_group}.{name}' for name in ctor_names)
+                    if record == 'RangeAdd':
+                        parts.append(zero.replace('open ValueObject', f'open {namespace}')
+                                     .replace('GenericScalarZero', zero_group).replace('GenericScalarCtor', ctor_group))
+                        checks.append(f'example : {namespace}.«RangeAdd_factory_id» = {zero_group}.program {ty} := rfl')
+                        checks.append(f'example : {namespace}.«RangeAdd_factory_id_exportViewFuel» = {zero_group}.view {ty} := rfl')
+                        checks.extend(f'#print axioms {zero_group}.{name}' for name in zero_names)
+                    count += 1
+            lean = Path(directory) / 'scalar.lean'
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericLazy\nimport Proofs.MonoidLazyCall\n'
+                            'import Proofs.CppScalarContents\nimport Proofs.CppScalarValuePrepare\n'
+                            'import Proofs.CppFrameResolveExtension\nopen Proofs.CppScalar\n' +
+                            '\n'.join(parts) + '\n' + '\n'.join(checks) + '\n')
+            lake, env = lean_environment()
+            result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
+                                    capture_output=True, text=True)
+        errors = '\n'.join(line for line in (result.stdout + result.stderr).splitlines() if 'error' in line)
+        self.assertEqual(result.returncode, 0, errors[:3000])
+        self.assertNotIn('sorryAx', result.stdout)
+        standard = {'propext', 'Classical.choice', 'Quot.sound'}
+        reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
+        self.assertGreater(len(reports), 60)
+        for line in reports:
+            if line.endswith('does not depend on any axioms'):
+                continue
+            used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
+            self.assertLessEqual(used, standard, line)
+
+
 
 if __name__ == '__main__':
     unittest.main()
