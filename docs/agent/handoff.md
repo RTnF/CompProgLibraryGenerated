@@ -145,3 +145,5 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 2026-11-10: add系2フィクスチャに、符号付き/符号なし/bool を一括して扱う `raw_exec_conv`（`ty.convert` の結果を仮定）と、符号なしの折返し（mod 2^width）を直接述べる `raw_exec_wrap` を追加。成功条件の一般化は本体（raw）層まで。`ObjectView` 層（`view_export_correct`/`object_export_correct`）の折返し版は未了。残り: `RangeAdd_id`/`RangeMax`/`RangeMin` の group/monoid 依存部、変換器の `prog (t : Ty)` 直接出力、公開側への切替、浮動小数 `T`。`monoid_lazy.hpp` は未完（`[x]` 未記入）。
 
 - 2026-11-10: add系2フィクスチャの view/object 層まで折返しを一般化（`stage_ready_conv`/`view_export_correct_conv`/`object_export_correct_conv`＝`ty.convert` の結果を仮定、`object_export_wrap`＝符号なしで `mod 2^width` した値をエクスポート）。apply系4件の一般化は符号付き・符号なし・fault・拒否まで完了。残り: `RangeAdd_id`/`RangeMax`/`RangeMin` の group/monoid 依存部、他ファミリ（ctor/factory/compose 等）の折返し版、変換器の `prog (t : Ty)` 直接出力、公開側への切替、浮動小数 `T`。`monoid_lazy.hpp` は未完（`[x]` 未記入）。
+
+- 2026-11-10: `generic_add_compose.lean` を `s`＋`hc : ty.convert (x+y) = some s` で既存定理ごと一般化（範囲内は `s = x+y` の特殊例）、`object_compose_wrap`（符号なし折返し）を追加。残りの算術を含むfixture: `generic_add_sum`, `generic_friend_op`, `generic_record_apply`, `generic_set_apply_sum`, `generic_sum_set_apply`（`product` を含む）。
