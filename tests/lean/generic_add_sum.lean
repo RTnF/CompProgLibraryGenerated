@@ -91,27 +91,27 @@ theorem apply_body (second : Bool) :
 theorem apply_exec (P : List Cell) (av ax az : Nat) (v x sz : Int) (second : Bool)
     (cv : P[av]? = some ⟨ty,v⟩) (cx : P[ax]? = some ⟨ty,x⟩) (cz : P[az]? = some ⟨i32,sz⟩)
     (hv : ty.valid v = true) (hx : ty.valid x = true) (hz : i32.valid sz = true) (hzt : ty.valid sz = true)
-    (hm : ty.valid (sz*v) = true) (hsum : ty.valid (x+sz*v) = true) :
+    (q s : Int) (hcp : ty.convert (sz*v) = some q) (hcs : ty.convert (x+q) = some s)
+    (hsum : ty.valid s = true) :
     ∃ r, pexec 1 (gApply ty second).body
         (ws P [⟨av,true⟩,⟨ax,true⟩,⟨az,true⟩] []) = some r ∧
-      r.ret = some (if second then sz else x+sz*v) ∧ r.cost ≤ 20 ∧
+      r.ret = some (if second then sz else s) ∧ r.cost ≤ 20 ∧
       r.need ≤ P.length+40 ∧
-      r.ps.mem = P ++ [⟨ty,x+sz*v⟩,⟨i32,sz⟩,⟨ty,x+sz*v⟩,⟨i32,sz⟩] := by
+      r.ps.mem = P ++ [⟨ty,s⟩,⟨i32,sz⟩,⟨ty,s⟩,⟨i32,sz⟩] := by
   let R : List CppState.Binding := [⟨av,true⟩,⟨ax,true⟩,⟨az,true⟩]
   have e0 : penv (ws P R []) 0 ty = some v := ws_env_ref P R [] 0 av true ty v rfl cv hv
   have e1 : penv (ws P R []) 1 ty = some x := ws_env_ref P R [] 1 ax true ty x rfl cx hx
   have e2 : penv (ws P R []) 2 i32 = some sz := ws_env_ref P R [] 2 az true i32 sz rfl cz hz
-  have den : (Proofs.GenericLazy.raSumG ty).denote (penv (ws P R [])) = some (x+sz*v) := by
+  have den : (Proofs.GenericLazy.raSumG ty).denote (penv (ws P R [])) = some (s) := by
     rw [den_binary,den_variable,den_binary,Proofs.GenericLazy.castTo_den ty i32 (.variable i32 2) _ sz (by rw [den_variable]; exact e2) hzt,den_variable,e1,e0]
     simp only [Option.bind_some]
     have m1 : binaryValue .mul sz v = sz*v := rfl
-    rw [m1,Proofs.GenericCall.convG ty _ hm]
+    rw [m1,hcp]
     simp only [Option.bind_some]
-    have m2 : binaryValue .add x (sz*v) = x+sz*v := rfl
-    rw [m2]; exact Proofs.GenericCall.convG ty _ hsum
-  have ds : (NExpr.variable i32 2).denote (penv (ws P R [⟨ty,x+sz*v⟩])) = some sz := by
+    exact hcs
+  have ds : (NExpr.variable i32 2).denote (penv (ws P R [⟨ty,s⟩])) = some sz := by
     rw [den_variable]; exact ws_env_ref P R _ 2 az true i32 sz rfl cz hz
-  obtain ⟨r,ran,ret,cost,need,mem⟩ := fields_exec ty P R (Proofs.GenericLazy.raSumG ty) (.variable i32 2) (x+sz*v) sz second hsum hz den ds
+  obtain ⟨r,ran,ret,cost,need,mem⟩ := fields_exec ty P R (Proofs.GenericLazy.raSumG ty) (.variable i32 2) (s) sz second hsum hz den ds
   rw [apply_body ty]
   have hn := Proofs.GenericLazy.castTo_nodes ty i32 (.variable i32 2)
   simp only [NExpr.nodes] at hn
@@ -224,7 +224,8 @@ theorem apply_correct (second : Bool) (caller : NState)
     (hs2 : e2.scalarOnly = true) (ht2 : e2.resultType = i32)
     (value1 : e1.denote (envOf caller) = some x) (value2 : e2.denote (envOf caller) = some sz)
     (gv : ty.valid v = true) (gx : ty.valid x = true) (gz : i32.valid sz = true)
-    (gzt : ty.valid sz = true) (gm : ty.valid (sz*v) = true) (gs : ty.valid (x+sz*v) = true)
+    (gzt : ty.valid sz = true) (q s : Int) (hcp : ty.convert (sz*v) = some q)
+    (hcs : ty.convert (x+q) = some s) (gs : ty.valid s = true)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
@@ -232,13 +233,13 @@ theorem apply_correct (second : Bool) (caller : NState)
     let prog := gApply ty second
     ∃ Sinit fuel res, prepare caller prog.parameters [.scalarReference slot,.value e1,.value e2] = some Sinit ∧
       prog.callFuel fuel caller [.scalarReference slot,.value e1,.value e2] =
-        .finished (res,.scalar (if second then sz else x+sz*v)) ∧
+        .finished (res,.scalar (if second then sz else s)) ∧
       ScalarPost2 caller Sinit res (1+e1.nodes+e2.nodes) 100 caller.scalars.memory := by
   let prog := gApply ty second
   refine mutable_values2_correct prog (if second then i32 else ty) ty ty i32
     (by cases second <;> rfl) (by cases second <;> rfl)
     (by show Scalar (fieldsBody ty 3 (Proofs.GenericLazy.raSumG ty) (.variable i32 2) second) = true; have h := Proofs.GenericLazy.castTo_scalar ty i32 (.variable i32 2) rfl; cases second <;> simp [fieldsBody, picked, Scalar, NExpr.scalarOnly, Proofs.GenericLazy.raSumG, h]) caller slot binding v e1 x e2 sz cell writable
-    hs1 ht1 value1 gx hs2 ht2 value2 gz valid lengths strict base 1 (if second then sz else x+sz*v)
+    hs1 ht1 value1 gx hs2 ht2 value2 gz valid lengths strict base 1 (if second then sz else s)
     (by cases second <;> assumption) 20 ?_
   intro P hP
   subst hP
@@ -249,14 +250,14 @@ theorem apply_correct (second : Bool) (caller : NState)
   have cz : P[(callerP caller).length+1]? = some ⟨i32,sz⟩ := by
     simp [P]
   obtain ⟨r,ran,ret,cost,need,mem⟩ := apply_exec ty P binding.address (callerP caller).length
-    ((callerP caller).length+1) v x sz second cv cx cz gv gx gz gzt gm gs
+    ((callerP caller).length+1) v x sz second cv cx cz gv gx gz gzt q s hcp hcs gs
   refine ⟨r,?_,ret,cost,?_,?_⟩
   · cases second <;> simpa [prog,P,ws_nil] using ran
   · change r.need ≤ P.length+100
     omega
   · rw [mem]
     simpa only [P,List.append_assoc] using Proofs.MonoidCallCore.take_P caller
-      ([⟨ty,x⟩,⟨i32,sz⟩]++[⟨ty,x+sz*v⟩,⟨i32,sz⟩,⟨ty,x+sz*v⟩,⟨i32,sz⟩])
+      ([⟨ty,x⟩,⟨i32,sz⟩]++[⟨ty,s⟩,⟨i32,sz⟩,⟨ty,s⟩,⟨i32,sz⟩])
 
 
 theorem constant_body_correct (prog : NProgram) (ty : Ty) (v : Int)
@@ -476,7 +477,7 @@ theorem op_correct (second : Bool) (caller : NState) (s1 s2 s3 s4 : Nat)
     (c3 : caller.scalarCell s3 ty = some (b3,⟨ty,v3⟩)) (c4 : caller.scalarCell s4 i32 = some (b4,⟨i32,v4⟩))
     (g1 : ty.valid v1 = true) (g2 : i32.valid v2 = true)
     (g3 : ty.valid v3 = true) (g4 : i32.valid v4 = true)
-    (gx : ty.valid (v1+v3) = true) (gz : i32.valid (v2+v4) = true)
+    (s13 : Int) (hc13 : ty.convert (v1+v3) = some s13) (gx : ty.valid s13 = true) (gz : i32.valid (v2+v4) = true)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
@@ -485,13 +486,13 @@ theorem op_correct (second : Bool) (caller : NState) (s1 s2 s3 s4 : Nat)
     ∃ Sinit fuel res, prepare caller prog.parameters
         [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] = some Sinit ∧
       prog.callFuel fuel caller [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] =
-        .finished (res,.scalar (if second then v2+v4 else v1+v3)) ∧
+        .finished (res,.scalar (if second then v2+v4 else s13)) ∧
       ScalarPost2 caller Sinit res 0 80 caller.scalars.memory := by
   let prog := gOp ty second
   refine Proofs.ScalarRefs.refs4t_correct prog (if second then i32 else ty) ty i32 ty i32
     (by cases second <;> rfl) (by cases second <;> rfl) (by show Scalar (prog.body) = true; cases second <;> simp [prog, gE, gNew1, gNew0, gOp, fieldsBody, picked, defaultBody, defaultPicked, Scalar, NExpr.scalarOnly, Proofs.GenericLazy.castTo_scalar ty i32 (.literal i32 0) rfl])
     caller s1 s2 s3 s4 b1 b2 b3 b4 v1 v2 v3 v4 c1 c2 c3 c4 valid lengths strict base
-    1 (if second then v2+v4 else v1+v3) (by cases second <;> assumption) 20 ?_
+    1 (if second then v2+v4 else s13) (by cases second <;> assumption) 20 ?_
   intro P hP
   subst hP
   let P := callerP caller
@@ -500,19 +501,19 @@ theorem op_correct (second : Bool) (caller : NState) (s1 s2 s3 s4 : Nat)
     ws_env_ref P R [] 0 b1.address false ty v1 rfl (Proofs.IntervalCall.P_cell_ty caller s1 ty b1 v1 c1) g1
   have e2 : penv (ws P R []) 2 ty = some v3 :=
     ws_env_ref P R [] 2 b3.address false ty v3 rfl (Proofs.IntervalCall.P_cell_ty caller s3 ty b3 v3 c3) g3
-  have dx : (opX ty).denote (penv (ws P R [])) = some (v1+v3) := by
+  have dx : (opX ty).denote (penv (ws P R [])) = some s13 := by
     rw [den_binary,den_variable,den_variable,e0,e2]
     simp only [Option.bind_some]
-    exact Proofs.GenericCall.convG ty _ gx
-  have e1 : penv (ws P R [⟨ty,v1+v3⟩]) 1 i32 = some v2 :=
+    exact hc13
+  have e1 : penv (ws P R [⟨ty,s13⟩]) 1 i32 = some v2 :=
     ws_env_ref P R _ 1 b2.address false i32 v2 rfl (Proofs.IntervalCall.P_cell_ty caller s2 i32 b2 v2 c2) g2
-  have e3 : penv (ws P R [⟨ty,v1+v3⟩]) 3 i32 = some v4 :=
+  have e3 : penv (ws P R [⟨ty,s13⟩]) 3 i32 = some v4 :=
     ws_env_ref P R _ 3 b4.address false i32 v4 rfl (Proofs.IntervalCall.P_cell_ty caller s4 i32 b4 v4 c4) g4
-  have ds : opSizeE.denote (penv (ws P R [⟨ty,v1+v3⟩])) = some (v2+v4) := by
+  have ds : opSizeE.denote (penv (ws P R [⟨ty,s13⟩])) = some (v2+v4) := by
     rw [den_binary,den_variable,den_variable,e1,e3]
     simp only [Option.bind_some]
     exact conv_signed i32 rfl rfl _ gz
-  obtain ⟨r,ran,ret,cost,need,mem⟩ := fields_exec ty P R (opX ty) opSizeE (v1+v3) (v2+v4) second gx gz dx ds
+  obtain ⟨r,ran,ret,cost,need,mem⟩ := fields_exec ty P R (opX ty) opSizeE s13 (v2+v4) second gx gz dx ds
   have body : prog.body = fieldsBody ty 4 (opX ty) opSizeE second := by cases second <;> rfl
   refine ⟨r,?_,ret,?_,?_,?_⟩
   · rw [body]; simpa [R,ws_nil] using ran
@@ -547,16 +548,16 @@ theorem compose_correct (caller : NState) (e1 e2 : NExpr) (x y : Int)
     (hs1 : e1.scalarOnly = true) (hs2 : e2.scalarOnly = true)
     (ht1 : e1.resultType = ty) (ht2 : e2.resultType = ty)
     (d1 : e1.denote (envOf caller) = some x) (d2 : e2.denote (envOf caller) = some y)
-    (hx : ty.valid x = true) (hy : ty.valid y = true) (hxy : ty.valid (x+y) = true)
+    (hx : ty.valid x = true) (hy : ty.valid y = true) (s : Int) (hc : ty.convert (x+y) = some s) (hxy : ty.valid s = true)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
     (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
     ∃ Sinit fuel res, prepare caller (gCompose ty).parameters [.value e1,.value e2] = some Sinit ∧
-      (gCompose ty).callFuel fuel caller [.value e1,.value e2] = .finished (res,.scalar (x+y)) ∧
+      (gCompose ty).callFuel fuel caller [.value e1,.value e2] = .finished (res,.scalar s) ∧
       ScalarPost2 caller Sinit res (e1.nodes+e2.nodes) 70 caller.scalars.memory := by
   refine two_values_body_correct (gCompose ty) ty ty ty rfl rfl (Proofs.GenericCall.composeAdd_scalar ty)
-    caller e1 e2 x y (x+y) hs1 hs2 ht1 ht2 d1 d2 hx hy hxy valid lengths strict base ?_
+    caller e1 e2 x y s hs1 hs2 ht1 ht2 d1 d2 hx hy hxy valid lengths strict base ?_
   intro P hP
   subst hP
   let P := callerP caller ++ [(⟨ty,x⟩ : Cell),⟨ty,y⟩]
@@ -565,8 +566,8 @@ theorem compose_correct (caller : NState) (e1 e2 : NExpr) (x y : Int)
     ws_env_ref P R [] 0 (callerP caller).length true ty x rfl (by simp [P]) hx
   have e1 : penv (ws P R []) 1 ty = some y :=
     ws_env_ref P R [] 1 ((callerP caller).length+1) true ty y rfl (by simp [P]) hy
-  obtain ⟨r,ran,ret,cost,need,mem⟩ := Proofs.GenericCall.shapeG_exec ty P R (Proofs.GenericCall.addG ty) (x+y) hxy
-    (Proofs.GenericCall.addG_den ty _ x y e0 e1 hxy) (by simp [NExpr.nodes])
+  obtain ⟨r,ran,ret,cost,need,mem⟩ := Proofs.GenericCall.shapeG_exec ty P R (Proofs.GenericCall.addG ty) s hxy
+    (Proofs.GenericCall.addG_den_conv ty _ x y s e0 e1 hc) (by simp [NExpr.nodes])
   refine ⟨r,?_,ret,cost,?_,?_⟩
   · have hb : (gCompose ty).body = Proofs.GenericCall.shapeG ty 2 (Proofs.GenericCall.addG ty) := rfl
     rw [hb]
@@ -576,6 +577,6 @@ theorem compose_correct (caller : NState) (e1 e2 : NExpr) (x y : Int)
     omega
   · rw [mem]
     simpa only [P,List.append_assoc] using take_P caller
-      ([⟨ty,x⟩,⟨ty,y⟩]++[⟨ty,x+y⟩,⟨ty,x+y⟩])
+      ([⟨ty,x⟩,⟨ty,y⟩]++[⟨ty,s⟩,⟨ty,s⟩])
 
 end GenericAddSum
