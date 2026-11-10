@@ -137,3 +137,5 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 古い履歴は [11月1日以前](handoff_history_20261101.md)。今回の上書き前snapshotは `.cache/wip/library_layout_20261108/handoff_before.md`（ローカルのみ）。
 
 - 2026-11-10: `Proofs/GenericCall|GenericLazy|GenericExtrema|SortPairsFrame` を `verifier/support.toml` の `lean_modules` に登録し、`verification/statements.json` を再生成（`NStmt` の sortPairs 追加分の既存ダイジェスト変更を受け入れ）。`tools/check_proof_security.py` 成功（約750秒、フル再構築時）。`monoid_lazy.hpp` は未完（`[x]` 未記入）。
+
+- 2026-11-10: apply系の add フィクスチャ（`generic_extrema_add_apply`, `generic_sum_add_apply`）に、任意の符号付き `ty` で和が範囲外なら最初の宣言で fault する定理 `raw_sum_overflow_faults` を追加（`tests/test_generic_template_family.py` の該当2テスト成功、公理は標準3種以内）。未了: 引数スロット欠落の拒否、符号なしの折返し、`RangeAdd_id`/`RangeMax`/`RangeMin` の group/monoid 依存部、変換器の `prog (t : Ty)` 直接出力、公開側への切替。`monoid_lazy.hpp` は未完（`[x]` 未記入）。

@@ -87,6 +87,35 @@ theorem raw_exec (P : List Cell) (a : Nat) (v x n : Int)
   simp only [NExpr.nodes] at hn'
   refine ⟨_,by simpa [rawBody,ws,L2,L3,L4,L5,L6,resultCells,R,refs,total,product,NExpr.nodes,Nat.add_assoc] using all,?h2,?h3,?h4,?h5⟩
   all_goals first | rfl | (simp [NExpr.nodes,ws,L6,resultCells,R,refs,total,product] <;> omega)
+
+/-- A signed sum that leaves the range of `ty` faults at the first declaration. -/
+theorem raw_sum_overflow_faults (P : List Cell) (a : Nat) (v x n : Int)
+    (receiver : P[a]? = some (cx ty v))
+    (hv : ty.valid v = true) (hx : ty.valid x = true)
+    (hn : i32.valid n = true) (hnt : ty.valid n = true)
+    (hp : ty.valid (n*v) = true)
+    (hb : ty.boolean = false) (hsg : ty.signed = true) (hbad : ty.valid (x+n*v) = false) :
+    pexec 1 (rawBody ty) (ws P (refs a) [cx ty x,cn n]) = none := by
+  let R := refs a
+  let L2 : List Cell := [cx ty x,cn n]
+  have rv : (NExpr.variable ty 0).denote (penv (ws P R L2)) = some v := by
+    rw [den_variable]
+    exact ws_env_ref P R L2 0 a true ty v (by rfl) receiver hv
+  have xx : (NExpr.variable ty 1).denote (penv (ws P R L2)) = some x := by
+    rw [den_variable]
+    exact ws_env_loc P R L2 0 (cx ty x) ty rfl rfl hx
+  have castn : ((Proofs.GenericLazy.castTo ty i32 (.variable i32 2))).denote (penv (ws P R L2)) = some n := by
+    exact Proofs.GenericLazy.castTo_den ty i32 (.variable i32 2) _ n
+      (by rw [den_variable]; exact ws_env_loc P R L2 1 (cn n) i32 rfl rfl hn) hnt
+  have mul : (product ty).denote (penv (ws P R L2)) = some (n*v) := by
+    rw [product,den_binary,castn,rv]
+    simpa [binaryValue] using Ty.convert_of_valid ty (n*v) hp
+  have sum : (total ty).denote (penv (ws P R L2)) = none := by
+    rw [total,den_binary,xx,mul]
+    simp [binaryValue, Ty.convert, hb, hsg, hbad]
+  simp only [R, L2] at sum
+  rw [rawBody, pexec_seq, pexec_prim]
+  simp [pstmt, sum]
 end GenericSumAddApplyRaw
 
 namespace GenericSumAddApplyCall

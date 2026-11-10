@@ -57,6 +57,26 @@ theorem raw_exec (ty : Ty) (P : List Cell) (a : Nat) (v x : Int)
   have all := seq_some q0 rfl (seq_some q1 rfl (seq_some sc rfl (pexec_skip 1 _)))
   refine ⟨⟨ws P R L3,none,7,P.length+10⟩,?_,rfl,rfl,rfl,rfl⟩
   simpa [rawBody,ws,R,refs,L1,L2,L3,total,NExpr.nodes,Nat.add_assoc] using all
+
+/-- A signed sum that leaves the range of `ty` faults at the first declaration. -/
+theorem raw_sum_overflow_faults (ty : Ty) (P : List Cell) (a : Nat) (v x : Int)
+    (receiver : P[a]? = some (cx ty v)) (hv : ty.valid v = true) (hx : ty.valid x = true)
+    (hb : ty.boolean = false) (hsg : ty.signed = true) (hbad : ty.valid (x+v) = false) :
+    pexec 1 (rawBody ty) (ws P (refs a) [cx ty x]) = none := by
+  let R := refs a
+  let L1 : List Cell := [cx ty x]
+  have rv : (NExpr.variable ty 0).denote (penv (ws P R L1)) = some v := by
+    rw [den_variable]
+    exact ws_env_ref P R L1 0 a true ty v rfl receiver hv
+  have xx : (NExpr.variable ty 1).denote (penv (ws P R L1)) = some x := by
+    rw [den_variable]
+    exact ws_env_loc P R L1 0 (cx ty x) ty rfl rfl hx
+  have sum : (total ty).denote (penv (ws P R L1)) = none := by
+    rw [total,den_binary,xx,rv]
+    simp [binaryValue, Ty.convert, hb, hsg, hbad]
+  simp only [R, L1] at sum
+  rw [rawBody, pexec_seq, pexec_prim]
+  simp [pstmt, sum]
 end GenericAddApplyRaw
 
 namespace GenericAddApplyCall
