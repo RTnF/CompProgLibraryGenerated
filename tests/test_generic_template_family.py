@@ -458,6 +458,56 @@ class GenericTemplateFamilyTests(unittest.TestCase):
             self.assertLessEqual(used, standard, line)
 
 
+    def test_original_record_apply_equals_the_ty_family(self):
+        """`RangeAdd::apply` on `RangeMax`/`RangeMin` returning the record's field (`original_record_apply`)."""
+        disable_network()
+        fixture = (ROOT / 'tests/lean/generic_record_apply.lean').read_text()
+        theorem_names = [line.split()[1] for line in fixture.splitlines() if line.startswith('theorem ')]
+        parts, checks, imports = [], [], []
+        with tempfile.TemporaryDirectory(prefix='generic-record-apply-') as directory:
+            count = 0
+            text = (ROOT / 'tests/imports/original_record_apply.cpp').read_text()
+            for cpp, _, ty in EXTREMA_TYPES:
+                path = Path(directory) / f'witness_{count}.cpp'
+                path.write_text(text.replace('long long', cpp))
+                main = TemplateInstance((cpp,), path, nested_members=('RangeAdd',))
+                companions = tuple(('RangeAddRangeMaxMin', TemplateInstance((cpp,), path, nested_members=(name,)))
+                                   for name in ['RangeMax', 'RangeMin'])
+                ir, _ = lower_template_class(ORIGINAL, 'RangeAddRangeMaxMin', main, [ROOT / 'experiments/library/cpp'],
+                    companion_instances=companions,
+                    member_instances={'apply': [(RecordArgument(1),), (RecordArgument(2),)]})
+                namespace = f'OriginalRecordApply{count}'
+                lines = emit_lean(ir, 'OriginalRecordApply').replace('OriginalRecordApply', namespace).split('\n')
+                imports = imports or [line for line in lines if line.startswith('import')]
+                generated = '\n'.join(lines)
+                parts.append('\n'.join(line for line in lines if not line.startswith('import')))
+                group = f'GenericRecordApply{count}'
+                parts.append(fixture.replace('GenericRecordApply', group))
+                for kind in ('RangeMax', 'RangeMin'):
+                    name = re.search(r'^def «(RangeAdd_apply[^»]*' + kind + r')» : NProgram', generated, re.M).group(1)
+                    checks.append(f'example : {namespace}.«{name}» = {group}.gRecApply {ty} := rfl')
+                checks.append(f'example : {namespace}.«RangeAdd_new0» = Proofs.GenericLazy.addNew0 {ty} := rfl')
+                checks.extend(f'#print axioms {group}.{theorem}' for theorem in theorem_names)
+                count += 1
+            lean = Path(directory) / 'record_apply.lean'
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericLazy\nimport Proofs.MonoidLazyCall\n'
+                            'open Proofs.CppScalar\n' + '\n'.join(parts) + '\n' + '\n'.join(checks) + '\n')
+            lake, env = lean_environment()
+            result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
+                                    capture_output=True, text=True)
+        errors = '\n'.join(line for line in (result.stdout + result.stderr).splitlines() if 'error' in line)
+        self.assertEqual(result.returncode, 0, errors[:3000])
+        self.assertNotIn('sorryAx', result.stdout)
+        standard = {'propext', 'Classical.choice', 'Quot.sound'}
+        reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
+        self.assertGreater(len(reports), 4)
+        for line in reports:
+            if line.endswith('does not depend on any axioms'):
+                continue
+            used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
+            self.assertLessEqual(used, standard, line)
+
+
 
 if __name__ == '__main__':
     unittest.main()
