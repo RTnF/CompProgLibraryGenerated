@@ -18,6 +18,7 @@ import class_copy_layout as layout
 from class_templates import TemplateInstance, RecordArgument
 import re
 from nested_ir import lower_source, emit_lean
+from template_class_ir import lower_template_class
 from test_scalar_ir import lean_environment
 from offline import disable_network
 
@@ -360,6 +361,69 @@ class GenericTemplateFamilyTests(unittest.TestCase):
         standard = {'propext', 'Classical.choice', 'Quot.sound'}
         reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
         self.assertGreater(len(reports), 60)
+        for line in reports:
+            if line.endswith('does not depend on any axioms'):
+                continue
+            used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
+            self.assertLessEqual(used, standard, line)
+
+
+    def test_original_set_sum_transferred_programs_equal_the_ty_family(self):
+        """The field-projection models of the original `RangeAddRangeSum`/`RangeSetRangeSum`."""
+        disable_network()
+        copy_fields = (ROOT / 'tests/lean/scalar_record_copy_fields.lean').read_text()
+        # (fixture, group, [(namespace key, generated program, family expression)])
+        fixtures = [
+            ('generic_add_sum.lean', 'GenericAddSum', [
+                ('add', 'RangeAdd_apply_x', 'gApply {ty} false'), ('add', 'RangeAdd_apply_size', 'gApply {ty} true'),
+                ('add', 'RangeSum_e_x', 'gE {ty} false'), ('add', 'RangeSum_e_size', 'gE {ty} true'),
+                ('add', 'RangeSum_new1_x', 'gNew1 {ty} false'), ('add', 'RangeSum_new1_size', 'gNew1 {ty} true'),
+                ('add', 'RangeSum_new0_x', 'gNew0 {ty} false'), ('add', 'RangeSum_new0_size', 'gNew0 {ty} true'),
+                ('add', 'RangeSum_op_x', 'gOp {ty} false'), ('add', 'RangeSum_op_size', 'gOp {ty} true'),
+                ('add', 'RangeAdd_compose', 'gCompose {ty}')]),
+            ('generic_set_value_ctor.lean', 'GenericSetValueCtor', [
+                ('set', 'RangeSet_new0_v', 'gNew0 {ty} false'), ('set', 'RangeSet_new0_noop', 'gNew0 {ty} true')])]
+        parts, checks, imports = [], [], []
+        with tempfile.TemporaryDirectory(prefix='generic-set-sum-') as directory:
+            count = 0
+            for cpp, _, ty in EXTREMA_TYPES:
+                namespaces = {}
+                for key, family, witness, record, companion in [
+                        ('add', 'RangeAddRangeSum', 'original_mixed_add_sum.cpp', 'RangeAdd', 'RangeSum'),
+                        ('set', 'RangeSetRangeSum', 'original_mixed_set_sum.cpp', 'RangeSet', 'RangeSum')]:
+                    path = Path(directory) / f'{key}_{count}.cpp'
+                    path.write_text((ROOT / 'tests/imports' / witness).read_text().replace('long long', cpp))
+                    ir, _ = lower_template_class(ORIGINAL, family,
+                        TemplateInstance((cpp,), path, nested_members=(record,)), [ROOT / 'experiments/library/cpp'],
+                        companion_instances=((family, TemplateInstance((cpp,), path, nested_members=(companion,))),))
+                    prefix = 'OriginalMixedAddSum' if key == 'add' else 'OriginalSetSum'
+                    namespaces[key] = f'{prefix}{count}'
+                    lines = emit_lean(ir, prefix).replace(prefix, namespaces[key]).split('\n')
+                    imports = imports or [line for line in lines if line.startswith('import')]
+                    parts.append('\n'.join(line for line in lines if not line.startswith('import')))
+                parts.append(copy_fields.replace('CopiedScalarFieldsAudit', f'CopiedScalarFieldsAudit{count}'))
+                for name, group, programs in fixtures:
+                    fixture = (ROOT / 'tests/lean' / name).read_text()
+                    theorem_names = [line.split()[1] for line in fixture.splitlines() if line.startswith('theorem ')]
+                    renamed = group + str(count)
+                    parts.append(fixture.replace(group, renamed)
+                                 .replace('CopiedScalarFieldsAudit', f'CopiedScalarFieldsAudit{count}'))
+                    for key, generated, family in programs:
+                        checks.append(f'example : {namespaces[key]}.«{generated}» = {renamed}.{family.format(ty=ty)} := rfl')
+                    checks.extend(f'#print axioms {renamed}.{theorem}' for theorem in theorem_names)
+                count += 1
+            lean = Path(directory) / 'sum.lean'
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericLazy\nimport Proofs.MonoidLazyCall\n'
+                            'open Proofs.CppScalar\n' + '\n'.join(parts) + '\n' + '\n'.join(checks) + '\n')
+            lake, env = lean_environment()
+            result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
+                                    capture_output=True, text=True)
+        errors = '\n'.join(line for line in (result.stdout + result.stderr).splitlines() if 'error' in line)
+        self.assertEqual(result.returncode, 0, errors[:3000])
+        self.assertNotIn('sorryAx', result.stdout)
+        standard = {'propext', 'Classical.choice', 'Quot.sound'}
+        reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
+        self.assertGreater(len(reports), 20)
         for line in reports:
             if line.endswith('does not depend on any axioms'):
                 continue
