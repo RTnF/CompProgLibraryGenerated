@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(ROOT / 'tests'), str(ROOT / 'verifier'), str(ROOT / 'tools')]
 import class_copy_layout as layout
 from class_templates import TemplateInstance, RecordArgument
+import os
 import re
 from nested_ir import lower_source, emit_lean
 from template_class_ir import lower_template_class
@@ -29,9 +30,15 @@ TYPES = [('long long', 'long_long', '⟨64, true, false⟩'),
          ('int', 'int', '⟨32, true, false⟩'),
          ('unsigned int', 'unsigned_int', '⟨32, false, false⟩'),
          ('unsigned long long', 'unsigned_long_long', '⟨64, false, false⟩')]
-# Each class-layout generation costs ~30 s, so extrema use one signed and one unsigned type of
-# different widths (the type-dependent parts are signedness and width).
-EXTREMA_TYPES = [t for t in TYPES if t[0] in ('int', 'unsigned long long')]
+# The converter's scalar subset (`verifier/scalar_ir.TYPES`) has exactly these integer types: 32/64 bits,
+# signed/unsigned. The flat family test below covers every one, so "for every supported integral T" is
+# checked exhaustively rather than sampled. (`short`/`char` need integral-promotion modelling.)
+OTHER_INTEGER_TYPES = [('long', 'long', '⟨64, true, false⟩'),
+                       ('unsigned long', 'unsigned_long', '⟨64, false, false⟩')]
+# Two pairs, one per run: (int, unsigned long long) and (unsigned int, long long) together cover all four
+# distinct `Ty` values of the supported scalar types; the `_alt` check scripts select the second pair.
+_HEAVY = ('unsigned int', 'long long') if os.environ.get('GENERIC_FAMILY_ALT') else ('int', 'unsigned long long')
+EXTREMA_TYPES = [t for t in TYPES if t[0] in _HEAVY]
 FAMILY = [('compose_RangeAdd_{s}', 'Proofs.GenericCall.composeAdd'),
           ('RangeSum_{s}_op_x', 'Proofs.GenericLazy.sumOpX'),
           ('RangeSet_{s}_compose_v', 'Proofs.GenericLazy.setComposeV'),
@@ -113,7 +120,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
         source = HEADER.read_text()
         parts, checks = ['import Proofs.GenericLazy'], []
         with tempfile.TemporaryDirectory(prefix='generic-family-') as directory:
-            for index, (cpp, fragment, ty) in enumerate(TYPES):
+            for index, (cpp, fragment, ty) in enumerate(TYPES + OTHER_INTEGER_TYPES):
                 path = Path(directory) / f'monoid_lazy_{index}.hpp'
                 path.write_text(source.replace('long long', cpp))
                 namespace = f'Proofs.GenFamily{index}'
