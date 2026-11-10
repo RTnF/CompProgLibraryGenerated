@@ -738,6 +738,59 @@ class GenericTemplateFamilyTests(unittest.TestCase):
             used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
             self.assertLessEqual(used, standard, line)
 
+    def test_original_sum_default_constructor_for_every_ty(self):
+        """`RangeSum()` default (delegating) constructor, both families."""
+        disable_network()
+        fixture = (ROOT / 'tests/lean/generic_sum_default_ctor.lean').read_text()
+        theorem_names, current = [], None
+        for line in fixture.splitlines():
+            if line.startswith('namespace '):
+                current = line.split()[1]
+            elif line.startswith('theorem '):
+                theorem_names.append(f'{current}.{line.split()[1]}')
+        parts, checks, imports = [], [], []
+        with tempfile.TemporaryDirectory(prefix='generic-sum-default-ctor-') as directory:
+            count = 0
+            for family, witness in [('RangeAddRangeSum', 'original_mixed_add_sum.cpp'),
+                                    ('RangeSetRangeSum', 'original_mixed_set_sum.cpp')]:
+                text = (ROOT / 'tests/imports' / witness).read_text()
+                for cpp, _, ty in EXTREMA_TYPES:
+                    path = Path(directory) / f'witness_{count}.cpp'
+                    path.write_text(text.replace('long long', cpp))
+                    instance = TemplateInstance((cpp,), path, nested_members=('RangeSum',))
+                    generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalRangeSumObject',
+                        [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
+                        template_instance=instance)
+                    namespace = f'DefaultCtor{count}'
+                    lines = generated.replace('OriginalRangeSumObject', namespace).split('\n')
+                    imports = imports or [line for line in lines if line.startswith('import')]
+                    parts.append('\n'.join(line for line in lines if not line.startswith('import')))
+                    parts.append(fixture.replace('OriginalRangeSumObject', namespace)
+                                 .replace('GenericDefaultCtor', f'GenericDefaultCtor{count}'))
+                    call = f'GenericDefaultCtor{count}'
+                    checks.append(f'example : {namespace}.«RangeSum_construct1» = {call}.gDefaultCtor {ty} := rfl')
+                    checks.append(f'example : {namespace}.«RangeSum_construct1_exportViewFuel» = {call}.gView {ty} := rfl')
+                    checks.extend('#print axioms ' + name.replace('GenericDefaultCtor', f'GenericDefaultCtor{count}') for name in theorem_names)
+                    count += 1
+            lean = Path(directory) / 'friend.lean'
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericLazy\nimport Proofs.MonoidLazyCall\n'
+                            'import Proofs.CppScalarValuePrepare\nimport Proofs.CppScalarContents\nopen Proofs.CppScalar\n' +
+                            '\n'.join(parts) + '\n' + '\n'.join(checks) + '\n')
+            lake, env = lean_environment()
+            result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
+                                    capture_output=True, text=True)
+        errors = '\n'.join(line for line in (result.stdout + result.stderr).splitlines() if 'error' in line)
+        self.assertEqual(result.returncode, 0, errors[:3000])
+        self.assertNotIn('sorryAx', result.stdout)
+        standard = {'propext', 'Classical.choice', 'Quot.sound'}
+        reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
+        self.assertGreater(len(reports), 20)
+        for line in reports:
+            if line.endswith('does not depend on any axioms'):
+                continue
+            used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
+            self.assertLessEqual(used, standard, line)
+
 
 
 if __name__ == '__main__':
