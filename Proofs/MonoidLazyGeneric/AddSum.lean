@@ -334,7 +334,7 @@ theorem e_correct (second : Bool) (caller : NState)
   let prog := gE ty second
   refine constant_body_correct prog (if second then i32 else ty) 0
     (by cases second <;> rfl) (by cases second <;> rfl) (by show Scalar (prog.body) = true; cases second <;> simp [prog, gE, gNew1, gNew0, gOp, fieldsBody, picked, defaultBody, defaultPicked, Scalar, NExpr.scalarOnly, Proofs.GenericLazy.castTo_scalar ty i32 (.literal i32 0) rfl])
-    (by cases second; exact Proofs.GenericLazy.valid_zero ty; rfl) caller valid lengths strict base ?_
+    (by cases second; exact Proofs.GenericLazy.valid_zero ty; exact Proofs.GenericLazy.valid_zero i32) caller valid lengths strict base ?_
   intro P hP
   subst hP
   have hn := Proofs.GenericLazy.castTo_nodes ty i32 (.literal i32 0)
@@ -361,7 +361,7 @@ theorem default_correct (second : Bool) (caller : NState)
   let prog := gNew1 ty second
   refine constant_body_correct prog (if second then i32 else ty) 0
     (by cases second <;> rfl) (by cases second <;> rfl) (by show Scalar (prog.body) = true; cases second <;> simp [prog, gE, gNew1, gNew0, gOp, fieldsBody, picked, defaultBody, defaultPicked, Scalar, NExpr.scalarOnly, Proofs.GenericLazy.castTo_scalar ty i32 (.literal i32 0) rfl])
-    (by cases second; exact Proofs.GenericLazy.valid_zero ty; rfl) caller valid lengths strict base ?_
+    (by cases second; exact Proofs.GenericLazy.valid_zero ty; exact Proofs.GenericLazy.valid_zero i32) caller valid lengths strict base ?_
   intro P hP
   subst hP
   obtain ⟨r,ran,ret,cost,need,mem⟩ := default_fields_exec ty (callerP caller) second
