@@ -468,6 +468,28 @@ theorem default_export_correct (v : Int) (hv : ty.valid v = true) (caller : NSta
       exact ⟨r,ran,ret,cost,need,ps⟩)
     caller targetConst valid lengths strict base
 
+
+/-- Objects missing their field slot are rejected, for every type and every caller. -/
+theorem incomplete_object_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (second : Proofs.CppConstructorMultiFinish.ObjectRef) :
+    gCombine ty li ri fuel caller [⟨[],[]⟩,second] targetConst = .fault := by
+  simp [gCombine, MemberFactory.referenceArguments, MemberFactory.referenceFields]
+
+/-- An argument slot that does not name a live scalar of the right type is rejected. -/
+theorem missing_slot_rejected (fuel : Nat) (caller : NState) (targetConst : Bool) (s1 s2 : Nat)
+    (missing : caller.scalarCell s2 ty = none) :
+    gCombine ty li ri fuel caller [⟨[],[s1]⟩,⟨[],[s2]⟩] targetConst = .fault := by
+  unfold gCombine
+  rcases hc : caller.scalarCell s1 ty with _ | ⟨binding,cell⟩
+  · simp [MemberFactory.referenceArguments, MemberFactory.referenceFields, hc]
+  · simp [MemberFactory.referenceArguments, MemberFactory.referenceFields, hc, missing]
+
+/-- Vector slots in an argument object are rejected. -/
+theorem vector_slot_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (v : Nat) (rest : List Nat) (second : Proofs.CppConstructorMultiFinish.ObjectRef) :
+    gCombine ty li ri fuel caller [⟨v :: rest,[]⟩,second] targetConst = .fault := by
+  simp [gCombine, MemberFactory.referenceArguments]
+
 theorem total_work (x : Int) (caller initial out : NState) (targetConst : Bool)
     (post : ExportState ty x caller initial out targetConst) : out.work ≤ caller.work+47 := by
   have scalar := post.scalarWork
