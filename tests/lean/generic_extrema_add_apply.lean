@@ -430,6 +430,27 @@ theorem object_export_correct (caller : NState) (targetConst : Bool)
   rw [args]
   exact ran
 
+/-- A read-only receiver is rejected, for every type and caller. -/
+theorem readonly_receiver_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (s1 : Nat) (b : CppState.Binding) (cell : Cell)
+    (second : Proofs.CppConstructorMultiFinish.ObjectRef)
+    (found : caller.scalarCell s1 ty = some (b,cell)) (readonly : b.writable = false) :
+    gApplyObjects ty fuel caller [⟨[],[s1]⟩,second] targetConst = .fault := by
+  simp [gApplyObjects, MemberFactory.objectArguments, MemberFactory.referenceFields, found, readonly]
+
+/-- A receiver object that lacks its field slots is rejected. -/
+theorem incomplete_receiver_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (second : Proofs.CppConstructorMultiFinish.ObjectRef) :
+    gApplyObjects ty fuel caller [⟨[],[]⟩,second] targetConst = .fault := by
+  simp [gApplyObjects, MemberFactory.objectArguments, MemberFactory.referenceFields]
+
+/-- A receiver object with a vector slot is rejected. -/
+theorem vector_receiver_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (v : Nat) (rest : List Nat) (second : Proofs.CppConstructorMultiFinish.ObjectRef) :
+    gApplyObjects ty fuel caller [⟨v :: rest,[]⟩,second] targetConst = .fault := by
+  simp [gApplyObjects, MemberFactory.objectArguments]
+
+
 theorem total_work (x : Int) (caller initial out : NState) (targetConst : Bool)
     (post : ExportState ty x caller initial out targetConst) : out.work ≤ caller.work+14 := by
   have scalar := post.scalarWork
