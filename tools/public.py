@@ -32,8 +32,10 @@ def support_registry() -> dict[str, list[str]]:
             raise ValueError(f"invalid verifier support {field}")
         for path in paths:
             repo_file(path)
-            if field == "lean_modules" and Path(path).parent not in (Path("Proofs"), Path("Proofs/Generated")):
-                raise ValueError("shared Lean support must be declared in Proofs/ or Proofs/Generated/")
+            if field == "lean_modules" and Path(path).parent not in (
+                    Path("Proofs"), Path("Proofs/Generated"), Path("Proofs/MonoidLazyGeneric")):
+                raise ValueError("shared Lean support must be declared in Proofs/, Proofs/Generated/ "
+                                 "or Proofs/MonoidLazyGeneric/")
     return data
 
 

@@ -1389,9 +1389,18 @@ def lower_class_layout(source, qualified, include_dirs=(), signed_conversion='ch
     return result
 
 
+SHARED_SUPPORT_IMPORTS = ['import Proofs.CppClassCopyCommands', 'import Proofs.CppConstructorMultiFinish', 'import Proofs.CppConstructorView', 'import Proofs.CppFrameResolveExtension', 'import Proofs.CppNestedCall']
+
+
+def member_support_module():
+    """The instance-independent support code shared by every member-export model (`Proofs/MemberSupport.lean`)."""
+    return '\n'.join([*SHARED_SUPPORT_IMPORTS, MEMBER_VIEW_SUPPORT, MEMBER_COPY_SUPPORT,
+                      MEMBER_FACTORY_SUPPORT, ''])
+
+
 def emit_class_layout(source, qualified, namespace='Proofs.Generated.ClassLayout', include_dirs=(),
                       signed_conversion='checked', *, member_exports=False, template_instance=None,
-                      factory_exports=False, friend_exports=False, companion_instances=(), receiver_methods=()):
+                      factory_exports=False, friend_exports=False, companion_instances=(), receiver_methods=(), shared_support=False):
     if not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*', namespace):
         raise ValueError('invalid Lean namespace')
     ir = lower_class_layout(source, qualified, include_dirs, signed_conversion, multiple_vectors=member_exports,
@@ -1406,14 +1415,18 @@ def emit_class_layout(source, qualified, namespace='Proofs.Generated.ClassLayout
             coverage = 'constructor_factory_and_friend_member_exports'
         if receiver_methods:
             coverage = 'constructor_factory_and_record_returning_member_exports'
-        lines = ['import Proofs.CppConstructorView', 'import Proofs.CppClassCopyCommands',
-                 'import Proofs.CppFrameResolveExtension', program, f'namespace {namespace}',
+        imports = (['import Proofs.MemberSupport'] if shared_support else
+                   ['import Proofs.CppConstructorView', 'import Proofs.CppClassCopyCommands',
+                    'import Proofs.CppFrameResolveExtension'])
+        lines = [*imports, program, f'namespace {namespace}',
                  'open Proofs.CppNestedProgram Proofs.CppNestedCall',
                  f'def qualifiedClass : String := {json.dumps(ir["qualified_class"])}',
                  f'def sourceSHA256 : String := {json.dumps(ir["source_sha256"])}',
-                 f'def coverage : String := {json.dumps(coverage)}', MEMBER_VIEW_SUPPORT, MEMBER_COPY_SUPPORT]
-        if factory_exports:
-            lines.append(MEMBER_FACTORY_SUPPORT)
+                 f'def coverage : String := {json.dumps(coverage)}']
+        if not shared_support:
+            lines += [MEMBER_VIEW_SUPPORT, MEMBER_COPY_SUPPORT]
+            if factory_exports:
+                lines.append(MEMBER_FACTORY_SUPPORT)
         if template_instance is not None:
             lines += [f'def templateWitnessSHA256 : String := {json.dumps(ir["template_instance"]["witness_sha256"])}',
                       'def genericTypesVerified : Bool := false',

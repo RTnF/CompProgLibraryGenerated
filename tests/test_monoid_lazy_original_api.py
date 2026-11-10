@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import re
 import unittest
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -11,6 +12,7 @@ from check_public import check_compiler,lower_priority
 from offline import disable_network
 
 ORIGINAL=ROOT/'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp'
+PUBLIC=ROOT/'library/algebraic_structure/monoid_lazy.hpp'
 CANDIDATE=ROOT/'experiments/verification/algebraic_structure/monoid_lazy.hpp'
 
 class MonoidLazyOriginalApiTests(unittest.TestCase):
@@ -48,14 +50,26 @@ class MonoidLazyOriginalApiTests(unittest.TestCase):
             rejected=subprocess.run(['g++',*flags,'-fsyntax-only',str(control)],capture_output=True,text=True,timeout=60)
             self.assertNotEqual(rejected.returncode,0)
             self.assertGreaterEqual(rejected.stderr.count('could not convert'),2)
-            # The currently published flat API is still missing these names.
-            # Keep this control until the actual public switch is verified.
-            control=directory/'flat.cpp'
-            control.write_text('#include "library/algebraic_structure/monoid_lazy.hpp"\nusing namespace cp;\n'+
-                (ROOT/'tests/imports/original_mixed_add_extrema.cpp').read_text())
-            rejected=subprocess.run(['g++',*flags,'-fsyntax-only',str(control)],capture_output=True,text=True,timeout=60)
-            self.assertNotEqual(rejected.returncode,0)
-            self.assertIn('RangeAddRangeMaxMin',rejected.stderr)
+            # The published header carries the original nested API: every original driver compiles and runs
+            # against library/ as well.
+            for kind in ('add_extrema','set_extrema','add_sum','set_sum'):
+                driver=directory/(kind+'-public.cpp')
+                driver.write_text('#include "library/algebraic_structure/monoid_lazy.hpp"\nusing namespace cp;\n'+
+                    (ROOT/'tests/imports'/('original_mixed_'+kind+'.cpp')).read_text())
+                binary=directory/(kind+'-public-native')
+                subprocess.run(['g++',*flags,str(driver),'-o',str(binary)],check=True,timeout=60)
+                subprocess.run([str(binary)],check=True,timeout=10)
+
+    def test_published_nested_api_is_the_original_up_to_std_qualification(self):
+        original=ORIGINAL.read_text().removeprefix('#pragma once\n#include "template/small_template.hpp"\n')
+        public=PUBLIC.read_text()
+        start=public.index('// ---- The original nested API')
+        nested=public[public.index('\n',public.index('compares the two token by token'))+1:]
+        nested=nested[:nested.index('template struct RangeSum<long long>;')]
+        # The only differences are std:: qualification and the spelling of `ll`.
+        normalised=re.sub(r'\bstd::','',nested).replace('long long','ll')
+        self.assertEqual(normalised.split(),re.sub(r'\bstd::','',original).split())
+        self.assertGreater(start,0)
 
 if __name__=='__main__':
     disable_network();lower_priority();unittest.main()

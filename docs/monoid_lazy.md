@@ -6,6 +6,12 @@
 - `RangeAdd { long long v; }`: 区間への加算。既定値（恒等）は `v = 0`、`compose(f, g)` は `RangeAdd(f.v + g.v)`、`applyExtremum(m)` は最大値（または最小値）`m` に対する新しい値 `m + v`、`applySumX(x, size)` は和 `x`・長さ `size` の区間の新しい和 `x + size * v`。
 - `RangeSet { long long v; bool noop; }`: 区間への代入。既定値（恒等）は `noop = true`、`compose(f, g)` は `f.noop` なら `g`、そうでなければ `f`（`g` を先に、`f` を後に適用する作用）。`applyExtremum(m)` は `noop` なら `m`、そうでなければ `v`。`applySumX(x, size)` は `noop` なら `x`、そうでなければ `v * size`。
 
+## 元の入れ子API（2026-11-10 に公開側へ追加）
+
+`cp::RangeAddRangeMaxMin<T>`・`cp::RangeAddRangeSum<T>`・`cp::RangeSetRangeMaxMin<T>`・`cp::RangeSetRangeSum<T>`（`T` の既定は `long long`）を、元の `experiments/library/cpp/algebraic_structure/monoid_lazy.hpp` と同じ形で公開した。入れ子の `RangeMax`・`RangeMin`・`RangeSum`・`RangeAdd`・`RangeSet`、`e()`・`id()`、hidden friend の `op`・`compose`、`apply`（`RangeMax`/`RangeMin` を受けるメンバーテンプレートと `RangeSum` を返す版）、`RangeSet` の 2 つのコンストラクタを含む。元との違いは `std::numeric_limits`・`std::max`・`std::min` の修飾と、`ll` を `long long` と書いた 2 点だけである（`tests/test_monoid_lazy_original_api.py` が空白を除いたトークン列で原本と一致することを確認する）。以下に述べる平らなクラス（`RangeSum<T>` など）は、これとは別に残した簡便なAPIである。
+
+検証の範囲: 平らなAPIは従来どおり `Proofs/MonoidLazyCall.lean` が公開モデルを対象に証明する。入れ子のAPIは、変換器の整数型（32/64 bit の符号付き/なし。`T = int`・`unsigned int`・`long long`・`unsigned long long`、`long`/`unsigned long` は同じ型）の全部について、元ヘッダーから生成したモデルが Lean の任意型 `ty` の族（`Proofs/GenericLazy.lean`・`GenericCall.lean`・`GenericExtrema.lean`・`Proofs/MonoidLazyGeneric/`）と一致することを `tests/test_generic_family_*.py`（31本）で検査し、族について、任意の呼び出し元の全フィールド・既存のscalar/vectorの保持・IR仕事量を証明している。和と積は符号付き型では範囲外なら fault（`raw_sum_overflow_faults` など）、符号なし型では `2^width` で折り返す。残る未検証: `T` が `short`/`char`/`double` の場合（変換器が未対応、浮動小数の基盤は別途）、C++ の厳密なオブジェクト寿命（コピー・破棄の回数）。
+
 元のソースからの変更（元APIとコピー効果の差が未解消）:
 
 - 型Tはクラステンプレートのまま保持し、検証した具体化はlong longである。`e()` と `id()` は既定コンストラクタに置き換えた。`numeric_limits` は使わない。

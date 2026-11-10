@@ -61,5 +61,33 @@ int main() {
         cp::RangeSet<double> set(1.5);
         assert(set.applyExtremum(9.0) == 1.5 && set.applySumX(9.0, 4) == 6.0);
     }
+    // The original nested API (RangeAddRangeMaxMin, RangeAddRangeSum, RangeSetRangeMaxMin, RangeSetRangeSum).
+    {
+        using AddSum = cp::RangeAddRangeSum<long long>;
+        AddSum::RangeSum x(7, 4), y(2, 1), z;
+        auto s = op(x, y);
+        assert(z.x == 0 && z.size == 0 && AddSum::RangeSum::e().size == 0 && s.x == 9 && s.size == 5);
+        AddSum::RangeAdd f(3), g(2);
+        auto h = compose(f, g);
+        assert(AddSum::RangeAdd::id().v == 0 && h.v == 5);
+        auto a = f.apply(x);
+        assert(a.x == 19 && a.size == 4 && x.x == 7);
+        using AddMax = cp::RangeAddRangeMaxMin<long long>;
+        assert(AddMax::RangeMax().x == LLONG_MIN && AddMax::RangeMin().x == LLONG_MAX);
+        assert(op(AddMax::RangeMax(3), AddMax::RangeMax(9)).x == 9 && op(AddMax::RangeMin(3), AddMax::RangeMin(9)).x == 3);
+        assert(AddMax::RangeAdd(4).apply(AddMax::RangeMax(10)).x == 14 && AddMax::RangeAdd(4).apply(AddMax::RangeMin(10)).x == 14);
+        using SetSum = cp::RangeSetRangeSum<long long>;
+        SetSum::RangeSum q(5, 3);
+        SetSum::RangeSet keep, assign(8);
+        assert(keep.noop && !assign.noop && keep.apply(q).x == 5 && assign.apply(q).x == 24 && assign.apply(q).size == 3);
+        assert(compose(keep, assign).v == 8 && compose(assign, keep).v == 8);
+        using SetMax = cp::RangeSetRangeMaxMin<long long>;
+        assert(SetMax::RangeSet().apply(SetMax::RangeMax(6)).x == 6 && SetMax::RangeSet(2).apply(SetMax::RangeMin(6)).x == 2);
+        // the value type is a template parameter: unsigned wrap-around and int
+        cp::RangeAddRangeSum<unsigned>::RangeAdd u(1);
+        auto w = u.apply(cp::RangeAddRangeSum<unsigned>::RangeSum(4294967295u, 2));
+        assert(w.x == 4294967295u + 2u && w.size == 2);
+        assert(cp::RangeAddRangeMaxMin<int>::RangeMax().x == INT_MIN && cp::RangeSetRangeMaxMin<double>::RangeMin().x > 1e300);
+    }
     return 0;
 }

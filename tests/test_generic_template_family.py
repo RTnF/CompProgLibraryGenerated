@@ -23,6 +23,13 @@ from template_class_ir import lower_template_class
 from test_scalar_ir import lean_environment
 from offline import disable_network
 
+SHARED_SUPPORT = bool(os.environ.get('GENERIC_FAMILY_SHARED'))
+
+
+def emit_class_layout(*args, **kwargs):
+    return layout.emit_class_layout(*args, shared_support=SHARED_SUPPORT, **kwargs)
+
+
 ORIGINAL = ROOT / 'experiments/library/cpp/algebraic_structure/monoid_lazy.hpp'
 HEADER = ROOT / 'library/algebraic_structure/monoid_lazy.hpp'
 # (C++ type, name fragment used by the generator, Lean Ty literal)
@@ -67,7 +74,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path.write_text(text.replace('long long', cpp))
                     for kind, indices in [('RangeMax', '0 1'), ('RangeMin', '1 0')]:
                         instance = TemplateInstance((cpp,), path, nested_members=(kind,))
-                        generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalExtremaObject',
+                        generated = emit_class_layout(ORIGINAL, family, 'OriginalExtremaObject',
                             [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                             friend_exports=True, template_instance=instance)
                         namespace = f'Ext{count}'
@@ -158,7 +165,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                 for kind in ('RangeMax', 'RangeMin'):
                     instance = TemplateInstance((cpp,), path, nested_members=(kind,))
                     receiver = TemplateInstance((cpp,), path, nested_members=('RangeAdd',))
-                    generated = layout.emit_class_layout(ORIGINAL, 'RangeAddRangeMaxMin', 'TemplateMemberResult',
+                    generated = emit_class_layout(ORIGINAL, 'RangeAddRangeMaxMin', 'TemplateMemberResult',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                         template_instance=instance, companion_instances=(('RangeAddRangeMaxMin', receiver),),
                         receiver_methods=((1, 'apply', (RecordArgument(0),)),))
@@ -220,7 +227,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                 for kind in ('RangeMax', 'RangeMin'):
                     instance = TemplateInstance((cpp,), path, nested_members=(kind,))
                     receiver = TemplateInstance((cpp,), path, nested_members=('RangeSet',))
-                    generated = layout.emit_class_layout(ORIGINAL, 'RangeSetRangeMaxMin', 'TemplateMemberResult',
+                    generated = emit_class_layout(ORIGINAL, 'RangeSetRangeMaxMin', 'TemplateMemberResult',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                         template_instance=instance, companion_instances=(('RangeSetRangeMaxMin', receiver),),
                         receiver_methods=((1, 'apply', (RecordArgument(0),)),))
@@ -278,7 +285,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path = Path(directory) / f'witness_{count}.cpp'
                     path.write_text(text.replace('long long', cpp))
                     instance = TemplateInstance((cpp,), path, nested_members=('RangeSet',))
-                    generated = layout.emit_class_layout(ORIGINAL, family, 'ValueObject',
+                    generated = emit_class_layout(ORIGINAL, family, 'ValueObject',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                         template_instance=instance)
                     namespace = f'Ctor{count}'
@@ -335,7 +342,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path = Path(directory) / f'witness_{count}.cpp'
                     path.write_text(text.replace('long long', cpp))
                     instance = TemplateInstance((cpp,), path, nested_members=(record,))
-                    generated = layout.emit_class_layout(ORIGINAL, family, 'ValueObject',
+                    generated = emit_class_layout(ORIGINAL, family, 'ValueObject',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                         template_instance=instance)
                     namespace = f'Scalar{count}'
@@ -536,7 +543,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                 path.write_text(text.replace('long long', cpp))
                 instance = TemplateInstance((cpp,), path, nested_members=('RangeSum',))
                 receiver = TemplateInstance((cpp,), path, nested_members=('RangeAdd',))
-                generated = layout.emit_class_layout(ORIGINAL, 'RangeAddRangeSum', 'OriginalMemberResult',
+                generated = emit_class_layout(ORIGINAL, 'RangeAddRangeSum', 'OriginalMemberResult',
                     [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                     template_instance=instance, companion_instances=(('RangeAddRangeSum', receiver),),
                     receiver_methods=((1, 'apply'),))
@@ -597,7 +604,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                 path.write_text(text.replace('long long', cpp))
                 instance = TemplateInstance((cpp,), path, nested_members=('RangeSum',))
                 receiver = TemplateInstance((cpp,), path, nested_members=('RangeSet',))
-                generated = layout.emit_class_layout(ORIGINAL, 'RangeSetRangeSum', 'OriginalMemberResult',
+                generated = emit_class_layout(ORIGINAL, 'RangeSetRangeSum', 'OriginalMemberResult',
                     [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                     template_instance=instance, companion_instances=(('RangeSetRangeSum', receiver),),
                     receiver_methods=((1, 'apply'),))
@@ -658,7 +665,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path = Path(directory) / f'witness_{count}.cpp'
                     path.write_text(text.replace('long long', cpp))
                     instance = TemplateInstance((cpp,), path, nested_members=('RangeSum',))
-                    generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalFriendSumObject',
+                    generated = emit_class_layout(ORIGINAL, family, 'OriginalFriendSumObject',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                         friend_exports=True, template_instance=instance)
                     namespace = f'Friend{count}'
@@ -712,7 +719,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path = Path(directory) / f'witness_{count}.cpp'
                     path.write_text(text.replace('long long', cpp))
                     instance = TemplateInstance((cpp,), path, nested_members=('RangeSum',))
-                    generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalRangeSumObject',
+                    generated = emit_class_layout(ORIGINAL, family, 'OriginalRangeSumObject',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                         template_instance=instance)
                     namespace = f'ValueCtor{count}'
@@ -765,7 +772,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path = Path(directory) / f'witness_{count}.cpp'
                     path.write_text(text.replace('long long', cpp))
                     instance = TemplateInstance((cpp,), path, nested_members=('RangeSum',))
-                    generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalRangeSumObject',
+                    generated = emit_class_layout(ORIGINAL, family, 'OriginalRangeSumObject',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                         template_instance=instance)
                     namespace = f'DefaultCtor{count}'
@@ -818,7 +825,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path = Path(directory) / f'witness_{count}.cpp'
                     path.write_text(text.replace('long long', cpp))
                     instance = TemplateInstance((cpp,), path, nested_members=('RangeSum',))
-                    generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalRangeSumObject',
+                    generated = emit_class_layout(ORIGINAL, family, 'OriginalRangeSumObject',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
                         template_instance=instance)
                     namespace = f'FactoryE{count}'
@@ -871,7 +878,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path = Path(directory) / f'witness_{count}.cpp'
                     path.write_text(text.replace('long long', cpp))
                     instance = TemplateInstance((cpp,), path, nested_members=('RangeAdd',))
-                    generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalValueAdd',
+                    generated = emit_class_layout(ORIGINAL, family, 'OriginalValueAdd',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True, friend_exports=True,
                         template_instance=instance)
                     namespace = f'AddCompose{count}'
@@ -925,7 +932,7 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     path = Path(directory) / f'witness_{count}.cpp'
                     path.write_text(text.replace('long long', cpp))
                     instance = TemplateInstance((cpp,), path, nested_members=('RangeSet',))
-                    generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalSetObject',
+                    generated = emit_class_layout(ORIGINAL, family, 'OriginalSetObject',
                         [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True, friend_exports=True,
                         template_instance=instance)
                     namespace = f'SetCompose{count}'

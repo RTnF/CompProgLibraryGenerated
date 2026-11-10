@@ -1,0 +1,1168 @@
+import Proofs.CppClassCopyCommands
+import Proofs.CppConstructorMultiFinish
+import Proofs.CppConstructorView
+import Proofs.CppFrameResolveExtension
+import Proofs.CppNestedCall
+
+namespace MemberView
+open Proofs.CppScalar Proofs.CppNestedProgram Proofs.CppNestedCall Proofs.CppLoop
+open Proofs.CppNestedVectorBindings Proofs.CppConstructorMultiFinish Proofs.CppConstructorRoots
+
+def restrictVectors : List Binding → List Bool → Option (List Binding)
+  | [],[] => some []
+  | binding::bindings,permission::permissions => do
+      if permission = true → binding.writable = true then
+        let tail ← restrictVectors bindings permissions
+        some ({binding with writable := permission}::tail)
+      else none
+  | _,_ => none
+
+theorem restrict_identity (bindings : List Binding) :
+    restrictVectors bindings (bindings.map Binding.writable) = some bindings := by
+  induction bindings with
+  | nil => rfl
+  | cons binding bindings ih => simp [restrictVectors,ih]
+
+def VectorView : List Binding → List Binding → Prop
+  | [],[] => True
+  | source::sources,target::targets =>
+      target.owner = source.owner ∧ target.element = source.element ∧
+      target.header = source.header ∧ (target.writable = true → source.writable = true) ∧
+      VectorView sources targets
+  | _,_ => False
+
+theorem restrict_properties (bindings : List Binding) (permissions : List Bool)
+    (viewed : List Binding) (actual : restrictVectors bindings permissions = some viewed) :
+    descriptors viewed = descriptors bindings ∧
+      viewed.map Binding.writable = permissions ∧ viewed.length = bindings.length ∧
+      VectorView bindings viewed := by
+  induction bindings generalizing permissions viewed with
+  | nil =>
+    cases permissions <;> simp [restrictVectors] at actual
+    subst viewed
+    exact ⟨rfl,rfl,rfl,True.intro⟩
+  | cons binding bindings ih =>
+    cases permissions with
+    | nil => simp [restrictVectors] at actual
+    | cons permission permissions =>
+      unfold restrictVectors at actual
+      split at actual
+      · rename_i permitted
+        cases ran : restrictVectors bindings permissions with
+        | none => simp [ran] at actual
+        | some tail =>
+          simp only [ran,Bind.bind,Option.bind,Option.some.injEq] at actual
+          subst viewed
+          obtain ⟨owners,flags,length,view⟩ := ih permissions tail ran
+          refine ⟨?_,?_,?_,?_⟩
+          · change (binding.owner,binding.element)::descriptors tail =
+              (binding.owner,binding.element)::descriptors bindings
+            exact congrArg (List.cons (binding.owner,binding.element)) owners
+          · exact congrArg (List.cons permission) flags
+          · exact congrArg Nat.succ length
+          · exact ⟨rfl,rfl,rfl,permitted,view⟩
+      · simp at actual
+
+def finishView (caller callee : NState) (vectors : List VectorField)
+    (scalars : List Proofs.CppConstructorFinish.ScalarField) (vectorPermissions : List Bool)
+    (scalarPermissions : List (Ty × Bool)) : Option (NState × ObjectRef) := do
+  if callee.scope = caller.scope+1 ∧ caller.scalars.memory.length ≤ callee.scalars.memory.length ∧
+      (callee.scalars.memory.take caller.scalars.memory.length).map Proofs.CppState.Cell.type =
+        caller.scalars.memory.map Proofs.CppState.Cell.type then
+    let bindings ← captureVectors callee vectors
+    let values ← Proofs.CppConstructorFinish.captureAll callee scalars
+    let viewedBindings ← restrictVectors bindings vectorPermissions
+    let viewedValues ← Proofs.CppConstructorView.restrictValues values scalarPermissions
+    let frame ← finishRoots callee.frame (descriptors viewedBindings) callee.scope caller.scope
+    some (restored caller callee frame viewedBindings viewedValues,
+      reference caller viewedBindings.length viewedValues.length)
+  else none
+
+def constructViewFuel (program : NProgram) (fuel : Nat) (caller : NState)
+    (arguments : List NArgument) (vectors : List VectorField)
+    (scalars : List Proofs.CppConstructorFinish.ScalarField) (vectorPermissions : List Bool)
+    (scalarPermissions : List (Ty × Bool)) : Outcome (NState × ObjectRef) := do
+  let initial ← liftChecked (prepare caller program.parameters arguments)
+  let step ← runFuel fuel program.body initial
+  if (step.returned.isSome && step.returned != some Ret.unit) || step.breaking then .fault else
+    liftChecked (finishView caller step.state vectors scalars vectorPermissions scalarPermissions)
+
+theorem constructView_of_steps (program : NProgram) (fuel : Nat) (caller initial callee out : NState)
+    (arguments : List NArgument) (vectors : List VectorField)
+    (scalars : List Proofs.CppConstructorFinish.ScalarField) (vectorPermissions : List Bool)
+    (scalarPermissions : List (Ty × Bool)) (object : ObjectRef) (returned : Option Ret)
+    (prepared : prepare caller program.parameters arguments = some initial)
+    (executed : runFuel fuel program.body initial = .finished ⟨callee,returned,false⟩)
+    (completed : returned = none ∨ returned = some Ret.unit)
+    (exported : finishView caller callee vectors scalars vectorPermissions scalarPermissions = some (out,object)) :
+    constructViewFuel program fuel caller arguments vectors scalars vectorPermissions scalarPermissions =
+      .finished (out,object) := by
+  rcases completed with rfl | rfl <;>
+    simp [constructViewFuel,prepared,executed,exported,liftChecked,Bind.bind,Outcome.bind]
+
+theorem finishView_ok (caller callee : NState) (vectors : List VectorField)
+    (scalars : List Proofs.CppConstructorFinish.ScalarField) (vectorPermissions : List Bool)
+    (scalarPermissions : List (Ty × Bool)) (bindings viewedBindings : List Binding)
+    (values viewedValues : List Proofs.CppConstructorFinish.ScalarValue) (roots : List Root)
+    (scope : callee.scope = caller.scope+1)
+    (fits : caller.scalars.memory.length ≤ callee.scalars.memory.length)
+    (types : (callee.scalars.memory.take caller.scalars.memory.length).map Proofs.CppState.Cell.type =
+      caller.scalars.memory.map Proofs.CppState.Cell.type)
+    (vectorMatch : VectorFieldsMatch callee vectors bindings)
+    (scalarMatch : Proofs.CppConstructorFinish.FieldsMatch callee scalars values)
+    (vectorView : restrictVectors bindings vectorPermissions = some viewedBindings)
+    (scalarView : Proofs.CppConstructorView.restrictValues values scalarPermissions = some viewedValues)
+    (selected : descriptors bindings = specs roots) (distinct : (roots.map Prod.fst).Nodup)
+    (valid : callee.frame.state.wellFormed = true) (models : HaveModels callee.frame roots callee.scope) :
+    ∃ out, finishView caller callee vectors scalars vectorPermissions scalarPermissions =
+        some (out,reference caller viewedBindings.length viewedValues.length) ∧
+      (∀ root ∈ roots, Proofs.CppRootModel.Models out.frame.state root.1
+        (Proofs.DynamicTransfer.inScope root.2 caller.scope)) ∧
+      (∀ owner view, Proofs.CppRootModel.Models callee.frame.state owner view →
+        owner ∉ roots.map Prod.fst → view.scope ≠ callee.scope →
+        Proofs.CppRootModel.Models out.frame.state owner view) ∧
+      out.scalars.memory = callee.scalars.memory.take caller.scalars.memory.length ++ values.map Prod.fst ∧
+      out.frame.bindings = caller.frame.bindings ++ rebound caller.scope viewedBindings ∧
+      out.scalars.bindings = caller.scalars.bindings ++
+        Proofs.CppConstructorFinish.scalarBindings caller.scalars.memory.length viewedValues ∧
+      out.scope = caller.scope := by
+  have same := (restrict_properties bindings vectorPermissions viewedBindings vectorView).1
+  have selectedView : descriptors viewedBindings = specs roots := same.trans selected
+  obtain ⟨ran,exported,kept⟩ := finishRoots_ok callee.frame roots callee.scope caller.scope valid
+    (by omega) distinct models
+  rw [← selectedView] at ran
+  let frame := Proofs.DynamicRetire.retiredFrame (movedAll callee.frame roots caller.scope) callee.scope
+  let out := restored caller callee frame viewedBindings viewedValues
+  refine ⟨out,?_,exported,kept,?_,rfl,rfl,rfl⟩
+  · unfold finishView
+    rw [ite_eq_left ⟨scope,fits,types⟩]
+    simp only [captureVectors_ok callee vectors bindings vectorMatch,
+      Proofs.CppConstructorFinish.captureAll_ok callee scalars values scalarMatch,
+      vectorView,scalarView,Bind.bind,Option.bind,ran]
+    rfl
+  · change callee.scalars.memory.take caller.scalars.memory.length ++ viewedValues.map Prod.fst = _
+    rw [Proofs.CppConstructorView.restrict_cells values scalarPermissions viewedValues scalarView]
+
+end MemberView
+
+
+namespace MemberCopy
+open Proofs.CppScalar Proofs.CppNestedProgram Proofs.CppNestedCall Proofs.CppLoop
+
+inductive Field where
+  | vector (slot : Nat) (type : Ty) (writable : Bool)
+  | scalar (slot : Nat) (type : Ty) (writable : Bool)
+  deriving DecidableEq, Repr
+
+def statement : Field → NStmt
+  | .vector slot ty writable => .copyVector (.local slot) ty writable
+  | .scalar slot ty writable => .declare ty writable (.variable ty slot)
+
+def validate (s : NState) : List Field → Option Unit
+  | [] => some ()
+  | field::fields => do
+      match field with
+      | .vector slot ty _ =>
+        let index ← s.vectorSlot slot
+        let _ ← s.frame.resolve index (.integer ty)
+        pure ()
+      | .scalar slot ty _ =>
+        let _ ← s.scalarCell slot ty
+        pure ()
+      validate s fields
+
+def command : List Field → Command
+  | [] => .primitive .skip
+  | field::fields => .sequence (.primitive (statement field)) (command fields)
+
+def reference (s : NState) (fields : List Field) : Proofs.CppConstructorMultiFinish.ObjectRef :=
+  ⟨fields.zipIdx.filterMap (fun (field,index) => match field with
+      | .vector .. => some (s.slots.length+index) | _ => none),
+   fields.zipIdx.filterMap (fun (field,index) => match field with
+      | .scalar .. => some (s.slots.length+index) | _ => none)⟩
+
+def runCopyFuel (fuel : Nat) (s : NState) (fields : List Field) : Outcome NStep := do
+  let _ ← liftChecked (validate s fields)
+  runFuel fuel (command fields) s
+
+-- Each member uses the already verified ordinary scalar/vector statement.
+-- This relation composes their actual states in source declaration order.
+inductive Steps : List Field → NState → NState → Prop
+  | nil (s) : Steps [] s s
+  | cons (field fields before middle after)
+      (head : (statement field).run before = some ⟨middle,none,false⟩)
+      (tail : Steps fields middle after) : Steps (field::fields) before after
+
+theorem command_complete (fields : List Field) (before after : NState)
+    (steps : Steps fields before after) :
+    runFuel (fields.length+1) (command fields) before = .finished ⟨after,none,false⟩ := by
+  induction steps with
+  | nil => rfl
+  | cons field fields before middle after head tail ih =>
+    exact Proofs.CppClassCopyCommands.sequence_run (fields.length+1) _ _ before middle after
+      (Proofs.CppClassCopyCommands.primitive_run fields.length _ before middle head) ih
+
+theorem copy_complete (fields : List Field) (before after : NState)
+    (ready : validate before fields = some ()) (steps : Steps fields before after) :
+    runCopyFuel (fields.length+1) before fields = .finished ⟨after,none,false⟩ := by
+  simp only [runCopyFuel,ready,liftChecked,Bind.bind,Outcome.bind,command_complete fields before after steps]
+
+-- Readiness uses source cells/buffers and frame metadata, rather than assuming
+-- that the member-copy statements have already succeeded.
+inductive Ready : List Field → NState → NState → Prop
+  | nil (s) : Ready [] s s
+  | scalar (slot ty writable fields before after)
+      (binding : Proofs.CppState.Binding) (cell : Proofs.CppState.Cell)
+      (found : before.scalarCell slot ty = some (binding,cell))
+      (tail : Ready fields (Proofs.CppClassCopyCommands.scalarStep before ty writable cell.value) after) :
+      Ready (.scalar slot ty writable::fields) before after
+  | vector (slot ty writable fields before after index)
+      (binding : Proofs.CppNestedVectorBindings.Binding)
+      (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value)
+      (found : before.vectorSlot slot = some index)
+      (resolved : before.frame.resolve index (.integer ty) = some (binding,buffer))
+      (lengths : before.frame.rootWritable.length = before.frame.state.forest.objects.length)
+      (supported : Proofs.CppVectorBindings.supported ty)
+      (tail : Ready fields (Proofs.CppCopyStatementFacts.result before (before.charge 1 1)
+        buffer ty writable) after) : Ready (.vector slot ty writable::fields) before after
+
+theorem ready_steps (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) : Steps fields before after := by
+  induction ready with
+  | nil s => exact .nil s
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    refine Steps.cons (.scalar slot ty writable) fields before _ after ?_ ih
+    exact Proofs.CppClassCopyCommands.scalar_run before slot ty writable binding cell found
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    have evaluated : (Container.local slot).eval before = some (before.charge 1 1,index) := by
+      simp [Container.eval,found]
+    have copied := (Proofs.CppCopyStatementFacts.completes before (before.charge 1 1)
+      (.local slot) index binding buffer ty writable evaluated resolved lengths supported).1
+    refine Steps.cons (.vector slot ty writable) fields before _ after ?_ ih
+    simpa only [statement,Proofs.CppCopyStatement.statement_run] using copied
+
+theorem copy_ready_complete (fields : List Field) (before after : NState)
+    (initial : validate before fields = some ()) (ready : Ready fields before after) :
+    runCopyFuel (fields.length+1) before fields = .finished ⟨after,none,false⟩ :=
+  copy_complete fields before after initial (ready_steps fields before after ready)
+
+theorem resolve_root_kept (f g : Proofs.CppNestedVectorBindings.Frame)
+    (extension : Proofs.CppFrameExtension.Extends f g) (index : Nat) (ty : Ty)
+    (binding : Proofs.CppNestedVectorBindings.Binding)
+    (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value) (scope : Nat)
+    (root : binding.header = .root scope)
+    (actual : f.resolve index (.integer ty) = some (binding,buffer)) :
+    g.resolve index (.integer ty) = some (binding,buffer) := by
+  have parsed := actual
+  unfold Proofs.CppNestedVectorBindings.Frame.resolve at parsed
+  obtain ⟨b,found,rest⟩ := Proofs.DynamicResultValid.bind_some _ _ _ parsed
+  obtain ⟨owner,header,rest⟩ := Proofs.DynamicResultValid.bind_some _ _ _ rest
+  obtain ⟨⟨buf,tag⟩,object,rest⟩ := Proofs.DynamicResultValid.bind_some _ _ _ rest
+  obtain ⟨maximum,maximumFound,rest⟩ := Proofs.DynamicResultValid.bind_some _ _ _ rest
+  split at rest
+  · rename_i good
+    obtain ⟨sameBinding,sameBuffer⟩ := Prod.mk.inj (Option.some.inj rest)
+    subst b
+    subst buf
+    have ownerEq : binding.owner = owner := good.1
+    subst owner
+    have parts := Proofs.CppFrameCopy.object_parts f binding.owner ty buffer tag object
+    have inside := Proofs.CppVectorStore.lookup_bound f.state.storage binding.owner buffer parts.2.1
+    have nextFound := (extension.bindings index (List.getElem?_eq_some_iff.mp found).1).trans found
+    have headerEq : g.headerOwner binding = f.headerOwner binding := by
+      simp only [Proofs.CppNestedVectorBindings.Frame.headerOwner,root]
+      rw [Proofs.CppFrameExtension.object_eq f g extension binding.owner binding.element inside]
+    have objectEq := Proofs.CppFrameExtension.object_eq f g extension binding.owner (.integer ty) inside
+    have maximumEq := Proofs.CppFrameExtension.maximum_eq f g extension binding.owner
+      (by have := (Proofs.CppNestedVectorStore.wellFormed_parts f.state extension.oldValid).1; omega)
+    simp only [Proofs.CppNestedVectorBindings.Frame.resolve,nextFound,Bind.bind,Option.bind,
+      headerEq,header,objectEq,object,maximumEq,maximumFound]
+    exact ite_eq_left ⟨True.intro,good.2.1,good.2.2⟩
+  · simp at rest
+
+theorem vector_slot_prefix (before after : NState) (extra : List Proofs.CppMixedInvoke.Location)
+    (slots : after.slots = before.slots++extra) (slot index : Nat)
+    (found : before.vectorSlot slot = some index) : after.vectorSlot slot = some index := by
+  have parsed := found
+  unfold NState.vectorSlot at parsed
+  obtain ⟨location,lookup,_⟩ := Proofs.DynamicResultValid.bind_some _ _ _ parsed
+  have inside := (List.getElem?_eq_some_iff.mp lookup).1
+  simpa only [NState.vectorSlot,slots,List.getElem?_append_left inside] using found
+
+def Keeps (before after : NState) : Prop :=
+  (∀ slot ty binding cell, before.scalarCell slot ty = some (binding,cell) →
+    after.scalarCell slot ty = some (binding,cell)) ∧
+  (∀ slot ty index binding buffer scope, before.vectorSlot slot = some index →
+    before.frame.resolve index (.integer ty) = some (binding,buffer) → binding.header = .root scope →
+    after.vectorSlot slot = some index ∧ after.frame.resolve index (.integer ty) = some (binding,buffer))
+
+theorem Keeps.refl (s : NState) : Keeps s s := ⟨by intros; assumption,by intros; exact ⟨by assumption,by assumption⟩⟩
+
+theorem Keeps.trans {a b c : NState} (first : Keeps a b) (second : Keeps b c) : Keeps a c := by
+  constructor
+  · intro slot ty binding cell found
+    exact second.1 _ _ _ _ (first.1 _ _ _ _ found)
+  · intro slot ty index binding buffer scope slotFound resolved root
+    obtain ⟨slotNext,resolveNext⟩ := first.2 _ _ _ _ _ _ slotFound resolved root
+    exact second.2 _ _ _ _ _ _ slotNext resolveNext root
+
+def Good (s : NState) : Prop := s.frame.state.wellFormed = true ∧
+  s.frame.rootWritable.length = s.frame.state.forest.objects.length
+
+def Source (s : NState) : Field → Prop
+  | .scalar slot ty _ => ∃ binding cell, s.scalarCell slot ty = some (binding,cell)
+  | .vector slot ty _ => ∃ index binding buffer scope, s.vectorSlot slot = some index ∧
+      s.frame.resolve index (.integer ty) = some (binding,buffer) ∧ binding.header = .root scope ∧
+      Proofs.CppVectorBindings.supported ty
+
+def Sources (s : NState) (fields : List Field) : Prop := ∀ field ∈ fields, Source s field
+
+theorem sources_kept {before after : NState} (kept : Keeps before after) (fields : List Field)
+    (sources : Sources before fields) : Sources after fields := by
+  intro field member
+  cases field with
+  | scalar slot ty writable =>
+    obtain ⟨binding,cell,found⟩ := sources _ member
+    exact ⟨binding,cell,kept.1 _ _ _ _ found⟩
+  | vector slot ty writable =>
+    obtain ⟨index,binding,buffer,scope,found,resolved,root,supported⟩ := sources _ member
+    obtain ⟨slotNext,resolveNext⟩ := kept.2 _ _ _ _ _ _ found resolved root
+    exact ⟨index,binding,buffer,scope,slotNext,resolveNext,root,supported⟩
+
+theorem sources_validated (s : NState) (fields : List Field) (sources : Sources s fields) :
+    validate s fields = some () := by
+  induction fields with
+  | nil => rfl
+  | cons field fields ih =>
+    have tail := ih (fun f member => sources f (List.mem_cons_of_mem _ member))
+    have head := sources field (by simp)
+    cases field with
+    | scalar slot ty writable =>
+      obtain ⟨binding,cell,found⟩ := head
+      simp [validate,found,tail]
+    | vector slot ty writable =>
+      obtain ⟨index,binding,buffer,scope,found,resolved,_,_⟩ := head
+      simp [validate,found,resolved,tail]
+
+theorem scalar_keeps (s : NState) (ty : Ty) (writable : Bool) (value : Int) :
+    Keeps s (Proofs.CppClassCopyCommands.scalarStep s ty writable value) := by
+  constructor
+  · exact Proofs.CppClassCopyCommands.scalar_step_keeps s ty writable value
+  · intro slot sourceTy index binding buffer scope found resolved root
+    refine ⟨vector_slot_prefix s _ [.scalar s.scalars.bindings.length] rfl slot index found,?_⟩
+    exact resolved
+
+theorem scalar_destination (s : NState) (ty : Ty) (writable : Bool) (value : Int)
+    (valid : ty.valid value = true) :
+    (Proofs.CppClassCopyCommands.scalarStep s ty writable value).scalarCell s.slots.length ty =
+      some (⟨s.scalars.memory.length,writable⟩,⟨ty,value⟩) := by
+  simp [Proofs.CppClassCopyCommands.scalarStep,NState.scalarCell,NState.scalarSlot,
+    NState.declared,NState.charge,NState.observe,Proofs.CppState.State.observe,valid]
+
+theorem resolved_payload (f : Proofs.CppNestedVectorBindings.Frame) (index : Nat) (ty : Ty)
+    (binding : Proofs.CppNestedVectorBindings.Binding) (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value)
+    (resolved : f.resolve index (.integer ty) = some (binding,buffer)) :
+    buffer.Valid (Proofs.CppNestedVectorStore.accepts (.integer ty)) := by
+  obtain ⟨tag,object⟩ := Proofs.CppFrameCopy.resolve_object f index ty binding buffer resolved
+  obtain ⟨valid,storage,forest,typed⟩ := Proofs.CppFrameCopy.object_parts f binding.owner ty buffer tag object
+  obtain ⟨actual,found,_,payload⟩ :=
+    Proofs.CppNestedVectorStore.wellFormed_buffer f.state binding.owner buffer valid storage
+  have same : actual = tag := Option.some.inj (found.symm.trans forest)
+  subst actual
+  simpa only [typed] using payload.1
+
+def vectorResult (s : NState) (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value)
+    (ty : Ty) (writable : Bool) : NState :=
+  Proofs.CppCopyStatementFacts.result s (s.charge 1 1) buffer ty writable
+
+theorem vector_destination (s : NState) (index : Nat) (ty : Ty) (writable : Bool)
+    (binding : Proofs.CppNestedVectorBindings.Binding) (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value)
+    (resolved : s.frame.resolve index (.integer ty) = some (binding,buffer))
+    (lengths : s.frame.rootWritable.length = s.frame.state.forest.objects.length)
+    (supported : Proofs.CppVectorBindings.supported ty) :
+    (vectorResult s buffer ty writable).vectorSlot s.slots.length = some s.frame.bindings.length ∧
+    (vectorResult s buffer ty writable).frame.resolve s.frame.bindings.length (.integer ty) =
+      some (Proofs.CppFrameCopy.copyBinding s.frame ty s.scope writable,
+        Proofs.CppVectorCopy.copied buffer s.frame.state.storage.objects.length) := by
+  obtain ⟨tag,object⟩ := Proofs.CppFrameCopy.resolve_object s.frame index ty binding buffer resolved
+  have valid := (Proofs.CppFrameCopy.object_parts s.frame binding.owner ty buffer tag object).1
+  constructor
+  · simp [vectorResult,Proofs.CppCopyStatementFacts.result,NState.release,NState.charge,
+      NState.observe,NState.vectorSlot]
+  · have copied := Proofs.CppFrameCopy.copied_resolve s.frame buffer ty s.scope writable
+      valid lengths supported (resolved_payload s.frame index ty binding buffer resolved)
+    simpa only [vectorResult,Proofs.CppCopyStatementFacts.result,NState.release,NState.charge,
+      NState.observe,List.take_length] using copied
+
+theorem vector_extension (s : NState) (slot index : Nat) (ty : Ty) (writable : Bool)
+    (binding : Proofs.CppNestedVectorBindings.Binding)
+    (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value)
+    (found : s.vectorSlot slot = some index)
+    (resolved : s.frame.resolve index (.integer ty) = some (binding,buffer))
+    (lengths : s.frame.rootWritable.length = s.frame.state.forest.objects.length)
+    (supported : Proofs.CppVectorBindings.supported ty) :
+    Proofs.CppFrameExtension.Extends s.frame (vectorResult s buffer ty writable).frame := by
+  have evaluated : (Container.local slot).eval s = some (s.charge 1 1,index) := by
+    simp [Container.eval,found]
+  have extension := (Proofs.CppCopyStatementFacts.completes s (s.charge 1 1) (.local slot)
+    index binding buffer ty writable evaluated resolved lengths supported).2
+  simpa only [vectorResult,NState.release,NState.charge,NState.observe,List.take_length] using extension
+
+theorem vector_keeps (s : NState) (slot index : Nat) (ty : Ty) (writable : Bool)
+    (binding : Proofs.CppNestedVectorBindings.Binding)
+    (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value)
+    (found : s.vectorSlot slot = some index)
+    (resolved : s.frame.resolve index (.integer ty) = some (binding,buffer))
+    (lengths : s.frame.rootWritable.length = s.frame.state.forest.objects.length)
+    (supported : Proofs.CppVectorBindings.supported ty) : Keeps s (vectorResult s buffer ty writable) := by
+  have extension := vector_extension s slot index ty writable binding buffer found resolved lengths supported
+  constructor
+  · exact Proofs.CppCopyStatementFacts.keeps_scalar s (s.charge 1 1) buffer ty writable
+  · intro oldSlot oldTy oldIndex oldBinding oldBuffer oldScope oldFound oldResolved root
+    have slots : (vectorResult s buffer ty writable).slots =
+        s.slots++[.vector s.frame.bindings.length] := by
+      simp [vectorResult,Proofs.CppCopyStatementFacts.result,NState.release,NState.charge,NState.observe]
+    exact ⟨vector_slot_prefix s _ _ slots oldSlot oldIndex oldFound,
+      resolve_root_kept _ _ extension oldIndex oldTy oldBinding oldBuffer oldScope root oldResolved⟩
+
+theorem sources_ready (s : NState) (fields : List Field) (good : Good s) (sources : Sources s fields) :
+    ∃ after, Ready fields s after ∧ Good after ∧ Keeps s after := by
+  induction fields generalizing s with
+  | nil => exact ⟨s,.nil s,good,Keeps.refl s⟩
+  | cons field fields ih =>
+    have head := sources field (by simp)
+    have tail : Sources s fields := fun f member => sources f (List.mem_cons_of_mem _ member)
+    cases field with
+    | scalar slot ty writable =>
+      obtain ⟨binding,cell,found⟩ := head
+      let next := Proofs.CppClassCopyCommands.scalarStep s ty writable cell.value
+      have kept := scalar_keeps s ty writable cell.value
+      have goodNext : Good next := good
+      obtain ⟨after,ready,goodAfter,keptAfter⟩ := ih next goodNext (sources_kept kept fields tail)
+      exact ⟨after,.scalar slot ty writable fields s after binding cell found ready,
+        goodAfter,kept.trans keptAfter⟩
+    | vector slot ty writable =>
+      obtain ⟨index,binding,buffer,scope,found,resolved,root,supported⟩ := head
+      let next := vectorResult s buffer ty writable
+      have extension := vector_extension s slot index ty writable binding buffer found resolved good.2 supported
+      have kept := vector_keeps s slot index ty writable binding buffer found resolved good.2 supported
+      have goodNext : Good next := ⟨extension.newValid,extension.newLengths⟩
+      obtain ⟨after,ready,goodAfter,keptAfter⟩ := ih next goodNext (sources_kept kept fields tail)
+      exact ⟨after,.vector slot ty writable fields s after index binding buffer
+        found resolved good.2 supported ready,goodAfter,kept.trans keptAfter⟩
+
+theorem source_copy_complete (s : NState) (fields : List Field) (good : Good s)
+    (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,goodAfter,kept⟩
+
+theorem ready_shape (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) :
+    after.slots.length = before.slots.length + fields.length ∧ after.scope = before.scope := by
+  induction ready with
+  | nil s => exact ⟨by simp,rfl⟩
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    refine ⟨?_,ih.2⟩
+    simpa [Proofs.CppClassCopyCommands.scalarStep,NState.declared,NState.charge,NState.observe,
+      Nat.add_assoc,Nat.add_left_comm,Nat.add_comm] using ih.1
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    refine ⟨?_,ih.2⟩
+    simpa [Proofs.CppCopyStatementFacts.result,NState.release,NState.charge,NState.observe,
+      Nat.add_assoc,Nat.add_left_comm,Nat.add_comm] using ih.1
+
+theorem source_copy_layout (s : NState) (fields : List Field)
+    (good : Good s) (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after ∧
+      after.slots.length = s.slots.length + fields.length ∧ after.scope = s.scope := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  have shape := ready_shape fields s after ready
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources)
+    ready,goodAfter,kept,shape.1,shape.2⟩
+
+def Copied (before after : NState) : Field → Nat → Prop
+  | .scalar slot ty writable, target =>
+      ∀ binding cell, before.scalarCell slot ty = some (binding,cell) →
+        ∃ targetBinding targetCell, after.scalarCell target ty = some (targetBinding,targetCell) ∧
+          targetCell.value = cell.value ∧ targetBinding.writable = writable
+  | .vector slot ty writable, target =>
+      ∀ index binding buffer scope, before.vectorSlot slot = some index →
+        before.frame.resolve index (.integer ty) = some (binding,buffer) → binding.header = .root scope →
+        ∃ targetIndex targetBinding targetBuffer,
+          after.vectorSlot target = some targetIndex ∧
+          after.frame.resolve targetIndex (.integer ty) = some (targetBinding,targetBuffer) ∧
+          targetBinding.header = .root before.scope ∧ targetBuffer.items = buffer.items ∧
+          targetBinding.writable = writable ∧ targetBuffer.capacity = buffer.items.length ∧
+          targetBuffer.limit = buffer.limit ∧ targetBuffer.epoch = 0 ∧ targetBuffer.owner = targetBinding.owner
+
+theorem copied_source_kept {a b c : NState} (kept : Keeps a b) (scope : b.scope = a.scope)
+    (field : Field) (target : Nat) (copied : Copied b c field target) : Copied a c field target := by
+  cases field with
+  | scalar slot ty writable =>
+    intro binding cell found
+    exact copied binding cell (kept.1 _ _ _ _ found)
+  | vector slot ty writable =>
+    intro index binding buffer root found resolved header
+    obtain ⟨nextFound,nextResolved⟩ := kept.2 _ _ _ _ _ _ found resolved header
+    obtain ⟨i,bf,buf,slotFound,actual,rooted,items,permission,capacity,limit,epoch,owner⟩ :=
+      copied index binding buffer root nextFound nextResolved header
+    exact ⟨i,bf,buf,slotFound,actual,scope ▸ rooted,items,permission,capacity,limit,epoch,owner⟩
+
+theorem copied_target_kept {a b c : NState} (kept : Keeps b c)
+    (field : Field) (target : Nat) (copied : Copied a b field target) : Copied a c field target := by
+  cases field with
+  | scalar slot ty writable =>
+    intro binding cell found
+    obtain ⟨bf,cl,actual,value,permission⟩ := copied binding cell found
+    exact ⟨bf,cl,kept.1 _ _ _ _ actual,value,permission⟩
+  | vector slot ty writable =>
+    intro index binding buffer root found resolved header
+    obtain ⟨i,bf,buf,slotFound,actual,rooted,items,permission,capacity,limit,epoch,owner⟩ := copied index binding buffer root found resolved header
+    obtain ⟨nextFound,nextResolved⟩ := kept.2 _ _ _ _ _ _ slotFound actual rooted
+    exact ⟨i,bf,buf,nextFound,nextResolved,rooted,items,permission,capacity,limit,epoch,owner⟩
+
+theorem scalar_copied (s : NState) (slot : Nat) (ty : Ty) (writable : Bool)
+    (binding : Proofs.CppState.Binding) (cell : Proofs.CppState.Cell)
+    (found : s.scalarCell slot ty = some (binding,cell)) :
+    Copied s (Proofs.CppClassCopyCommands.scalarStep s ty writable cell.value)
+      (.scalar slot ty writable) s.slots.length := by
+  intro b c actual
+  have same := Prod.mk.inj (Option.some.inj (actual.symm.trans found))
+  obtain ⟨sameBinding,sameCell⟩ := same
+  subst b
+  subst c
+  exact ⟨_,_,scalar_destination s ty writable cell.value
+    (Proofs.CppClassCopyCommands.scalar_cell_facts s slot ty binding cell found).2,rfl,rfl⟩
+
+theorem vector_copied (s : NState) (slot index : Nat) (ty : Ty) (writable : Bool)
+    (binding : Proofs.CppNestedVectorBindings.Binding)
+    (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value)
+    (found : s.vectorSlot slot = some index)
+    (resolved : s.frame.resolve index (.integer ty) = some (binding,buffer))
+    (lengths : s.frame.rootWritable.length = s.frame.state.forest.objects.length)
+    (supported : Proofs.CppVectorBindings.supported ty) :
+    Copied s (vectorResult s buffer ty writable) (.vector slot ty writable) s.slots.length := by
+  intro i b buf root actual actualResolve _
+  have equalIndex := Option.some.inj (actual.symm.trans found)
+  subst i
+  have same := Prod.mk.inj (Option.some.inj (actualResolve.symm.trans resolved))
+  obtain ⟨sameBinding,sameBuffer⟩ := same
+  subst b
+  subst buf
+  obtain ⟨newSlot,newResolve⟩ := vector_destination s index ty writable binding buffer resolved lengths supported
+  exact ⟨_,_,_,newSlot,newResolve,rfl,rfl,rfl,rfl,rfl,rfl,rfl⟩
+
+def Targets (before after : NState) : Nat → List Field → Prop
+  | _, [] => True
+  | base, field::fields => Copied before after field base ∧ Targets before after (base+1) fields
+
+theorem targets_source_kept {a b c : NState} (kept : Keeps a b) (scope : b.scope = a.scope)
+    (fields : List Field) (base : Nat) (targets : Targets b c base fields) : Targets a c base fields := by
+  induction fields generalizing base with
+  | nil => trivial
+  | cons field fields ih =>
+    exact ⟨copied_source_kept kept scope field base targets.1,ih (base+1) targets.2⟩
+
+theorem ready_keeps (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) : Keeps before after := by
+  induction ready with
+  | nil s => exact Keeps.refl s
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    exact (scalar_keeps before ty writable cell.value).trans ih
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    exact (vector_keeps before slot index ty writable binding buffer found resolved lengths supported).trans ih
+
+theorem ready_targets (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) : Targets before after before.slots.length fields := by
+  induction ready with
+  | nil s => trivial
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    refine ⟨copied_target_kept (ready_keeps _ _ _ tail) _ _
+      (scalar_copied before slot ty writable binding cell found),?_⟩
+    have result := targets_source_kept (scalar_keeps before ty writable cell.value) rfl _ _ ih
+    simpa [Proofs.CppClassCopyCommands.scalarStep,NState.declared,NState.charge,NState.observe] using result
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    have kept := vector_keeps before slot index ty writable binding buffer found resolved lengths supported
+    refine ⟨copied_target_kept (ready_keeps _ _ _ tail) _ _
+      (vector_copied before slot index ty writable binding buffer found resolved lengths supported),?_⟩
+    have result := targets_source_kept kept rfl _ _ ih
+    simpa [vectorResult,Proofs.CppCopyStatementFacts.result,NState.release,NState.charge,NState.observe] using result
+
+theorem targets_at (before after : NState) (fields : List Field) (base i : Nat) (field : Field)
+    (targets : Targets before after base fields) (found : fields[i]? = some field) :
+    Copied before after field (base+i) := by
+  induction fields generalizing base i with
+  | nil => simp at found
+  | cons head fields ih =>
+    cases i with
+    | zero =>
+      simp only [List.getElem?_cons_zero,Option.some.injEq] at found
+      subst head
+      simpa using targets.1
+    | succ i =>
+      have result := ih (base+1) i targets.2 found
+      simpa [Nat.add_assoc,Nat.add_comm,Nat.add_left_comm] using result
+
+def vectorField : Field → Bool | .vector .. => true | .scalar .. => false
+def scalarField : Field → Bool | .vector .. => false | .scalar .. => true
+
+inductive FieldsCopied (before after : NState) : List Field → List Nat → Prop
+  | nil : FieldsCopied before after [] []
+  | cons {field slot fields slots} (head : Copied before after field slot)
+      (tail : FieldsCopied before after fields slots) :
+      FieldsCopied before after (field::fields) (slot::slots)
+
+def ObjectCopies (before after : NState) (fields : List Field)
+    (object : Proofs.CppConstructorMultiFinish.ObjectRef) : Prop :=
+  FieldsCopied before after
+    (fields.filter vectorField) object.vectorSlots ∧
+  FieldsCopied before after
+    (fields.filter scalarField) object.scalarSlots
+
+theorem selected_targets (before after : NState) (base : Nat) (choose : Field → Bool)
+    (entries : List (Field × Nat))
+    (targets : ∀ entry ∈ entries, Copied before after entry.1 (base+entry.2)) :
+    FieldsCopied before after
+      ((entries.map Prod.fst).filter choose)
+      (entries.filterMap (fun entry => if choose entry.1 then some (base+entry.2) else none)) := by
+  induction entries with
+  | nil => exact .nil
+  | cons entry entries ih =>
+    have tail := ih (fun e member => targets e (List.mem_cons_of_mem _ member))
+    by_cases selected : choose entry.1 = true
+    · simpa [selected] using FieldsCopied.cons (targets entry (by simp)) tail
+    · simpa [selected] using tail
+
+theorem targets_object (before after : NState) (fields : List Field)
+    (targets : Targets before after before.slots.length fields) :
+    ObjectCopies before after fields (reference before fields) := by
+  have all (entry : Field × Nat) (member : entry ∈ fields.zipIdx) :
+      Copied before after entry.1 (before.slots.length+entry.2) :=
+    targets_at before after fields before.slots.length entry.2 entry.1 targets
+      (List.mem_zipIdx_iff_getElem?.mp member)
+  constructor
+  · have selected := selected_targets before after before.slots.length vectorField fields.zipIdx all
+    have same : (fun entry : Field × Nat => if vectorField entry.1 then some (before.slots.length+entry.2) else none) =
+        (fun entry => match entry.1 with | .vector .. => some (before.slots.length+entry.2) | _ => none) := by
+      funext entry
+      cases entry.1 <;> rfl
+    simpa only [List.zipIdx_map_fst,same,reference] using selected
+  · have selected := selected_targets before after before.slots.length scalarField fields.zipIdx all
+    have same : (fun entry : Field × Nat => if scalarField entry.1 then some (before.slots.length+entry.2) else none) =
+        (fun entry => match entry.1 with | .scalar .. => some (before.slots.length+entry.2) | _ => none) := by
+      funext entry
+      cases entry.1 <;> rfl
+    simpa only [List.zipIdx_map_fst,same,reference] using selected
+
+theorem source_copy_values (s : NState) (fields : List Field) (good : Good s) (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after ∧ after.slots.length = s.slots.length+fields.length ∧
+      after.scope = s.scope ∧ ObjectCopies s after fields (reference s fields) := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  have shape := ready_shape fields s after ready
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,
+    goodAfter,kept,shape.1,shape.2,targets_object s after fields (ready_targets fields s after ready)⟩
+
+def Position (after : NState) (scope : Nat) : Field → Nat → Nat → Nat → Prop
+  | .scalar _ ty _, slot, _, address =>
+      ∃ binding cell, after.scalarCell slot ty = some (binding,cell) ∧ binding.address = address
+  | .vector _ ty _, slot, owner, _ =>
+      ∃ index binding buffer, after.vectorSlot slot = some index ∧
+        after.frame.resolve index (.integer ty) = some (binding,buffer) ∧
+        binding.header = .root scope ∧ binding.owner = owner ∧ buffer.owner = owner
+
+def Placements (after : NState) (scope : Nat) : Nat → Nat → Nat → List Field → Prop
+  | _,_,_,[] => True
+  | slot,owner,address,(field@(.scalar ..))::fields =>
+      Position after scope field slot owner address ∧ Placements after scope (slot+1) owner (address+1) fields
+  | slot,owner,address,(field@(.vector ..))::fields =>
+      Position after scope field slot owner address ∧ Placements after scope (slot+1) (owner+1) address fields
+
+theorem position_kept {before after : NState} (kept : Keeps before after)
+    (scope : Nat) (field : Field) (slot owner address : Nat)
+    (position : Position before scope field slot owner address) :
+    Position after scope field slot owner address := by
+  cases field with
+  | scalar source ty writable =>
+    obtain ⟨binding,cell,found,located⟩ := position
+    exact ⟨binding,cell,kept.1 _ _ _ _ found,located⟩
+  | vector source ty writable =>
+    obtain ⟨index,binding,buffer,found,resolved,root,located,owner⟩ := position
+    obtain ⟨nextFound,nextResolve⟩ := kept.2 _ _ _ _ _ _ found resolved root
+    exact ⟨index,binding,buffer,nextFound,nextResolve,root,located,owner⟩
+
+theorem ready_placements (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) :
+    Placements after before.scope before.slots.length before.frame.state.storage.objects.length
+      before.scalars.memory.length fields := by
+  induction ready with
+  | nil s => trivial
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    have head : Position (Proofs.CppClassCopyCommands.scalarStep before ty writable cell.value)
+        before.scope (.scalar slot ty writable) before.slots.length
+        before.frame.state.storage.objects.length before.scalars.memory.length := by
+      exact ⟨_,_,scalar_destination before ty writable cell.value
+        (Proofs.CppClassCopyCommands.scalar_cell_facts before slot ty binding cell found).2,rfl⟩
+    refine ⟨position_kept (ready_keeps _ _ _ tail) _ _ _ _ _ head,?_⟩
+    simpa [Proofs.CppClassCopyCommands.scalarStep,NState.declared,NState.charge,NState.observe,
+      Proofs.CppState.State.observe] using ih
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    obtain ⟨newSlot,newResolve⟩ := vector_destination before index ty writable binding buffer resolved lengths supported
+    have head : Position (vectorResult before buffer ty writable) before.scope
+        (.vector slot ty writable) before.slots.length before.frame.state.storage.objects.length
+        before.scalars.memory.length := ⟨_,_,_,newSlot,newResolve,rfl,rfl,rfl⟩
+    refine ⟨position_kept (ready_keeps _ _ _ tail) _ _ _ _ _ head,?_⟩
+    simpa [vectorResult,Proofs.CppCopyStatementFacts.result,NState.release,NState.charge,NState.observe,
+      Proofs.CppState.State.observe,Proofs.CppFrameCopy.copiedFrame,Proofs.CppNestedCopy.cloned] using ih
+
+theorem ready_counts (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) :
+    after.frame.state.storage.objects.length = before.frame.state.storage.objects.length +
+        (fields.filter vectorField).length ∧
+    after.scalars.memory.length = before.scalars.memory.length + (fields.filter scalarField).length := by
+  induction ready with
+  | nil s => exact ⟨by simp,by simp⟩
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    simpa [List.filter_cons,vectorField,scalarField,Proofs.CppClassCopyCommands.scalarStep,NState.declared,NState.charge,
+      NState.observe,Proofs.CppState.State.observe,Nat.add_assoc,Nat.add_comm,Nat.add_left_comm] using ih
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    simpa [List.filter_cons,vectorField,scalarField,Proofs.CppCopyStatementFacts.result,NState.release,NState.charge,NState.observe,
+      Proofs.CppState.State.observe,Proofs.CppFrameCopy.copiedFrame,Proofs.CppNestedCopy.cloned,
+      Nat.add_assoc,Nat.add_comm,Nat.add_left_comm] using ih
+
+theorem placements_at (after : NState) (scope : Nat) (fields : List Field)
+    (base owner address i : Nat) (field : Field)
+    (placed : Placements after scope base owner address fields) (found : fields[i]? = some field) :
+    Position after scope field (base+i) (owner+((fields.take i).filter vectorField).length)
+      (address+((fields.take i).filter scalarField).length) := by
+  induction fields generalizing base owner address i with
+  | nil => simp at found
+  | cons head fields ih =>
+    cases head <;> cases i with
+    | zero =>
+      simp only [List.getElem?_cons_zero,Option.some.injEq] at found
+      subst field
+      simpa using placed.1
+    | succ i =>
+      have result := ih _ _ _ i placed.2 found
+      simpa [List.take_succ_cons,List.filter_cons,vectorField,scalarField,Nat.add_assoc,Nat.add_comm,Nat.add_left_comm] using result
+
+theorem source_copy_positions (s : NState) (fields : List Field) (good : Good s) (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after ∧ after.slots.length = s.slots.length+fields.length ∧
+      after.scope = s.scope ∧ ObjectCopies s after fields (reference s fields) ∧
+      Placements after s.scope s.slots.length s.frame.state.storage.objects.length s.scalars.memory.length fields ∧
+      after.frame.state.storage.objects.length = s.frame.state.storage.objects.length + (fields.filter vectorField).length ∧
+      after.scalars.memory.length = s.scalars.memory.length + (fields.filter scalarField).length := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  have shape := ready_shape fields s after ready
+  have counts := ready_counts fields s after ready
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,
+    goodAfter,kept,shape.1,shape.2,targets_object s after fields (ready_targets fields s after ready),
+    ready_placements fields s after ready,counts.1,counts.2⟩
+
+def vectorOwner (s : NState) (slot : Nat) (ty : Ty) : Option Nat := do
+  let index ← s.vectorSlot slot
+  let (binding,_) ← s.frame.resolve index (.integer ty)
+  pure binding.owner
+
+def scalarAddress (s : NState) (slot : Nat) (ty : Ty) : Option Nat := do
+  let (binding,_) ← s.scalarCell slot ty
+  pure binding.address
+
+theorem placed_vector_owner (after : NState) (scope base owner address : Nat) (fields : List Field)
+    (placed : Placements after scope base owner address fields)
+    (i source : Nat) (ty : Ty) (writable : Bool) (found : fields[i]? = some (.vector source ty writable)) :
+    vectorOwner after (base+i) ty = some (owner+((fields.take i).filter vectorField).length) := by
+  obtain ⟨index,binding,buffer,slot,resolved,_,located,_⟩ :=
+    placements_at after scope fields base owner address i (.vector source ty writable) placed found
+  simp [vectorOwner,slot,resolved,located]
+
+theorem placed_scalar_address (after : NState) (scope base owner address : Nat) (fields : List Field)
+    (placed : Placements after scope base owner address fields)
+    (i source : Nat) (ty : Ty) (writable : Bool) (found : fields[i]? = some (.scalar source ty writable)) :
+    scalarAddress after (base+i) ty = some (address+((fields.take i).filter scalarField).length) := by
+  obtain ⟨binding,cell,actual,located⟩ :=
+    placements_at after scope fields base owner address i (.scalar source ty writable) placed found
+  simp [scalarAddress,actual,located]
+
+theorem selected_prefix_strict (choose : Field → Bool) (fields : List Field) (i j : Nat) (field : Field)
+    (found : fields[i]? = some field) (selected : choose field = true) (earlier : i < j) :
+    ((fields.take i).filter choose).length < ((fields.take j).filter choose).length := by
+  induction fields generalizing i j with
+  | nil => simp at found
+  | cons head fields ih =>
+    cases i with
+    | zero =>
+      simp only [List.getElem?_cons_zero,Option.some.injEq] at found
+      subst head
+      cases j with
+      | zero => omega
+      | succ j => simp [List.take_succ_cons,selected]
+    | succ i =>
+      cases j with
+      | zero => omega
+      | succ j =>
+        have result := ih i j found (by omega)
+        by_cases headSelected : choose head = true
+        · simpa [List.take_succ_cons,headSelected] using result
+        · simpa [List.take_succ_cons,headSelected] using result
+
+theorem vector_owners_distinct (after : NState) (scope base owner address : Nat) (fields : List Field)
+    (placed : Placements after scope base owner address fields) (i j sourceA sourceB : Nat)
+    (tyA tyB : Ty) (writableA writableB : Bool)
+    (first : fields[i]? = some (.vector sourceA tyA writableA))
+    (second : fields[j]? = some (.vector sourceB tyB writableB)) (earlier : i < j) :
+    vectorOwner after (base+i) tyA ≠ vectorOwner after (base+j) tyB := by
+  rw [placed_vector_owner after scope base owner address fields placed i sourceA tyA writableA first,
+    placed_vector_owner after scope base owner address fields placed j sourceB tyB writableB second]
+  intro equal
+  have strict := selected_prefix_strict vectorField fields i j (.vector sourceA tyA writableA) first rfl earlier
+  exact (Nat.ne_of_lt (Nat.add_lt_add_left strict owner)) (Option.some.inj equal)
+
+theorem scalar_addresses_distinct (after : NState) (scope base owner address : Nat) (fields : List Field)
+    (placed : Placements after scope base owner address fields) (i j sourceA sourceB : Nat)
+    (tyA tyB : Ty) (writableA writableB : Bool)
+    (first : fields[i]? = some (.scalar sourceA tyA writableA))
+    (second : fields[j]? = some (.scalar sourceB tyB writableB)) (earlier : i < j) :
+    scalarAddress after (base+i) tyA ≠ scalarAddress after (base+j) tyB := by
+  rw [placed_scalar_address after scope base owner address fields placed i sourceA tyA writableA first,
+    placed_scalar_address after scope base owner address fields placed j sourceB tyB writableB second]
+  intro equal
+  have strict := selected_prefix_strict scalarField fields i j (.scalar sourceA tyA writableA) first rfl earlier
+  exact (Nat.ne_of_lt (Nat.add_lt_add_left strict address)) (Option.some.inj equal)
+
+theorem vector_old_separated (after : NState) (scope base owner address : Nat) (fields : List Field)
+    (placed : Placements after scope base owner address fields)
+    (i source oldOwner : Nat) (ty : Ty) (writable : Bool)
+    (found : fields[i]? = some (.vector source ty writable)) (old : oldOwner < owner) :
+    vectorOwner after (base+i) ty ≠ some oldOwner := by
+  rw [placed_vector_owner after scope base owner address fields placed i source ty writable found]
+  intro equal
+  have strict := Nat.lt_of_lt_of_le old (Nat.le_add_right owner ((fields.take i).filter vectorField).length)
+  exact (Nat.ne_of_gt strict) (Option.some.inj equal)
+
+theorem scalar_old_separated (after : NState) (scope base owner address : Nat) (fields : List Field)
+    (placed : Placements after scope base owner address fields)
+    (i source oldAddress : Nat) (ty : Ty) (writable : Bool)
+    (found : fields[i]? = some (.scalar source ty writable)) (old : oldAddress < address) :
+    scalarAddress after (base+i) ty ≠ some oldAddress := by
+  rw [placed_scalar_address after scope base owner address fields placed i source ty writable found]
+  intro equal
+  have strict := Nat.lt_of_lt_of_le old (Nat.le_add_right address ((fields.take i).filter scalarField).length)
+  exact (Nat.ne_of_gt strict) (Option.some.inj equal)
+
+def fieldWork (s : NState) : Field → Nat
+  | .scalar .. => 2
+  | .vector slot ty _ => ((s.vectorSlot slot >>= fun index =>
+      s.frame.resolve index (.integer ty)).map (fun pair => pair.2.items.length+3)).getD 0
+
+def copyWork (s : NState) (fields : List Field) : Nat := (fields.map (fieldWork s)).sum
+
+theorem field_work_kept {before after : NState} (kept : Keeps before after)
+    (field : Field) (source : Source before field) : fieldWork after field = fieldWork before field := by
+  cases field with
+  | scalar slot ty writable => rfl
+  | vector slot ty writable =>
+    obtain ⟨index,binding,buffer,scope,found,resolved,root,_⟩ := source
+    obtain ⟨nextFound,nextResolved⟩ := kept.2 _ _ _ _ _ _ found resolved root
+    simp [fieldWork,found,resolved,nextFound,nextResolved]
+
+theorem copy_work_kept {before after : NState} (kept : Keeps before after)
+    (fields : List Field) (sources : Sources before fields) : copyWork after fields = copyWork before fields := by
+  induction fields with
+  | nil => rfl
+  | cons field fields ih =>
+    have head := field_work_kept kept field (sources field (by simp))
+    have tail := ih (fun f member => sources f (List.mem_cons_of_mem _ member))
+    change fieldWork after field + copyWork after fields = fieldWork before field + copyWork before fields
+    rw [head,tail]
+
+theorem ready_work (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) (sources : Sources before fields) :
+    after.work = before.work + copyWork before fields := by
+  induction ready with
+  | nil s => simp [copyWork]
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    have kept := scalar_keeps before ty writable cell.value
+    have tailSources : Sources before fields := fun f member => sources f (List.mem_cons_of_mem _ member)
+    have result := ih (sources_kept kept fields tailSources)
+    have cost := Proofs.CppClassCopyCommands.scalar_step_work before ty writable cell.value
+    rw [copy_work_kept kept fields tailSources,cost] at result
+    simpa [copyWork,fieldWork,Nat.add_assoc] using result
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    have kept := vector_keeps before slot index ty writable binding buffer found resolved lengths supported
+    have tailSources : Sources before fields := fun f member => sources f (List.mem_cons_of_mem _ member)
+    have result := ih (sources_kept kept fields tailSources)
+    obtain ⟨tag,object⟩ := Proofs.CppFrameCopy.resolve_object before.frame index ty binding buffer resolved
+    have valid := (Proofs.CppFrameCopy.object_parts before.frame binding.owner ty buffer tag object).1
+    have cost : (vectorResult before buffer ty writable).work = before.work+buffer.items.length+3 :=
+      Proofs.CppClassCopyCommands.vector_result_work before buffer ⟨ty,writable,[]⟩ valid
+    change after.work = (vectorResult before buffer ty writable).work + copyWork (vectorResult before buffer ty writable) fields at result
+    rw [copy_work_kept kept fields tailSources,cost] at result
+    simpa [copyWork,fieldWork,found,resolved,Nat.add_assoc] using result
+
+theorem source_copy_work (s : NState) (fields : List Field) (good : Good s) (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after ∧ after.slots.length = s.slots.length+fields.length ∧
+      after.scope = s.scope ∧ ObjectCopies s after fields (reference s fields) ∧
+      Placements after s.scope s.slots.length s.frame.state.storage.objects.length s.scalars.memory.length fields ∧
+      after.frame.state.storage.objects.length = s.frame.state.storage.objects.length + (fields.filter vectorField).length ∧
+      after.scalars.memory.length = s.scalars.memory.length + (fields.filter scalarField).length ∧
+      after.work = s.work + copyWork s fields := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  have shape := ready_shape fields s after ready
+  have counts := ready_counts fields s after ready
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,
+    goodAfter,kept,shape.1,shape.2,targets_object s after fields (ready_targets fields s after ready),
+    ready_placements fields s after ready,counts.1,counts.2,ready_work fields s after ready sources⟩
+
+open Proofs.CppScalar Proofs.CppNestedProgram Proofs.CppNestedEval Proofs.CppLoop
+
+def scalarPeakBound (s : NState) (budget : Nat) : Nat := max s.scalars.peak (liveS s+budget)
+def storagePeakBound (s : NState) (budget : Nat) : Nat := max s.frame.state.storage.peak
+  (s.frame.state.liveSpace+budget-s.frame.state.storage.baseSpace)
+def peakBound (s : NState) (budget : Nat) : Nat :=
+  max s.peak (scalarPeakBound s budget+storagePeakBound s budget)
+
+structure SpaceBounds (before after : NState) (budget : Nat) : Prop where
+  storageBase : after.frame.state.storage.baseSpace = before.frame.state.storage.baseSpace
+  scalarLive : liveS after ≤ liveS before+budget
+  storageLive : after.frame.state.liveSpace ≤ before.frame.state.liveSpace+budget
+  scalarPeak : after.scalars.peak ≤ scalarPeakBound before budget
+  storagePeak : after.frame.state.storage.peak ≤ storagePeakBound before budget
+  peak : after.peak ≤ peakBound before budget
+
+theorem SpaceBounds.refl (s : NState) : SpaceBounds s s 0 := by
+  refine ⟨rfl,by simp,by simp,?_,?_,?_⟩
+  · exact Nat.le_max_left _ _
+  · exact Nat.le_max_left _ _
+  · exact Nat.le_max_left _ _
+
+theorem scalar_bound_mono (s : NState) (p q : Nat) (small : p ≤ q) :
+    scalarPeakBound s p ≤ scalarPeakBound s q := by
+  exact Nat.max_le.mpr ⟨Nat.le_max_left _ _,
+    Nat.le_trans (Nat.add_le_add_left small (liveS s)) (Nat.le_max_right _ _)⟩
+
+theorem storage_bound_mono (s : NState) (p q : Nat) (small : p ≤ q) :
+    storagePeakBound s p ≤ storagePeakBound s q := by
+  exact Nat.max_le.mpr ⟨Nat.le_max_left _ _,
+    Nat.le_trans (Nat.sub_le_sub_right (Nat.add_le_add_left small s.frame.state.liveSpace) _) (Nat.le_max_right _ _)⟩
+
+theorem peak_bound_mono (s : NState) (p q : Nat) (small : p ≤ q) : peakBound s p ≤ peakBound s q := by
+  exact Nat.max_le.mpr ⟨Nat.le_max_left _ _,
+    Nat.le_trans (Nat.add_le_add (scalar_bound_mono s p q small) (storage_bound_mono s p q small)) (Nat.le_max_right _ _)⟩
+
+theorem SpaceBounds.trans {a b c : NState} {first rest : Nat}
+    (head : SpaceBounds a b first) (tail : SpaceBounds b c rest) : SpaceBounds a c (first+rest) := by
+  have smaller : first ≤ first+rest := Nat.le_add_right _ _
+  have scalarNext : scalarPeakBound b rest ≤ scalarPeakBound a (first+rest) := by
+    refine Nat.max_le.mpr ⟨Nat.le_trans head.scalarPeak (scalar_bound_mono a first _ smaller),?_⟩
+    have live : liveS b+rest ≤ liveS a+(first+rest) := by
+      simpa only [Nat.add_assoc] using Nat.add_le_add_right head.scalarLive rest
+    exact Nat.le_trans live (Nat.le_max_right _ _)
+  have storageNext : storagePeakBound b rest ≤ storagePeakBound a (first+rest) := by
+    refine Nat.max_le.mpr ⟨Nat.le_trans head.storagePeak (storage_bound_mono a first _ smaller),?_⟩
+    have live : b.frame.state.liveSpace+rest ≤ a.frame.state.liveSpace+(first+rest) := by
+      simpa only [Nat.add_assoc] using Nat.add_le_add_right head.storageLive rest
+    rw [head.storageBase]
+    exact Nat.le_trans (Nat.sub_le_sub_right live _) (Nat.le_max_right _ _)
+  have outerNext : peakBound b rest ≤ peakBound a (first+rest) := by
+    exact Nat.max_le.mpr ⟨Nat.le_trans head.peak (peak_bound_mono a first _ smaller),
+      Nat.le_trans (Nat.add_le_add scalarNext storageNext) (Nat.le_max_right _ _)⟩
+  refine ⟨tail.storageBase.trans head.storageBase,?_,?_,
+    Nat.le_trans tail.scalarPeak scalarNext,Nat.le_trans tail.storagePeak storageNext,Nat.le_trans tail.peak outerNext⟩
+  · simpa only [Nat.add_assoc] using Nat.le_trans tail.scalarLive (Nat.add_le_add_right head.scalarLive rest)
+  · simpa only [Nat.add_assoc] using Nat.le_trans tail.storageLive (Nat.add_le_add_right head.storageLive rest)
+
+theorem scalar_space (s : NState) (ty : Ty) (writable : Bool) (value : Int) :
+    SpaceBounds s (Proofs.CppClassCopyCommands.scalarStep s ty writable value) 2 := by
+  obtain ⟨live,scalar,peak⟩ := Proofs.CppClassCopyCommands.scalar_step_bounds s ty writable value
+  have storage : (Proofs.CppClassCopyCommands.scalarStep s ty writable value).frame = s.frame := rfl
+  refine ⟨rfl,live,?_,scalar,?_,?_⟩
+  · rw [storage]
+    omega
+  · change s.frame.state.storage.peak ≤ max _ _
+    exact Nat.le_max_left _ _
+  · simp only [peakBound,scalarPeakBound,storagePeakBound]
+    omega
+
+theorem vector_space (s : NState) (buffer : Proofs.CppVector.Buffer Proofs.CppNestedVectorStore.Value)
+    (ty : Ty) (writable : Bool) (valid : s.frame.state.wellFormed = true) :
+    SpaceBounds s (vectorResult s buffer ty writable) (buffer.items.length+3) := by
+  obtain ⟨scalar,storage,peak,live⟩ :=
+    Proofs.CppClassCopyCommands.vector_result_peaks s buffer ⟨ty,writable,[]⟩ valid
+  have resident := (Proofs.CppCopyStatementFacts.result_cost s (s.charge 1 1) buffer ty writable valid).2.1
+  change (vectorResult s buffer ty writable).frame.state.liveSpace = s.frame.state.liveSpace+buffer.items.length+1 at resident
+  change (vectorResult s buffer ty writable).scalars.peak = _ at scalar
+  change (vectorResult s buffer ty writable).frame.state.storage.peak = _ at storage
+  change (vectorResult s buffer ty writable).peak = _ at peak
+  change liveS (vectorResult s buffer ty writable) = liveS s at live
+  simp only [Proofs.CppClassCopyCommands.copiedStoragePeak] at storage peak
+  refine ⟨rfl,?_,?_,?_,?_,?_⟩
+  · rw [live]
+    omega
+  · rw [resident]
+    omega
+  · simp only [scalarPeakBound]
+    omega
+  · simp only [storagePeakBound]
+    omega
+  · simp only [peakBound,scalarPeakBound,storagePeakBound]
+    omega
+
+theorem ready_space (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) (sources : Sources before fields) :
+    SpaceBounds before after (copyWork before fields) := by
+  induction ready with
+  | nil s => exact SpaceBounds.refl s
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    have kept := scalar_keeps before ty writable cell.value
+    have tailSources : Sources before fields := fun f member => sources f (List.mem_cons_of_mem _ member)
+    have later := ih (sources_kept kept fields tailSources)
+    have combined := (scalar_space before ty writable cell.value).trans later
+    rw [copy_work_kept kept fields tailSources] at combined
+    simpa only [copyWork,List.map_cons,List.sum_cons,fieldWork] using combined
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    have kept := vector_keeps before slot index ty writable binding buffer found resolved lengths supported
+    have tailSources : Sources before fields := fun f member => sources f (List.mem_cons_of_mem _ member)
+    have later := ih (sources_kept kept fields tailSources)
+    obtain ⟨tag,object⟩ := Proofs.CppFrameCopy.resolve_object before.frame index ty binding buffer resolved
+    have valid := (Proofs.CppFrameCopy.object_parts before.frame binding.owner ty buffer tag object).1
+    have combined := (vector_space before buffer ty writable valid).trans later
+    change SpaceBounds before after (buffer.items.length+3 + copyWork (vectorResult before buffer ty writable) fields) at combined
+    rw [copy_work_kept kept fields tailSources] at combined
+    simpa [copyWork,fieldWork,found,resolved] using combined
+
+theorem source_copy_space (s : NState) (fields : List Field) (good : Good s) (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after ∧ after.slots.length = s.slots.length+fields.length ∧
+      after.scope = s.scope ∧ ObjectCopies s after fields (reference s fields) ∧
+      Placements after s.scope s.slots.length s.frame.state.storage.objects.length s.scalars.memory.length fields ∧
+      after.frame.state.storage.objects.length = s.frame.state.storage.objects.length + (fields.filter vectorField).length ∧
+      after.scalars.memory.length = s.scalars.memory.length + (fields.filter scalarField).length ∧
+      after.work = s.work+copyWork s fields ∧ SpaceBounds s after (copyWork s fields) := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  have shape := ready_shape fields s after ready
+  have counts := ready_counts fields s after ready
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,
+    goodAfter,kept,shape.1,shape.2,targets_object s after fields (ready_targets fields s after ready),
+    ready_placements fields s after ready,counts.1,counts.2,ready_work fields s after ready sources,
+    ready_space fields s after ready sources⟩
+
+theorem invalid_source (fuel : Nat) (s : NState) (fields : List Field)
+    (invalid : validate s fields = none) : runCopyFuel fuel s fields = .fault := by
+  simp [runCopyFuel,invalid,liftChecked,Bind.bind,Outcome.bind]
+
+end MemberCopy
+
+namespace MemberCopy
+open Proofs.CppNestedProgram Proofs.CppNestedVectorBindings Proofs.CppNestedVectorStore
+
+def PreservesContainers (before after : NState) : Prop :=
+  ∀ slot index expected binding buffer,
+    before.vectorSlot slot = some index →
+    before.frame.resolve index expected = some (binding,buffer) →
+    after.vectorSlot slot = some index ∧
+      after.frame.resolve index expected = some (binding,buffer)
+
+theorem ready_preserves_containers (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) : PreservesContainers before after := by
+  induction ready with
+  | nil s => intro slot index expected binding buffer found resolved; exact ⟨found,resolved⟩
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    intro oldSlot oldIndex expected oldBinding oldBuffer oldFound oldResolved
+    have nextSlot := vector_slot_prefix before (Proofs.CppClassCopyCommands.scalarStep before ty writable cell.value) [.scalar before.scalars.bindings.length]
+      rfl oldSlot oldIndex oldFound
+    exact ih oldSlot oldIndex expected oldBinding oldBuffer nextSlot oldResolved
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    intro oldSlot oldIndex expected oldBinding oldBuffer oldFound oldResolved
+    have extension := vector_extension before slot index ty writable binding buffer found resolved lengths supported
+    have slots : (vectorResult before buffer ty writable).slots =
+        before.slots++[.vector before.frame.bindings.length] := by
+      simp [vectorResult,Proofs.CppCopyStatementFacts.result,NState.release,NState.charge,NState.observe]
+    have nextSlot := vector_slot_prefix before _ _ slots oldSlot oldIndex oldFound
+    have nextResolve := Proofs.CppFrameResolveExtension.resolve_kept _ _ extension oldIndex expected
+      oldBinding oldBuffer oldResolved
+    exact ih oldSlot oldIndex expected oldBinding oldBuffer nextSlot nextResolve
+
+theorem source_copy_preserves_containers (s : NState) (fields : List Field)
+    (good : Good s) (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after ∧ PreservesContainers s after := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,
+    goodAfter,kept,ready_preserves_containers fields s after ready⟩
+end MemberCopy
+
+namespace MemberCopy
+open Proofs.CppNestedProgram Proofs.CppNestedVectorBindings
+
+def PreservesReferences (before after : NState) : Prop :=
+  ∀ reference value, before.frame.read reference = some value → after.frame.read reference = some value
+
+theorem ready_preserves_references (fields : List Field) (before after : NState)
+    (ready : Ready fields before after) : PreservesReferences before after := by
+  induction ready with
+  | nil s => intro reference value actual; exact actual
+  | scalar slot ty writable fields before after binding cell found tail ih =>
+    intro reference value actual
+    exact ih reference value actual
+  | vector slot ty writable fields before after index binding buffer found resolved lengths supported tail ih =>
+    intro reference value actual
+    have extension := vector_extension before slot index ty writable binding buffer found resolved lengths supported
+    exact ih reference value (Proofs.CppFrameExtension.read_kept _ _ extension reference value actual)
+
+theorem source_copy_preserves_observers (s : NState) (fields : List Field)
+    (good : Good s) (sources : Sources s fields) :
+    ∃ after, runCopyFuel (fields.length+1) s fields = .finished ⟨after,none,false⟩ ∧
+      Good after ∧ Keeps s after ∧ PreservesContainers s after ∧ PreservesReferences s after := by
+  obtain ⟨after,ready,goodAfter,kept⟩ := sources_ready s fields good sources
+  exact ⟨after,copy_ready_complete fields s after (sources_validated s fields sources) ready,
+    goodAfter,kept,ready_preserves_containers fields s after ready,
+    ready_preserves_references fields s after ready⟩
+end MemberCopy
+
+
+
+namespace MemberFactory
+open Proofs.CppScalar Proofs.CppNestedProgram Proofs.CppNestedCall Proofs.CppConstructorMultiFinish
+
+def referenceFields (caller : NState) : List (Ty × Bool) → List Nat → Option (List NArgument)
+  | [],[] => some []
+  | (ty,writable)::fields,slot::slots => do
+      let (binding,_) ← caller.scalarCell slot ty
+      if writable && !binding.writable then none else do
+        let rest ← referenceFields caller fields slots
+        some (.scalarReference slot::rest)
+  | _,_ => none
+
+def referenceArguments (caller : NState) : List (List (Ty × Bool)) → List ObjectRef → Option (List NArgument)
+  | [],[] => some []
+  | fields::profiles,object::objects => do
+      if !object.vectorSlots.isEmpty then none else do
+        let args ← referenceFields caller fields object.scalarSlots
+        let rest ← referenceArguments caller profiles objects
+        some (args++rest)
+  | _,_ => none
+def valueFields (caller : NState) : List (Ty × Bool) → List Nat → Option (List NArgument)
+  | [],[] => some []
+  | (ty,_)::fields,slot::slots => do
+      let (_,cell) ← caller.scalarCell slot ty
+      let rest ← valueFields caller fields slots
+      some (.value (.literal ty cell.value)::rest)
+  | _,_ => none
+
+def objectArguments (caller : NState) : List (Bool × List (Ty × Bool)) → List ObjectRef → Option (List NArgument)
+  | [],[] => some []
+  | (byValue,fields)::profiles,object::objects => do
+      if !object.vectorSlots.isEmpty then none else do
+        let args ← if byValue then valueFields caller fields object.scalarSlots
+                   else referenceFields caller fields object.scalarSlots
+        let rest ← objectArguments caller profiles objects
+        some (args++rest)
+  | _,_ => none
+end MemberFactory
+

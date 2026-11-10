@@ -10,5 +10,5 @@ tests = ["tests/monoid_lazy.cpp"]
 sanitizers = true
 spec = "docs/monoid_lazy.md"
 standard = "c++17"
-source_sha256 = "00e875888b9e8ea379e44146dfee0d023000931dade767fcf9462992fa580601"
-public_declarations = ["ClassTemplateDecl:RangeAdd", "ClassTemplateDecl:RangeSet", "ClassTemplateDecl:RangeSum", "ClassTemplateSpecializationDecl:RangeAdd<long long>", "ClassTemplateSpecializationDecl:RangeSet<long long>", "ClassTemplateSpecializationDecl:RangeSum<long long>", "FunctionTemplateDecl:compose<RangeAdd>", "FunctionTemplateDecl:compose<RangeSet>", "FunctionTemplateDecl:op<RangeSum>"]
+source_sha256 = "036d12862ba1ed46e789a217394d364df97685c6c779c03ae9ca231daac64698"
+public_declarations = ["ClassTemplateDecl:RangeAdd", "ClassTemplateDecl:RangeAddRangeMaxMin", "ClassTemplateDecl:RangeAddRangeSum", "ClassTemplateDecl:RangeSet", "ClassTemplateDecl:RangeSetRangeMaxMin", "ClassTemplateDecl:RangeSetRangeSum", "ClassTemplateDecl:RangeSum", "ClassTemplateSpecializationDecl:RangeAdd<long long>", "ClassTemplateSpecializationDecl:RangeSet<long long>", "ClassTemplateSpecializationDecl:RangeSum<long long>", "FunctionTemplateDecl:compose<RangeAdd>", "FunctionTemplateDecl:compose<RangeSet>", "FunctionTemplateDecl:op<RangeSum>"]
