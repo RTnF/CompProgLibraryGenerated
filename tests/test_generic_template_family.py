@@ -898,6 +898,60 @@ class GenericTemplateFamilyTests(unittest.TestCase):
             used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
             self.assertLessEqual(used, standard, line)
 
+    def test_original_set_compose_object_for_every_ty(self):
+        """`RangeSet` friend compose returning a complete object, both families."""
+        disable_network()
+        fixture = (ROOT / 'tests/lean/generic_set_compose_object.lean').read_text()
+        theorem_names, current = [], None
+        for line in fixture.splitlines():
+            if line.startswith('namespace '):
+                current = line.split()[1]
+            elif line.startswith('theorem '):
+                theorem_names.append(f'{current}.{line.split()[1]}')
+        parts, checks, imports = [], [], []
+        with tempfile.TemporaryDirectory(prefix='generic-set-compose-obj-') as directory:
+            count = 0
+            for family, witness in [('RangeSetRangeMaxMin', 'original_mixed_set_extrema.cpp'),
+                                    ('RangeSetRangeSum', 'original_mixed_set_sum.cpp')]:
+                text = (ROOT / 'tests/imports' / witness).read_text()
+                for cpp, _, ty in EXTREMA_TYPES:
+                    path = Path(directory) / f'witness_{count}.cpp'
+                    path.write_text(text.replace('long long', cpp))
+                    instance = TemplateInstance((cpp,), path, nested_members=('RangeSet',))
+                    generated = layout.emit_class_layout(ORIGINAL, family, 'OriginalSetObject',
+                        [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True, friend_exports=True,
+                        template_instance=instance)
+                    namespace = f'SetCompose{count}'
+                    lines = generated.replace('OriginalSetObject', namespace).split('\n')
+                    imports = imports or [line for line in lines if line.startswith('import')]
+                    parts.append('\n'.join(line for line in lines if not line.startswith('import')))
+                    parts.append(fixture.replace('OriginalSetObject', namespace)
+                                 .replace('GenericSetObject', f'GenericSetObject{count}'))
+                    call = f'GenericSetObject{count}'
+                    checks.append(f'example : {namespace}.«RangeSet_factory_compose» = {call}.gCompose {ty} := rfl')
+                    checks.append(f'example : {namespace}.«RangeSet_factory_compose_exportViewFuel» = {call}.gView {ty} := rfl')
+                    checks.append(f'example : {namespace}.«RangeSet_factory_compose_exportObjectsFuel» = {call}.gObjects {ty} := rfl')
+                    checks.extend('#print axioms ' + name.replace('GenericSetObject', f'GenericSetObject{count}') for name in theorem_names)
+                    count += 1
+            lean = Path(directory) / 'friend.lean'
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericLazy\nimport Proofs.MonoidLazyCall\n'
+                            'import Proofs.CppScalarValuePrepare\nimport Proofs.CppScalarContents\nopen Proofs.CppScalar\n' +
+                            '\n'.join(parts) + '\n' + '\n'.join(checks) + '\n')
+            lake, env = lean_environment()
+            result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
+                                    capture_output=True, text=True)
+        errors = '\n'.join(line for line in (result.stdout + result.stderr).splitlines() if 'error' in line)
+        self.assertEqual(result.returncode, 0, errors[:3000])
+        self.assertNotIn('sorryAx', result.stdout)
+        standard = {'propext', 'Classical.choice', 'Quot.sound'}
+        reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
+        self.assertGreater(len(reports), 20)
+        for line in reports:
+            if line.endswith('does not depend on any axioms'):
+                continue
+            used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
+            self.assertLessEqual(used, standard, line)
+
 
 
 if __name__ == '__main__':
