@@ -470,6 +470,39 @@ theorem vector_receiver_rejected (fuel : Nat) (caller : NState) (targetConst : B
     gApplyObjects ty fuel caller [⟨v :: rest,[]⟩,second] targetConst = .fault := by
   simp [gApplyObjects, MemberFactory.objectArguments]
 
+/-- Omitting the argument object is rejected. -/
+theorem missing_argument_object_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (first : Proofs.CppConstructorMultiFinish.ObjectRef) :
+    gApplyObjects ty fuel caller [first] targetConst = .fault := by
+  unfold gApplyObjects
+  simp only [MemberFactory.objectArguments]
+  split <;> simp_all
+
+/-- Passing more objects than the member has parameters is rejected. -/
+theorem extra_argument_object_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (first second third : Proofs.CppConstructorMultiFinish.ObjectRef)
+    (rest : List Proofs.CppConstructorMultiFinish.ObjectRef) :
+    gApplyObjects ty fuel caller (first :: second :: third :: rest) targetConst = .fault := by
+  unfold gApplyObjects
+  simp only [MemberFactory.objectArguments]
+  split <;> simp_all
+
+/-- An argument object that lacks its scalar slots is rejected. -/
+theorem incomplete_argument_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (first : Proofs.CppConstructorMultiFinish.ObjectRef) :
+    gApplyObjects ty fuel caller [first,⟨[],[]⟩] targetConst = .fault := by
+  unfold gApplyObjects
+  simp only [MemberFactory.objectArguments, MemberFactory.valueFields]
+  split <;> simp_all
+
+/-- An argument object with a vector slot is rejected. -/
+theorem vector_argument_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
+    (first : Proofs.CppConstructorMultiFinish.ObjectRef) (v : Nat) (rest : List Nat) :
+    gApplyObjects ty fuel caller [first,⟨v :: rest,[]⟩] targetConst = .fault := by
+  unfold gApplyObjects
+  simp only [MemberFactory.objectArguments]
+  split <;> simp_all
+
 
 theorem total_work (x : Int) (caller initial out : NState) (targetConst : Bool)
     (post : ExportState ty x caller initial out targetConst) : out.work ≤ caller.work+14 := by
