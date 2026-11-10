@@ -36,37 +36,43 @@ theorem add_value (env : Nat → Ty → Option Int) (ty : Ty) (i j : Nat) (x y :
   rw [den_binary,den_variable,den_variable,left,right]
   simpa [binaryValue] using Ty.convert_of_valid ty (x+y) valid
 
+theorem add_value_conv (env : Nat → Ty → Option Int) (ty : Ty) (i j : Nat) (x y s : Int)
+    (left : env i ty = some x) (right : env j ty = some y) (hc : ty.convert (x+y) = some s) :
+    (NExpr.binary ty .add (.variable ty i) (.variable ty j)).denote env = some s := by
+  rw [den_binary,den_variable,den_variable,left,right]
+  simpa [binaryValue] using hc
+
 theorem raw_exec (P : List Cell) (a b c d : Nat) (x n y m : Int)
     (p0 : P[a]? = some ⟨ty,x⟩) (p1 : P[b]? = some ⟨i32,n⟩)
     (p2 : P[c]? = some ⟨ty,y⟩) (p3 : P[d]? = some ⟨i32,m⟩)
     (hx : ty.valid x = true) (hn : i32.valid n = true)
     (hy : ty.valid y = true) (hm : i32.valid m = true)
-    (hs : ty.valid (x+y) = true) (ht : i32.valid (n+m) = true) :
+    (s : Int) (hc : ty.convert (x+y) = some s) (hs : ty.valid s = true) (ht : i32.valid (n+m) = true) :
     ∃ r, pexec 1 (rawBody ty) ⟨P,inputs a b c d⟩ = some r ∧
       r.ret = none ∧ r.cost ≤ 13 ∧ r.need ≤ P.length+15 ∧
-      r.ps = ws P (inputs a b c d) (fields ty (x+y) (n+m)) := by
+      r.ps = ws P (inputs a b c d) (fields ty s (n+m)) := by
   let R := inputs a b c d
-  let L1 : List Cell := [⟨ty,x+y⟩]
-  let L2 : List Cell := [⟨ty,x+y⟩,⟨i32,n+m⟩]
-  let L3 : List Cell := [⟨ty,x+y⟩,⟨i32,n+m⟩,⟨ty,x+y⟩]
-  let L4 := fields ty (x+y) (n+m)
-  have d0 : (add64 ty).denote (penv (ws P R [])) = some (x+y) :=
-    add_value _ ty 0 2 x y
+  let L1 : List Cell := [⟨ty,s⟩]
+  let L2 : List Cell := [⟨ty,s⟩,⟨i32,n+m⟩]
+  let L3 : List Cell := [⟨ty,s⟩,⟨i32,n+m⟩,⟨ty,s⟩]
+  let L4 := fields ty s (n+m)
+  have d0 : (add64 ty).denote (penv (ws P R [])) = some s :=
+    add_value_conv _ ty 0 2 x y s
       (ws_env_ref P R [] 0 a false ty x rfl p0 hx)
-      (ws_env_ref P R [] 2 c false ty y rfl p2 hy) hs
+      (ws_env_ref P R [] 2 c false ty y rfl p2 hy) hc
   have d1 : add32.denote (penv (ws P R L1)) = some (n+m) :=
     add_value _ i32 1 3 n m
       (ws_env_ref P R L1 1 b false i32 n rfl p1 hn)
       (ws_env_ref P R L1 3 d false i32 m rfl p3 hm) ht
-  have d2 : (NExpr.variable ty 4).denote (penv (ws P R L2)) = some (x+y) := by
+  have d2 : (NExpr.variable ty 4).denote (penv (ws P R L2)) = some s := by
     rw [den_variable]
-    exact ws_env_loc P R L2 0 ⟨ty,x+y⟩ ty rfl rfl hs
+    exact ws_env_loc P R L2 0 ⟨ty,s⟩ ty rfl rfl hs
   have d3 : (NExpr.variable i32 5).denote (penv (ws P R L3)) = some (n+m) := by
     rw [den_variable]
     exact ws_env_loc P R L3 1 ⟨i32,n+m⟩ i32 rfl rfl ht
-  have q0 := (pexec_prim 1 _ _).trans (ws_declare P R [] ty (add64 ty) (x+y) d0 (Ty.convert_of_valid _ _ hs))
+  have q0 := (pexec_prim 1 _ _).trans (ws_declare P R [] ty (add64 ty) s d0 (Ty.convert_of_valid _ _ hs))
   have q1 := (pexec_prim 1 _ _).trans (ws_declare P R L1 i32 add32 (n+m) d1 (Ty.convert_of_valid _ _ ht))
-  have q2 := (pexec_prim 1 _ _).trans (ws_declare P R L2 ty (.variable ty 4) (x+y) d2 (Ty.convert_of_valid _ _ hs))
+  have q2 := (pexec_prim 1 _ _).trans (ws_declare P R L2 ty (.variable ty 4) s d2 (Ty.convert_of_valid _ _ hs))
   have q3 := (pexec_prim 1 _ _).trans (ws_declare P R L3 i32 (.variable i32 5) (n+m) d3 (Ty.convert_of_valid _ _ ht))
   have sc0 := pexec_scope 1 Sk (ws P R L4) _ (pexec_skip 1 _)
   have sc : pexec 1 (.scope Sk) (ws P R L4) = some ⟨ws P R L4,none,1,P.length+12⟩ := by
@@ -194,7 +200,7 @@ theorem stage_ready (caller : NState) (s1 s2 s3 s4 : Nat)
     (b1 b2 b3 b4 : CppState.Binding) (x n y m : Int)
     (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,x⟩)) (c2 : caller.scalarCell s2 i32 = some (b2,⟨i32,n⟩))
     (c3 : caller.scalarCell s3 ty = some (b3,⟨ty,y⟩)) (c4 : caller.scalarCell s4 i32 = some (b4,⟨i32,m⟩))
-    (hs : ty.valid (x+y) = true) (ht : i32.valid (n+m) = true)
+    (s : Int) (hc : ty.convert (x+y) = some s) (hs : ty.valid s = true) (ht : i32.valid (n+m) = true)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner scope, caller.frame.state.forest.context owner = some scope → scope ≤ caller.scope)
@@ -203,7 +209,7 @@ theorem stage_ready (caller : NState) (s1 s2 s3 s4 : Nat)
       prepare caller (gOp ty).parameters
         [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] = some initial ∧
       runFuel fuel (gOp ty).body initial = .finished ⟨callee,none,false⟩ ∧
-      StageState ty caller initial callee b1.address b2.address b3.address b4.address (x+y) (n+m) := by
+      StageState ty caller initial callee b1.address b2.address b3.address b4.address s (n+m) := by
   obtain ⟨initial,prepared,slots,mem,bindings,bas,scope,frame,work,peak⟩ :=
     prepare_references4 caller (gOp ty).parameters ty i32 ty i32 rfl
       s1 s2 s3 s4 b1 b2 b3 b4 x n y m c1 c2 c3 c4 valid
@@ -212,7 +218,7 @@ theorem stage_ready (caller : NState) (s1 s2 s3 s4 : Nat)
   obtain ⟨p2,hy⟩ := caller_cell caller s3 ty b3 y c3
   obtain ⟨p3,hm⟩ := caller_cell caller s4 i32 b4 m c4
   obtain ⟨r,ran,ret,cost,need,ps⟩ := raw_exec ty (callerP caller)
-    b1.address b2.address b3.address b4.address x n y m p0 p1 p2 p3 hx hn hy hm hs ht
+    b1.address b2.address b3.address b4.address x n y m p0 p1 p2 p3 hx hn hy hm s hc hs ht
   have qs : QS initial [] caller.scalars.baseMemory (caller.scope+1) (callerP caller)
       (inputs b1.address b2.address b3.address b4.address) (ssl 4) := by
     refine ⟨by simpa [ssl,List.range_succ] using slots,mem,bindings,bas,scope⟩
@@ -240,7 +246,7 @@ theorem stage_ready (caller : NState) (s1 s2 s3 s4 : Nat)
     (by simp [inputs]; unfold scalarBound; omega)
     (by unfold scalarBound; omega) (Nat.le_refl _) (by exact Nat.le_max_right _ _)
   obtain ⟨fuel,step,executed,returned,breaking,qsD,faD,cqD⟩ := run
-  have typed : StageState ty caller initial step.state b1.address b2.address b3.address b4.address (x+y) (n+m) := by
+  have typed : StageState ty caller initial step.state b1.address b2.address b3.address b4.address s (n+m) := by
     refine ⟨?_,faD,?_,?_,hs,ht⟩
     · rw [ps] at qsD
       simpa [ws,fields,fieldBindings,ssl,inputs] using qsD
@@ -456,7 +462,7 @@ theorem view_export_correct (caller : NState) (targetConst : Bool) (s1 s2 s3 s4 
     (b1 b2 b3 b4 : CppState.Binding) (x n y m : Int)
     (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,x⟩)) (c2 : caller.scalarCell s2 i32 = some (b2,⟨i32,n⟩))
     (c3 : caller.scalarCell s3 ty = some (b3,⟨ty,y⟩)) (c4 : caller.scalarCell s4 i32 = some (b4,⟨i32,m⟩))
-    (hs : ty.valid (x+y) = true) (ht : i32.valid (n+m) = true)
+    (s : Int) (hc : ty.convert (x+y) = some s) (hs : ty.valid s = true) (ht : i32.valid (n+m) = true)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner scope, caller.frame.state.forest.context owner = some scope → scope ≤ caller.scope)
@@ -467,12 +473,12 @@ theorem view_export_correct (caller : NState) (targetConst : Bool) (s1 s2 s3 s4 
       (gView ty) fuel caller
         [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] targetConst =
           .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 2) ∧
-      ExportState ty (x+y) (n+m) caller initial out targetConst := by
+      ExportState ty s (n+m) caller initial out targetConst := by
   obtain ⟨initial,fuel,callee,prepared,ran,ready⟩ := stage_ready caller s1 s2 s3 s4 b1 b2 b3 b4 x n y m
-    c1 c2 c3 c4 hs ht valid lengths strict base
-  obtain ⟨fin,post⟩ := finish_export (x+y) (n+m) b1.address b2.address b3.address b4.address
+    c1 c2 c3 c4 s hc hs ht valid lengths strict base
+  obtain ⟨fin,post⟩ := finish_export s (n+m) b1.address b2.address b3.address b4.address
     caller initial callee targetConst ready base
-  refine ⟨initial,fuel,exported ty (x+y) (n+m) caller callee targetConst,prepared,?_,post⟩
+  refine ⟨initial,fuel,exported ty s (n+m) caller callee targetConst,prepared,?_,post⟩
   exact MemberView.constructView_of_steps (gOp ty) fuel caller initial callee _
     [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] []
     (gFields ty) [] (gPerm ty targetConst)
@@ -482,7 +488,7 @@ theorem object_export_correct (caller : NState) (targetConst : Bool) (s1 s2 s3 s
     (b1 b2 b3 b4 : CppState.Binding) (x n y m : Int)
     (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,x⟩)) (c2 : caller.scalarCell s2 i32 = some (b2,⟨i32,n⟩))
     (c3 : caller.scalarCell s3 ty = some (b3,⟨ty,y⟩)) (c4 : caller.scalarCell s4 i32 = some (b4,⟨i32,m⟩))
-    (hs : ty.valid (x+y) = true) (ht : i32.valid (n+m) = true)
+    (s : Int) (hc : ty.convert (x+y) = some s) (hs : ty.valid s = true) (ht : i32.valid (n+m) = true)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner scope, caller.frame.state.forest.context owner = some scope → scope ≤ caller.scope)
@@ -492,9 +498,9 @@ theorem object_export_correct (caller : NState) (targetConst : Bool) (s1 s2 s3 s
         [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] = some initial ∧
       (gObjects ty) fuel caller [⟨[],[s1,s2]⟩,⟨[],[s3,s4]⟩] targetConst =
           .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 2) ∧
-      ExportState ty (x+y) (n+m) caller initial out targetConst := by
+      ExportState ty s (n+m) caller initial out targetConst := by
   obtain ⟨initial,fuel,out,prepared,ran,post⟩ := view_export_correct caller targetConst s1 s2 s3 s4
-    b1 b2 b3 b4 x n y m c1 c2 c3 c4 hs ht valid lengths strict base
+    b1 b2 b3 b4 x n y m c1 c2 c3 c4 s hc hs ht valid lengths strict base
   have args : MemberFactory.referenceArguments caller
       [[(ty,false),(i32,false)],[(ty,false),(i32,false)]] [⟨[],[s1,s2]⟩,⟨[],[s3,s4]⟩] =
       some [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] := by
