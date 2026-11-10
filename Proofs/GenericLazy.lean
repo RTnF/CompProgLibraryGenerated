@@ -416,4 +416,145 @@ theorem rangeadd_new0_gen (ty : Ty) (caller : NState) (e : NExpr) (v : Int)
       ScalarPost2 caller Sinit res e.nodes 70 caller.scalars.memory :=
   ctor_gen ty _ rfl rfl rfl caller e v hs hty value hv valid lengths strict base
 
+
+theorem rangesum_op_x_conv_gen (ty : Ty) (caller : NState) (s1 s2 s3 s4 : Nat) (b1 b2 b3 b4 : CppState.Binding) (v1 v2 v3 v4 : Int)
+    (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,v1⟩)) (c2 : caller.scalarCell s2 i32 = some (b2,⟨i32,v2⟩))
+    (c3 : caller.scalarCell s3 ty = some (b3,⟨ty,v3⟩)) (c4 : caller.scalarCell s4 i32 = some (b4,⟨i32,v4⟩))
+    (g1 : ty.valid v1 = true) (g3 : ty.valid v3 = true) (s : Int) (hc : ty.convert (v1 + v3) = some s)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller (sumOpX ty).parameters
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] = some Sinit ∧
+      (sumOpX ty).callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.scalarReference s3,.scalarReference s4] = .finished (res,.scalar s) ∧
+      ScalarPost2 caller Sinit res 0 72 caller.scalars.memory := by
+  have gs := Proofs.GenericCall.convert_valid ty _ _ hc
+  refine refs4t_correct _ ty ty i32 ty i32 rfl rfl (by simp [sumOpX, Scalar, NExpr.scalarOnly]) caller s1 s2 s3 s4
+    b1 b2 b3 b4 v1 v2 v3 v4 c1 c2 c3 c4 valid lengths strict base 1 s gs 12 ?_
+  intro P hP
+  subst hP
+  have e0 : penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩]⟩ 0 ty = some v1 :=
+    penv_ok _ 0 ty ⟨b1.address,false⟩ ⟨ty,v1⟩ rfl (P_cell_ty caller s1 ty b1 v1 c1) rfl g1
+  have e2 : penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩]⟩ 2 ty = some v3 :=
+    penv_ok _ 2 ty ⟨b3.address,false⟩ ⟨ty,v3⟩ rfl (P_cell_ty caller s3 ty b3 v3 c3) rfl g3
+  have den : (NExpr.binary ty .add (.variable ty 0) (.variable ty 2)).denote
+      (penv ⟨callerP caller,[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨b3.address,false⟩,⟨b4.address,false⟩]⟩) = some s := by
+    rw [den_binary, den_variable, den_variable, e0, e2]
+    simp only [Option.bind_some]
+    exact hc
+  obtain ⟨r,h1,h2,h3,h4,h5⟩ := ret_exec_gen (.binary ty .add (.variable ty 0) (.variable ty 2)) s _ den (by simp [NExpr.nodes])
+  exact ⟨r, h1, h2, h3, by simp at h4; omega, by rw [h5]; exact take_callerP caller⟩
+
+theorem rangeadd_applyExt_conv_gen (ty : Ty) (caller : NState) (s1 : Nat) (b1 : CppState.Binding) (v : Int)
+    (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,v⟩)) (e : NExpr) (m : Int) (hs : e.scalarOnly = true)
+    (ht : e.resultType = ty) (value : e.denote (envOf caller) = some m) (gv : ty.valid v = true)
+    (gm : ty.valid m = true) (s : Int) (hc : ty.convert (m + v) = some s)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller (addApplyExt ty).parameters [.scalarReference s1,.value e] = some Sinit ∧
+      (addApplyExt ty).callFuel fuel caller [.scalarReference s1,.value e] = .finished (res,.scalar s) ∧
+      ScalarPost2 caller Sinit res (1 + e.nodes) 110 caller.scalars.memory := by
+  have gs := Proofs.GenericCall.convert_valid ty _ _ hc
+  refine R1V1_correct _ ty ty ty rfl rfl (by simp [addApplyExt, Scalar, NExpr.scalarOnly])
+    caller s1 b1 v e m c1 hs ht value gm valid lengths strict base 1 s gs 30 ?_
+  intro P hP
+  subst hP
+  have e0 : penv ⟨callerP caller ++ [(⟨ty,m⟩ : Cell)],[⟨b1.address,false⟩,⟨(callerP caller).length+0,true⟩]⟩ 0 ty = some v :=
+    penv_ok _ 0 ty ⟨b1.address,false⟩ ⟨ty,v⟩ rfl (refVal caller s1 ty b1 v c1 _) rfl gv
+  have e1 : penv ⟨callerP caller ++ [(⟨ty,m⟩ : Cell)],[⟨b1.address,false⟩,⟨(callerP caller).length+0,true⟩]⟩ 1 ty = some m :=
+    penv_ok _ 1 ty ⟨(callerP caller).length+0,true⟩ ⟨ty,m⟩ rfl (by simpa using get_tail (callerP caller) [⟨ty,m⟩] 0) rfl gm
+  have den : (raExtG ty).denote (penv ⟨callerP caller ++ [(⟨ty,m⟩ : Cell)],[⟨b1.address,false⟩,⟨(callerP caller).length+0,true⟩]⟩) =
+      some s := by
+    rw [den_binary, den_variable, den_variable, e1, e0]
+    simp only [Option.bind_some]
+    exact hc
+  obtain ⟨r,h1,h2,h3,h4,h5⟩ := ret_exec_gen (raExtG ty) s _ den (by simp [NExpr.nodes])
+  exact ⟨r, h1, h2, by omega, by simp at h4 ⊢; omega, by rw [h5]; exact Proofs.MonoidCallCore.take_P caller _⟩
+
+theorem rangeadd_applySum_conv_gen (ty : Ty) (caller : NState) (s1 : Nat) (b1 : CppState.Binding) (v : Int)
+    (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,v⟩)) (e1 e2 : NExpr) (x sz : Int)
+    (hs1 : e1.scalarOnly = true) (ht1 : e1.resultType = ty) (hs2 : e2.scalarOnly = true) (ht2 : e2.resultType = i32)
+    (value1 : e1.denote (envOf caller) = some x) (value2 : e2.denote (envOf caller) = some sz)
+    (gv : ty.valid v = true) (gx : ty.valid x = true) (gz : i32.valid sz = true) (gzt : ty.valid sz = true)
+    (q s : Int) (hcp : ty.convert (sz * v) = some q) (hcs : ty.convert (x + q) = some s)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller (addApplySum ty).parameters [.scalarReference s1,.value e1,.value e2] = some Sinit ∧
+      (addApplySum ty).callFuel fuel caller [.scalarReference s1,.value e1,.value e2] =
+        .finished (res,.scalar s) ∧
+      ScalarPost2 caller Sinit res (1 + e1.nodes + e2.nodes) 110 caller.scalars.memory := by
+  have gs := Proofs.GenericCall.convert_valid ty _ _ hcs
+  refine R1V2_correct _ ty ty ty i32 rfl rfl (by have h := castTo_scalar ty i32 (.variable i32 2) rfl; simp [addApplySum, Scalar, NExpr.scalarOnly, h])
+    caller s1 b1 v e1 x e2 sz c1 hs1 ht1 value1 gx hs2 ht2 value2 gz valid lengths strict base 1 s gs 30 ?_
+  intro P hP
+  subst hP
+  have e0 : penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩ 0 ty = some v :=
+    penv_ok _ 0 ty ⟨b1.address,false⟩ ⟨ty,v⟩ rfl (refVal caller s1 ty b1 v c1 _) rfl gv
+  have e1 : penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩ 1 ty = some x :=
+    penv_ok _ 1 ty ⟨(callerP caller).length+0,true⟩ ⟨ty,x⟩ rfl (by simpa using get_tail (callerP caller) [⟨ty,x⟩,⟨i32,sz⟩] 0) rfl gx
+  have e2 : penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩ 2 i32 = some sz :=
+    penv_ok _ 2 i32 ⟨(callerP caller).length+1,true⟩ ⟨i32,sz⟩ rfl (by simpa using get_tail (callerP caller) [⟨ty,x⟩,⟨i32,sz⟩] 1) rfl gz
+  have den : (raSumG ty).denote (penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩) =
+      some s := by
+    rw [den_binary, den_variable, den_binary, castTo_den ty i32 (.variable i32 2) _ sz (by rw [den_variable]; exact e2) gzt, den_variable, e1, e0]
+    simp only [Option.bind_some]
+    have m1 : binaryValue .mul sz v = sz * v := rfl
+    rw [m1, hcp]
+    simp only [Option.bind_some]
+    exact hcs
+  obtain ⟨r,h1,h2,h3,h4,h5⟩ := ret_exec_gen (raSumG ty) s _ den (by have := castTo_nodes ty i32 (.variable i32 2); simp [NExpr.nodes] at this ⊢; omega)
+  exact ⟨r, h1, h2, by omega, by simp at h4 ⊢; omega, by rw [h5]; exact Proofs.MonoidCallCore.take_P caller _⟩
+
+theorem rangeset_applySumX_conv_gen (ty : Ty) (caller : NState) (s1 s2 : Nat) (b1 b2 : CppState.Binding) (v noop : Int)
+    (c1 : caller.scalarCell s1 ty = some (b1,⟨ty,v⟩)) (c2 : caller.scalarCell s2 bl = some (b2,⟨bl,noop⟩))
+    (e1 e2 : NExpr) (x sz : Int) (hs1 : e1.scalarOnly = true) (ht1 : e1.resultType = ty)
+    (hs2 : e2.scalarOnly = true) (ht2 : e2.resultType = i32)
+    (value1 : e1.denote (envOf caller) = some x) (value2 : e2.denote (envOf caller) = some sz)
+    (gv : ty.valid v = true) (gn : bl.valid noop = true) (gx : ty.valid x = true) (gz : i32.valid sz = true) (gzt : ty.valid sz = true)
+    (q : Int) (hcm : ty.convert (v * sz) = some q)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller (setApplySum ty).parameters
+        [.scalarReference s1,.scalarReference s2,.value e1,.value e2] = some Sinit ∧
+      (setApplySum ty).callFuel fuel caller
+        [.scalarReference s1,.scalarReference s2,.value e1,.value e2] =
+        .finished (res,.scalar (if noop ≠ 0 then x else q)) ∧
+      ScalarPost2 caller Sinit res (2 + e1.nodes + e2.nodes) 110 caller.scalars.memory := by
+  have gm := Proofs.GenericCall.convert_valid ty _ _ hcm
+  refine R2V2_correct _ ty ty bl ty i32 rfl rfl
+    (by exact selRet_scalar _ _ _ rfl rfl (by have h := castTo_scalar ty i32 (.variable i32 3) rfl; simp [NExpr.scalarOnly, h]))
+    caller s1 s2 b1 b2 v noop e1 x e2 sz c1 c2 hs1 ht1 value1 gx hs2 ht2 value2 gz valid lengths strict base 1
+    (if noop ≠ 0 then x else q) (by split <;> assumption) 30 ?_
+  intro P hP
+  subst hP
+  have e0 : penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩ 0 ty = some v :=
+    penv_ok _ 0 ty ⟨b1.address,false⟩ ⟨ty,v⟩ rfl (refVal caller s1 ty b1 v c1 _) rfl gv
+  have e1 : penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩ 1 bl = some noop :=
+    penv_ok _ 1 bl ⟨b2.address,false⟩ ⟨bl,noop⟩ rfl (refVal caller s2 bl b2 noop c2 _) rfl gn
+  have e2 : penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩ 2 ty = some x :=
+    penv_ok _ 2 ty ⟨(callerP caller).length+0,true⟩ ⟨ty,x⟩ rfl (by simpa using get_tail (callerP caller) [⟨ty,x⟩,⟨i32,sz⟩] 0) rfl gx
+  have e3 : penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩ 3 i32 = some sz :=
+    penv_ok _ 3 i32 ⟨(callerP caller).length+1,true⟩ ⟨i32,sz⟩ rfl (by simpa using get_tail (callerP caller) [⟨ty,x⟩,⟨i32,sz⟩] 1) rfl gz
+  have hb : (NExpr.binary ty .mul (.variable ty 0) (castTo ty i32 (.variable i32 3))).denote
+      (penv ⟨callerP caller ++ [(⟨ty,x⟩ : Cell),(⟨i32,sz⟩ : Cell)],[⟨b1.address,false⟩,⟨b2.address,false⟩,⟨(callerP caller).length+0,true⟩,⟨(callerP caller).length+1,true⟩]⟩) =
+      some (q) := by
+    rw [den_binary, den_variable, castTo_den ty i32 (.variable i32 3) _ sz (by rw [den_variable]; exact e3) gzt, e0]
+    simp only [Option.bind_some]
+    exact hcm
+  obtain ⟨r,h1,h2,h3,h4,h5⟩ := selRet_exec (.variable bl 1) (.variable ty 2)
+    (.binary ty .mul (.variable ty 0) (castTo ty i32 (.variable i32 3))) _ noop x (q)
+    (by rw [den_variable]; exact e1) (by rw [den_variable]; exact e2) hb
+  have hn := castTo_nodes ty i32 (.variable i32 3)
+  simp only [NExpr.nodes] at hn
+  refine ⟨r, h1, h2, by simp [NExpr.nodes] at h3; omega, by simp [NExpr.nodes] at h4 ⊢; omega,
+    by rw [h5]; exact Proofs.MonoidCallCore.take_P caller _⟩
+
 end Proofs.GenericLazy

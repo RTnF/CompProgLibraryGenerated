@@ -143,4 +143,61 @@ theorem rangeadd_compose_gen (ty : Ty) (caller : NState) (sa sb : Nat) (ba bb : 
   rw [ws_nil] at h1
   exact ⟨r,h1,h2,h3,by simp at h4; omega,by rw [h5]; exact take_P caller _⟩
 
+/-- The result of a representation conversion is representable. -/
+theorem convert_valid (ty : Ty) (z w : Int) (h : ty.convert z = some w) : ty.valid w = true := by
+  by_cases hb : ty.boolean = true
+  · simp [Ty.convert, hb] at h
+    subst h
+    split <;> simp [Ty.valid, hb]
+  · by_cases hs : ty.signed = true
+    · simp [Ty.convert, hb, hs] at h
+      obtain ⟨hz, rfl⟩ := h
+      exact hz
+    · simp [Ty.convert, hb, hs] at h
+      subst h
+      have pos : (0 : Int) < 2 ^ ty.width := Int.pow_pos (by decide)
+      have h0 : 0 ≤ z % 2 ^ ty.width := Int.emod_nonneg _ (by omega)
+      have h1 : z % 2 ^ ty.width < 2 ^ ty.width := Int.emod_lt_of_pos _ pos
+      simp [Ty.valid, hb, hs, h0, h1]
+
+/-- Unsigned arithmetic wraps modulo `2^width`. -/
+theorem convert_wrap (ty : Ty) (z : Int) (hb : ty.boolean = false) (hu : ty.signed = false) :
+    ty.convert z = some (z % 2 ^ ty.width) := by
+  simp [Ty.convert, hb, hu]
+
+theorem addG_den_conv (ty : Ty) (env : Nat → Ty → Option Int) (x y s : Int) (h0 : env 0 ty = some x)
+    (h1 : env 1 ty = some y) (hc : ty.convert (x+y) = some s) : (addG ty).denote env = some s := by
+  rw [den_binary, den_variable, den_variable, h0, h1]
+  simpa [binaryValue] using hc
+
+/-- `RangeAdd<T>::compose` with the sum converted to `T` (wraps for unsigned `T`). -/
+theorem rangeadd_compose_conv_gen (ty : Ty) (caller : NState) (sa sb : Nat) (ba bb : CppState.Binding) (x y s : Int)
+    (hxv : ty.valid x = true) (hyv : ty.valid y = true) (hc : ty.convert (x+y) = some s)
+    (ca : caller.scalarCell sa ty = some (ba,⟨ty,x⟩)) (cb : caller.scalarCell sb ty = some (bb,⟨ty,y⟩))
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ Sinit fuel res, prepare caller (composeAdd ty).parameters
+        [.scalarReference sa,.scalarReference sb] = some Sinit ∧
+      (composeAdd ty).callFuel fuel caller [.scalarReference sa,.scalarReference sb] =
+        .finished (res,.scalar s) ∧
+      ScalarPost2 caller Sinit res 0 80 caller.scalars.memory := by
+  have hs := convert_valid ty _ _ hc
+  refine refs2b_gen ty _ rfl rfl (composeAdd_scalar ty) caller sa sb ba bb x y ca cb valid lengths strict base 1 s hs 20 ?_
+  intro P hP
+  subst hP
+  have ⟨e0, e1⟩ := env2G ty (callerP caller) ba.address bb.address x y hxv hyv (P_cellG ty caller sa ba x ca) (P_cellG ty caller sb bb y cb)
+  obtain ⟨r,h1,h2,h3,h4,h5⟩ := shapeG_exec ty (callerP caller) [⟨ba.address,false⟩,⟨bb.address,false⟩] (addG ty) s hs
+    (addG_den_conv ty _ x y s e0 e1 hc) (by simp [NExpr.nodes])
+  rw [ws_nil] at h1
+  exact ⟨r,h1,h2,h3,by simp at h4; omega,by rw [h5]; exact take_P caller _⟩
+
+/-- Signed overflow of the sum is refused: the callee body faults. -/
+theorem addG_den_overflow (ty : Ty) (env : Nat → Ty → Option Int) (x y : Int) (h0 : env 0 ty = some x)
+    (h1 : env 1 ty = some y) (hb : ty.boolean = false) (hsg : ty.signed = true)
+    (hbad : ty.valid (x+y) = false) : (addG ty).denote env = none := by
+  rw [den_binary, den_variable, den_variable, h0, h1]
+  simp [binaryValue, Ty.convert, hb, hsg, hbad]
+
 end Proofs.GenericCall
