@@ -8,7 +8,7 @@
 
 - [x] `experiments/library/cpp/algebraic_structure/group.hpp` — 整数型の具体化セット（long long, int）。浮動小数Tは基盤整備後 — 11d1c70
 - [x] `experiments/library/cpp/algebraic_structure/monoid.hpp` — 整数型の具体化セット（long long, int）。浮動小数Tは基盤整備後 — aec6ac1
-- [ ] `experiments/library/cpp/algebraic_structure/monoid_lazy.hpp`
+- [x] `experiments/library/cpp/algebraic_structure/monoid_lazy.hpp` — 元の入れ子APIを公開側へ追加、任意 `ty` の一般証明を変換器の整数型4種（int, unsigned int, long long, unsigned long long）の生成モデルと全数照合。`short`/`char`・浮動小数Tは基盤整備後 — 83dbf50
 - [ ] `experiments/library/cpp/array/cumulative_sum.hpp`
 - [x] `experiments/library/cpp/array/doubling.hpp` — 公開版との同値を差分テストで確認、変更点を文書化 — 5ea4269
 - [ ] `experiments/library/cpp/array/element_count.hpp`
