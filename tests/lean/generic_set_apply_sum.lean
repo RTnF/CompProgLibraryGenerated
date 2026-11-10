@@ -37,10 +37,10 @@ theorem update_exec (Q : List Cell) (av an : Nat) (v n x sz : Int)
     (cv : Q[av]? = some ⟨ty,v⟩) (cn : Q[an]? = some ⟨bl,n⟩)
     (hv : ty.valid v = true) (hn : bl.valid n = true)
     (hx : ty.valid x = true) (hz : i32.valid sz = true) (hzt : ty.valid sz = true)
-    (hm : n = 0 → ty.valid (v*sz) = true) :
+    (q : Int) (hcm : n = 0 → ty.convert (v*sz) = some q) :
     ∃ r, pexec 1 (updateBranch ty) ⟨argMem ty Q x sz,applyRefs Q av an⟩ = some r ∧
       r.ret = none ∧ r.cost ≤ 12 ∧ r.need ≤ Q.length+30 ∧
-      r.ps = ⟨argMem ty Q (if n = 0 then v*sz else x) sz,applyRefs Q av an⟩ := by
+      r.ps = ⟨argMem ty Q (if n = 0 then q else x) sz,applyRefs Q av an⟩ := by
   let M := argMem ty Q x sz
   let R := applyRefs Q av an
   have cv' : M[av]? = some ⟨ty,v⟩ := by
@@ -58,14 +58,14 @@ theorem update_exec (Q : List Cell) (av an : Nat) (v n x sz : Int)
   by_cases zero : n = 0
   · have dc : condition.denote (penv (⟨M,R⟩ : PS)) = some 1 := by
       simp [condition,NExpr.denote,en,unaryValue,zero]
-    have dm : (product ty).denote (penv (⟨M,R⟩ : PS)) = some (v*sz) := by
+    have dm : (product ty).denote (penv (⟨M,R⟩ : PS)) = some (q) := by
       unfold product
       rw [den_binary,den_variable,Proofs.GenericLazy.castTo_den ty i32 (.variable i32 3) _ sz (by rw [den_variable]; exact ez) hzt,ev]
       simp only [Option.bind_some]
-      exact Ty.convert_of_valid ty (v*sz) (hm zero)
-    have st := pstmt_assign_ok (⟨M,R⟩ : PS) 2 ty (product ty) (v*sz) dm
-      ⟨Q.length,true⟩ ⟨ty,x⟩ rfl (by simp [M,argMem]) rfl hx rfl (v*sz)
-      (Ty.convert_of_valid ty (v*sz) (hm zero))
+      exact hcm zero
+    have st := pstmt_assign_ok (⟨M,R⟩ : PS) 2 ty (product ty) (q) dm
+      ⟨Q.length,true⟩ ⟨ty,x⟩ rfl (by simp [M,argMem]) rfl hx rfl (q)
+      (Proofs.GenericCall.convG ty q (Proofs.GenericCall.convert_valid ty _ _ (hcm zero)))
     have braced := pexec_braced 1 (.assign 2 ty (product ty)) (⟨M,R⟩ : PS) _ st rfl
       (by simp) rfl
     have br := pexec_branch_true 1 condition _ Sk (⟨M,R⟩ : PS) 1 dc (by decide) _ braced
@@ -88,17 +88,17 @@ theorem apply_exec (Q : List Cell) (av an : Nat) (v n x sz : Int) (second : Bool
     (cv : Q[av]? = some ⟨ty,v⟩) (cn : Q[an]? = some ⟨bl,n⟩)
     (hv : ty.valid v = true) (hn : bl.valid n = true)
     (hx : ty.valid x = true) (hz : i32.valid sz = true) (hzt : ty.valid sz = true)
-    (hm : n = 0 → ty.valid (v*sz) = true) :
-    let w := if n = 0 then v*sz else x
+    (q : Int) (hcm : n = 0 → ty.convert (v*sz) = some q) :
+    let w := if n = 0 then q else x
     ∃ r, pexec 1 (gSetApply ty second).body
         ⟨argMem ty Q x sz,applyRefs Q av an⟩ = some r ∧
       r.ret = some (if second then sz else w) ∧ r.cost ≤ 30 ∧ r.need ≤ Q.length+50 ∧
       r.ps.mem = argMem ty Q w sz ++ [⟨ty,w⟩,⟨i32,sz⟩] := by
-  let w := if n = 0 then v*sz else x
+  let w := if n = 0 then q else x
   let M := argMem ty Q w sz
   let R := applyRefs Q av an
-  have hw : ty.valid w = true := by dsimp [w]; split <;> first | apply hm; assumption | exact hx
-  obtain ⟨r,ran,ret,cost,need,ps⟩ := update_exec ty Q av an v n x sz cv cn hv hn hx hz hzt hm
+  have hw : ty.valid w = true := by dsimp [w]; split <;> first | exact Proofs.GenericCall.convert_valid ty _ _ (hcm (by assumption)) | exact hx
+  obtain ⟨r,ran,ret,cost,need,ps⟩ := update_exec ty Q av an v n x sz cv cn hv hn hx hz hzt q hcm
   have dx : (NExpr.variable ty 2).denote (penv (ws M R [])) = some w := by
     rw [den_variable]; exact ws_env_ref M R [] 2 Q.length true ty w rfl (by simp [M,argMem]) hw
   have dz : (NExpr.variable i32 3).denote (penv (ws M R [⟨ty,w⟩])) = some sz := by
@@ -265,21 +265,21 @@ theorem apply_correct (second : Bool) (caller : NState)
     (value1 : e1.denote (envOf caller) = some x) (value2 : e2.denote (envOf caller) = some sz)
     (gv : ty.valid v = true) (gn : bl.valid n = true)
     (gx : ty.valid x = true) (gz : i32.valid sz = true) (gzt : ty.valid sz = true)
-    (gm : n = 0 → ty.valid (v*sz) = true)
+    (q : Int) (hcm : n = 0 → ty.convert (v*sz) = some q)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
     (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
     let prog := gSetApply ty second
-    let w := if n = 0 then v*sz else x
+    let w := if n = 0 then q else x
     ∃ Sinit fuel res, prepare caller prog.parameters
         [.scalarReference sv,.scalarReference sn,.value e1,.value e2] = some Sinit ∧
       prog.callFuel fuel caller [.scalarReference sv,.scalarReference sn,.value e1,.value e2] =
         .finished (res,.scalar (if second then sz else w)) ∧
       ScalarPost2 caller Sinit res (2+e1.nodes+e2.nodes) 110 caller.scalars.memory := by
   let prog := gSetApply ty second
-  let w := if n = 0 then v*sz else x
-  have gw : ty.valid w = true := by dsimp [w]; split <;> first | apply gm; assumption | exact gx
+  let w := if n = 0 then q else x
+  have gw : ty.valid w = true := by dsimp [w]; split <;> first | exact Proofs.GenericCall.convert_valid ty _ _ (hcm (by assumption)) | exact gx
   refine RW2V2_correct prog (if second then i32 else ty) ty bl ty i32
     (by cases second <;> rfl) (by cases second <;> rfl)
     (by show Scalar (applyBody ty second) = true; have h := Proofs.GenericLazy.castTo_scalar ty i32 (.variable i32 3) rfl; cases second <;> simp [applyBody, updateBranch, condition, product, copyBody, copyPicked, Scalar, NExpr.scalarOnly, h]) caller sv sn bv bn v n e1 x e2 sz cv cn wv wn
@@ -292,7 +292,7 @@ theorem apply_correct (second : Bool) (caller : NState)
   have cn' : (callerP caller)[bn.address]? = some ⟨bl,n⟩ :=
     Proofs.IntervalCall.P_cell_ty caller sn bl bn n cn
   obtain ⟨r,ran,ret,cost,need,mem⟩ := apply_exec ty (callerP caller) bv.address bn.address v n x sz second
-    cv' cn' gv gn gx gz gzt gm
+    cv' cn' gv gn gx gz gzt q hcm
   refine ⟨r,?_,ret,cost,?_,?_⟩
   · simpa [prog,argMem,applyRefs] using ran
   · simp only [List.length_append,List.length_cons,List.length_nil]
