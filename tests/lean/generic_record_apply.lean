@@ -72,23 +72,23 @@ abbrev addBody : Command :=
 
 theorem add_exec (P : List Cell) (R : List CppState.Binding) (x y : Int)
     (hR : R.length = 2) (_hx : ty.valid x = true) (_hy : ty.valid y = true)
-    (hsum : ty.valid (x+y) = true)
+    (s : Int) (hc : ty.convert (x+y) = some s) (hsum : ty.valid s = true)
     (e0 : penv (ws P R []) 0 ty = some y)
     (e1 : penv (ws P R []) 1 ty = some x) :
-    ∃ r, pexec 1 (addBody ty) (ws P R []) = some r ∧ r.ret = some (x+y) ∧
+    ∃ r, pexec 1 (addBody ty) (ws P R []) = some r ∧ r.ret = some s ∧
       r.cost ≤ 20 ∧ r.need ≤ P.length+40 ∧
-      r.ps.mem = P ++ [⟨ty,x+y⟩,⟨ty,x+y⟩] := by
-  have den : (addExpression ty).denote (penv (ws P R [])) = some (x+y) := by
+      r.ps.mem = P ++ [⟨ty,s⟩,⟨ty,s⟩] := by
+  have den : (addExpression ty).denote (penv (ws P R [])) = some s := by
     simp only [NExpr.denote,e0,e1,Option.bind_some,binaryValue]
-    exact Proofs.GenericCall.convG ty _ hsum
-  have q1 := (pexec_prim 1 _ _).trans (ws_declare P R [] ty (addExpression ty) (x+y) den (Proofs.GenericCall.convG ty _ hsum))
-  have d2 : penv (ws P R [⟨ty,x+y⟩]) 2 ty = some (x+y) := by
-    simpa only [hR] using ws_env_loc P R [⟨ty,x+y⟩] 0 ⟨ty,x+y⟩ ty rfl rfl hsum
-  have q2 := (pexec_prim 1 _ _).trans (ws_declare P R [⟨ty,x+y⟩] ty (.variable ty 2) (x+y)
+    exact hc
+  have q1 := (pexec_prim 1 _ _).trans (ws_declare P R [] ty (addExpression ty) s den (Proofs.GenericCall.convG ty _ hsum))
+  have d2 : penv (ws P R [⟨ty,s⟩]) 2 ty = some s := by
+    simpa only [hR] using ws_env_loc P R [⟨ty,s⟩] 0 ⟨ty,s⟩ ty rfl rfl hsum
+  have q2 := (pexec_prim 1 _ _).trans (ws_declare P R [⟨ty,s⟩] ty (.variable ty 2) s
     (by rw [den_variable]; exact d2) (Proofs.GenericCall.convG ty _ hsum))
-  have d3 : penv (ws P R [⟨ty,x+y⟩,⟨ty,x+y⟩]) 3 ty = some (x+y) := by
-    simpa only [hR] using ws_env_loc P R [⟨ty,x+y⟩,⟨ty,x+y⟩] 1 ⟨ty,x+y⟩ ty rfl rfl hsum
-  have qr := exec_ret 1 (ws P R [⟨ty,x+y⟩,⟨ty,x+y⟩]) (.variable ty 3) (x+y)
+  have d3 : penv (ws P R [⟨ty,s⟩,⟨ty,s⟩]) 3 ty = some s := by
+    simpa only [hR] using ws_env_loc P R [⟨ty,s⟩,⟨ty,s⟩] 1 ⟨ty,s⟩ ty rfl rfl hsum
+  have qr := exec_ret 1 (ws P R [⟨ty,s⟩,⟨ty,s⟩]) (.variable ty 3) s
     (by rw [den_variable]; exact d3)
   refine ⟨_,seq_some q1 rfl (seq_some q2 rfl qr),rfl,?_,?_,?_⟩
   · simp [NExpr.nodes]
@@ -103,13 +103,13 @@ theorem apply_correct (caller : NState) (slot : Nat) (binding : CppState.Binding
     (writable : binding.writable = true) (hv : ty.valid v = true)
     (e : NExpr) (scalar : e.scalarOnly = true) (typed : e.resultType = ty)
     (value : e.denote (envOf caller) = some x) (hx : ty.valid x = true)
-    (hsum : ty.valid (x+v) = true)
+    (s : Int) (hc : ty.convert (x+v) = some s) (hsum : ty.valid s = true)
     (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
     (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
     ∃ Sinit fuel res, prepare caller (gRecApply ty).parameters [.scalarReference slot,.value e] = some Sinit ∧
-      (gRecApply ty).callFuel fuel caller [.scalarReference slot,.value e] = .finished (res,.scalar (x+v)) ∧
+      (gRecApply ty).callFuel fuel caller [.scalarReference slot,.value e] = .finished (res,.scalar s) ∧
       ScalarPost2 caller Sinit res (1+e.nodes) 100 caller.scalars.memory := by
   obtain ⟨q,qWork,Sinit,hprep,sSlots,sMem,sBind,sBase,sScope,sFrame,sWork,sPeak⟩ :=
     prep_mutable_value caller _ ty ty slot binding v e x rfl cell writable scalar typed value hx valid
@@ -122,18 +122,18 @@ theorem apply_correct (caller : NState) (slot : Nat) (binding : CppState.Binding
   have ex : penv (ws P R []) 1 ty = some x := by
     rw [ws_nil]
     exact penv_ok _ 1 ty ⟨(callerP caller).length,true⟩ ⟨ty,x⟩ rfl (by simp [P]) rfl hx
-  obtain ⟨r,ran,ret,cost,need,mem⟩ := add_exec ty P R x v rfl hx hv hsum ev ex
+  obtain ⟨r,ran,ret,cost,need,mem⟩ := add_exec ty P R x v rfl hx hv s hc hsum ev ex
   have body : (gRecApply ty).body = (addBody ty) := rfl
   have hex : pexec 1 (gRecApply ty).body ⟨P,R⟩ = some r := by rw [body]; simpa only [ws_nil] using ran
   have takeM : P.take caller.scalars.memory.length = caller.scalars.memory := Proofs.MonoidCallCore.take_P caller _
   have takeR : r.ps.mem.take caller.scalars.memory.length = caller.scalars.memory := by
-    rw [mem]; simpa only [P,List.append_assoc] using Proofs.MonoidCallCore.take_P caller ([⟨ty,x⟩]++[⟨ty,x+v⟩,⟨ty,x+v⟩])
+    rw [mem]; simpa only [P,List.append_assoc] using Proofs.MonoidCallCore.take_P caller ([⟨ty,x⟩]++[⟨ty,s⟩,⟨ty,s⟩])
   have hlen : P.length = caller.scalars.memory.length +
       (caller.scalars.bindings.length+caller.frame.bindings.length)+1 := by simp [P,callerP]; omega
   have plen : P.length = (callerP caller).length+1 := by simp [P]
   have post := call_scalar caller (gRecApply ty) [.scalarReference slot,.value e] Sinit P R
     hprep (by rw [sSlots];rfl) sMem sBind sBase sScope sFrame sPeak
-    (by omega) (by rw [takeM]) valid lengths strict base (by simp [gRecApply, addBody, addExpression, Scalar, NExpr.scalarOnly]) 1 r hex (x+v) ret ty rfl hsum
+    (by omega) (by rw [takeM]) valid lengths strict base (by simp [gRecApply, addBody, addExpression, Scalar, NExpr.scalarOnly]) 1 r hex s ret ty rfl hsum
     (by omega) (by simp [R]; omega) (1+e.nodes) 100 (by omega)
   obtain ⟨fuel,res,hrun,hpost⟩ := post
   exact ⟨Sinit,fuel,res,hprep,hrun,by simpa only [takeR] using hpost⟩
