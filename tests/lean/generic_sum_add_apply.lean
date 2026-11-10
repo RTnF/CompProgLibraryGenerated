@@ -332,6 +332,76 @@ theorem stage_ready (caller : NState) (receiverSlot : Nat) (binding : CppState.B
     simp only [ret,Option.map_none] at returned
     simp_all
   exact executed.trans (congrArg (fun q : NStep => Proofs.CppLoop.Outcome.finished q) stepEq)
+theorem stage_ready_conv (caller : NState) (receiverSlot : Nat) (binding : CppState.Binding) (v x n : Int)
+    (found : caller.scalarCell receiverSlot ty = some (binding,cx ty v))
+    (writable : binding.writable = true)
+    (hx : ty.valid x = true) (hn : i32.valid n = true) (hnt : ty.valid n = true)
+    (q s : Int) (hcp : ty.convert (n*v) = some q) (hcs : ty.convert (x+q) = some s)
+    (hq : ty.valid q = true) (hs : ty.valid s = true)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ initial fuel callee, prepare caller (gSumApply ty).parameters
+        [.scalarReference receiverSlot,.value (.literal ty x),.value (.literal i32 n)] = some initial ∧
+      runFuel fuel (gSumApply ty).body initial = .finished ⟨callee,none,false⟩ ∧
+      StageState ty caller initial callee binding.address x s n := by
+  obtain ⟨initial,prepared,slots,mem,bindings,bas,scope,frame,work,peak⟩ :=
+    prepare_references1_values2 caller (gSumApply ty).parameters ty ty i32 rfl
+      receiverSlot binding v x n found writable hx hn valid
+  obtain ⟨receiver,hv⟩ := caller_cell caller receiverSlot ty binding v found
+  obtain ⟨r,ran,ret,cost,need,ps⟩ := GenericSumAddApplyRaw.raw_exec_conv ty (callerP caller) binding.address v x n receiver hv hx hn hnt q s hcp hcs hq hs
+  have qs : QS initial [] caller.scalars.baseMemory (caller.scope+1)
+      (ws (callerP caller) (refs binding.address) [cx ty x,cn n]).mem
+      (ws (callerP caller) (refs binding.address) [cx ty x,cn n]).bs (ssl 3) := by
+    refine ⟨by simpa [ssl] using slots,?_,?_,bas,scope⟩
+    · simpa [ws] using mem
+    · simpa [ws,refs,List.range_succ] using bindings
+  have fa : FA initial.frame caller.frame.state.liveSpace caller.frame.state.storage.work
+      (caller.scope+1) caller.frame.state.storage.objects.length := by
+    refine ⟨by rw [frame]; exact valid,by rw [frame]; exact lengths,by rw [frame],by rw [frame],?_,by rw [frame],by rw [frame]⟩
+    intro owner c h
+    rw [frame] at h
+    have := strict owner c h
+    omega
+  have cq : Cq (scalarBound caller initial) (storageBound caller) initial.scalars.work initial := by
+    refine ⟨Nat.le_refl _,?_,?_,?_⟩
+    · change initial.scalars.peak ≤ scalarBound caller initial
+      unfold scalarBound; omega
+    · change initial.frame.state.storage.peak ≤ storageBound caller
+      rw [frame]; exact Nat.le_max_left _ _
+    · change initial.peak ≤ scalarBound caller initial+storageBound caller
+      unfold scalarBound; omega
+  have hbase : caller.scalars.baseMemory ≤ (ws (callerP caller) (refs binding.address) [cx ty x,cn n]).mem.length := by
+    simp [ws,callerP]; omega
+  have run := sound (gSumApply ty).body (by simp [gSumApply, GenericSumAddApplyRaw.rawBody, GenericSumAddApplyRaw.total, GenericSumAddApplyRaw.product, Proofs.GenericLazy.castTo_scalar ty i32 (.variable i32 2) rfl, CppScalarContents.Allowed, Proofs.CppScalarFrame.Scalar, Scalar, NExpr.scalarOnly]) 1 _ r ran
+    (L0:=caller.frame.state.liveSpace) (T0:=caller.frame.state.storage.work)
+    (N:=caller.frame.state.storage.objects.length) (scq:=caller.scope+1)
+    (SPB:=scalarBound caller initial) (TPB:=storageBound caller) (W:=initial.scalars.work)
+    initial qs fa cq hbase
+    (by simp [ws,refs]; unfold scalarBound; omega)
+    (by unfold scalarBound; omega)
+    (Nat.le_refl _) (by exact Nat.le_max_right _ _)
+  obtain ⟨fuel,step,executed,returned,breaking,qsD,faD,cqD⟩ := run
+  have typed : StageState ty caller initial step.state binding.address x s n := by
+    refine ⟨?_,faD,?_,?_,hs,hn⟩
+    · rw [ps] at qsD
+      simpa [ws,resultCells,fields,fieldBindings,ssl,refs] using qsD
+    · refine ⟨?_,cqD.scalarPeak,cqD.storagePeak,cqD.outerPeak⟩
+      have bound := cqD.work
+      rw [work] at bound
+      omega
+    · have stable := CppScalarContents.run_stable fuel (gSumApply ty).body initial step
+        (by simp [gSumApply, GenericSumAddApplyRaw.rawBody, GenericSumAddApplyRaw.total, GenericSumAddApplyRaw.product, Proofs.GenericLazy.castTo_scalar ty i32 (.variable i32 2) rfl, CppScalarContents.Allowed, Proofs.CppScalarFrame.Scalar, Scalar, NExpr.scalarOnly]) (by intro owner c found; rw [frame] at found; have h := strict owner c found; rw [scope]; omega) executed
+      have initialContents : CppScalarContents.Contents caller.frame initial.frame := by
+        rw [frame]; exact ⟨rfl,rfl,rfl,rfl⟩
+      exact initialContents.trans stable.contents
+  refine ⟨initial,fuel,step.state,prepared,?_,typed⟩
+  have stepEq : step = ⟨step.state,none,false⟩ := by
+    cases step
+    simp only [ret,Option.map_none] at returned
+    simp_all
+  exact executed.trans (congrArg (fun q : NStep => Proofs.CppLoop.Outcome.finished q) stepEq)
 def destinationValues (ty : Ty) (x n : Int) (targetConst : Bool) : List Proofs.CppConstructorFinish.ScalarValue :=
   [((cx ty x),!targetConst),((cn n),!targetConst)]
 def exported (ty : Ty) (x n : Int) (caller callee : NState) (targetConst : Bool) : NState :=
@@ -579,6 +649,99 @@ theorem object_export_correct (caller : NState) (targetConst : Bool)
     | some arguments => (gApplyView ty) fuel caller arguments targetConst) = _
   rw [args]
   exact ran
+
+theorem view_export_correct_conv (caller : NState) (targetConst : Bool) (receiverSlot : Nat) (binding : CppState.Binding) (v x n : Int)
+    (found : caller.scalarCell receiverSlot ty = some (binding,cx ty v))
+    (writable : binding.writable = true)
+    (hx : ty.valid x = true) (hn : i32.valid n = true) (hnt : ty.valid n = true)
+    (q s : Int) (hcp : ty.convert (n*v) = some q) (hcs : ty.convert (x+q) = some s)
+    (hq : ty.valid q = true) (hs : ty.valid s = true)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ initial fuel out, prepare caller (gSumApply ty).parameters
+        [.scalarReference receiverSlot,.value (.literal ty x),.value (.literal i32 n)] = some initial ∧
+      (gApplyView ty) fuel caller
+        [.scalarReference receiverSlot,.value (.literal ty x),.value (.literal i32 n)] targetConst =
+          .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 2) ∧
+      ExportState ty s n caller initial out targetConst := by
+  obtain ⟨initial,fuel,callee,prepared,ran,ready⟩ := stage_ready_conv caller receiverSlot binding v x n
+    found writable hx hn hnt q s hcp hcs hq hs valid lengths strict base
+  obtain ⟨fin,post⟩ := finish_export x s n binding.address caller initial callee targetConst ready base
+  refine ⟨initial,fuel,exported ty s n caller callee targetConst,prepared,?_,post⟩
+  exact MemberView.constructView_of_steps (gSumApply ty) fuel caller initial callee _
+    [.scalarReference receiverSlot,.value (.literal ty x),.value (.literal i32 n)] []
+    (gApplyFields ty) [] (gPerm ty targetConst)
+    (Proofs.CppConstructorMultiFinish.reference caller 0 2) none prepared ran (Or.inl rfl) fin
+
+theorem object_export_correct_conv (caller : NState) (targetConst : Bool)
+    (receiverSlot xSlot nSlot : Nat) (binding bx bn : CppState.Binding) (v x n : Int)
+    (found : caller.scalarCell receiverSlot ty = some (binding,cx ty v))
+    (writable : binding.writable = true)
+    (sourceX : caller.scalarCell xSlot ty = some (bx,cx ty x))
+    (sourceN : caller.scalarCell nSlot i32 = some (bn,cn n))
+    (hnt : ty.valid n = true) (q s : Int) (hcp : ty.convert (n*v) = some q) (hcs : ty.convert (x+q) = some s)
+    (hq : ty.valid q = true) (hs : ty.valid s = true)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ initial fuel out,
+      prepare caller (gSumApply ty).parameters
+        [.scalarReference receiverSlot,.value (.literal ty x),.value (.literal i32 n)] = some initial ∧
+      (gApplyObjects ty) fuel caller
+        [⟨[],[receiverSlot]⟩,⟨[],[xSlot,nSlot]⟩] targetConst =
+          .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 2) ∧
+      ExportState ty s n caller initial out targetConst := by
+  have hx := (caller_cell caller xSlot ty bx x sourceX).2
+  have hn := (caller_cell caller nSlot i32 bn n sourceN).2
+  obtain ⟨initial,fuel,out,prepared,ran,post⟩ := view_export_correct_conv caller targetConst receiverSlot binding v x n
+    found writable hx hn hnt q s hcp hcs hq hs valid lengths strict base
+  have args : MemberFactory.objectArguments caller
+      [(false,[(ty,true)]),(true,[(ty,true),(i32,true)])]
+      [⟨[],[receiverSlot]⟩,⟨[],[xSlot,nSlot]⟩] =
+        some [.scalarReference receiverSlot,.value (.literal ty x),.value (.literal i32 n)] := by
+    simp [MemberFactory.objectArguments,MemberFactory.referenceFields,MemberFactory.valueFields,
+      found,sourceX,sourceN,writable,cx,cn]
+  refine ⟨initial,fuel,out,prepared,?_,post⟩
+  change (match MemberFactory.objectArguments caller
+    [(false,[(ty,true)]),(true,[(ty,true),(i32,true)])]
+    [⟨[],[receiverSlot]⟩,⟨[],[xSlot,nSlot]⟩] with
+    | none => Proofs.CppLoop.Outcome.fault
+    | some arguments => (gApplyView ty) fuel caller arguments targetConst) = _
+  rw [args]
+  exact ran
+
+/-- Unsigned products and sums wrap modulo `2^width`: the exported object holds the reduced values. -/
+theorem object_export_wrap (caller : NState) (targetConst : Bool)
+    (receiverSlot xSlot nSlot : Nat) (binding bx bn : CppState.Binding) (v x n : Int)
+    (found : caller.scalarCell receiverSlot ty = some (binding,cx ty v))
+    (writable : binding.writable = true)
+    (sourceX : caller.scalarCell xSlot ty = some (bx,cx ty x))
+    (sourceN : caller.scalarCell nSlot i32 = some (bn,cn n))
+    (hnt : ty.valid n = true)
+    (hb : ty.boolean = false) (hu : ty.signed = false)
+    (valid : caller.frame.state.wellFormed = true)
+    (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
+    (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
+    (base : caller.scalars.baseMemory ≤ caller.scalars.memory.length) :
+    ∃ initial fuel out,
+      prepare caller (gSumApply ty).parameters
+        [.scalarReference receiverSlot,.value (.literal ty x),.value (.literal i32 n)] = some initial ∧
+      (gApplyObjects ty) fuel caller
+        [⟨[],[receiverSlot]⟩,⟨[],[xSlot,nSlot]⟩] targetConst =
+          .finished (out,Proofs.CppConstructorMultiFinish.reference caller 0 2) ∧
+      ExportState ty ((x + (n*v) % 2 ^ ty.width) % 2 ^ ty.width) n caller initial out targetConst := by
+  have pos : (0 : Int) < 2 ^ ty.width := Int.pow_pos (by decide)
+  have red (z : Int) : ty.convert z = some (z % 2 ^ ty.width) ∧ ty.valid (z % 2 ^ ty.width) = true := by
+    have h0 : 0 ≤ z % 2 ^ ty.width := Int.emod_nonneg _ (by omega)
+    have h1 : z % 2 ^ ty.width < 2 ^ ty.width := Int.emod_lt_of_pos _ pos
+    exact ⟨by simp [Ty.convert, hb, hu], by simp [Ty.valid, hb, hu, h0, h1]⟩
+  obtain ⟨cq, vq⟩ := red (n*v)
+  obtain ⟨cs, vs⟩ := red (x + (n*v) % 2 ^ ty.width)
+  exact object_export_correct_conv caller targetConst receiverSlot xSlot nSlot binding bx bn v x n found writable
+    sourceX sourceN hnt _ _ cq cs vq vs valid lengths strict base
 
 /-- A read-only receiver is rejected, for every type and caller. -/
 theorem readonly_receiver_rejected (fuel : Nat) (caller : NState) (targetConst : Bool)
