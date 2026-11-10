@@ -508,6 +508,68 @@ class GenericTemplateFamilyTests(unittest.TestCase):
             self.assertLessEqual(used, standard, line)
 
 
+    def test_original_sum_add_apply_equals_the_ty_family(self):
+        """`RangeAdd::apply` returning a complete `RangeSum` object, for every T."""
+        disable_network()
+        fixture = (ROOT / 'tests/lean/generic_sum_add_apply.lean').read_text()
+        prepare = (ROOT / 'tests/lean/original_member_prepare.lean').read_text()
+        theorem_names, current = [], None
+        for line in fixture.splitlines():
+            if line.startswith('namespace '):
+                current = line.split()[1]
+            elif line.startswith('theorem '):
+                theorem_names.append(f'{current}.{line.split()[1]}')
+        prepare_names = [line.split()[1] for line in prepare.splitlines() if line.startswith('theorem ')]
+        parts, checks, imports = [], [], []
+        with tempfile.TemporaryDirectory(prefix='generic-sum-add-apply-') as directory:
+            count = 0
+            text = (ROOT / 'tests/imports/original_mixed_add_sum.cpp').read_text()
+            for cpp, _, ty in EXTREMA_TYPES:
+                path = Path(directory) / f'witness_{count}.cpp'
+                path.write_text(text.replace('long long', cpp))
+                instance = TemplateInstance((cpp,), path, nested_members=('RangeSum',))
+                receiver = TemplateInstance((cpp,), path, nested_members=('RangeAdd',))
+                generated = layout.emit_class_layout(ORIGINAL, 'RangeAddRangeSum', 'OriginalMemberResult',
+                    [ROOT / 'experiments/library/cpp'], member_exports=True, factory_exports=True,
+                    template_instance=instance, companion_instances=(('RangeAddRangeSum', receiver),),
+                    receiver_methods=((1, 'apply'),))
+                namespace = f'SumApply{count}'
+                lines = generated.replace('OriginalMemberResult', namespace).split('\n')
+                imports = imports or [line for line in lines if line.startswith('import')]
+                parts.append('\n'.join(line for line in lines if not line.startswith('import')))
+                prep = f'MemberPrepareGeneral{count}'
+                parts.append(prepare.replace('MemberPrepareGeneral', prep).replace('OriginalMemberResult', namespace))
+                text_fixture = (fixture.replace('OriginalMemberResult', namespace)
+                                .replace('GenericSumAddApply', f'GenericSumAddApply{count}')
+                                .replace('open MemberPrepareGeneral', f'open {prep}'))
+                parts.append(text_fixture)
+                call = f'GenericSumAddApply{count}Call'
+                checks.append(f'example : {namespace}.«RangeSum_factory_receiver1_apply» = {call}.gSumApply {ty} := rfl')
+                checks.append(f'example : {namespace}.«RangeSum_factory_receiver1_apply_exportViewFuel» = {call}.gApplyView {ty} := rfl')
+                checks.append(f'example : {namespace}.«RangeSum_factory_receiver1_apply_exportObjectsFuel» = {call}.gApplyObjects {ty} := rfl')
+                checks.extend('#print axioms ' + name.replace('GenericSumAddApply', f'GenericSumAddApply{count}') for name in theorem_names)
+                checks.extend(f'#print axioms {prep}.{name}' for name in prepare_names)
+                count += 1
+            lean = Path(directory) / 'sum_apply.lean'
+            lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericLazy\nimport Proofs.MonoidLazyCall\n'
+                            'import Proofs.CppScalarValuePrepare\nimport Proofs.CppScalarContents\nopen Proofs.CppScalar\n' +
+                            '\n'.join(parts) + '\n' + '\n'.join(checks) + '\n')
+            lake, env = lean_environment()
+            result = subprocess.run([lake, 'env', 'lean', str(lean)], cwd=ROOT, env=env,
+                                    capture_output=True, text=True)
+        errors = '\n'.join(line for line in (result.stdout + result.stderr).splitlines() if 'error' in line)
+        self.assertEqual(result.returncode, 0, errors[:3000])
+        self.assertNotIn('sorryAx', result.stdout)
+        standard = {'propext', 'Classical.choice', 'Quot.sound'}
+        reports = [line for line in result.stdout.splitlines() if 'axioms' in line]
+        self.assertGreater(len(reports), 20)
+        for line in reports:
+            if line.endswith('does not depend on any axioms'):
+                continue
+            used = {name.strip() for name in line.split('depends on axioms: [', 1)[1].rstrip(']').split(',')}
+            self.assertLessEqual(used, standard, line)
+
+
 
 if __name__ == '__main__':
     unittest.main()
