@@ -393,7 +393,10 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                  [('x', 'false'), ('size', 'true')]]),
             ('generic_set_compose.lean', 'GenericSetCompose', [
                 ('set', 'RangeSet_compose_v', 'GenericSetComposeAudit.gSetCompose {ty} false'),
-                ('set', 'RangeSet_compose_noop', 'GenericSetComposeAudit.gSetCompose {ty} true')])]
+                ('set', 'RangeSet_compose_noop', 'GenericSetComposeAudit.gSetCompose {ty} true')]),
+            ('generic_set_apply_sum.lean', 'GenericSetApply', [
+                ('set', 'RangeSet_apply_x', 'GenericSetApplyAudit.gSetApply {ty} false'),
+                ('set', 'RangeSet_apply_size', 'GenericSetApplyAudit.gSetApply {ty} true')])]
         parts, checks, imports = [], [], []
         with tempfile.TemporaryDirectory(prefix='generic-set-sum-') as directory:
             count = 0
