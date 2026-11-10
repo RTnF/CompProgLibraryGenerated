@@ -382,7 +382,15 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                 ('add', 'RangeSum_op_x', 'gOp {ty} false'), ('add', 'RangeSum_op_size', 'gOp {ty} true'),
                 ('add', 'RangeAdd_compose', 'gCompose {ty}')]),
             ('generic_set_value_ctor.lean', 'GenericSetValueCtor', [
-                ('set', 'RangeSet_new0_v', 'gNew0 {ty} false'), ('set', 'RangeSet_new0_noop', 'gNew0 {ty} true')])]
+                ('set', 'RangeSet_new0_v', 'gNew0 {ty} false'), ('set', 'RangeSet_new0_noop', 'gNew0 {ty} true')]),
+            ('generic_set_callers.lean', 'GenericSetCallers', [
+                ('set', 'RangeSet_new1_v', 'gSetNew1 {ty} false'), ('set', 'RangeSet_new1_noop', 'gSetNew1 {ty} true'),
+                ('set', 'RangeSet_id_v', 'gSetNew1 {ty} false'), ('set', 'RangeSet_id_noop', 'gSetNew1 {ty} true')] +
+                [('set', f'RangeSum_{op}_{field}', f'@gE {{ty}} {flag}') for op, gen in [('e', 'gE')] for field, flag in
+                 [('x', 'false'), ('size', 'true')]] +
+                [('set', f'RangeSum_{op}_{field}', f'@{gen} {{ty}} {flag}') for op, gen in
+                 [('new1', 'gNew1'), ('new0', 'gNew0'), ('op', 'gOp')] for field, flag in
+                 [('x', 'false'), ('size', 'true')]])]
         parts, checks, imports = [], [], []
         with tempfile.TemporaryDirectory(prefix='generic-set-sum-') as directory:
             count = 0
@@ -406,10 +414,16 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     fixture = (ROOT / 'tests/lean' / name).read_text()
                     theorem_names = [line.split()[1] for line in fixture.splitlines() if line.startswith('theorem ')]
                     renamed = group + str(count)
-                    parts.append(fixture.replace(group, renamed)
-                                 .replace('CopiedScalarFieldsAudit', f'CopiedScalarFieldsAudit{count}'))
+                    text = fixture.replace(group, renamed).replace('CopiedScalarFieldsAudit', f'CopiedScalarFieldsAudit{count}')
+                    if group != 'GenericAddSum':
+                        text = text.replace('open GenericAddSum', f'open GenericAddSum{count}')
+                    parts.append(text)
                     for key, generated, family in programs:
-                        checks.append(f'example : {namespaces[key]}.«{generated}» = {renamed}.{family.format(ty=ty)} := rfl')
+                        if family.startswith('@'):
+                            target = f'GenericAddSum{count}.{family[1:].format(ty=ty)}'
+                        else:
+                            target = f'{renamed}.{family.format(ty=ty)}'
+                        checks.append(f'example : {namespaces[key]}.«{generated}» = {target} := rfl')
                     checks.extend(f'#print axioms {renamed}.{theorem}' for theorem in theorem_names)
                 count += 1
             lean = Path(directory) / 'sum.lean'
