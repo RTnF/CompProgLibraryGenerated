@@ -390,7 +390,10 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                  [('x', 'false'), ('size', 'true')]] +
                 [('set', f'RangeSum_{op}_{field}', f'@{gen} {{ty}} {flag}') for op, gen in
                  [('new1', 'gNew1'), ('new0', 'gNew0'), ('op', 'gOp')] for field, flag in
-                 [('x', 'false'), ('size', 'true')]])]
+                 [('x', 'false'), ('size', 'true')]]),
+            ('generic_set_compose.lean', 'GenericSetCompose', [
+                ('set', 'RangeSet_compose_v', 'GenericSetComposeAudit.gSetCompose {ty} false'),
+                ('set', 'RangeSet_compose_noop', 'GenericSetComposeAudit.gSetCompose {ty} true')])]
         parts, checks, imports = [], [], []
         with tempfile.TemporaryDirectory(prefix='generic-set-sum-') as directory:
             count = 0
@@ -412,7 +415,12 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                 parts.append(copy_fields.replace('CopiedScalarFieldsAudit', f'CopiedScalarFieldsAudit{count}'))
                 for name, group, programs in fixtures:
                     fixture = (ROOT / 'tests/lean' / name).read_text()
-                    theorem_names = [line.split()[1] for line in fixture.splitlines() if line.startswith('theorem ')]
+                    theorem_names, current = [], group
+                    for line in fixture.splitlines():
+                        if line.startswith('namespace '):
+                            current = line.split()[1]
+                        elif line.startswith('theorem '):
+                            theorem_names.append(f'{current}.{line.split()[1]}')
                     renamed = group + str(count)
                     text = fixture.replace(group, renamed).replace('CopiedScalarFieldsAudit', f'CopiedScalarFieldsAudit{count}')
                     if group != 'GenericAddSum':
@@ -421,10 +429,12 @@ class GenericTemplateFamilyTests(unittest.TestCase):
                     for key, generated, family in programs:
                         if family.startswith('@'):
                             target = f'GenericAddSum{count}.{family[1:].format(ty=ty)}'
+                        elif family.startswith(group):
+                            target = family.replace(group, renamed, 1).format(ty=ty)
                         else:
                             target = f'{renamed}.{family.format(ty=ty)}'
                         checks.append(f'example : {namespaces[key]}.«{generated}» = {target} := rfl')
-                    checks.extend(f'#print axioms {renamed}.{theorem}' for theorem in theorem_names)
+                    checks.extend('#print axioms ' + theorem.replace(group, renamed, 1) for theorem in theorem_names)
                 count += 1
             lean = Path(directory) / 'sum.lean'
             lean.write_text('\n'.join(imports) + '\nimport Proofs.GenericLazy\nimport Proofs.MonoidLazyCall\n'
