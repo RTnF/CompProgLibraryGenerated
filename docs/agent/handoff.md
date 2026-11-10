@@ -135,3 +135,5 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - [元template class](../original_template_classes.md)、[class copy/constructor監査](../class_copy_audit.md)、[Beats候補](../beats_wide_candidate.md)、[信頼境界](../trust_policy.md)
 - [CI/リリース記録](ci_release_handoff_20261103.md)は過去の経過資料。現行のpush粒度と再開地点はこの文書を優先する。
 - 古い履歴は [11月1日以前](handoff_history_20261101.md)。今回の上書き前snapshotは `.cache/wip/library_layout_20261108/handoff_before.md`（ローカルのみ）。
+
+- 2026-11-10: `Proofs/GenericCall|GenericLazy|GenericExtrema|SortPairsFrame` を `verifier/support.toml` の `lean_modules` に登録し、`verification/statements.json` を再生成（`NStmt` の sortPairs 追加分の既存ダイジェスト変更を受け入れ）。`tools/check_proof_security.py` 成功（約750秒、フル再構築時）。`monoid_lazy.hpp` は未完（`[x]` 未記入）。
