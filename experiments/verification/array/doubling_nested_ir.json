@@ -248,6 +248,7 @@
          "width": 32
         },
         "kind": "local",
+        "pair": false,
         "slot": 0,
         "writable": false
        },
@@ -306,6 +307,7 @@
          "width": 32
         },
         "kind": "local",
+        "pair": false,
         "slot": 0,
         "writable": false
        },
@@ -374,6 +376,7 @@
                "width": 32
               },
               "kind": "local",
+              "pair": false,
               "slot": 0,
               "writable": false
              },
@@ -425,6 +428,7 @@
                "width": 32
               },
               "kind": "local",
+              "pair": false,
               "slot": 0,
               "writable": false
              },
@@ -645,6 +649,7 @@
         }
        },
        "kind": "local",
+       "pair": false,
        "slot": 5,
        "writable": true
       },
@@ -719,6 +724,7 @@
               }
              },
              "kind": "local",
+             "pair": false,
              "slot": 5,
              "writable": true
             },
@@ -806,6 +812,7 @@
                     }
                    },
                    "kind": "local",
+                   "pair": false,
                    "slot": 5,
                    "writable": true
                   },
@@ -869,6 +876,7 @@
                      }
                     },
                     "kind": "local",
+                    "pair": false,
                     "slot": 5,
                     "writable": true
                    },
@@ -933,6 +941,7 @@
                        }
                       },
                       "kind": "local",
+                      "pair": false,
                       "slot": 5,
                       "writable": true
                      },
