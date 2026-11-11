@@ -760,3 +760,5 @@ import Proofs.Generated.PowMod
 import Proofs.Cpp.PowMod
 import Proofs.Generated.InvGcd
 import Proofs.Cpp.InvGcd
+import Proofs.Generated.RunLength
+import Proofs.Cpp.RunLength
