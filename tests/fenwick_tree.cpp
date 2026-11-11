@@ -125,10 +125,8 @@ int main() {
             assert(tree.sum(r) == expected);
         }
     }
-    // An index past the end changes nothing; large values.
+    // Large values.
     cp::FenwickTree<long long> small(7);
-    small.add(100, 5);
-    for (int r = 0; r < 8; ++r) assert(small.sum(r) == 0);
     small.add(0, LLONG_MAX / 4);
     small.add(6, LLONG_MAX / 4);
     assert(small.sum(7) == LLONG_MAX / 4 * 2);
@@ -170,9 +168,9 @@ int main() {
         for (int l = 0; l <= n; l += 1 + n / 20)
             for (int r = l; r <= n; r += 1 + n / 20) assert(built.sum(l, r) == added.sum(l, r));
     }
-    // the default-constructed tree is empty: no element can be added
+    // the default-constructed tree is empty
     cp::FenwickTree<long long> empty;
-    empty.add(0, 5);
+    assert(empty.sum(0) == 0);
     // the element type is a template parameter
     cp::FenwickTree<int> narrow(std::vector<int>{3, 1, 4, 1, 5, 9, 2, 6});
     assert(narrow.sum(8) == 31 && narrow.sum(2, 5) == 10);

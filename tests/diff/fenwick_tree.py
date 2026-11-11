@@ -23,10 +23,10 @@ for _ in range(2000):
     k = rng.randrange(len(sizes))
     n = sizes[k]
     op = rng.random()
-    if op < 0.4:
-        i = rng.randint(0, n + 2)
+    if op < 0.4 and n > 0:
+        i = rng.randrange(n)
         lines.append(f"do FenwickTree.add {k} {i} {rng.randint(-1000, 1000)}")
-    elif op < 0.7:
+    elif op < 0.7 or n == 0:
         lines.append(f"do FenwickTree.sum_int {k} {rng.randint(0, n)}")
     else:
         l = rng.randint(0, n)

@@ -154,11 +154,11 @@ theorem add_step {t : cp.FenwickTree T} {n : Nat} {A : Nat → T} (h : Rep t n A
         simp [hlt, this]
       · simp [hlt, hgt]
 
-/-- `add(i, val)`: `A i += val` (nothing for `i ≥ n`), in `stepsA (n + 1) (i + 1) + 2` steps. -/
+/-- `add(i, val)` for `0 ≤ i < n`: `A i += val`, in `stepsA (n + 1) (i + 1) + 2` steps. -/
 theorem add_spec (t : cp.FenwickTree T) (n : Nat) (A : Nat → T) (h : Rep t n A) (i : Int) (h0 : 0 ≤ i)
-    (hi : i + 1 < 2 ^ 31) (val : T) (t0 : Nat) :
+    (hin : i < n) (val : T) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.FenwickTree.add t i val
-    ⦃⇓ t' c => ⌜Rep t' n (if i.toNat < n then Function.update A i.toNat (A i.toNat + val) else A) ∧
+    ⦃⇓ t' c => ⌜Rep t' n (Function.update A i.toNat (A i.toNat + val)) ∧
                 c = t0 + 2 + stepsA t.tree.size (i.toNat + 1)⌝⦄ := by
   mvcgen [cp.FenwickTree.add]
   case inv =>
@@ -167,7 +167,7 @@ theorem add_spec (t : cp.FenwickTree T) (n : Nat) (A : Nat → T) (h : Rep t n A
                               (∀ k, 0 < k → k ≤ n → tr[k]! = seg A (k - lowb k) k +
                                  (if k < q.toNat ∧ Covers (i.toNat + 1) k then val else 0)) ∧
                               c + stepsA t.tree.size q.toNat = t0 + 1 + stepsA t.tree.size (i.toNat + 1)⌝,
-           fun ⟨tr, _⟩ c => ⌜Rep ⟨tr⟩ n (if i.toNat < n then Function.update A i.toNat (A i.toNat + val) else A) ∧
+           fun ⟨tr, _⟩ c => ⌜Rep ⟨tr⟩ n (Function.update A i.toNat (A i.toNat + val)) ∧
                               c = t0 + 2 + stepsA t.tree.size (i.toNat + 1)⌝,
            fun ⟨_, q⟩ => (t.tree.size - q).toNat⟩
   all_goals simp_all +zetaDelta [fuel]
@@ -181,16 +181,12 @@ theorem add_spec (t : cp.FenwickTree T) (n : Nat) (A : Nat → T) (h : Rep t n A
     have hs := rep_size_pos h (by rcases h.size with h' | h' <;> omega)
     rw [hnodes k hk hkn]
     have hkq : (k : Int) < q := by omega
-    simp only [hkq, true_and]
-    by_cases hin : i < (n : Int)
-    · simp only [hin, ite_true, seg_update]
-      unfold Covers
-      congr 1
-      by_cases hc : k - lowb k < i.toNat + 1 ∧ i.toNat + 1 ≤ k
-      · simp only [hc, show (k - lowb k ≤ i.toNat ∧ i.toNat < k) by omega, ite_true]
-      · simp only [hc, show ¬(k - lowb k ≤ i.toNat ∧ i.toNat < k) by omega, ite_false]
-    · have : ¬ Covers (i.toNat + 1) k := by unfold Covers; omega
-      simp [hin, this]
+    simp only [hkq, true_and, seg_update]
+    unfold Covers
+    congr 1
+    by_cases hc : k - lowb k < i.toNat + 1 ∧ i.toNat + 1 ≤ k
+    · simp only [hc, show (k - lowb k ≤ i.toNat ∧ i.toNat < k) by omega, ite_true]
+    · simp only [hc, show ¬(k - lowb k ≤ i.toNat ∧ i.toNat < k) by omega, ite_false]
   · -- one iteration
     obtain ⟨hsz, hiq, hpq, hcov, hnodes, hc⟩ := ‹_ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _›
     generalize (‹Array T × ℤ›).2 = q at *

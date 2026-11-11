@@ -10,7 +10,7 @@ namespace cp {
 // FenwickTree<long long>.
 // Differences from the original: std:: qualification and the namespace only.
 // Preconditions: n >= 0 and v.size() < 2^31 - 1; for sum, 0 <= r < tree.size() and 0 <= l <= r; for add,
-// 0 <= i < 2^31 - 1 (an index past the end changes nothing); every intermediate sum fits in T.
+// 0 <= i < n; every intermediate sum fits in T.
 template <class T = long long> class FenwickTree {
   std::vector<T> tree; // 1-indexed
 public:
