@@ -808,4 +808,158 @@ theorem loop_run (F : Fix) (ok : FixOK F) (W : Nat) (positive : 0 < F.X.length) 
     have : F.X.getD t 0 = F.X[t] := by simp [List.getD_eq_getElem?_getD,item]
     rw [this,mathT]
 
+/-! ## After the loop: close the last run and return `ret` -/
+
+def cellsC (ty : Ty) (n : Nat) (pre : Int) (cnt : Nat) : List Cell := [⟨ti,(n : Int)⟩,⟨ty,pre⟩,⟨ti,(cnt : Int)⟩]
+
+theorem envC {s : NState} {P : List Cell} {B scope : Nat} {ty : Ty} {n : Nat} {pre : Int} {cnt : Nat}
+    (sh : Sh s P B slotsC (cellsC ty n pre cnt) (bindsC P) scope)
+    (hpre : ty.valid pre = true) (hc : cnt < 2147483648) :
+    envOf s 3 ty = some pre ∧ envOf s 4 ti = some (cnt : Int) := by
+  refine ⟨?_,?_⟩
+  · exact Proofs.DoublingNested.envOf_at s 3 1 ⟨P.length+1,true⟩ ty _ (by simp [sh.slots,slotsC,slotsP,slotsN])
+      (by simp [sh.bindings,bindsC,bindsP,bindsN]) (by simp [sh.memory,cellsC]) hpre
+  · exact Proofs.DoublingNested.envOf_at s 4 2 ⟨P.length+2,true⟩ ti _ (by simp [sh.slots,slotsC,slotsP,slotsN])
+      (by simp [sh.bindings,bindsC,bindsP,bindsN]) (by simp [sh.memory,cellsC]) (i32_valid_nat cnt hc)
+
+/-- The returned state: `ret` holds the encoding of `v`. -/
+def Final (F : Fix) (W : Nat) (step : NStep) : Prop :=
+  step.returned = some (.vector F.R (.vector (.integer F.ty))) ∧ step.breaking = false ∧
+    St F step.state (rle F.X) ∧ Cb F step.state ∧ step.state.scope = F.sc ∧
+    (∃ cells, step.state.scalars.memory = F.P ++ cells ∧ cells.length ≤ 3) ∧
+    step.state.scalars.bindings.length ≤ 3 ∧ step.state.scalars.baseMemory = F.B ∧
+    step.state.scalars.work ≤ W
+
+theorem retVector_run (F : Fix) (s : NState) (C : List (Int × Nat)) (st : St F s C)
+    (slots : s.slots[1]? = some (.vector 1)) :
+    (NStmt.retVector 1).run s = some ⟨s.charge 1 0,some (.vector F.R (.vector (.integer F.ty))),false⟩ := by
+  have bound := st.family.bindings (pr F.ty F.R F.sc) (pr_mem F)
+  simp only [pr,Parameter.binding] at bound
+  simp [NStmt.run,NState.vectorSlot,slots,bound]
+
+theorem cb_charge (F : Fix) (s : NState) (C : List (Int × Nat)) (st : St F s C) (cb : Cb F s) (k : Nat)
+    (live : liveS s ≤ F.SPB) : Cb F (s.charge k 0) := by
+  have := cb.scalarPeak; have := cb.peak; have := st.storagePeak
+  simp only [liveS] at live
+  refine ⟨?_,?_⟩
+  · rw [charge_scalar_peak]; omega
+  · rw [charge_peak]; omega
+
+theorem tail_run (F : Fix) (ok : FixOK F) (G : NState) (C : List (Int × Nat)) (pre : Int) (cnt : Nat) (W : Nat)
+    (sh : Sh G F.P F.B slotsC (cellsC F.ty F.X.length pre cnt) (bindsC F.P) F.sc)
+    (st : St F G C) (cb : Cb F G) (math : rle F.X = C ++ [(pre,cnt)]) (hpre : F.ty.valid pre = true)
+    (hc : cnt ≤ F.X.length) (work : G.scalars.work ≤ W) :
+    RunsTo (tailC F.ty F.cv) G (Final F (W+12)) := by
+  have small := ok.small
+  have lenR := rle_length_le F.X
+  rw [math] at lenR
+  have len : C.length < F.X.length := by simp at lenR; omega
+  obtain ⟨ep,ec⟩ := envC sh hpre (by omega)
+  have liveG : liveS G+40 ≤ F.SPB := by
+    rw [liveS_sh sh]; have := ok.spb; have := ok.baseLe; simp [cellsC,bindsC,bindsP,bindsN]; omega
+  have slot1 : G.slots[1]? = some (.vector 1) := by simp [sh.slots,slotsC,slotsP,slotsN]
+  obtain ⟨t1,b0,b1,run1,fam1,f0,f1,i0,i1,c0,c1,l0,l1,lv,wk,base1,forest1,fb1,tp1,sl1,sc1,me1,bi1,ba1,wl1,wu1,cb1⟩ :=
+    append0 F ok G C pre st cb slot1 (by simpa [NExpr.denote] using ep) hpre len (by omega)
+  have sh1 : Sh t1 F.P F.B slotsC (cellsC F.ty F.X.length pre cnt) (bindsC F.P) F.sc :=
+    ⟨by rw [sl1]; exact sh.slots,by rw [me1]; exact sh.memory,by rw [bi1]; exact sh.bindings,
+      by rw [ba1]; exact sh.base,by rw [sc1]; exact sh.scope⟩
+  have ec1 := (envC sh1 hpre (by omega)).2
+  obtain ⟨t2,run2,st2,forest2,fb2,sl2,sc2,me2,bi2,ba2,wl2,wu2,cb2⟩ :=
+    append1 F ok t1 C pre cnt b0 b1 fam1 f0 f1 i0 i1 c0 c1 l0 l1 lv wk base1
+      (by rw [forest1]; exact st.context) (by rw [fb1]; exact st.frameBindings) tp1 cb1
+      (by rw [sl1]; exact slot1) ec1 (by omega) len (by rw [liveS_sh sh1]; rw [liveS_sh sh] at liveG; omega)
+  rw [← math] at st2
+  have sh2 : Sh t2 F.P F.B slotsC (cellsC F.ty F.X.length pre cnt) (bindsC F.P) F.sc :=
+    ⟨by rw [sl2]; exact sh1.slots,by rw [me2]; exact sh1.memory,by rw [bi2]; exact sh1.bindings,
+      by rw [ba2]; exact sh1.base,by rw [sc2]; exact sh1.scope⟩
+  have run3 := retVector_run F t2 _ st2 (by rw [sh2.slots]; simp [slotsC,slotsP,slotsN])
+  have st3 : St F (t2.charge 1 0) (rle F.X) := st_frame st2 st2.family rfl st2.frameBindings
+  have cb3 := cb_charge F t2 _ st2 cb2 1 (by rw [liveS_sh sh2]; rw [liveS_sh sh] at liveG; omega)
+  apply RunsTo.seq
+  refine RunsTo.primitive run1 ⟨rfl,rfl,?_⟩
+  apply RunsTo.seq
+  refine RunsTo.primitive run2 ⟨rfl,rfl,?_⟩
+  apply RunsTo.sequence
+  have bl : (t2.charge 1 0).scalars.bindings.length ≤ 3 := by
+    rw [charge_bindings,sh2.bindings]; simp [bindsC,bindsP,bindsN]
+  have wk3 : (t2.charge 1 0).scalars.work ≤ W+12 := by rw [charge_work]; omega
+  exact RunsTo.primitive run3 (Or.inl ⟨Or.inl rfl,rfl,rfl,st3,cb3,sh2.scope,⟨cellsC F.ty F.X.length pre cnt,
+    sh2.memory,by simp [cellsC]⟩,bl,sh2.base,wk3⟩)
+
+theorem Final.mono {F : Fix} {W W' : Nat} {step : NStep} (final : Final F W step) (le : W ≤ W') :
+    Final F W' step := by
+  obtain ⟨r,b,st,cb,sc,mem,bl,base,work⟩ := final
+  exact ⟨r,b,st,cb,sc,mem,bl,base,by omega⟩
+
+theorem runs_weaken {command : Command} {s : NState} {F : Fix} {W W' : Nat}
+    (run : RunsTo command s (Final F W)) (le : W ≤ W') : RunsTo command s (Final F W') :=
+  run.mono fun _ final => final.mono le
+
+/-- The `for` loop with its scope, then the tail. -/
+theorem rest_run (F : Fix) (ok : FixOK F) (D : NState) (x0 : Int) (W : Nat)
+    (sh : Sh D F.P F.B slotsC (cellsC F.ty F.X.length x0 0) (bindsC F.P) F.sc)
+    (st : St F D []) (cb : Cb F D) (positive : 0 < F.X.length) (first : F.X[0]? = some x0)
+    (work : D.scalars.work ≤ W) :
+    RunsTo (.sequence (loopC F.ty F.cv) (tailC F.ty F.cv)) D (Final F (W+90*F.X.length+25)) := by
+  have small := ok.small
+  have x0v : F.ty.valid x0 = true := ok.valid x0 (List.mem_of_getElem? first)
+  have z : ti.valid 0 = true := by simpa using i32_valid_nat 0 (by omega)
+  obtain ⟨L0,run0,fam0,state0,rights0,fb0,sl0,sc0,me0,bi0,ba0,wl0,wu0,pl0,pu0,ql0,qu0⟩ :=
+    FamilySteps.declare (s := {D with scope := D.scope+1}) st.family (.literal ti 0) ti true 0 0
+      (by rw [denote_scalar _ _ _ _ (by simp [NExpr.scalarOnly])]; simp [NExpr.denote,z])
+      (Ty.convert_of_valid _ _ z)
+  have sh0 : Sh L0 F.P F.B slotsI (cellsI F.ty F.X.length x0 0 0) (bindsI F.P) (F.sc+1) := by
+    refine ⟨?_,?_,?_,?_,?_⟩
+    · rw [sl0]; show D.slots ++ [.scalar D.scalars.bindings.length] = _
+      rw [sh.slots,sh.bindings]; simp [slotsI,slotsC,slotsP,slotsN,bindsC,bindsP,bindsN]
+    · rw [me0]; show D.scalars.memory ++ _ = _
+      rw [sh.memory]; simp [cellsI,cellsC]
+    · rw [bi0]; show D.scalars.bindings ++ [⟨D.scalars.memory.length,true⟩] = _
+      rw [sh.bindings,sh.memory]; simp [bindsI,bindsC,bindsP,bindsN,cellsC]
+    · rw [ba0]; exact sh.base
+    · rw [sc0]; show D.scope+1 = _; rw [sh.scope]
+  have st0 : St F L0 [] := st_frame st fam0 state0 (by rw [fb0]; exact st.frameBindings)
+  have liveD : liveS D+40 ≤ F.SPB := by
+    rw [liveS_sh sh]; have := ok.spb; have := ok.baseLe; simp [cellsC,bindsC,bindsP,bindsN]; omega
+  have cb0 : Cb F L0 := by
+    have := cb.scalarPeak; have := cb.peak; have := st0.storagePeak
+    have e : liveS {D with scope := D.scope+1} = liveS D := rfl
+    have pu0' : L0.scalars.peak ≤ max D.scalars.peak (liveS D+2*1+2) := by simpa [NExpr.nodes,e] using pu0
+    have qu0' : L0.peak ≤ max D.peak (L0.scalars.peak+L0.frame.state.storage.peak) := qu0
+    exact ⟨by omega,by omega⟩
+  have head : Head F L0.scalars.work L0 0 := by
+    refine ⟨[],x0,0,sh0,st0,cb0,?_,by simp,by omega,x0v,by omega,by omega⟩
+    have : F.X.getD 0 0 = x0 := by rw [List.getD_eq_getElem?_getD,first]; rfl
+    rw [show rleExt F.X 0 = [(F.X.getD 0 0,0)] by simp [rleExt],this]; rfl
+  have loop := loop_run F ok L0.scalars.work positive F.X.length F.X.length L0 (Nat.le_refl _) ⟨0,by omega,head⟩
+  have w0 : L0.scalars.work ≤ W+3 := by
+    have : L0.scalars.work ≤ D.scalars.work+2*(NExpr.literal ti 0).nodes+1 := wu0
+    simp [NExpr.nodes] at this; omega
+  apply RunsTo.seq
+  apply RunsTo.scopeSimple
+  apply RunsTo.seq
+  refine RunsTo.primitive run0 ⟨rfl,rfl,?_⟩
+  apply RunsTo.seq
+  apply loop.mono
+  intro E ⟨er,eb,C,pre,cnt,shE,stE,cbE,math,lenC,hc,hpre,workE⟩
+  refine ⟨er,eb,RunsTo.skip ⟨rfl,rfl,?_⟩⟩
+  have fits : D.scalars.memory.length ≤ E.state.scalars.memory.length := by
+    rw [shE.memory,sh.memory]; simp [cellsC,cellsI]
+  have takeE : E.state.scalars.memory.take D.scalars.memory.length = F.P ++ cellsC F.ty F.X.length pre cnt := by
+    rw [shE.memory,sh.memory]
+    have : (F.P ++ cellsC F.ty F.X.length x0 0).length = (F.P ++ cellsC F.ty F.X.length pre cnt).length := by
+      simp [cellsC]
+    rw [this,show F.P ++ cellsI F.ty F.X.length pre cnt F.X.length =
+      (F.P ++ cellsC F.ty F.X.length pre cnt) ++ [⟨ti,(F.X.length : Int)⟩] by simp [cellsI,cellsC]]
+    exact List.take_left
+  have types : (E.state.scalars.memory.take D.scalars.memory.length).map Cell.type = D.scalars.memory.map Cell.type := by
+    rw [takeE,sh.memory]; simp [cellsC]
+  obtain ⟨leave,stG,cbG,workG,_,_⟩ := leave_take F ok D E.state C stE cbE cb fits types st.frameBindings
+    (Nat.le_of_eq sh.scope.symm) (by omega) (by omega)
+  have shG : Sh (D.left E.state) F.P F.B slotsC (cellsC F.ty F.X.length pre cnt) (bindsC F.P) F.sc :=
+    ⟨by simp [sh.slots],by simp only [left_memory]; exact takeE,by simp [sh.bindings],by simp [sh.base],
+      by simp [sh.scope]⟩
+  refine ⟨D.left E.state,leave,rfl,rfl,?_⟩
+  exact runs_weaken (tail_run F ok (D.left E.state) C pre cnt _ shG stG cbG math hpre hc (Nat.le_refl _)) (by omega)
+
 end Proofs.ElementCountExec
