@@ -316,6 +316,9 @@ import Proofs.UfUniteCall
 import Proofs.FenwickTreeExec
 import Proofs.FenwickTreeVecCall
 import Proofs.FenwickTreeCall
+import Proofs.Generated.FenwickTree
+import Proofs.Cpp.Lib.Lowbit
+import Proofs.Cpp.FenwickTree
 import Proofs.UfFindCall
 import Proofs.UfCounterCall
 import Proofs.UnionFindCall

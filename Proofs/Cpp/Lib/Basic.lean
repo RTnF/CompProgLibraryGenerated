@@ -64,3 +64,24 @@ theorem getElem!_set {α : Type} [Inhabited α] (v : Array α) (i : Int) (x : α
 theorem get_eq {α : Type} [Inhabited α] (v : Array α) (i : Int) : get v i = v[i.toNat]! := rfl
 
 end Proofs.Cpp
+
+namespace Proofs.Cpp
+
+/-- The element at a cursor of `range a b` is `a` plus the length of the prefix. -/
+theorem range_cursor {a b cur : Int} {pref suff : List Int} (h : range a b = pref ++ cur :: suff) :
+    cur = a + pref.length := by
+  have hl : pref.length < (range a b).length := by rw [h]; simp
+  have e := congrArg (fun l => l[pref.length]?) h
+  simp only [List.getElem?_append_right (Nat.le_refl pref.length), Nat.sub_self, List.getElem?_cons_zero] at e
+  simp only [range, List.length_map, List.length_range] at e hl
+  rw [List.getElem?_map, List.getElem?_range hl] at e
+  simp at e
+  omega
+
+theorem range_prefix_length {a b : Int} {pref suff : List Int} {cur : Int} (h : range a b = pref ++ cur :: suff) :
+    pref.length < (b - a).toNat := by
+  have := congrArg List.length h
+  simp [range] at this
+  omega
+
+end Proofs.Cpp

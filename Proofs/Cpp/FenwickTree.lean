@@ -1,6 +1,7 @@
 import Proofs.Cpp.Gen.FenwickTree
 import Proofs.Cpp.Lib.Basic
 import Proofs.Cpp.Lib.Lowbit
+import Proofs.FenwickBuildMath
 
 
 /-! # `FenwickTree<T>` (library/segment_tree/fenwick_tree.hpp)
@@ -34,6 +35,11 @@ structure Rep (t : cp.FenwickTree T) (n : Nat) (A : Nat → T) : Prop where
 theorem stepsS_succ (r : Nat) (hr : 0 < r) : stepsS r = 1 + stepsS (r - lowb r) := by
   obtain ⟨r', rfl⟩ : ∃ r', r = r' + 1 := ⟨r - 1, by omega⟩
   rw [stepsS]
+
+theorem log2_mono' (a b : Nat) (h : a ≤ b) : Nat.log2 a ≤ Nat.log2 b := by
+  rcases Nat.eq_zero_or_pos a with ha | ha
+  · subst ha; simp [Nat.log2_zero]
+  · exact log2_mono a b ha h
 
 theorem stepsS_le_log (r : Nat) : stepsS r ≤ Nat.log2 r + 1 := by
   rcases Nat.eq_zero_or_pos r with h | h
@@ -215,5 +221,183 @@ theorem add_spec (t : cp.FenwickTree T) (n : Nat) (A : Nat → T) (h : Rep t n A
       simp only [this, ite_false, add_zero]
     · have := h.bound
       rcases h.size with h' | h' <;> omega
+
+/-- `FenwickTree()`: the tree of the empty array. -/
+theorem init_0_spec (A : Nat → T) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ (cp.FenwickTree.init_0 : Cpp.M (cp.FenwickTree T))
+    ⦃⇓ t c => ⌜Rep t 0 A ∧ c = t0 + 1⌝⦄ := by
+  mvcgen [cp.FenwickTree.init_0]
+  simp_all
+  exact ⟨by norm_num, Or.inr ⟨rfl, rfl⟩, fun k hk hkn => by omega⟩
+
+/-- `FenwickTree(n)`: the tree of `n` zeros (`T()` is `0`), in `n + 2` steps. -/
+theorem init_int_spec (hd : (default : T) = 0) (n : Int) (h0 : 0 ≤ n) (hn : n + 1 < 2 ^ 31) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ (cp.FenwickTree.init_int n : Cpp.M (cp.FenwickTree T))
+    ⦃⇓ t c => ⌜Rep t n.toNat (fun _ => 0) ∧ c = t0 + 1 + (n.toNat + 1)⌝⦄ := by
+  mvcgen [cp.FenwickTree.init_int]
+  simp_all +zetaDelta [replicate]
+  refine ⟨⟨by omega, Or.inl (by simp; omega), fun k hk hkn => ?_⟩, by omega⟩
+  simp [getElem!_pos, show k < (n + 1).toNat by omega, seg]
+
+/-- The state of the second loop of the vector constructor before node `k` is pushed up: nodes below `k`
+are complete; node `t ≥ k` holds `A (t - 1)` and the part `[t - lowb t, Wc t k)` of its range. -/
+def BuildInv (A : Nat → T) (n k : Nat) (tr : Array T) : Prop :=
+  ∀ t, 0 < t → t ≤ n → tr[t]! =
+    if t < k then seg A (t - lowb t) t else A (t - 1) + seg A (t - lowb t) (Proofs.FenwickBuildMath.Wc t k)
+
+theorem seg_last (A : Nat → T) (a k : Nat) (h : a < k) : A (k - 1) + seg A a (k - 1) = seg A a k := by
+  rw [← seg_consecutive A (by omega : a ≤ k - 1) (by omega : k - 1 ≤ k), add_comm]
+  congr 1
+  simp [seg, show k - (k - 1) = 1 by omega]
+
+theorem build_step (A : Nat → T) (n k : Nat) (tr : Array T) (hsz : tr.size = n + 1) (hk : 0 < k) (hkn : k < n)
+    (h : BuildInv A n k tr) :
+    BuildInv A n (k + 1)
+      (if k + lowb k < n + 1 then set tr (↑(k + lowb k)) (get tr ↑(k + lowb k) + get tr ↑k) else tr) := by
+  have hL := lowb_pos k hk
+  have hLn := lowb_next k hk
+  have hLk := lowb_le k hk
+  have hWj := Proofs.FenwickBuildMath.Wc_at_j k hk
+  intro t ht htn
+  have hfull : ∀ t, 0 < t → t ≤ n → t ≤ k → tr[t]! = seg A (t - lowb t) t := by
+    intro t ht htn htk
+    rw [h t ht htn]
+    by_cases hlt : t < k
+    · simp [hlt]
+    · have : t = k := by omega
+      subst this
+      simp only [lt_irrefl, ite_false, Proofs.FenwickBuildMath.Wc_self t ht]
+      exact seg_last A _ t (by omega)
+  have hrhs : (if t < k + 1 then seg A (t - lowb t) t
+      else A (t - 1) + seg A (t - lowb t) (Proofs.FenwickBuildMath.Wc t (k + 1))) =
+      (if t ≤ k then seg A (t - lowb t) t
+      else A (t - 1) + seg A (t - lowb t) (Proofs.FenwickBuildMath.Wc t (k + 1))) := by
+    by_cases h' : t ≤ k
+    · simp [h', show t < k + 1 by omega]
+    · simp [h', show ¬ t < k + 1 by omega]
+  rw [hrhs]
+  by_cases hj : k + lowb k < n + 1
+  · simp only [hj, ite_true]
+    rw [getElem!_set _ _ _ _ (by simp; omega)]
+    simp only [Int.toNat_natCast]
+    by_cases htj : t = k + lowb k
+    · subst htj
+      simp only [ite_true, show ¬ k + lowb k ≤ k by omega, ite_false, get_eq, Int.toNat_natCast]
+      rw [h (k + lowb k) (by omega) (by omega), hfull k hk (by omega) (le_refl _),
+        if_neg (by omega), hWj.1, hWj.2, add_assoc, seg_consecutive A (by omega) (by omega)]
+    · simp only [htj, ite_false]
+      by_cases htk : t ≤ k
+      · simp [htk, hfull t ht htn htk]
+      · simp only [htk, ite_false]
+        rw [h t ht htn, if_neg (by omega), Proofs.FenwickBuildMath.Wc_same t k hk (by omega) htj]
+  · simp only [hj, ite_false]
+    have htj : t ≠ k + lowb k := by omega
+    by_cases htk : t ≤ k
+    · simp [htk, hfull t ht htn htk]
+    · simp only [htk, ite_false]
+      rw [h t ht htn, if_neg (by omega), Proofs.FenwickBuildMath.Wc_same t k hk (by omega) htj]
+
+/-- `FenwickTree(v)`: the tree of `A j = v[j]` (`T()` is `0`), in at most `3 n + 2` steps. -/
+theorem init_vec_spec (v : Array T) (hn : v.size + 1 < 2 ^ 31) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.FenwickTree.init_vec v
+    ⦃⇓ t c => ⌜Rep t v.size (fun j => v[j]!) ∧ c ≤ t0 + 3 * v.size + 2⌝⦄ := by
+  mvcgen [cp.FenwickTree.init_vec]
+  case inv1 =>
+    exact ⇓⟨xs, tr⟩ c => ⌜tr.size = v.size + 1 ∧ (∀ t, 0 < t → t ≤ xs.prefix.length → tr[t]! = v[t - 1]!) ∧
+                          c = t0 + 1 + (v.size + 1) + xs.prefix.length⌝
+  case inv2 =>
+    exact ⇓⟨xs, tr⟩ c => ⌜tr.size = v.size + 1 ∧ BuildInv (fun j => v[j]!) v.size (xs.prefix.length + 1) tr ∧
+                          c = t0 + 1 + (v.size + 1) + v.size + xs.prefix.length⌝
+  all_goals simp_all +zetaDelta
+  · -- first loop: copy v[cur] into node cur + 1
+    rename_i pref cur suff hcur b c tr ht hinv
+    obtain ⟨hsz, hv, hc⟩ := hinv
+    have e := range_cursor hcur
+    have hl := range_prefix_length hcur
+    simp [size] at e hl
+    refine ⟨fun t ht' htl => ?_, by omega⟩
+    rw [getElem!_set _ _ _ _ (by omega)]
+    by_cases h' : t = (cur + 1).toNat
+    · simp only [h', ite_true, get_eq]; congr 1; omega
+    · simp only [h', ite_false]; exact hv t ht' (by omega)
+  · simp [replicate, size]
+    intro t a b; omega
+  · -- second loop, the parent is in range
+    rename_i pref cur suff hcur b c tr ht h1 hinv hif
+    obtain ⟨hsz, hb, hc⟩ := hinv
+    have e := range_cursor hcur
+    have hl := range_prefix_length hcur
+    simp [size] at e hl hif
+    have hk : (0 : Int) < cur := by omega
+    rw [land_neg cur hk] at hif ⊢
+    have st := build_step (fun j => v[j]!) v.size (pref.length + 1) b hsz (by omega) (by omega) hb
+    have ek : cur.toNat = pref.length + 1 := by omega
+    rw [ek] at hif ⊢
+    rw [if_pos (by omega)] at st
+    refine ⟨?_, by omega⟩
+    have e1 : cur + (lowb (pref.length + 1) : Int) = ((pref.length + 1 + lowb (pref.length + 1) : Nat) : Int) := by
+      push_cast; omega
+    have e2 : cur = ((pref.length + 1 : Nat) : Int) := by push_cast; omega
+    rw [e1, e2]
+    exact st
+  · -- second loop, the parent is past the end
+    rename_i pref cur suff hcur b c ht h1 hinv hif
+    obtain ⟨hsz, hb, hc⟩ := hinv
+    have e := range_cursor hcur
+    have hl := range_prefix_length hcur
+    simp [size] at e hl hif
+    have hk : (0 : Int) < cur := by omega
+    rw [land_neg cur hk] at hif
+    have st := build_step (fun j => v[j]!) v.size (pref.length + 1) b hsz (by omega) (by omega) hb
+    have ek : cur.toNat = pref.length + 1 := by omega
+    rw [ek] at hif
+    rw [if_neg (by omega)] at st
+    exact ⟨st, by omega⟩
+  · -- between the loops
+    rename_i tr c hinv
+    obtain ⟨hsz, hv, hc⟩ := hinv
+    simp [range, size] at hv ⊢
+    intro t ht htn
+    rw [hv t ht htn, if_neg (by omega), Proofs.FenwickBuildMath.Wc_one t ht]
+    simp [seg]
+  · -- after the loops
+    rename_i tr1 c1 hinv1 tr c hinv
+    obtain ⟨hsz, hb, hc⟩ := hinv
+    simp [range, size] at hb hc ⊢
+    refine ⟨⟨by omega, Or.inl hsz, fun t ht htn => ?_⟩, by omega⟩
+    rw [hb t ht htn]
+    have e : v.size - 1 + 1 = v.size := by omega
+    rw [e]
+    by_cases hlt : t < v.size
+    · simp [hlt]
+    · have : t = v.size := by omega
+      subst this
+      simp only [hlt, ite_false]
+      rw [Proofs.FenwickBuildMath.Wc_self _ ht]
+      exact seg_last _ _ _ (by have := lowb_pos v.size ht; omega)
+
+end Proofs.Cpp.FenwickTree
+
+namespace Proofs.Cpp.FenwickTree
+
+variable {T : Type} [AddCommGroup T] [Inhabited T]
+
+/-- `sum(l, r)`: `A l + ... + A (r - 1)` for a commutative group `T`, in at most `2 log2 n + 7` steps. -/
+theorem sum_range_spec (t : cp.FenwickTree T) (n : Nat) (A : Nat → T) (h : Rep t n A) (l r : Int) (hl : 0 ≤ l)
+    (hlr : l ≤ r) (hr : r ≤ n) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.FenwickTree.sum_int_int t l r
+    ⦃⇓ s c => ⌜s = seg A l.toNat r.toNat ∧ c ≤ t0 + 2 * Nat.log2 n + 7⌝⦄ := by
+  obtain ⟨s1, c1, e1, p1⟩ := run_of_triple (sum_spec t n A h r (by omega) hr (t0 + 1))
+  obtain ⟨s2, c2, e2, p2⟩ := run_of_triple (sum_spec t n A h l hl (by omega) c1)
+  apply triple_of_run (s1 - s2) c2
+  · simp [cp.FenwickTree.sum_int_int, tick, e1, e2]
+  · refine ⟨?_, ?_⟩
+    · rw [p1.1, p2.1, ← seg_consecutive A (Nat.zero_le l.toNat) (by omega : l.toNat ≤ r.toNat)]
+      simp
+    · have := stepsS_le_log r.toNat
+      have := stepsS_le_log l.toNat
+      have := log2_mono' r.toNat n (by omega)
+      have := log2_mono' l.toNat n (by omega)
+      omega
 
 end Proofs.Cpp.FenwickTree
