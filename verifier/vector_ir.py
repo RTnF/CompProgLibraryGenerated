@@ -163,7 +163,7 @@ class Body:
             for child in children:
                 body.extend(self.statement(child))
             self.slots=saved_slots;self.bindings=saved_bindings
-            return [dict(kind='scope',body=body)]
+            return [dict(kind='scope',body=body,base=len(saved_bindings))]
         if node['kind']=='ReturnStmt' and len(children)==1:
             value=self.expr(children[0])
             if value['type']!=function_return_type(self.node):

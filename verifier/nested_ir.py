@@ -54,11 +54,19 @@ def returns_vector(statements):
     return False
 
 
+def returned_slots(statements):
+    for statement in statements:
+        if statement['kind'] == 'return_vector':
+            yield statement['slot']
+        for key in ('body', 'yes', 'no'):
+            yield from returned_slots(statement.get(key, []))
+
+
 def lift_vector_returns(statements):
-    """A vector returned from inside a block belongs to an enclosing scope, and the model's scope exit only
-    transfers roots of the exited scope. A block that declares nothing has no C++ lifetime effect, so such a block
-    around a vector return is lowered without its scope. A declaring block keeps its scope (a vector declared and
-    returned in it is a root of that scope, as before)."""
+    """The model's scope exit only transfers roots of the exited scope. A block that declares nothing has no C++
+    lifetime effect, so such a block around a vector return is lowered without its scope. A declaring block keeps
+    its scope when every vector returned from it is declared in it (a root of that scope, slot >= `base`); a
+    declaring block that returns a vector of an enclosing scope is rejected."""
     lifted = []
     for statement in statements:
         statement = dict(statement)
@@ -67,6 +75,10 @@ def lift_vector_returns(statements):
                 statement[key] = lift_vector_returns(statement[key])
         if statement['kind'] == 'scope' and returns_vector(statement['body']):
             if any(inner['kind'] not in NONDECLARING for inner in statement['body']):
+                base = statement.get('base')
+                if base is None or any(slot < base for slot in returned_slots(statement['body'])):
+                    raise ValueError('returning a vector of an enclosing scope from a block with declarations '
+                                     'is unsupported')
                 lifted.append(statement)
             else:
                 lifted.extend(statement['body'])
