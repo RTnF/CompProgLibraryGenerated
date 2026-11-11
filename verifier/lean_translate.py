@@ -1295,11 +1295,24 @@ class Fn:
             if target[3].kind != "vec":
                 raise Unsupported("std::sort of a non-vector")
             elem = target[3].args[0]
-            self.need("LT", elem)
-            self.need("DecidableLT", elem)
+            fn = "Cpp.sort"
+            if elem.kind == "pair":
+                # operator< of std::pair is lexicographic
+                fn = "Cpp.sortLex"
+                for comp in elem.args:
+                    if comp.kind not in ("tparam", "int", "u32", "u64", "bool"):
+                        raise Unsupported(f"std::sort of pairs of {comp}")
+                    self.need("LT", comp)
+                    self.need("DecidableLT", comp)
+                self.need("DecidableEq", elem.args[0])
+            elif elem.kind in ("tparam", "int", "u32", "u64"):
+                self.need("LT", elem)
+                self.need("DecidableLT", elem)
+            else:
+                raise Unsupported(f"std::sort of {elem}")
             cur = self.read_lvalue(target)
             self.emit(f"Cpp.tickN (Cpp.sortCost {cur}.size)")
-            for line in self.assign_lines(target, f"(Cpp.sort {cur})"):
+            for line in self.assign_lines(target, f"({fn} {cur})"):
                 self.emit(line)
             return True
         return False
@@ -1505,27 +1518,48 @@ class Fn:
 
     def range_for(self, node):
         kids = inner(node)
-        var = next(k for k in kids if k.get("kind") == "VarDecl" and k.get("name") not in ("__range1", "__begin1", "__end1"))
-        rng = next(k for k in kids if k.get("kind") == "DeclStmt")
-        rng_init = inner(inner(rng)[0])[0]
+        decls = [k for k in kids if k.get("kind") == "DeclStmt"]
+        if len(decls) < 2:
+            raise Unsupported("range for without a loop variable")
+        rng_init = inner(inner(decls[0])[0])[0]
+        loop = inner(decls[-1])[0]
         body = kids[-1]
         pre = []
         rt, rty = self.expr(rng_init, pre)
         if rty.kind != "vec":
             raise Unsupported("range for over a non-vector")
-        qual = type_of_decl(var)
-        if "&" in qual and "const" not in qual:
-            raise Unsupported("range for by mutable reference")
+        elem = rty.args[0]
+        qual = type_of_decl(loop)
         changed = self.assigned_names(body)
         read = {r.removesuffix(".size") for r in self.read_names(rng_init)}
         if self.conflicts(read, changed):
             raise Unsupported("range for over a vector the body changes")
+        if loop.get("kind") == "DecompositionDecl":
+            names = [b["name"] for b in inner(loop) if b.get("kind") == "BindingDecl"]
+            if elem.kind != "pair" or len(names) != 2:
+                raise Unsupported("structured binding of a non-pair")
+            if any(n in changed or n + "[]" in changed for n in names):
+                raise Unsupported("assignment through a structured binding")
+            bound = list(zip(names, elem.args))
+        else:
+            if "&" in qual and "const" not in qual and loop["name"] in changed:
+                raise Unsupported("range for by mutable reference")
+            bound = None
         self.flush(pre)
         self.scopes.append({})
-        self.declare(var["name"], rty.args[0])
-        self.emit(f"for {self.var_name(var['name'])} in {rt} do")
-        self.indent += 1
-        self.emit("Cpp.tick")
+        if bound is None:
+            self.declare(loop["name"], elem)
+            self.emit(f"for {self.var_name(loop['name'])} in {rt} do")
+            self.indent += 1
+            self.emit("Cpp.tick")
+        else:
+            item = self.fresh()
+            self.emit(f"for {item} in {rt} do")
+            self.indent += 1
+            self.emit("Cpp.tick")
+            for k, (name, ty) in enumerate(bound):
+                self.declare(name, ty)
+                self.emit(f"let {self.var_name(name)} : {lean_type(ty)} := {item}.{k + 1}")
         self.continue_prefix.append([])
         self.block(body)
         self.continue_prefix.pop()

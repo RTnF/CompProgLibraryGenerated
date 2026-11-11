@@ -146,6 +146,11 @@ the choice does not matter. -/
 def sort {α : Type} [LT α] [DecidableLT α] (v : Array α) : Array α :=
   (v.toList.mergeSort (fun a b => !decide (b < a))).toArray
 
+/-- `std::sort` of a vector of `std::pair`s: `operator<` on pairs is lexicographic (`Prod.lexLt`). -/
+def sortLex {α β : Type} [LT α] [LT β] [DecidableEq α] [DecidableLT α] [DecidableLT β] (v : Array (α × β)) :
+    Array (α × β) :=
+  (v.toList.mergeSort (fun a b => !decide (Prod.lexLt b a))).toArray
+
 /-- The cost (ticks) of `std::sort` on `n` elements: the documented O(n log n). -/
 def sortCost (n : Nat) : Nat := n * (Nat.log2 n + 1)
 
