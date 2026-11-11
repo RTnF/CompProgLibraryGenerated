@@ -1039,4 +1039,127 @@ theorem construct_step (F : Fix) (ok : FixOK F) (S0 : NState)
     simp [NExpr.nodes] at pu
     exact ⟨by omega,by omega⟩
 
+theorem body_run (F : Fix) (ok : FixOK F) (S0 : NState)
+    (sh0 : Sh S0 F.P F.B [.vector 0] [] [] F.sc)
+    (fam0 : Family [pv F.ty F.V F.vsc F.mV] F.h0 S0.frame (resources S0.frame))
+    (fb0 : S0.frame.bindings.length = 1)
+    (ctx0 : ∀ o c, S0.frame.state.forest.context o = some c → c < F.sc)
+    (hR : F.R = S0.frame.state.storage.objects.length) (hLc : F.Lc = S0.frame.state.liveSpace+3)
+    (hTc : F.Tc = S0.frame.state.storage.work+3) (hbase : F.base = S0.frame.state.storage.baseSpace)
+    (tp0 : max S0.frame.state.storage.peak (S0.frame.state.liveSpace+4-F.base) ≤ F.TPB)
+    (cb0 : Cb F S0) :
+    RunsTo (body F.ty F.cv) S0 (Final F (S0.scalars.work+90*F.X.length+70)) := by
+  have small := ok.small
+  obtain ⟨S1,run1,sh1,st1,cb1,w1⟩ := construct_step F ok S0 sh0 fam0 fb0 ctx0 hR hLc hTc hbase tp0 cb0
+  -- int n = v.size();
+  have input : eraseHeap (F.heap []) F.V = some (.flat F.ty F.vsc F.X) :=
+    erase_input F.h0 F.ty F.R F.sc F.V F.vsc F.X _ _ ok.input (by have := ok.vr; omega)
+  have slot0 : (snapshot S1).slots[0]? = some (.vector 0) := by simp [snapshot,sh1.slots]
+  have nv : ti.convert (F.X.length : Int) = some (F.X.length : Int) := Ty.convert_of_valid _ _ (i32_valid_nat _ (by omega))
+  obtain ⟨S2,run2,fam2,state2,rights2,fb2,sl2,sc2,me2,bi2,ba2,wl2,wu2,pl2,pu2,ql2,qu2⟩ :=
+    FamilySteps.declare st1.family (eN F.ty) ti true _ _
+      (denote_size F.ty F.V F.vsc F.mV [pr F.ty F.R F.sc] _ _ F.X slot0 input (by omega)) nv
+  have sh2 : Sh S2 F.P F.B slotsN [⟨ti,(F.X.length : Int)⟩] (bindsN F.P) F.sc :=
+    ⟨by rw [sl2,sh1.slots,sh1.bindings]; rfl,by rw [me2,sh1.memory]; simp,
+      by rw [bi2,sh1.bindings,sh1.memory]; simp [bindsN],by rw [ba2]; exact sh1.base,by rw [sc2]; exact sh1.scope⟩
+  have st2 : St F S2 [] := st_frame st1 fam2 state2 (by rw [fb2]; exact st1.frameBindings)
+  have live1 : liveS S1+40 ≤ F.SPB := by rw [liveS_sh sh1]; have := ok.spb; have := ok.baseLe; simp; omega
+  have live2 : liveS S2+40 ≤ F.SPB := by rw [liveS_sh sh2]; have := ok.spb; have := ok.baseLe; simp [bindsN]; omega
+  have nodesN : (eN F.ty).nodes = 4 := by simp [NExpr.nodes,Container.nodes]
+  have cb2 : Cb F S2 := by
+    have := cb1.scalarPeak; have := cb1.peak; have := st2.storagePeak
+    rw [nodesN] at pu2
+    exact ⟨by omega,by omega⟩
+  have en : envOf S2 2 ti = some (F.X.length : Int) :=
+    Proofs.DoublingNested.envOf_at S2 2 0 ⟨F.P.length,true⟩ ti _ (by simp [sh2.slots,slotsN])
+      (by simp [sh2.bindings,bindsN]) (by simp [sh2.memory]) (i32_valid_nat _ (by omega))
+  -- if (n == 0) return ret;
+  have z : ti.valid 0 = true := by simpa using i32_valid_nat 0 (by omega)
+  have pureZ : denote F.params (snapshot S2) (eraseHeap (F.heap [])) cZero =
+      some (if F.X.length = 0 then 1 else 0) := by
+    rw [denote_scalar _ _ _ _ (by simp [NExpr.scalarOnly]),snapshot_env]
+    by_cases e : F.X.length = 0
+    · simp [NExpr.denote,en,z,binaryValue,e,bool_convert]
+    · have e' : ¬ (F.X.length : Int) = 0 := by omega
+      simp [NExpr.denote,en,z,binaryValue,e,e',bool_convert]
+  obtain ⟨nextZ,evalZ,relZ⟩ := FamilySteps.condition st2.family cZero _ pureZ
+  let u := (nextZ.release S2).charge 1 0
+  have shU : Sh u F.P F.B slotsN [⟨ti,(F.X.length : Int)⟩] (bindsN F.P) F.sc := sh_released relZ sh2
+  have stU : St F u [] := st_released relZ st2
+  have cbU : Cb F u := cb_released relZ cb2 st2 (by simp [NExpr.nodes]; omega)
+  have wU : u.scalars.work ≤ S2.scalars.work+2*cZero.nodes+1 := relZ.workUpper
+  have nodesZ : cZero.nodes = 3 := by simp [NExpr.nodes]
+  rw [nodesZ] at wU
+  have wS2 : S2.scalars.work ≤ S1.scalars.work+2*4+1 := by rw [nodesN] at wu2; exact wu2
+  apply RunsTo.seq
+  refine RunsTo.primitive run1 ⟨rfl,rfl,?_⟩
+  apply RunsTo.seq
+  refine RunsTo.primitive run2 ⟨rfl,rfl,?_⟩
+  apply RunsTo.sequence
+  refine RunsTo.branch evalZ ?_
+  by_cases empty : F.X.length = 0
+  · -- the early return of the empty result
+    have xs : F.X = [] := List.eq_nil_of_length_eq_zero empty
+    simp only [empty,if_true,show (1 : Int) ≠ 0 by omega,if_false]
+    have runR := retVector_run F u [] stU (by simp [shU.slots,slotsN])
+    have stR : St F (u.charge 1 0) (rle F.X) := by
+      rw [xs]; exact st_frame stU stU.family rfl stU.frameBindings
+    have cbR := cb_charge F u [] stU cbU 1 (by rw [liveS_sh shU]; rw [liveS_sh sh2] at live2; omega)
+    apply RunsTo.sequence
+    refine RunsTo.primitive runR (Or.inl ⟨Or.inl rfl,Or.inl ⟨Or.inl rfl,?_⟩⟩)
+    refine ⟨rfl,rfl,stR,cbR,shU.scope,⟨[⟨ti,(F.X.length : Int)⟩],shU.memory,by simp⟩,
+      by rw [charge_bindings,shU.bindings]; simp [bindsN],shU.base,?_⟩
+    show u.scalars.work+1 ≤ _
+    omega
+  · simp only [empty,if_false]
+    refine RunsTo.skip (Or.inr ⟨rfl,rfl,?_⟩)
+    -- T pre = v[0];
+    obtain ⟨x0,first⟩ : ∃ x0, F.X[0]? = some x0 := ⟨F.X[0]'(by omega),List.getElem?_eq_getElem (by omega)⟩
+    have x0v : F.ty.valid x0 = true := ok.valid x0 (List.mem_of_getElem? first)
+    have pureP : denote F.params (snapshot u) (eraseHeap (F.heap [])) (ePre F.ty) = some x0 := by
+      apply denote_read F.ty F.V F.vsc F.mV _ (snapshot u) _ F.X _ 0 x0 (by simp [snapshot,shU.slots,slotsN]) input
+      · rw [denote_scalar _ _ _ _ (by simp [NExpr.scalarOnly])]
+        have v0 : tu.valid 0 = true := by simpa using u64_valid_small 0 (by omega)
+        simp [NExpr.denote,z,Ty.convert_of_valid _ _ v0]
+      · exact first
+      · exact x0v
+    obtain ⟨S3,run3,fam3,state3,rights3,fb3,sl3,sc3,me3,bi3,ba3,wl3,wu3,pl3,pu3,ql3,qu3⟩ :=
+      FamilySteps.declare stU.family (ePre F.ty) F.ty true x0 x0 pureP (Ty.convert_of_valid _ _ x0v)
+    have sh3 : Sh S3 F.P F.B slotsP [⟨ti,(F.X.length : Int)⟩,⟨F.ty,x0⟩] (bindsP F.P) F.sc :=
+      ⟨by rw [sl3,shU.slots,shU.bindings]; rfl,by rw [me3,shU.memory]; simp,
+        by rw [bi3,shU.bindings,shU.memory]; simp [bindsP,bindsN],by rw [ba3]; exact shU.base,
+        by rw [sc3]; exact shU.scope⟩
+    have st3 : St F S3 [] := st_frame stU fam3 state3 (by rw [fb3]; exact stU.frameBindings)
+    have liveU : liveS u+40 ≤ F.SPB := by rw [liveS_sh shU]; rw [liveS_sh sh2] at live2; omega
+    have nodesP : (ePre F.ty).nodes ≤ 6 := by simp [NExpr.nodes,Container.nodes]
+    have cb3 : Cb F S3 := by
+      have := cbU.scalarPeak; have := cbU.peak; have := st3.storagePeak
+      exact ⟨by omega,by omega⟩
+    -- int cnt = 0;
+    obtain ⟨S4,run4,fam4,state4,rights4,fb4,sl4,sc4,me4,bi4,ba4,wl4,wu4,pl4,pu4,ql4,qu4⟩ :=
+      FamilySteps.declare fam3 (.literal ti 0) ti true 0 0
+        (by rw [denote_scalar _ _ _ _ (by simp [NExpr.scalarOnly])]; simp [NExpr.denote,z])
+        (Ty.convert_of_valid _ _ z)
+    have sh4 : Sh S4 F.P F.B slotsC (cellsC F.ty F.X.length x0 0) (bindsC F.P) F.sc :=
+      ⟨by rw [sl4,sh3.slots,sh3.bindings]; rfl,by rw [me4,sh3.memory]; simp [cellsC],
+        by rw [bi4,sh3.bindings,sh3.memory]; simp [bindsC,bindsP,bindsN],by rw [ba4]; exact sh3.base,
+        by rw [sc4]; exact sh3.scope⟩
+    have st4 : St F S4 [] := st_frame st3 (by rw [resources_eq state3]; exact fam4) state4
+      (by rw [fb4]; exact st3.frameBindings)
+    have live3 : liveS S3+40 ≤ F.SPB := by
+      rw [liveS_sh sh3]; have := ok.spb; have := ok.baseLe; simp [bindsP,bindsN]; omega
+    have cb4 : Cb F S4 := by
+      have := cb3.scalarPeak; have := cb3.peak; have := st4.storagePeak
+      simp [NExpr.nodes] at pu4
+      exact ⟨by omega,by omega⟩
+    apply RunsTo.seq
+    refine RunsTo.primitive run3 ⟨rfl,rfl,?_⟩
+    apply RunsTo.seq
+    refine RunsTo.primitive run4 ⟨rfl,rfl,?_⟩
+    have w4 : S4.scalars.work ≤ S0.scalars.work+40 := by
+      simp [NExpr.nodes] at wu4
+      have : S3.scalars.work ≤ u.scalars.work+2*(ePre F.ty).nodes+1 := wu3
+      omega
+    exact runs_weaken (rest_run F ok S4 x0 _ sh4 st4 cb4 (by omega) first w4) (by omega)
+
 end Proofs.ElementCountExec
