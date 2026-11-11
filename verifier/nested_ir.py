@@ -39,6 +39,40 @@ def terminal_return_kinds(statements):
     return set()
 
 
+# Statements that add no binding: a scope whose top level has only these declares nothing.
+NONDECLARING = {'append_reserved', 'append_row', 'assign', 'assign_range', 'check', 'dedup_vector', 'reserve',
+                'return', 'return_unit', 'return_vector', 'sort_pairs', 'sort_vector', 'write', 'branch', 'break',
+                'scope', 'while', 'skip', 'swap'}
+
+
+def returns_vector(statements):
+    for statement in statements:
+        if statement['kind'] == 'return_vector':
+            return True
+        if any(returns_vector(statement.get(key, [])) for key in ('body', 'yes', 'no')):
+            return True
+    return False
+
+
+def lift_vector_returns(statements):
+    """A vector returned from inside a block belongs to an enclosing scope, and the model's scope exit only
+    transfers roots of the exited scope. A block that declares nothing has no C++ lifetime effect, so such a block
+    around a vector return is lowered without its scope; a declaring block around a vector return is rejected."""
+    lifted = []
+    for statement in statements:
+        statement = dict(statement)
+        for key in ('body', 'yes', 'no'):
+            if key in statement:
+                statement[key] = lift_vector_returns(statement[key])
+        if statement['kind'] == 'scope' and returns_vector(statement['body']):
+            if any(inner['kind'] not in NONDECLARING for inner in statement['body']):
+                raise ValueError('returning a vector from a block with declarations is unsupported')
+            lifted.extend(statement['body'])
+        else:
+            lifted.append(statement)
+    return lifted
+
+
 # LP64 libstdc++ fixed-width aliases; the type-identity probes still compare the written spelling.
 ALIASES = {'std::uint64_t': 'unsigned long', 'uint64_t': 'unsigned long', 'std::size_t': 'unsigned long',
            'std::int64_t': 'long', 'int64_t': 'long', 'std::int32_t': 'int', 'int32_t': 'int',
@@ -683,6 +717,7 @@ class NestedBody(Body):
             expected_return = 'return_vector' if 'vector' in self.result else 'return'
             if returns != {expected_return}:
                 raise ValueError('return kind differs from the function result type')
+        statements = lift_vector_returns(statements)
         result = dict(name=self.node['name'], parameters=self.parameters, result=self.result, body=statements)
         if '_construction_fields' in self.node:
             result['construction_fields'] = [dict(name=f['name'], slot=self.slots[f['id']])

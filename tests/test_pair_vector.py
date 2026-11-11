@@ -143,6 +143,30 @@ template std::vector<std::pair<long long, int>> runs<std::vector<long long>>(con
             with self.subTest(body=body), self.assertRaises(Exception):
                 self.model(self.MIXED.replace('BODY', body))
 
+    EARLY = '''#include <vector>
+namespace cp {
+inline std::vector<int> f(int a) {
+  std::vector<int> ret;
+  if (a == 0) {
+    BLOCK
+  }
+  ret.emplace_back(a);
+  return ret;
+}
+}
+'''
+
+    def test_vector_return_from_a_declaration_free_block_has_no_scope(self):
+        # The model's scope exit transfers only roots of the exited scope; `ret` belongs to the function scope.
+        model = self.model(self.EARLY.replace('BLOCK', 'return ret;'))
+        self.assertIn("(.branch (.binary ⟨1, false, true⟩ .eq (.variable ⟨32, true, false⟩ 0) "
+                      "(.literal ⟨32, true, false⟩ (0))) (.sequence (.primitive (.retVector 1)) (.primitive .skip))", model)
+        self.assertNotIn("(.scope (.sequence (.primitive (.retVector", model)
+
+    def test_vector_return_from_a_declaring_block_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.model(self.EARLY.replace('BLOCK', 'int b = a; ret.emplace_back(b); return ret;'))
+
     def test_pairs_without_nested_field_ranges_are_rejected(self):
         text = '''#include <utility>
 #include <vector>
