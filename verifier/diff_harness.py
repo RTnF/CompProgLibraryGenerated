@@ -141,6 +141,10 @@ class Harness:
         tr.translate()
         self.tr = tr
         self.lean_instance = {k: lean_instance_type(v) for k, v in instance.items()}
+        for k, v in instance.items():
+            ty = lt.parse_type(v, set(), set())
+            if ty.kind == "vec":   # a container parameter T: its element type is T_value_type
+                self.lean_instance[f"{k}_value_type"] = lt.lean_type(ty.args[0])
 
     def callables(self):
         out = []
@@ -178,7 +182,8 @@ class Harness:
                 decls.append(f"{t} a{i}; difftest::rd(a{i});")
                 names.append(f"a{i}")
             if info is None:
-                targs = [self.instance[t] for t in sig.tparams]
+                targs = [self.instance[t.removesuffix("_value_type")] if t.removesuffix("_value_type") in sig.containers
+                         else self.instance[t] for t in sig.tparams]
                 callee = f"cp::{sig.cpp_name}" + (f"<{', '.join(targs)}>" if targs else "")
                 key = f"call {sig.lean_name.removeprefix('cp.')}"
                 call = f"{callee}({', '.join(names)})"

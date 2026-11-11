@@ -754,3 +754,5 @@ import Proofs.Cpp.CountrZero
 import Proofs.Generated.SearchUtil
 import Proofs.Cpp.SearchUtil
 import Proofs.Cpp.Lib.Rle
+import Proofs.Generated.ElementCount
+import Proofs.Cpp.ElementCount

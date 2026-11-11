@@ -95,6 +95,17 @@ theorem unrle_rle (xs : List T) : unrle (rle xs) = xs := by
 theorem rle_ok (xs : List T) : RunsOk (rle xs) :=
   runsOk_reverse _ (foldl_rrStep_ok xs [] (by simp [RunsOk])).1
 
+/-- Adding a value to a list whose runs end with `p`. -/
+theorem rle_snoc_last (l : List T) (y : T) (R : List (T × Int)) (p : T × Int) (h : rle l = R ++ [p]) :
+    rle (l ++ [y]) = if p.1 = y then R ++ [(p.1, p.2 + 1)] else R ++ [p, (y, 1)] := by
+  have hr : rrle l = p :: R.reverse := by
+    have := congrArg List.reverse h
+    simpa [rle] using this
+  simp only [rle, rrle, List.foldl_append, List.foldl_cons, List.foldl_nil] at hr ⊢
+  rw [hr]
+  simp only [rrStep]
+  by_cases hp : p.1 = y <;> simp [hp]
+
 /-! ## The C++ loops that extend the last run of a vector of pairs -/
 
 section

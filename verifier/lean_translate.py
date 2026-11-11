@@ -114,6 +114,14 @@ def parse_type(text: str, tparams: set[str], classes: set[str]) -> Ty:
     raise Unsupported(f"type {text!r}")
 
 
+def container_text(text: str, containers) -> str:
+    """`T::value_type` → `T_value_type` and `T` → `std::vector<T_value_type>` for a container parameter `T`."""
+    for t in containers:
+        text = re.sub(rf"(?:typename\s+)?\b{t}::value_type\b", f"{t}_value_type", text)
+        text = re.sub(rf"\b{t}\b(?!_value_type)", f"std::vector<{t}_value_type>", text)
+    return text
+
+
 def lean_type(ty: Ty) -> str:
     if ty.kind == "int":
         return "Int"
@@ -217,6 +225,7 @@ class Sig:
     node: dict | None = None
     tparams: list = field(default_factory=list)
     public: bool = True
+    containers: list = field(default_factory=list)
     policies: dict = field(default_factory=dict)   # tparam -> [static member names] (policy classes)
 
     @property
@@ -1507,6 +1516,7 @@ class Translator:
         tps = set()
         if fn is not None:
             tps = set(fn.sig.tparams) | (set(fn.cls.tparams) if fn.cls else set())
+            text = container_text(text, fn.sig.containers)
         return parse_type(text, tps, set(self.classes))
 
     def collect(self):
@@ -1542,20 +1552,25 @@ class Translator:
                     tags.add(tag)
                     sig.lean_name = f"cp.{lean_name(name)}_{tag}"
 
-    def param_list(self, node, tps):
+    def param_list(self, node, tps, containers=()):
         params = []
         for p in inner(node):
             if p.get("kind") == "ParmVarDecl":
-                qual = type_of_decl(p)
+                qual = container_text(type_of_decl(p), containers)
                 is_ref = "&" in qual and not re.search(r"\bconst\b", qual)
                 params.append((p.get("name") or f"arg{len(params)}", parse_type(qual, set(tps), set(self.classes)), is_ref))
         return params
 
     def collect_function(self, node, tps):
         name = node["name"]
-        ret_text = node["type"]["qualType"].split("(")[0].strip()
+        # A template parameter used as `T::value_type` is a random-access container (modelled by std::vector)
+        text = json.dumps(node)
+        containers = [t for t in tps if f"{t}::value_type" in text]
+        tps = [f"{t}_value_type" if t in containers else t for t in tps]
+        ret_text = container_text(node["type"]["qualType"].split("(")[0].strip(), containers)
         ret = parse_type(ret_text, set(tps), set(self.classes))
-        sig = Sig(name, f"cp.{name}", self.param_list(node, tps), ret, node=node, tparams=tps)
+        sig = Sig(name, f"cp.{name}", self.param_list(node, tps, containers), ret, node=node, tparams=tps)
+        sig.containers = containers
         self.functions.setdefault(name, []).append(sig)
         self.order.append(("fn", sig))
 

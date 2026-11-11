@@ -15,16 +15,10 @@
 - 不具合の修正: 元のソースはテンプレート引数 `T` をコンテナ型として推論させながら、結果の型 `pair<T, int>` と局所変数 `T pre = v[0]` にも `T` を使っていたため、`std::vector<int>` などの標準コンテナでは具体化できなかった（`tests/imports/element_count.repro.cpp`、`tools/check_import_element_count.py`）。要素の型を `typename T::value_type` に直した。引数の形 `const T &v` は元のままで、意図されていたコンテナ全般（`std::string` なども）で使える。走査の処理は元と同じ。
 - 公開側では `namespace cp` に置き、`std::` を明示した。
 
-## 証明
+## 検証（新方式、`docs/translation.md`）
 
-検証した具体化は `element_count<std::vector<long long>>` と `element_count<std::vector<int>>`（ヘッダー末尾の明示的な具体化）。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/ElementCount.lean` を生成する。`T::value_type` を使うテンプレート引数 `T` はランダムアクセスのコンテナとして、要素型 `T_value_type` の `Array` に翻訳する（`std::vector`、`std::string`、`std::deque` の `size()`・`operator[]` はドキュメント上同じ動作）。
 
-- モデル: 結果の `vector<pair<A, B>>` は 2 行の入れ子 vector（行 0 が `first`、行 1 が `second`）として変換する。`pair<long long, int>` のように型が違う場合は、範囲が他方を含む広い型（`long long`）の行にし、`int` の値は拡大変換して格納する（`verifier/nested_ir.py`。狭いフィールドの読み書き・`std::sort`・範囲 for は未対応として拒否する）。`if (n == 0) { return ret; }` のように宣言のないブロックからの vector の返却は、ブロックのスコープを作らずに変換する（モデルのスコープ退出は、退出するスコープの根だけを移すため）。
-- `Proofs/ElementCountCall.lean` の `element_count_ll_correct`・`element_count_int_correct`: すべての有効な入力 `X`（`v` の要素、`X.length < 2^31 - 1`）について、呼び出しは成功して結果の根を返し、
-  - 結果の行 0 は `rle X` の値、行 1 は `rle X` の長さ（`Post.result`。`Proofs/RunLengthMath.lean` の `rle`）。`rle X` は連をつなぐと `X` に戻り（`rleFlat (rle X) = X`）、長さはすべて正で、隣り合う連の値は異なる（`AdjOK`）。
-  - `v` のバッファは変わらない（`Post.input`）。呼び出し元のスカラー・束縛・スロット・スコープは元に戻る。
-  - 時間: スカラーの仕事量は `90 n + 74` 以下、記憶域の仕事量（`emplace_back` の再確保を含む償却）は `10 n + 3` 以下の増加。
-  - 追加領域: 記憶域のピークは `max(呼び出し前のピーク, 呼び出し前の生存領域 + 8 n + 13 − 基準領域)` 以下（`Post.storagePeak`。結果の 2 行の容量は各 `2 × 行の長さ + 1` 以下、`Proofs/AppendCapacity.lean`）。全体のピークは呼び出し元のピークと、スカラーの上界（呼び出し元の局所変数 + 定数）と記憶域の上界の和の大きい方以下（`Post.peak`）。
-- 実行の証明は `Proofs/ElementCountExec.lean`（行の要素型 `ty` と行 1 に格納する式 `cv` について一般に示し、2 つの具体化で共有する）。ループ不変条件は、`t` 個を処理した後に `rleExt X t = (閉じた連) ++ [(pre, cnt)]`。行への追加は `Proofs/AppendCapacity.lean`、Family 上の宣言・代入・条件は `Proofs/FamilySteps.lean`。
+`Proofs/Cpp/ElementCount.lean` の `element_count_spec` が、等しさが決定可能な任意の要素型と任意の `v` について、結果が `rle v`（`Proofs/Cpp/Lib/Rle.lean`）に等しいこと、tick 数が `2 n + 2` 以下であることを証明する。`unrle_rle`（連を展開すると `v` に戻る）と `rle_ok`（各連の長さは正、隣り合う連の値は異なる）が結果の意味を与える。`search_util` の `counts` も同じ `rle` を返す。
 
-定理に含めていないこと: `long long`・`int` 以外の要素型（`std::string`、`char` など）とコンテナ（`std::string`、`std::deque` など）の具体化。これらは C++ のテストで確認する。メモリ確保の失敗はモデルの前提（確保は成功する）。C++ のテストは `tests/element_count.cpp` で、長さ 8 以下の 3 値の全列（`vector<int>`・`vector<long long>`・`string`・`deque<int>`）、長さ 300 以下の乱数列、極値、長さ 100000 の 1 個の連、空入力、`vector<string>` を素朴な分割と比較する。
+差分テスト（`tests/diff/element_count.py`、`std::vector<long long>` と `std::vector<int>`）と C++ のテスト（`tests/element_count.cpp`、他のコンテナと要素型を含む）で翻訳と実装を確かめる。
