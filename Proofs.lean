@@ -751,3 +751,6 @@ import Proofs.Generated.BitWidthU64
 import Proofs.Cpp.BitWidthU64
 import Proofs.Generated.CountrZero
 import Proofs.Cpp.CountrZero
+import Proofs.Generated.SearchUtil
+import Proofs.Cpp.SearchUtil
+import Proofs.Cpp.Lib.Rle

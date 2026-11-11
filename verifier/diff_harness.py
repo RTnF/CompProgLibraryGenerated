@@ -48,6 +48,10 @@ CPP_PRELUDE = r"""
 #include <vector>
 
 namespace difftest {
+template <class X> void rd(std::vector<X> &v);
+template <class A, class B> void rd(std::pair<A, B> &p);
+template <class X> void pr(const std::vector<X> &v);
+template <class A, class B> void pr(const std::pair<A, B> &p);
 template <class X> void rd(X &x) {
   if constexpr (std::is_unsigned_v<X>) { unsigned long long v; std::cin >> v; x = (X)v; }
   else { long long v; std::cin >> v; x = (X)v; }

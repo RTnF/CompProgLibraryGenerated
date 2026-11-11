@@ -9,19 +9,6 @@ open Std.Do Proofs.Cpp Proofs.Cpp.Gen
 
 namespace Proofs.Cpp.BitWidthU64
 
-/-- `std::bit_width`: `0` for `0`, otherwise `log2 n + 1`. -/
-def bitWidth (n : Nat) : Nat := if n = 0 then 0 else Nat.log2 n + 1
-
-@[simp] theorem bitWidth_zero : bitWidth 0 = 0 := rfl
-
-theorem bitWidth_div_two (n : Nat) (h : 0 < n) : bitWidth (n / 2) + 1 = bitWidth n := by
-  unfold bitWidth
-  by_cases h1 : n = 1
-  · subst h1; rfl
-  · have h2 : 2 ≤ n := by omega
-    rw [Nat.log2_def n]; simp only [h2, ite_true]
-    simp [show n / 2 ≠ 0 by omega, show n ≠ 0 by omega]
-
 theorem bit_width_u64_spec (value : UInt64) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.bit_width_u64 value
     ⦃⇓ r c => ⌜r = bitWidth value.toNat ∧ c = t0 + 2 + bitWidth value.toNat⌝⦄ := by

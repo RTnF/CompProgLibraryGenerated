@@ -427,6 +427,12 @@ class Fn:
                         return f"{t}.{lean_name(fname)}", subst(fty, info.tparams, bty.args)
             raise Unsupported(f"member {n['name']}")
         if kind == "CXXDependentScopeMemberExpr":
+            member = n.get("member")
+            if member in ("first", "second") and inner(n):
+                t, bty = self.expr(inner(n)[0], pre)
+                if bty.kind == "pair":
+                    i = 0 if member == "first" else 1
+                    return f"{t}.{i + 1}", bty.args[i]
             raise Unsupported("member access without call")
         if kind == "ArraySubscriptExpr" or (kind == "CXXOperatorCallExpr" and self.operator_name(n) == "[]"):
             base, index = self.subscript_parts(n)
@@ -857,6 +863,22 @@ class Fn:
             if ty is None:
                 raise Unsupported(f"unknown variable {name}")
             return (self.var_name(name), [], ty, ty)
+        if kind == "CXXDependentScopeMemberExpr" and n.get("member") in ("first", "second") and inner(n):
+            root, path, rty, bty = self.lvalue(inner(n)[0])
+            if bty.kind != "pair":
+                raise Unsupported("member of a non-pair")
+            i = 0 if n["member"] == "first" else 1
+            return (root, path + [("pair", i)], rty, bty.args[i])
+        if kind in ("CallExpr", "CXXMemberCallExpr") and len(inner(n)) == 1:
+            callee = strip(inner(n)[0])
+            if callee.get("kind") in ("MemberExpr", "CXXDependentScopeMemberExpr") and \
+                    (callee.get("name") or callee.get("member")) == "back" and inner(callee):
+                root, path, rty, bty = self.lvalue(inner(callee)[0])
+                if bty.kind != "vec":
+                    raise Unsupported("back() of a non-vector")
+                self.need("Inhabited", bty.args[0])
+                current = self.read_lvalue((root, path, rty, bty))
+                return (root, path + [("index", f"(Cpp.size {current} - 1)")], rty, bty.args[0])
         if kind == "MemberExpr":
             base = strip(inner(n)[0])
             if base.get("kind") == "CXXThisExpr":

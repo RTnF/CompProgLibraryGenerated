@@ -1,14 +1,18 @@
 name = "search_util"
 source = "array/search_util.hpp"
 dependencies = []
-translation = "nested_ir"
-lean_namespace = "Proofs.SearchUtilInstance"
-proof = "Proofs/SearchUtilCall.lean"
-model = "Proofs/Generated/SearchUtil.lean"
-bridge = "verifier/nested_bridge.py"
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.SearchUtil"
+proof = "Proofs/Cpp/SearchUtil.lean"
+model = "Proofs/Cpp/Gen/SearchUtil.lean"
+bridge = "verifier/model_bridge.py"
 tests = ["tests/search_util.cpp"]
 sanitizers = true
 spec = "docs/search_util.md"
 standard = "c++17"
-source_sha256 = "4c30d58e4716825d443e071aef9b7e75728bcc163b9b34ee04b349f5d59f6b34"
-public_declarations = ["FunctionTemplateDecl:count<vector>", "FunctionTemplateDecl:lower_bound_index<vector>"]
+source_sha256 = "d6c6edb97dfd1f9ead1953650811efa22aceb6d2225a810f8dc0a4e242134219"
+public_declarations = ["FunctionTemplateDecl:count<vector>", "FunctionTemplateDecl:counts<vector>", "FunctionTemplateDecl:lower_bound_index<vector>"]
+
+[diff]
+instances = [{ T = "long long" }, { T = "int" }]
+cases = "tests/diff/search_util.py"

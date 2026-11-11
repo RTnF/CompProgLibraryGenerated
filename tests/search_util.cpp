@@ -4,12 +4,13 @@
 #include <climits>
 #include <cstdint>
 #include <random>
+#include <utility>
 #include <vector>
 
-// Independent oracle: std::count over the half-open iterator range (empty when begin >= end).
+// Independent oracle: std::count over the half-open iterator range (precondition begin <= end).
 int oracle(const std::vector<int> &v, int value, int begin, int end) {
     if (end == -1) end = static_cast<int>(v.size());
-    if (begin >= end) return 0;
+    assert(begin <= end);
     return static_cast<int>(std::count(v.begin() + begin, v.begin() + end, value));
 }
 
@@ -20,8 +21,9 @@ void test_count() {
         for (;;) {
             for (int value = -1; value <= 3; ++value) {
                 for (int b = 0; b <= n; ++b) {
-                    for (int e = -1; e <= n; ++e) {
-                        assert(cp::count(v, value, b, e) == oracle(v, value, b, e));
+                    for (int e = b - 1; e <= n; ++e) {
+                        const int end = e == b - 1 ? -1 : e;
+                        assert(cp::count(v, value, b, end) == oracle(v, value, b, end));
                     }
                 }
             }
@@ -39,12 +41,31 @@ void test_count() {
     for (int trial = 0; trial < 2000; ++trial) {
         const int value = trial % 9 == 0 ? INT_MIN : trial % 9 == 1 ? INT_MAX : static_cast<int>(random() % 9) - 4;
         int b = static_cast<int>(random() % 5001);
-        int e = trial % 5 == 0 ? -1 : static_cast<int>(random() % 5001);
+        int e = trial % 5 == 0 ? -1 : b + static_cast<int>(random() % (5001 - b));
         assert(cp::count(big, value, b, e) == oracle(big, value, b, e));
     }
     assert(cp::count(big, INT_MIN, 0, -1) >= 1);
     assert(cp::count(big, INT_MAX, 18, 19) == 1);
-    assert(cp::count(big, INT_MAX, 19, 18) == 0);
+}
+
+// counts: the distinct values of a sorted vector with their numbers of occurrences.
+void test_counts() {
+    std::mt19937 random(20261112);
+    for (int trial = 0; trial < 500; ++trial) {
+        std::vector<long long> v(random() % 40);
+        for (auto &x : v) x = static_cast<long long>(random() % 9) - 4;
+        if (trial % 3 == 0) v.push_back(LLONG_MIN), v.push_back(LLONG_MAX);
+        std::sort(v.begin(), v.end());
+        std::vector<std::pair<long long, int>> expected;
+        for (std::size_t i = 0; i < v.size();) {
+            std::size_t j = i;
+            while (j < v.size() && v[j] == v[i]) ++j;
+            expected.emplace_back(v[i], static_cast<int>(j - i));
+            i = j;
+        }
+        assert(cp::counts(v) == expected);
+    }
+    assert(cp::counts(std::vector<long long>()).empty());
 }
 
 void test_lower_bound_index() {
@@ -80,6 +101,7 @@ void test_lower_bound_index() {
 int main() {
     test_count();
     test_lower_bound_index();
+    test_counts();
     // the default arguments of the original `count`
     {
         std::vector<int> v = {1, 2, 1, 3, 1};

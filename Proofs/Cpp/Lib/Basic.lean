@@ -1,5 +1,8 @@
 import Proofs.Cpp.Prelude
 import Mathlib.Algebra.BigOperators.Group.List.Basic
+import Mathlib.Tactic.Set
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.Ring
 
 /-! Facts about the operations of `Proofs.Cpp.Prelude` shared by the component proofs. -/
 
@@ -104,5 +107,40 @@ namespace Proofs.Cpp
 @[simp] theorem range_zero_length (n : Nat) : (range 0 (n : Int)).length = n := by simp [range]
 
 @[simp] theorem get_natCast {α : Type} [Inhabited α] (v : Array α) (n : Nat) : get v (n : Int) = v[n]! := rfl
+
+end Proofs.Cpp
+
+namespace Proofs.Cpp
+
+/-- `std::bit_width`: `0` for `0`, otherwise `log2 n + 1`. -/
+def bitWidth (n : Nat) : Nat := if n = 0 then 0 else Nat.log2 n + 1
+
+@[simp] theorem bitWidth_zero : bitWidth 0 = 0 := rfl
+
+theorem bitWidth_div_two (n : Nat) (h : 0 < n) : bitWidth (n / 2) + 1 = bitWidth n := by
+  unfold bitWidth
+  by_cases h1 : n = 1
+  · subst h1; rfl
+  · have h2 : 2 ≤ n := by omega
+    rw [Nat.log2_def n]; simp only [h2, ite_true]
+    simp [show n / 2 ≠ 0 by omega, show n ≠ 0 by omega]
+
+theorem bitWidth_mono {a b : Nat} (h : a ≤ b) : bitWidth a ≤ bitWidth b := by
+  unfold bitWidth
+  by_cases ha : a = 0
+  · simp [ha]
+  · have hb : b ≠ 0 := by omega
+    simp only [ha, hb, ite_false]
+    have : Nat.log2 a ≤ Nat.log2 b := by
+      rw [Nat.le_log2 hb]; exact Nat.le_trans (Nat.log2_self_le ha) h
+    omega
+
+theorem bitWidth_lt_pow (n k : Nat) (h : n < 2 ^ k) : bitWidth n ≤ k := by
+  unfold bitWidth
+  by_cases hn : n = 0
+  · simp [hn]
+  · simp only [hn, ite_false]
+    have := (Nat.log2_lt hn).mpr h
+    omega
 
 end Proofs.Cpp
