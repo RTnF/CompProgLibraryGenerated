@@ -180,6 +180,8 @@ structure Fix where
   TPB : Nat
   /-- The ownership forest once `ret` exists; no statement after the construction changes it. -/
   forest : Forest
+  /-- The buffer of the input `v`, never modified. -/
+  vbuf : Buffer Value
 
 structure FixOK (F : Fix) : Prop where
   input : F.h0 F.V = some (.flat F.ty F.vsc F.X)
@@ -221,6 +223,7 @@ structure St (F : Fix) (s : NState) (C : List (Int × Nat)) : Prop where
   forest : s.frame.state.forest = F.forest
   frameBindings : s.frame.bindings.length = 2
   storagePeak : s.frame.state.storage.peak ≤ F.TPB
+  input : s.frame.state.storage.lookup F.V = some F.vbuf
 
 /-- The scalar and outer peak bounds. -/
 structure Cb (F : Fix) (s : NState) : Prop where
@@ -257,6 +260,7 @@ theorem append0 (F : Fix) (ok : FixOK F) (s : NState) (C : List (Int × Nat)) (x
       t.frame.state.storage.work+CppVectorGrowth.potential b0+CppVectorGrowth.potential b1 ≤ F.Tc+10*C.length+5 ∧
       t.frame.state.storage.baseSpace = F.base ∧ t.frame.state.forest = s.frame.state.forest ∧
       t.frame.bindings = s.frame.bindings ∧ t.frame.state.storage.peak ≤ F.TPB ∧
+      t.frame.state.storage.lookup F.V = some F.vbuf ∧
       t.slots = s.slots ∧ t.scope = s.scope ∧ t.scalars.memory = s.scalars.memory ∧
       t.scalars.bindings = s.scalars.bindings ∧ t.scalars.baseMemory = s.scalars.baseMemory ∧
       s.scalars.work ≤ t.scalars.work ∧ t.scalars.work ≤ s.scalars.work+5 ∧ Cb F t := by
@@ -286,8 +290,10 @@ theorem append0 (F : Fix) (ok : FixOK F) (s : NState) (C : List (Int × Nat)) (x
     have := ok.tpb
     rw [st.base]
     omega
+  have vT : t.frame.state.storage.lookup F.V = some F.vbuf := by
+    rw [other F.V (by have := ok.vr; omega)]; exact st.input
   refine ⟨t,r.buffer,b1,run,fam,self,b1Same,?_,i1,?_,c1,limit.trans l0,l1,?_,?_,by rw [baseT,st.base],forest,fb,tpT,
-    sl,sc',me,bi,ba,wl,by simpa [NExpr.nodes] using wu,?_⟩
+    vT,sl,sc',me,bi,ba,wl,by simpa [NExpr.nodes] using wu,?_⟩
   · rw [items,i0]; simp [firsts]
   · rw [b0len] at cap; omega
   · rw [liveT,lv]; omega
@@ -310,6 +316,7 @@ theorem append1 (F : Fix) (ok : FixOK F) (s : NState) (C : List (Int × Nat)) (x
     (base : s.frame.state.storage.baseSpace = F.base)
     (forestEq : s.frame.state.forest = F.forest)
     (fbl : s.frame.bindings.length = 2) (tp : s.frame.state.storage.peak ≤ F.TPB)
+    (vKeep : s.frame.state.storage.lookup F.V = some F.vbuf)
     (cb : Cb F s) (slots : s.slots[1]? = some (.vector 1))
     (cValue : envOf s 4 ti = some (c : Int)) (cSmall : c < 2147483648)
     (len : C.length < F.X.length) (live : liveS s+7 ≤ F.SPB) :
@@ -346,7 +353,8 @@ theorem append1 (F : Fix) (ok : FixOK F) (s : NState) (C : List (Int × Nat)) (x
     omega
   have nodes := ok.cvNodes
   refine ⟨t,run,⟨famT,⟨b0,r.buffer,b0Same,self,?_,?_,?_,?_,l0,limit.trans l1,?_,?_⟩,by rw [baseT,base],
-    by rw [forest]; exact forestEq,by rw [fb]; exact fbl,tpT⟩,forest,fb,sl,sc',me,bi,ba,wl,
+    by rw [forest]; exact forestEq,by rw [fb]; exact fbl,tpT,
+    by rw [other F.V (by have := ok.vr; omega)]; exact vKeep⟩,forest,fb,sl,sc',me,bi,ba,wl,
     by simp [NExpr.nodes] at wu; omega,?_⟩
   · rw [i0]; simp [firsts]
   · rw [items,i1]; simp [seconds]
@@ -410,7 +418,7 @@ theorem noBody_run (F : Fix) (ok : FixOK F) (S : NState) (C : List (Int × Nat))
   have live := live_loop sh ok
   have slot1 : S.slots[1]? = some (.vector 1) := by simp [sh.slots,slotsI,slotsC,slotsP,slotsN]
   -- row 0
-  obtain ⟨t1,b0,b1,run1,fam1,f0,f1,i0,i1,c0,c1,l0,l1,lv,wk,base1,forest1,fb1,tp1,sl1,sc1,me1,bi1,ba1,wl1,wu1,cb1⟩ :=
+  obtain ⟨t1,b0,b1,run1,fam1,f0,f1,i0,i1,c0,c1,l0,l1,lv,wk,base1,forest1,fb1,tp1,v1,sl1,sc1,me1,bi1,ba1,wl1,wu1,cb1⟩ :=
     append0 F ok S C pre st cb slot1 (by simpa [NExpr.denote] using ep) hpre len (by omega)
   have sh1 : Sh t1 F.P F.B slotsI (cellsI F.ty F.X.length pre cnt t) (bindsI F.P) (F.sc+3) :=
     ⟨by rw [sl1]; exact sh.slots,by rw [me1]; exact sh.memory,by rw [bi1]; exact sh.bindings,
@@ -419,7 +427,7 @@ theorem noBody_run (F : Fix) (ok : FixOK F) (S : NState) (C : List (Int × Nat))
   -- row 1
   obtain ⟨t2,run2,st2,forest2,fb2,sl2,sc2,me2,bi2,ba2,wl2,wu2,cb2⟩ :=
     append1 F ok t1 C pre cnt b0 b1 fam1 f0 f1 i0 i1 c0 c1 l0 l1 lv wk base1
-      (by rw [forest1]; exact st.forest) (by rw [fb1]; exact st.frameBindings) tp1 cb1
+      (by rw [forest1]; exact st.forest) (by rw [fb1]; exact st.frameBindings) tp1 v1 cb1
       (by rw [sl1]; exact slot1) ec1 hc len (by rw [liveS_sh sh1]; rw [liveS_sh sh] at live; omega)
   have sh2 : Sh t2 F.P F.B slotsI (cellsI F.ty F.X.length pre cnt t) (bindsI F.P) (F.sc+3) :=
     ⟨by rw [sl2]; exact sh1.slots,by rw [me2]; exact sh1.memory,by rw [bi2]; exact sh1.bindings,
@@ -446,13 +454,15 @@ theorem noBody_run (F : Fix) (ok : FixOK F) (S : NState) (C : List (Int × Nat))
     ⟨by rw [sl4]; exact sh3.slots,by rw [me4,sh3.memory]; exact set_cnt F.P F.ty _ x cnt t 1,
       by rw [bi4]; exact sh3.bindings,by rw [ba4]; exact sh3.base,by rw [sc4]; exact sh3.scope⟩
   have st3 : St F t3 (C ++ [(pre,cnt)]) := by
-    obtain ⟨fam,bufs,base,context,fbl,tp⟩ := st2
-    refine ⟨?_,?_,by rw [state3]; exact base,by rw [state3]; exact context,by rw [fb3]; exact fbl,by rw [state3]; exact tp⟩
+    obtain ⟨fam,bufs,base,context,fbl,tp,inp⟩ := st2
+    refine ⟨?_,?_,by rw [state3]; exact base,by rw [state3]; exact context,by rw [fb3]; exact fbl,by rw [state3]; exact tp,
+      by rw [state3]; exact inp⟩
     · have := fam3; rwa [show resources t3.frame = resources t2.frame by simp [resources,state3]]
     · rw [state3]; exact bufs
   have st4 : St F t4 (C ++ [(pre,cnt)]) := by
-    obtain ⟨fam,bufs,base,context,fbl,tp⟩ := st3
-    refine ⟨?_,?_,by rw [state4]; exact base,by rw [state4]; exact context,by rw [fb4]; exact fbl,by rw [state4]; exact tp⟩
+    obtain ⟨fam,bufs,base,context,fbl,tp,inp⟩ := st3
+    refine ⟨?_,?_,by rw [state4]; exact base,by rw [state4]; exact context,by rw [fb4]; exact fbl,by rw [state4]; exact tp,
+      by rw [state4]; exact inp⟩
     · have := fam4; rwa [show resources t4.frame = resources t2.frame by simp [resources,state4,state3]]
     · rw [state4]; exact bufs
   have live2 : liveS t2+40 ≤ F.SPB := live_loop sh2 ok
@@ -517,7 +527,8 @@ theorem leave_take (F : Fix) (ok : FixOK F) (O T : NState) (C : List (Int × Nat
     rw [peakL,lv,st.base]; have := st.storagePeak; have := ok.tpb; omega
   refine ⟨leave,⟨famL,⟨b0,b1,by rw [lookupL]; exact f0,by rw [lookupL]; exact f1,i0,i1,c0,c1,l0,l1,
     by rw [liveL]; exact lv,by rw [workL]; exact wk⟩,by rw [baseL]; exact st.base,
-    by rw [stateL]; exact st.forest,by rw [bindingsT]; exact st.frameBindings,tpL⟩,⟨?_,?_⟩,rfl,rfl,bindingsT⟩
+    by rw [stateL]; exact st.forest,by rw [bindingsT]; exact st.frameBindings,tpL,by rw [lookupL]; exact st.input⟩,
+    ⟨?_,?_⟩,rfl,rfl,bindingsT⟩
   · rw [left_scalar_peak]
     have := cbO.scalarPeak; have := cbT.scalarPeak
     simp only [liveS] at liveO
@@ -554,9 +565,9 @@ theorem resources_eq {f g : Frame} (state : f.state = g.state) : resources f = r
 theorem st_frame {F : Fix} {s u : NState} {C : List (Int × Nat)} (st : St F s C)
     (family : Family F.params (F.heap C) u.frame (resources s.frame))
     (state : u.frame.state = s.frame.state) (bindings : u.frame.bindings.length = 2) : St F u C := by
-  obtain ⟨_,bufs,base,context,_,tp⟩ := st
+  obtain ⟨_,bufs,base,context,_,tp,inp⟩ := st
   exact ⟨by rwa [resources_eq state],by rw [state]; exact bufs,by rw [state]; exact base,
-    by rw [state]; exact context,bindings,by rw [state]; exact tp⟩
+    by rw [state]; exact context,bindings,by rw [state]; exact tp,by rw [state]; exact inp⟩
 
 theorem st_released {F : Fix} {s u : NState} {w p : Nat} {C : List (Int × Nat)} (r : FamilySteps.Released s u w p)
     (st : St F s C) : St F u C :=
@@ -575,7 +586,7 @@ theorem sh_enter {s : NState} {P : List Cell} {B : Nat} {slots : List Location} 
 
 theorem st_enter {F : Fix} {s : NState} {C : List (Int × Nat)} (st : St F s C) :
     St F {s with scope := s.scope+1} C :=
-  ⟨st.family,st.bufs,st.base,st.forest,st.frameBindings,st.storagePeak⟩
+  ⟨st.family,st.bufs,st.base,st.forest,st.frameBindings,st.storagePeak,st.input⟩
 
 theorem cb_enter {F : Fix} {s : NState} (cb : Cb F s) : Cb F {s with scope := s.scope+1} :=
   ⟨cb.scalarPeak,cb.peak⟩
@@ -861,7 +872,7 @@ theorem tail_run (F : Fix) (ok : FixOK F) (G : NState) (C : List (Int × Nat)) (
   have liveG : liveS G+40 ≤ F.SPB := by
     rw [liveS_sh sh]; have := ok.spb; have := ok.baseLe; simp [cellsC,bindsC,bindsP,bindsN]; omega
   have slot1 : G.slots[1]? = some (.vector 1) := by simp [sh.slots,slotsC,slotsP,slotsN]
-  obtain ⟨t1,b0,b1,run1,fam1,f0,f1,i0,i1,c0,c1,l0,l1,lv,wk,base1,forest1,fb1,tp1,sl1,sc1,me1,bi1,ba1,wl1,wu1,cb1⟩ :=
+  obtain ⟨t1,b0,b1,run1,fam1,f0,f1,i0,i1,c0,c1,l0,l1,lv,wk,base1,forest1,fb1,tp1,v1,sl1,sc1,me1,bi1,ba1,wl1,wu1,cb1⟩ :=
     append0 F ok G C pre st cb slot1 (by simpa [NExpr.denote] using ep) hpre len (by omega)
   have sh1 : Sh t1 F.P F.B slotsC (cellsC F.ty F.X.length pre cnt) (bindsC F.P) F.sc :=
     ⟨by rw [sl1]; exact sh.slots,by rw [me1]; exact sh.memory,by rw [bi1]; exact sh.bindings,
@@ -869,7 +880,7 @@ theorem tail_run (F : Fix) (ok : FixOK F) (G : NState) (C : List (Int × Nat)) (
   have ec1 := (envC sh1 hpre (by omega)).2
   obtain ⟨t2,run2,st2,forest2,fb2,sl2,sc2,me2,bi2,ba2,wl2,wu2,cb2⟩ :=
     append1 F ok t1 C pre cnt b0 b1 fam1 f0 f1 i0 i1 c0 c1 l0 l1 lv wk base1
-      (by rw [forest1]; exact st.forest) (by rw [fb1]; exact st.frameBindings) tp1 cb1
+      (by rw [forest1]; exact st.forest) (by rw [fb1]; exact st.frameBindings) tp1 v1 cb1
       (by rw [sl1]; exact slot1) ec1 (by omega) len (by rw [liveS_sh sh1]; rw [liveS_sh sh] at liveG; omega)
   rw [← math] at st2
   have sh2 : Sh t2 F.P F.B slotsC (cellsC F.ty F.X.length pre cnt) (bindsC F.P) F.sc :=
@@ -980,6 +991,7 @@ theorem construct_step (F : Fix) (ok : FixOK F) (S0 : NState)
     (hR : F.R = S0.frame.state.storage.objects.length) (hLc : F.Lc = S0.frame.state.liveSpace+3)
     (hTc : F.Tc = S0.frame.state.storage.work+3) (hbase : F.base = S0.frame.state.storage.baseSpace)
     (hforest : F.forest = S0.frame.state.forest.constructRows F.ty F.sc 2)
+    (hvbuf : S0.frame.state.storage.lookup F.V = some F.vbuf)
     (tp0 : max S0.frame.state.storage.peak (S0.frame.state.liveSpace+4-F.base) ≤ F.TPB)
     (cb0 : Cb F S0) :
     ∃ S1, (NStmt.constructRows F.ty true (.literal tu 2)).run S0 = some ⟨S1,none,false⟩ ∧
@@ -1019,7 +1031,7 @@ theorem construct_step (F : Fix) (ok : FixOK F) (S0 : NState)
       by rw [ba]; exact sh0.base,by rw [sc]; exact sh0.scope⟩
   have tpT : t.frame.state.storage.peak ≤ F.TPB := by
     rw [state,nextEq]; simp only []; rw [← hbase]; omega
-  refine ⟨t,run,shT,⟨fam,⟨rowBuffer F.ty (F.R+1),rowBuffer F.ty (F.R+2),?_,?_,?_,?_,?_,?_,?_,?_,?_,?_⟩,?_,?_,?_,tpT⟩,
+  refine ⟨t,run,shT,⟨fam,⟨rowBuffer F.ty (F.R+1),rowBuffer F.ty (F.R+2),?_,?_,?_,?_,?_,?_,?_,?_,?_,?_⟩,?_,?_,?_,tpT,?_⟩,
     ?_,by simp [NExpr.nodes] at wu; omega⟩
   · rw [state,hR]; exact r0
   · rw [state,hR]; exact r1
@@ -1034,6 +1046,9 @@ theorem construct_step (F : Fix) (ok : FixOK F) (S0 : NState)
   · rw [state,nextEq,hbase]
   · rw [state,constructRows_forest _ _ _ _ next ran,hforest,sh0.scope]
   · rw [frame]; simp [fb0]
+  · rw [state,constructRows_storage_old _ _ _ _ F.V next ran
+      (by rw [← hR]; have := ok.vr; omega)]
+    exact hvbuf
   · have := cb0.scalarPeak; have := cb0.peak
     have live : liveS S0+1 ≤ F.SPB := by rw [liveS_sh sh0]; have := ok.spb; have := ok.baseLe; simp; omega
     simp [NExpr.nodes] at pu
@@ -1047,11 +1062,12 @@ theorem body_run (F : Fix) (ok : FixOK F) (S0 : NState)
     (hR : F.R = S0.frame.state.storage.objects.length) (hLc : F.Lc = S0.frame.state.liveSpace+3)
     (hTc : F.Tc = S0.frame.state.storage.work+3) (hbase : F.base = S0.frame.state.storage.baseSpace)
     (hforest : F.forest = S0.frame.state.forest.constructRows F.ty F.sc 2)
+    (hvbuf : S0.frame.state.storage.lookup F.V = some F.vbuf)
     (tp0 : max S0.frame.state.storage.peak (S0.frame.state.liveSpace+4-F.base) ≤ F.TPB)
     (cb0 : Cb F S0) :
     RunsTo (body F.ty F.cv) S0 (Final F (S0.scalars.work+90*F.X.length+70)) := by
   have small := ok.small
-  obtain ⟨S1,run1,sh1,st1,cb1,w1⟩ := construct_step F ok S0 sh0 fam0 fb0 ctx0 hR hLc hTc hbase hforest tp0 cb0
+  obtain ⟨S1,run1,sh1,st1,cb1,w1⟩ := construct_step F ok S0 sh0 fam0 fb0 ctx0 hR hLc hTc hbase hforest hvbuf tp0 cb0
   -- int n = v.size();
   have input : eraseHeap (F.heap []) F.V = some (.flat F.ty F.vsc F.X) :=
     erase_input F.h0 F.ty F.R F.sc F.V F.vsc F.X _ _ ok.input (by have := ok.vr; omega)
