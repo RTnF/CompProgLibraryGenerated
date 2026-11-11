@@ -171,7 +171,19 @@ LEAN_KEYWORDS = {
 }
 
 
+OPERATOR_NAMES = {"==": "op_eq", "!=": "op_ne", "<": "op_lt", ">": "op_gt", "<=": "op_le", ">=": "op_ge",
+                  "+": "op_add", "-": "op_sub", "*": "op_mul", "/": "op_div", "%": "op_mod", "+=": "op_add_assign",
+                  "-=": "op_sub_assign", "*=": "op_mul_assign", "/=": "op_div_assign", "()": "op_call", "[]": "op_index",
+                  "<=>": "op_cmp", "<<": "op_shl", ">>": "op_shr", "&": "op_and", "|": "op_or", "^": "op_xor",
+                  "!": "op_not", "~": "op_compl", "=": "op_assign"}
+
+
 def lean_name(name: str) -> str:
+    if name.startswith("operator"):
+        op = name.removeprefix("operator").strip()
+        if op not in OPERATOR_NAMES:
+            raise Unsupported(f"operator {op}")
+        return OPERATOR_NAMES[op]
     return name + "_" if name in LEAN_KEYWORDS else name
 
 
@@ -714,7 +726,7 @@ class Fn:
                 return f"({a}, {b})"
         if ty.kind == "cls":
             sigs = [s for s in self.tr.classes[ty.name].methods if s.is_ctor]
-            return self.call_sig(self.pick(sigs, args, f"constructor of {ty.name}"), None, args, pre, ty)
+            return self.call_sig(self.pick(sigs, args, f"constructor of {ty.name}"), None, args, pre, ty)[0]
         raise Unsupported(f"construct {ty}")
 
     def default_value(self, ty: Ty):
@@ -1645,7 +1657,7 @@ class Translator:
                 is_ctor = kind == "CXXConstructorDecl"
                 qual = c["type"]["qualType"]
                 ret = VOID if is_ctor else parse_type(qual.split("(")[0].strip(), tset, set(self.classes))
-                sig = Sig(c["name"].split("<")[0], "", self.param_list(c, tps), ret, owner=name,
+                sig = Sig(c["name"].split("<")[0] if is_ctor else c["name"], "", self.param_list(c, tps), ret, owner=name,
                           is_const=qual.rstrip().endswith("const") or is_ctor, is_static=c.get("storageClass") == "static",
                           is_ctor=is_ctor, node=c, tparams=[], public=access == "public")
                 info.methods.append(sig)
