@@ -1,0 +1,54 @@
+name: Set up the proof toolchain
+description: >
+  Install Lean, the Mathlib build cache and the pinned proof checkers, and restore the axiom definitions and the
+  screened Proofs build of an earlier main run. Network access happens only here, outside the test path.
+runs:
+  using: composite
+  steps:
+    - name: Install Python and Lean prerequisites
+      shell: bash
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends python3 unzip zstd git libseccomp2
+    - uses: leanprover/lean-action@v1
+      env:
+        LEAN_NUM_THREADS: '1'
+      with:
+        auto-config: 'false'
+        build: 'false'
+        test: 'false'
+        lint: 'false'
+        leanchecker: 'false'
+        axiom-audit: 'false'
+        use-mathlib-cache: 'false'
+    - name: Fetch Mathlib and its build cache (outside the test path)
+      shell: bash
+      run: lake exe cache get
+    - uses: dtolnay/rust-toolchain@1.94.1
+    - name: Fetch the pinned proof checkers (outside the test path)
+      shell: bash
+      run: python3 tools/prepare_proof_checkers.py --fetch
+    - name: Build the pinned proof checkers without network access
+      shell: bash
+      run: python3 tools/prepare_proof_checkers.py
+    - name: Restore the axiom definitions
+      uses: actions/cache/restore@v4
+      with:
+        path: .cache/axiom-definitions.json
+        key: axiom-definitions-${{ hashFiles('verification/allowed_axioms.json', 'lean-toolchain', 'verification/InspectEnvironment.lean', 'tools/proof_security.py') }}
+        restore-keys: axiom-definitions-
+    # The screened build (and the check results saved with it) from the latest main run. Only the audit job saves
+    # it; check_cache revalidates every restored result against the current inputs before reuse.
+    - name: Restore the screened Proofs build of an earlier run
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          .cache/proof-security-scratch/.lake/build
+          .cache/ci-check-results.json
+        key: public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-
+          public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-
+    - name: Trust the checked-out workspace inside the container
+      shell: bash
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"

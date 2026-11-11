@@ -10,67 +10,72 @@ permissions:
   contents: read
 
 jobs:
-  verify-public:
+  # The public gate (`check_public.py --mode all`) split for wall-clock time: SHARDS jobs run every check except the
+  # final proof audit, partitioned by tools/ci_weights.json, and the audit job runs the final proof audit. The gate
+  # holds only when all of them pass. Keep SHARDS equal to the length of the matrix below.
+  verify-shard:
     runs-on: ubuntu-24.04
     container: gcc:13.3.0-bookworm
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    env:
+      SHARDS: '16'
     steps:
       - uses: actions/checkout@v4
-      - name: Install Python and Lean prerequisites
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends python3 unzip zstd git libseccomp2
+      - uses: ./.github/actions/setup-proof-tools
+      - name: Restore this shard's successful checks
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/ci-check-results.json
+          key: public-results-v1-${{ matrix.shard }}-of-${{ env.SHARDS }}-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            public-results-v1-${{ matrix.shard }}-of-${{ env.SHARDS }}-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-
+            public-results-v1-${{ matrix.shard }}-of-${{ env.SHARDS }}-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-
+      - name: Restore checks while requiring the final proof audit
+        id: restore-check-results
+        run: python3 tools/offline.py python3 tools/ci_check_cache.py restore
+      - name: Verify this shard of the public checks without network access
+        env:
+          LEAN_NUM_THREADS: '1'
+        run: PROOF_BUILD_THREADS="$(nproc)" python3 tools/check_public.py --mode tests --shard "${{ matrix.shard }}/$SHARDS" --timeout-seconds 6600
+      - name: Snapshot successful checks from this main run
+        id: snapshot-progress
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.restore-check-results.outcome == 'success'
+        run: python3 tools/offline.py python3 tools/ci_check_cache.py snapshot
+      - name: Preserve completed work even when a later check fails
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.snapshot-progress.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/ci-check-results.json
+          key: public-results-v1-${{ matrix.shard }}-of-${{ env.SHARDS }}-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  verify-audit:
+    runs-on: ubuntu-24.04
+    container: gcc:13.3.0-bookworm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-proof-tools
       - name: Check AST stream boundaries before the proof build
         run: |
           python3 tools/offline.py python3 tests/test_direct_file_ast.py \
             DirectASTTests.test_stream_preserves_raw_roots_across_every_string_boundary \
             DirectASTTests.test_stream_rejects_truncated_strings_and_extra_environments \
             DirectASTTests.test_stream_chunk_boundaries_strings_and_trailer
-      - uses: leanprover/lean-action@v1
-        env:
-          LEAN_NUM_THREADS: '1'
-        with:
-          auto-config: 'false'
-          build: 'false'
-          test: 'false'
-          lint: 'false'
-          leanchecker: 'false'
-          axiom-audit: 'false'
-          use-mathlib-cache: 'false'
-      - name: Fetch Mathlib and its build cache (outside the test path)
-        run: lake exe cache get
-      - uses: dtolnay/rust-toolchain@1.94.1
-      - name: Fetch the pinned proof checkers (outside the test path)
-        run: |
-          python3 tools/prepare_proof_checkers.py --fetch
-      - name: Build the pinned proof checkers without network access
-        run: python3 tools/prepare_proof_checkers.py
-      - uses: actions/cache@v4
-        with:
-          path: .cache/axiom-definitions.json
-          key: axiom-definitions-${{ hashFiles('verification/allowed_axioms.json', 'lean-toolchain', 'verification/InspectEnvironment.lean', 'tools/proof_security.py') }}
-          restore-keys: axiom-definitions-
-      - name: Restore independently built imports and successful checks
-        id: restore-progress
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            .cache/proof-security-scratch/.lake/build
-            .cache/ci-check-results.json
-          key: public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-
-            public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-
+      - name: Check that the CI shards match the shard planner
+        run: python3 tools/offline.py python3 tools/ci_shards.py check-workflow .github/workflows/ci.yml
       - name: Restore checks while requiring the final proof audit
         id: restore-check-results
         run: python3 tools/offline.py python3 tools/ci_check_cache.py restore
-      - name: Trust the checked-out workspace inside the container
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Check imported-source inventory references and hashes
         run: python3 tools/inventory_imports.py --check
-      - name: Verify all public components without network access
+      - name: Run the final proof audit without network access
         env:
           LEAN_NUM_THREADS: '1'
-        run: python3 tools/check_public.py --timeout-seconds 7200
+        run: PROOF_BUILD_THREADS="$(nproc)" python3 tools/check_public.py --mode audit --timeout-seconds 6600
       - name: Build and verify the header-only archive
         run: |
           python3 tools/offline.py python3 tools/package_headers.py --output "$RUNNER_TEMP/library-hpp.zip"
@@ -80,11 +85,18 @@ jobs:
           name: library-hpp
           path: ${{ runner.temp }}/library-hpp.zip
           if-no-files-found: error
-      - name: Snapshot successful checks from this main run
+      - name: Save the axiom definitions
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('.cache/axiom-definitions.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/axiom-definitions.json
+          key: axiom-definitions-${{ hashFiles('verification/allowed_axioms.json', 'lean-toolchain', 'verification/InspectEnvironment.lean', 'tools/proof_security.py') }}
+        continue-on-error: true
+      - name: Snapshot reusable checks from this main run
         id: snapshot-progress
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.restore-check-results.outcome == 'success'
         run: python3 tools/offline.py python3 tools/ci_check_cache.py snapshot
-      - name: Preserve completed work even when a later check fails
+      - name: Preserve the screened Proofs build even when a later check fails
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.snapshot-progress.outcome == 'success'
         uses: actions/cache/save@v4
         with:
@@ -94,7 +106,7 @@ jobs:
           key: public-progress-v1-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'tools/prepare_proof_checkers.py', 'tools/ci_check_cache.py') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   release-headers:
-    needs: verify-public
+    needs: [verify-shard, verify-audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:

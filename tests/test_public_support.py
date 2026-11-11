@@ -19,6 +19,7 @@ import public
 import check_public
 import process_supervisor as supervisor
 import ci_check_cache
+import ci_shards
 from offline import disable_network
 
 
@@ -239,10 +240,21 @@ class SupportTests(unittest.TestCase):
         child.wait.assert_any_call()
 
     def test_test_imports_come_from_screened_build(self):
-        with patch.object(check_public, 'run') as run:
+        command = [sys.executable, str(ROOT / 'tools/check_proof_security.py'), '--prepare-test-imports']
+        environment = {k: v for k, v in os.environ.items() if k != 'PROOF_BUILD_THREADS'}
+        with patch.dict(os.environ, environment, clear=True), patch.object(check_public, 'run') as run:
             check_public.build_lean()
-        run.assert_called_once_with([
-            sys.executable, str(ROOT / 'tools/check_proof_security.py'), '--prepare-test-imports'])
+        run.assert_called_once_with(command)
+        with patch.dict(os.environ, {'PROOF_BUILD_THREADS': '4', 'LEAN_NUM_THREADS': '1'}), \
+                patch.object(check_public, 'run') as run:
+            check_public.build_lean()
+        self.assertEqual(run.call_args.args, (command,))
+        self.assertEqual(run.call_args.kwargs['env']['LEAN_NUM_THREADS'], '4')
+        for value in ('0', 'four', ''):
+            with self.subTest(value=value), patch.dict(os.environ, {'PROOF_BUILD_THREADS': value}), \
+                    patch.object(check_public, 'run') as run, self.assertRaisesRegex(RuntimeError, 'positive'):
+                check_public.build_lean()
+            run.assert_not_called()
 
     def test_full_gate_builds_imports_before_tests_and_audits_afterwards(self):
         events = []
@@ -282,6 +294,97 @@ class SupportTests(unittest.TestCase):
                 check_public.main()
             tasks.assert_not_called()
             audit.assert_not_called()
+
+    def gate_events(self, argv, labels):
+        """Run check_public.main with stubbed checks; return the order of build, checks and audit."""
+        events = []
+        tasks = [(label, lambda label=label: events.append(label)) for label in labels]
+        with ExitStack() as stack:
+            for name in ['disable_network', 'lower_priority', 'check_local_results_untracked', 'check_compiler']:
+                stack.enter_context(patch.object(check_public, name))
+            stack.enter_context(patch.object(sys, 'argv', ['check_public.py', *argv]))
+            stack.enter_context(patch.object(check_public, 'registry', return_value={}))
+            stack.enter_context(patch.object(check_public, 'all_tasks', return_value=tasks))
+            stack.enter_context(patch.object(check_public, 'build_lean', side_effect=lambda: events.append('build')))
+            stack.enter_context(patch.object(check_public, 'check_lean', side_effect=lambda: events.append('audit')))
+            with redirect_stdout(io.StringIO()):
+                check_public.main()
+        return events
+
+    def test_ci_shards_and_audit_together_run_the_full_gate_once(self):
+        labels = [f'check:tests/t{i}.py' for i in range(23)] + ['cpp:a', 'bridge:a', 'cpp-common [x]']
+        count = 5
+        runs = [self.gate_events(['--mode', 'tests', '--shard', f'{index}/{count}'], labels)
+                for index in range(count)]
+        for events in runs:
+            self.assertEqual(events[0], 'build')
+            self.assertNotIn('audit', events)
+        checks = [label for events in runs for label in events if label != 'build']
+        self.assertEqual(sorted(checks), sorted(labels))
+        self.assertEqual(self.gate_events(['--mode', 'audit'], labels), ['build', 'audit'])
+        self.assertEqual(self.gate_events([], labels), ['build', *labels, 'audit'])
+        self.assertEqual(self.gate_events(['--mode', 'cpp'], labels), labels)
+
+    def test_shard_arguments_are_validated(self):
+        for argv in (['--shard', '0/2'], ['--mode', 'audit', '--shard', '0/2']):
+            with self.subTest(argv=argv), self.assertRaisesRegex(RuntimeError, '--shard needs --mode tests'):
+                self.gate_events(argv, [])
+        for text in ('2/2', '1', 'a/b', '-1/2'):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                ci_shards.parse_shard(text)
+
+    def test_shard_plan_is_deterministic_balanced_and_complete(self):
+        weights = {'default_seconds': {'': 10, 'cpp': 1}, 'split_methods': [],
+                   'seconds': {'check:big': 100, 'check:mid': 60, 'check:small': 40}}
+        labels = ['check:small', 'cpp:x', 'check:big', 'check:unknown', 'check:mid', 'cpp:y']
+        shards, loads = ci_shards.assign(labels, 2, weights)
+        self.assertEqual(set(shards), set(labels))
+        self.assertEqual(ci_shards.assign(list(reversed(labels)), 2, weights), (shards, loads))
+        self.assertEqual(loads, [110, 102])
+        self.assertEqual(shards['check:big'], 0)
+
+    def test_split_methods_cover_every_unittest_method(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'test_split.py'
+            source.write_text('import unittest\nclass A(unittest.TestCase):\n    def test_a(self): pass\n'
+                              '    def helper(self): pass\nclass B(unittest.TestCase):\n    def test_b(self): pass\n'
+                              'class Mixin:\n    pass\n')
+            self.assertEqual(ci_shards.test_methods(source), ['A.test_a', 'B.test_b'])
+            source.write_text('import unittest\nclass A(unittest.TestCase):\n    def test_a(self): pass\n'
+                              'class C(A):\n    def test_c(self): pass\n')
+            with self.assertRaisesRegex(ValueError, 'derive directly'):
+                ci_shards.test_methods(source)
+        weights = {'default_seconds': {'': 10}, 'split_methods': ['tests/test_template_class_layout.py'],
+                   'seconds': {'check:tests/test_template_class_layout.py': 400}}
+        tasks = ci_shards.check_tasks(['tests/test_public_support.py', 'tests/test_template_class_layout.py'], weights)
+        methods = ci_shards.test_methods(ROOT / 'tests/test_template_class_layout.py')
+        self.assertEqual(tasks[0], ('check:tests/test_public_support.py', []))
+        self.assertEqual(tasks[1:], [(f'check:tests/test_template_class_layout.py::{m}', [m]) for m in methods])
+        siblings = {'check:tests/test_template_class_layout.py': len(methods)}
+        self.assertAlmostEqual(ci_shards.weight(tasks[1][0], weights, siblings), 400 / len(methods))
+        with self.assertRaisesRegex(ValueError, 'unregistered'):
+            ci_shards.check_split_registered(['tests/test_public_support.py'], weights)
+
+    def test_registered_split_files_and_workflow_matrix_are_consistent(self):
+        weights = ci_shards.load_weights()
+        checks = public.support_registry()['checks']
+        ci_shards.check_split_registered(checks, weights)
+        self.assertGreater(ci_shards.workflow_shards((ROOT / '.github/workflows/ci.yml').read_text()), 1)
+        with self.assertRaisesRegex(ValueError, 'does not list'):
+            ci_shards.workflow_shards("        shard: [0, 2]\n      SHARDS: '2'\n")
+
+    def test_weight_update_keeps_real_measurements_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'weights.json'
+            path.write_text(json.dumps({'default_seconds': {'': 10}, 'split_methods': [],
+                                        'seconds': {'check:a': 50, 'check:b': 70}}))
+            log = Path(directory) / 'job.log'
+            log.write_text('2026Z check passed after 0.012s: check:a\n2026Z check passed after 81.25s: check:b\n'
+                           '2026Z check passed after 3.0s: check:tests/t.py::A.test_a\n')
+            with patch.object(ci_shards, 'ROOT', Path(directory)), redirect_stdout(io.StringIO()):
+                ci_shards.update([log], path)
+            self.assertEqual(json.loads(path.read_text())['seconds'],
+                             {'check:a': 50, 'check:b': 81.2, 'check:tests/t.py::A.test_a': 3.0})
 
     def fixture(self, root):
         def write(path, text=""):

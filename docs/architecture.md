@@ -42,6 +42,8 @@
 
 `tools/package_headers.py` は登録済み公開ソースのハッシュを照合し、`library/` 内の `.hpp` だけを相対パスを保持した ZIP にする。ローカル include が配布物の外を参照する場合は拒否する。`tools/check_header_package.py` は収録内容を照合し、展開したヘッダのみでコンパイルできることを確認する。公開テンプレートも全検証完了後に `library/` 内へ配置する。
 
+CI は全件gate（`check_public.py --mode all`）を実行時間のため分割する。`verify-shard` の16ジョブが最終監査以外の全検査を`--mode tests --shard I/16` で分担し、`verify-audit` が最終監査（`--mode audit`）と配布ZIPの検査を行う。全ジョブの成功をもって全件gateの成功とする。分担は `tools/ci_shards.py` がタスク名と `tools/ci_weights.json`（CIで測った秒数）だけから最長処理時間順に決めるので、各ジョブが同じ分割を計算し、各検査はちょうど1回実行される。単独で長いテストファイルは `split_methods` に挙げ、unittest のメソッド単位の検査に分ける。重みは CI のジョブログから `python3 tools/ci_shards.py update LOG...` で更新し、`python3 tools/ci_shards.py plan 16` で各ジョブの見積もりを確かめる。Lake はモジュールのビルドを Lean のスレッドプールで実行するため、`LEAN_NUM_THREADS=1` ではモジュールを1つずつビルドする。CI は `PROOF_BUILD_THREADS` にコア数を与え、証明のビルドだけを並列にする（検査結果は変わらない）。
+
 main push の CI 検証と公理監査が成功した後に、Release 更新専用ジョブが固定タグ `headers` と asset `library-hpp.zip` を更新する。PR や手動実行では Release を更新しない。更新ジョブは直列化し、main が既に別コミットに進んでいる場合は旧コミットによる上書きを行わない。配布元コミットは Release 本文に記録する。利用者は asset の ZIP を取得すればよく、リポジトリ全体の clone は必要ない。
 
 同名 asset の更新には [GitHub CLI の `gh release upload --clobber`](https://cli.github.com/manual/gh_release_upload) を使う。通信禁止には [libseccomp のフィルタ](https://man7.org/linux/man-pages/man3/seccomp_load.3.html) を使う。

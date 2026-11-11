@@ -12,6 +12,7 @@ import tempfile
 import time
 
 import check_cache
+import ci_shards
 from public import ROOT, TEMPLATE, include_check, registry, repo_file, support_registry
 from offline import disable_network
 
@@ -159,6 +160,26 @@ def bridge_tasks(entries):
     return [(f"bridge:{name}", lambda name=name, data=data: check(name, data)) for name, data in entries.items()]
 
 
+def support_check_tasks():
+    tasks = []
+    for label, arguments in ci_shards.check_tasks(support_registry()["checks"], ci_shards.load_weights()):
+        check = label.removeprefix("check:").partition("::")[0]
+        tasks.append((label, lambda label=label, check=check, arguments=arguments:
+                      run_traced(label, [sys.executable, str(repo_file(check)), *arguments])))
+    return tasks
+
+
+def all_tasks(entries, mode="all"):
+    tasks = []
+    if mode in ("all", "tests", "cpp"):
+        tasks += cpp_tasks(entries)
+    if mode in ("all", "tests", "bridge"):
+        tasks += bridge_tasks(entries)
+    if mode in ("all", "tests"):
+        tasks += support_check_tasks()
+    return tasks
+
+
 def run_tasks(tasks, jobs):
     """Run independent checks in parallel; the first failure cancels the rest and is re-raised."""
     def timed(label, function):
@@ -188,8 +209,20 @@ def run_tasks(tasks, jobs):
 
 
 def build_lean():
-    """Prepare test imports from the independently built, screened sources."""
-    run([sys.executable, str(ROOT / "tools/check_proof_security.py"), "--prepare-test-imports"])
+    """Prepare test imports from the independently built, screened sources.
+
+    Lake runs its module builds on Lean's thread pool, so LEAN_NUM_THREADS=1 (which the checks use to bound each
+    Lean process) also builds one module at a time. PROOF_BUILD_THREADS, when set (CI sets the runner's core count),
+    replaces it for this build only; the thread count does not change what is built or checked.
+    """
+    command = [sys.executable, str(ROOT / "tools/check_proof_security.py"), "--prepare-test-imports"]
+    threads = os.environ.get("PROOF_BUILD_THREADS")
+    if threads is None:
+        run(command)
+        return
+    if not threads.isdigit() or int(threads) < 1:
+        raise RuntimeError(f"PROOF_BUILD_THREADS must be a positive integer: {threads!r}")
+    run(command, env={**os.environ, "LEAN_NUM_THREADS": threads})
 
 
 def check_lean():
@@ -220,7 +253,13 @@ def lower_priority():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=("all", "cpp", "bridge"), default="all")
+    parser.add_argument("--mode", choices=("all", "cpp", "bridge", "tests", "audit"), default="all",
+                        help="all: the full gate. CI splits it into `tests` (every check except the final proof "
+                             "audit, optionally one --shard of them) and `audit` (the final proof audit only); the "
+                             "gate holds when the audit and every shard pass")
+    parser.add_argument("--shard", type=ci_shards.parse_shard,
+                        help="INDEX/COUNT: with --mode tests, run only this shard of the checks "
+                             "(partition from tools/ci_weights.json)")
     parser.add_argument("--jobs", type=int, default=1,
                         help="number of independent checks run in parallel (default: 1; the machine's disk is shared, "
                              "so more jobs raise the I/O load)")
@@ -245,23 +284,26 @@ def main():
         unknown = sorted(set(args.component) - set(entries))
         if unknown:
             raise RuntimeError(f"unknown component(s): {unknown}")
-        if args.mode == "all":
+        if args.mode not in ("cpp", "bridge"):
             raise RuntimeError("--component needs --mode cpp or --mode bridge; the full gate always checks everything")
         selected = {name: data for name, data in entries.items() if name in args.component}
-    tasks = []
-    if args.mode in ("all", "cpp"):
-        tasks += cpp_tasks(selected)
-    if args.mode in ("all", "bridge"):
-        tasks += bridge_tasks(selected)
-    if args.mode == "all":
-        tasks += [(f"check:{check}", lambda check=check: run_traced(f"check:{check}", [sys.executable, str(repo_file(check))]))
-                  for check in support_registry()["checks"]]
-    if args.mode == "all":
+    if args.shard is not None and args.mode != "tests":
+        raise RuntimeError("--shard needs --mode tests")
+    tasks = [] if args.mode == "audit" else all_tasks(selected, args.mode)
+    if args.shard is not None:
+        index, count = args.shard
+        shards, loads = ci_shards.assign([label for label, _ in tasks], count, ci_shards.load_weights())
+        tasks = [(label, function) for label, function in tasks if shards[label] == index]
+        print(f"shard {index}/{count}: {len(tasks)} check(s), estimated {loads[index]:.0f}s", flush=True)
+    # The audit builds the same screened sources itself; building them here first lets that build use
+    # PROOF_BUILD_THREADS too (the audit's own build is then up to date).
+    if args.mode in ("all", "tests", "audit"):
         build_lean()
     run_tasks(tasks, args.jobs)
-    if args.mode == "all":
+    if args.mode in ("all", "audit"):
         check_lean()
-    print(f"public checks passed for {len(selected)} component(s): {args.mode}")
+    shard = "" if args.shard is None else f" shard {args.shard[0]}/{args.shard[1]}"
+    print(f"public checks passed for {len(selected)} component(s): {args.mode}{shard}")
 
 
 if __name__ == "__main__":
