@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      cold_build:
+        description: Build Proofs from scratch (measures the full build against the 30-minute budget)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,6 +31,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-proof-tools
+        with:
+          restore-build: ${{ !(github.event_name == 'workflow_dispatch' && inputs.cold_build) }}
       - name: Restore this shard's successful checks
         uses: actions/cache/restore@v4
         with:
@@ -59,6 +66,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-proof-tools
+        with:
+          restore-build: ${{ !(github.event_name == 'workflow_dispatch' && inputs.cold_build) }}
       - name: Check AST stream boundaries before the proof build
         run: |
           python3 tools/offline.py python3 tests/test_direct_file_ast.py \

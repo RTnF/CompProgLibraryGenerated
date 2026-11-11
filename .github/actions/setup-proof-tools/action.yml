@@ -2,6 +2,10 @@ name: Set up the proof toolchain
 description: >
   Install Lean, the Mathlib build cache and the pinned proof checkers, and restore the axiom definitions and the
   screened Proofs build of an earlier main run. Network access happens only here, outside the test path.
+inputs:
+  restore-build:
+    description: Restore the screened Proofs build of an earlier main run ('false' measures a cold build)
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -40,6 +44,7 @@ runs:
     # The screened build (and the check results saved with it) from the latest main run. Only the audit job saves
     # it; check_cache revalidates every restored result against the current inputs before reuse.
     - name: Restore the screened Proofs build of an earlier run
+      if: inputs.restore-build == 'true'
       uses: actions/cache/restore@v4
       with:
         path: |
