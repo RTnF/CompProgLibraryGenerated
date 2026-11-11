@@ -119,6 +119,10 @@ import Proofs.CountLoop
 
 import Proofs.CountCall
 import Proofs.VectorSumCall
+import Proofs.Generated.VectorSum
+import Proofs.Cpp.Prelude
+import Proofs.Cpp.Lib.Basic
+import Proofs.Cpp.VectorSum
 import Proofs.VectorMaxCall
 import Proofs.VectorMinCall
 import Proofs.MonoidCall

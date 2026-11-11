@@ -33,9 +33,10 @@ def support_registry() -> dict[str, list[str]]:
         for path in paths:
             repo_file(path)
             if field == "lean_modules" and Path(path).parent not in (
-                    Path("Proofs"), Path("Proofs/Generated"), Path("Proofs/MonoidLazyGeneric")):
-                raise ValueError("shared Lean support must be declared in Proofs/, Proofs/Generated/ "
-                                 "or Proofs/MonoidLazyGeneric/")
+                    Path("Proofs"), Path("Proofs/Generated"), Path("Proofs/MonoidLazyGeneric"), Path("Proofs/Cpp"),
+                    Path("Proofs/Cpp/Lib")):
+                raise ValueError("shared Lean support must be declared in Proofs/, Proofs/Generated/, "
+                                 "Proofs/MonoidLazyGeneric/, Proofs/Cpp/ or Proofs/Cpp/Lib/")
     return data
 
 
@@ -50,7 +51,7 @@ def load_component(metadata: Path) -> dict:
     if data.get("standard") != "c++17":
         raise ValueError(f"unsupported C++ standard for {name}")
     translation = data.get("translation")
-    if translation not in ("state_ir", "nested_ir", "context_class_ir"):
+    if translation not in ("state_ir", "nested_ir", "context_class_ir", "lean_model"):
         raise ValueError(f"unsupported translation for {name}")
     if "signed_conversion" in data and (translation != "state_ir" or
             data["signed_conversion"] not in ("checked", "gcc13.3-lp64-twos-complement")):
@@ -60,8 +61,13 @@ def load_component(metadata: Path) -> dict:
             r"Proofs(?:\.[A-Za-z_][A-Za-z_0-9]*)+", namespace)
             or data.get("bridge") != {"state_ir": "verifier/state_bridge.py",
                                       "nested_ir": "verifier/nested_bridge.py",
-                                      "context_class_ir": "verifier/nested_bridge.py"}[translation]):
+                                      "context_class_ir": "verifier/nested_bridge.py",
+                                      "lean_model": "verifier/model_bridge.py"}[translation]):
         raise ValueError(f"invalid common state generator configuration for {name}")
+    if translation == "lean_model":
+        check_lean_model(name, data)
+    elif "diff" in data:
+        raise ValueError(f"differential tests need the lean_model translation for {name}")
     if "reviewed_ast_sha256" in data:
         raise ValueError(f"common translation must not select a reviewed AST fingerprint for {name}")
     if not isinstance(data.get("spec"), str) or not data["spec"].endswith(".md"):
@@ -123,6 +129,27 @@ def load_component(metadata: Path) -> dict:
     return data
 
 
+def check_lean_model(name: str, data: dict) -> None:
+    """The fields of a component translated by verifier/lean_translate.py (docs/translation.md)."""
+    stem = "".join(part.capitalize() for part in name.split("_"))
+    if data.get("lean_namespace") != f"Proofs.Cpp.{stem}":
+        raise ValueError(f"lean_model components use the namespace Proofs.Cpp.{stem}: {name}")
+    if data.get("model") != f"Proofs/Cpp/Gen/{stem}.lean" or data.get("proof") != f"Proofs/Cpp/{stem}.lean":
+        raise ValueError(f"lean_model components use Proofs/Cpp/Gen/{stem}.lean and Proofs/Cpp/{stem}.lean: {name}")
+    diff = data.get("diff")
+    if not isinstance(diff, dict) or set(diff) != {"instances", "cases"}:
+        raise ValueError(f"missing differential test (diff.instances, diff.cases) for {name}")
+    instances = diff["instances"]
+    if not isinstance(instances, list) or not instances or not all(
+            isinstance(item, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in item.items())
+            for item in instances):
+        raise ValueError(f"invalid differential test instances for {name}")
+    cases = diff["cases"]
+    if not isinstance(cases, str) or Path(cases).parent != Path("tests/diff") or not cases.endswith(".py"):
+        raise ValueError(f"differential test cases must be a generator tests/diff/*.py for {name}")
+    repo_file(cases)
+
+
 def component(name: str) -> dict:
     if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name) is None:
         raise ValueError(f"invalid component name: {name}")
@@ -159,9 +186,10 @@ def registry() -> dict[str, dict]:
     if shared_proofs & (expected_proofs | expected_models):
         raise ValueError("shared infrastructure must not be registered as a component proof/model")
     lean_files = {path.relative_to(ROOT).as_posix() for path in (ROOT / "Proofs").rglob("*.lean")}
-    actual_models = {path for path in lean_files if Path(path).parent == Path("Proofs/Generated")}
+    model_dirs = (Path("Proofs/Generated"), Path("Proofs/Cpp/Gen"))
+    actual_models = {path for path in lean_files if Path(path).parent in model_dirs}
     actual_proofs = lean_files - actual_models
-    shared_models = {path for path in shared_proofs if Path(path).parent == Path("Proofs/Generated")}
+    shared_models = {path for path in shared_proofs if Path(path).parent in model_dirs}
     if actual_proofs != expected_proofs | (shared_proofs - shared_models) or actual_models != expected_models | shared_models:
         raise ValueError("Lean proof/model files and public registry differ")
     actual_bridges = {f"verifier/{path.name}" for path in (ROOT / "verifier").glob("*_bridge.py")}
