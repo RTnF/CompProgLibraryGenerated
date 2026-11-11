@@ -479,9 +479,9 @@ theorem left_sh {O T : NState} {P : List Cell} {B : Nat} {slots : List Location}
   simp only [left_memory,memory,sh.memory]
   rw [List.take_of_length_le (by simp [len])]
 
-theorem leave_ok (F : Fix) (ok : FixOK F) (O T : NState) (C : List (Int × Nat))
-    (st : St F T C) (cbT : Cb F T) (cbO : Cb F O) (lenEq : T.scalars.memory.length = O.scalars.memory.length)
-    (types : T.scalars.memory.map Cell.type = O.scalars.memory.map Cell.type)
+theorem leave_take (F : Fix) (ok : FixOK F) (O T : NState) (C : List (Int × Nat))
+    (st : St F T C) (cbT : Cb F T) (cbO : Cb F O) (fits : O.scalars.memory.length ≤ T.scalars.memory.length)
+    (types : (T.scalars.memory.take O.scalars.memory.length).map Cell.type = O.scalars.memory.map Cell.type)
     (fbO : O.frame.bindings.length = 2) (deeper : F.sc ≤ O.scope) (liveO : liveS O ≤ F.SPB)
     (len : C.length ≤ F.X.length) :
     O.leave T none = some (O.left T) ∧ St F (O.left T) C ∧ Cb F (O.left T) ∧
@@ -490,10 +490,9 @@ theorem leave_ok (F : Fix) (ok : FixOK F) (O T : NState) (C : List (Int × Nat))
   have valid := st.family.valid
   have fresh : ∀ owner, T.frame.state.forest.context owner ≠ some (O.scope+1) := by
     intro owner bad; have := st.context owner _ bad; omega
-  have takeT : T.scalars.memory.take O.scalars.memory.length = T.scalars.memory :=
-    List.take_of_length_le (by omega)
-  have leave := leave_scalar O T none (by intro o e h; cases h) (by omega)
-    (by rw [takeT,types])
+  have takeLen : (T.scalars.memory.take O.scalars.memory.length).length = O.scalars.memory.length := by
+    simp; omega
+  have leave := leave_scalar O T none (by intro o e h; cases h) fits types
     valid fresh
   have same := Proofs.DoublingNested.noopRetired_same T.frame
   have bindingsT : (O.left T).frame.bindings = T.frame.bindings := by
@@ -519,14 +518,24 @@ theorem leave_ok (F : Fix) (ok : FixOK F) (O T : NState) (C : List (Int × Nat))
   · rw [left_scalar_peak]
     have := cbO.scalarPeak; have := cbT.scalarPeak
     simp only [liveS] at liveO
-    rw [takeT,lenEq]
+    rw [takeLen]
     omega
   · rw [left_peak,left_scalar_peak]
     have := cbO.peak; have := cbT.peak; have := cbO.scalarPeak; have := cbT.scalarPeak
     simp only [liveS] at liveO
-    rw [takeT,lenEq]
+    rw [takeLen]
     have : (noopRetired T.frame).state.storage.peak ≤ F.TPB := tpL
     omega
+
+theorem leave_ok (F : Fix) (ok : FixOK F) (O T : NState) (C : List (Int × Nat))
+    (st : St F T C) (cbT : Cb F T) (cbO : Cb F O) (lenEq : T.scalars.memory.length = O.scalars.memory.length)
+    (types : T.scalars.memory.map Cell.type = O.scalars.memory.map Cell.type)
+    (fbO : O.frame.bindings.length = 2) (deeper : F.sc ≤ O.scope) (liveO : liveS O ≤ F.SPB)
+    (len : C.length ≤ F.X.length) :
+    O.leave T none = some (O.left T) ∧ St F (O.left T) C ∧ Cb F (O.left T) ∧
+      (O.left T).scalars.work = T.scalars.work+1 ∧ (O.left T).frame.state.forest = T.frame.state.forest ∧
+      (O.left T).frame.bindings = T.frame.bindings :=
+  leave_take F ok O T C st cbT cbO (by omega) (by rw [List.take_of_length_le (by omega),types]) fbO deeper liveO len
 
 /-! ## Moving the invariants along released expressions and scope entries -/
 
@@ -736,5 +745,67 @@ theorem iter_run (F : Fix) (ok : FixOK F) (u0 : NState) (C : List (Int × Nat)) 
     have hn : (cEq F.ty).nodes ≤ 10 := by simp [NExpr.nodes,Container.nodes]
     have hw2 : t2.scalars.work ≤ (u0.left T1).scalars.work+2*3+1 := by simpa [NExpr.nodes] using wu2
     omega
+
+/-! ## The loop -/
+
+/-- The loop head after `t` iterations: `ret` holds the closed runs `C` of `v[0..t)`, `(pre, cnt)` is the open
+run (`cnt = 0` before the first iteration). -/
+def Head (F : Fix) (W : Nat) (L : NState) (t : Nat) : Prop :=
+  ∃ C pre cnt, Sh L F.P F.B slotsI (cellsI F.ty F.X.length pre cnt t) (bindsI F.P) (F.sc+1) ∧ St F L C ∧ Cb F L ∧
+    rleExt F.X t = C ++ [(pre,cnt)] ∧ C.length ≤ t ∧ cnt ≤ t ∧ F.ty.valid pre = true ∧ t ≤ F.X.length ∧
+    L.scalars.work ≤ W+90*t
+
+/-- After the loop: the open run completes the encoding of `v`. -/
+def Done (F : Fix) (W : Nat) (step : NStep) : Prop :=
+  step.returned = none ∧ step.breaking = false ∧ ∃ C pre cnt,
+    Sh step.state F.P F.B slotsI (cellsI F.ty F.X.length pre cnt F.X.length) (bindsI F.P) (F.sc+1) ∧
+    St F step.state C ∧ Cb F step.state ∧ rle F.X = C ++ [(pre,cnt)] ∧ C.length ≤ F.X.length ∧
+    cnt ≤ F.X.length ∧ F.ty.valid pre = true ∧ step.state.scalars.work ≤ W+90*F.X.length+7
+
+theorem loop_run (F : Fix) (ok : FixOK F) (W : Nat) (positive : 0 < F.X.length) :
+    ∀ bound g L, g ≤ bound → (∃ t, g = F.X.length-t ∧ Head F W L t) →
+      RunsTo (.whileLoop cLoop (iterC F.ty F.cv)) L (Done F W) := by
+  apply RunsTo.whileGhost
+  intro g L ⟨t,hg,C,pre,cnt,sh,st,cb,math,len,hc,hpre,ht,work⟩
+  have small := ok.small
+  obtain ⟨en,_,_,ei⟩ := envI sh (by omega) hpre (by omega) (by omega)
+  have pure : denote F.params (snapshot L) (eraseHeap (F.heap C)) cLoop =
+      some (if (t : Int) < (F.X.length : Int) then 1 else 0) := by
+    rw [denote_scalar _ _ _ _ (by simp [NExpr.scalarOnly]),snapshot_env]
+    exact denote_lt _ 5 2 ti _ _ ei en
+  obtain ⟨next,eval,rel⟩ := FamilySteps.condition st.family cLoop _ pure
+  let u0 := (next.release L).charge 1 0
+  have sh0 : Sh u0 F.P F.B slotsI (cellsI F.ty F.X.length pre cnt t) (bindsI F.P) (F.sc+1) := sh_released rel sh
+  have st0 : St F u0 C := st_released rel st
+  have cb0 : Cb F u0 := cb_released rel cb st (by have := live_loop sh ok; simp [NExpr.nodes]; omega)
+  have w0 : u0.scalars.work ≤ L.scalars.work+2*cLoop.nodes+1 := rel.workUpper
+  have nodes : cLoop.nodes = 3 := by simp [NExpr.nodes]
+  rw [nodes] at w0
+  refine ⟨next,_,eval,?_,?_⟩
+  · intro zero
+    have tn : t = F.X.length := by
+      by_cases lt : (t : Int) < (F.X.length : Int)
+      · simp [lt] at zero
+      · omega
+    subst tn
+    refine ⟨rfl,rfl,C,pre,cnt,sh0,st0,cb0,?_,len,hc,hpre,by show u0.scalars.work ≤ _; omega⟩
+    have : rleExt F.X F.X.length = rle F.X := by
+      simp only [rleExt,if_neg (show F.X.length ≠ 0 by omega),List.take_length]
+    rw [← this,math]
+  · intro nonzero
+    have lt : t < F.X.length := by
+      by_cases h : (t : Int) < (F.X.length : Int)
+      · omega
+      · simp [h] at nonzero
+    have item : F.X[t]? = some F.X[t] := List.getElem?_eq_getElem lt
+    obtain ⟨T,C',pre',cnt',run,shT,stT,cbT,mathT,lenT,cT,preT,wl,wu⟩ :=
+      iter_run F ok u0 C pre cnt t F.X[t] sh0 st0 cb0 hpre hc lt len item
+    have wl' : u0.scalars.work ≤ T.scalars.work := wl
+    have wu' : T.scalars.work ≤ u0.scalars.work+80 := wu
+    refine run _ ⟨rfl,rfl,F.X.length-(t+1),by omega,t+1,rfl,C',pre',cnt',shT,stT,cbT,?_,lenT,cT,preT,by omega,
+      by show T.scalars.work ≤ _; omega⟩
+    rw [rleExt_succ F.X t lt,math]
+    have : F.X.getD t 0 = F.X[t] := by simp [List.getD_eq_getElem?_getD,item]
+    rw [this,mathT]
 
 end Proofs.ElementCountExec
