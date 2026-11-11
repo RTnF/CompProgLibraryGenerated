@@ -1,5 +1,20 @@
 # 作業引き継ぎ
 
+## 新方式への移行（2026-11-12〜、最優先）
+
+目標（利用者の指示）: 全証明を `docs/redesign_2026-11.md` の新方式へ移し、全部品（取り下げた segment_tree_beats・segment_tree・lazy_segment_tree・find_cycle を含む）を再公開し、push 後の CI を 20 分以内にする。
+
+基盤（ローカル commit、未 push）:
+- `Proofs/Cpp/Prelude.lean`: `Cpp.M := StateT Nat Option`（tick と非停止）、`Cpp.forever`（while）と `WhileInv` の mvcgen 仕様、vector・整数の演算。`check`（assert）は mvcgen が展開する。
+- `verifier/lean_translate.py`: Clang JSON のテンプレート定義 → Lean。符号なしは `UInt32/UInt64`、`T::value_type` のコンテナ引数は `Array`、再帰・クラス入れ子・friend・ラムダ・`std::sort` は未対応。全公開ヘッダの翻訳状況は `for f in library/*/*.hpp; do python3 verifier/lean_translate.py $f; done` で確かめる。
+- `verifier/diff_harness.py`（C++/Lean のインタプリタを生成して差分テスト）、`verifier/model_bridge.py`（`translation = "lean_model"` の bridge）、`docs/translation.md`（翻訳規則・STL の表）。
+- 共有補題 `Proofs/Cpp/Lib/{Basic,Lowbit,Rle}.lean`。
+- 移行済み: vector_sum, fenwick_tree, vector_max, vector_min, vector_fill, vector2d_sum, safe_mod, gcd_u64, bit_width_u64, countr_zero, search_util（`counts` を復元）, element_count。旧証明・旧モデルは `verifier/support.toml` の共有モジュールに移して残してある（最後にまとめて削除する）。
+- 手順（1 部品）: `python3 .cache/wip/newmethod/tools/migrate.py NAME 'T=long long;T=int'`（ローカル補助。TOML 書き換え・旧証明の共有化・Proofs.lean）→ `Proofs/Cpp/<Stem>.lean` に仕様（正しさ＋tick の上界）を mvcgen で証明 → `tests/diff/NAME.py` → `python3 verifier/model_bridge.py --component NAME` → docs 更新 → commit。
+- 証明のこつ: `mvcgen [f]` → `simp +zetaDelta at *`（`simp_all` は仮定を消すことがある）。仮定は型パターン `‹_ ∧ _›`、カーソルは `range_cursor ‹range _ _ = _ ++ _ :: _›` と `subst`。名前が要るときは Mathlib の `set`。`Proofs.Cpp.size` は `Array.size` と紛れるので修飾する。
+- 未了: statements.json の再生成（`tools/regenerate_statements.py`。登録を変える作業と並行に走らせない）、全件 gate、push（原本単位・手動承認）、残り約 42 部品＋取り下げ 4 部品、旧方式の削除、CI 20 分の計測。
+
+
 更新: 2026-11-09。時系列ログを圧縮して上書きした。目的は **experiments の全137ファイルを検証し、元API・機能・汎用性を保って移植すること**。一部のモデルやCI成功だけで完了としない。
 
 ## 現在の作業
