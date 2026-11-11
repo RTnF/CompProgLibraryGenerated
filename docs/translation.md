@@ -45,6 +45,7 @@ STL:
 | `v.pop_back()`、`v.clear()`、`v.resize(n[, x])`、`v.assign(n, x)`、`v.reserve(n)` | `v.pop`、`#[]`、`Cpp.resize`、`Cpp.replicate`、（何もしない） |
 | `std::vector<T> v(n[, x])`、`{a, b}`、コピー | `Cpp.replicate`、`#[a, b]`、同じ値 |
 | `std::min`、`std::max`、`std::swap`、`std::abs` | `min`、`max`、入れ替え、`Int.natAbs` |
+| `std::sort(v.begin(), v.end())` | `Cpp.sort v`（安定な mergeSort。tick は `n (log2 n + 1)`）。C++ では同値な要素の順序は不定なので、定理は全順序（整列結果が一意）で述べる |
 
 STL はドキュメント通りの契約・動作・計算量オーダーを持つものと認め（`docs/trust_policy.md`）、上の対応はその動作をそのまま定義したものである。STL の前提条件（添字の範囲など）は部品の前提として述べる。
 

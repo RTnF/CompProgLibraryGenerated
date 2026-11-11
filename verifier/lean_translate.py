@@ -1255,6 +1255,28 @@ class Fn:
             return True
         if name == "assert" or name == "__assert_fail":
             raise Unsupported("assert")
+        if name == "sort" and len(args) == 2:
+            bases = []
+            for arg, which in zip(args, ("begin", "end")):
+                call = strip(arg)
+                callee = strip(inner(call)[0]) if inner(call) else {}
+                member = callee.get("name") or callee.get("member")
+                if call.get("kind") not in ("CallExpr", "CXXMemberCallExpr") or member != which or not inner(callee):
+                    raise Unsupported("std::sort over a range other than v.begin(), v.end()")
+                bases.append(inner(callee)[0])
+            target = self.lvalue(bases[0])
+            if self.lvalue(bases[1])[:2] != target[:2]:
+                raise Unsupported("std::sort over two different vectors")
+            if target[3].kind != "vec":
+                raise Unsupported("std::sort of a non-vector")
+            elem = target[3].args[0]
+            self.need("LT", elem)
+            self.need("DecidableLT", elem)
+            cur = self.read_lvalue(target)
+            self.emit(f"Cpp.tickN (Cpp.sortCost {cur}.size)")
+            for line in self.assign_lines(target, f"(Cpp.sort {cur})"):
+                self.emit(line)
+            return True
         return False
 
     # ------------------------------------------------------------------ loops

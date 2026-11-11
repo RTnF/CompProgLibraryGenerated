@@ -139,6 +139,16 @@ theorem Spec.forIn_forever {β : Type} {init : β} {f : Unit → β → M (ForIn
 def resize {α : Type} (v : Array α) (n : Int) (x : α) : Array α :=
   if n.toNat ≤ v.size then v.extract 0 n.toNat else v ++ Array.replicate (n.toNat - v.size) x
 
+/-- `std::sort(v.begin(), v.end())` (https://en.cppreference.com/w/cpp/algorithm/sort): a permutation of `v` sorted by
+`<`, with O(n log n) comparisons. The order of equivalent elements is unspecified in C++; the model keeps their order
+(a stable merge sort). Proofs about `sort` assume a linear order, under which the sorted permutation is unique, so
+the choice does not matter. -/
+def sort {α : Type} [LT α] [DecidableLT α] (v : Array α) : Array α :=
+  (v.toList.mergeSort (fun a b => !decide (b < a))).toArray
+
+/-- The cost (ticks) of `std::sort` on `n` elements: the documented O(n log n). -/
+def sortCost (n : Nat) : Nat := n * (Nat.log2 n + 1)
+
 /-! ## Integers -/
 
 /-- `a / b` (rounds toward zero). -/
