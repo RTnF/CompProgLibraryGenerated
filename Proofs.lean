@@ -56,67 +56,35 @@ import Proofs.Generated.SegmentTree
 import Proofs.Generated.DoublingBindings
 
 import Proofs.CppMixedInvoke
-
 import Proofs.CppVectorProgram
-
 import Proofs.CppVectorLoop
-
 import Proofs.CppVectorOwnership
-
 import Proofs.CppNestedVectorStore
-
 import Proofs.CppNestedVectorBindings
-
 import Proofs.CppNestedConstruct
-
 import Proofs.CppNestedOps
-
-
 import Proofs.CppNestedProgram
-
 import Proofs.CppNestedCall
-
 import Proofs.CppNestedFacts
-
 import Proofs.CppNestedSim
-
 import Proofs.CppNestedHoare
-
 import Proofs.CppNestedEval
-
 import Proofs.CppNestedRows
-
 import Proofs.CppNestedStmt
-
 import Proofs.CppNestedScope
-
 import Proofs.DoublingNested
-
 import Proofs.DoublingPrologue
-
 import Proofs.DoublingInvoke
-
 import Proofs.DoublingConstruct
-
 import Proofs.DoublingProgram
-
 import Proofs.DoublingCall
-
 import Proofs.FlatVectorStmt
-
 import Proofs.EnumerateQuotientsMath
-
 import Proofs.QuotientFrame
-
 import Proofs.QuotientSearch
-
 import Proofs.QuotientBuild
-
-
 import Proofs.QuotientCall
-
 import Proofs.CountLoop
-
 import Proofs.CountCall
 import Proofs.VectorSumCall
 import Proofs.Generated.VectorSum
@@ -127,27 +95,16 @@ import Proofs.VectorMaxCall
 import Proofs.VectorMinCall
 import Proofs.MonoidCall
 import Proofs.GroupCall
-
 import Proofs.FillWriteStmt
-
 import Proofs.InvPermMath
-
 import Proofs.InvPermFrame
-
 import Proofs.InvPermEval
-
 import Proofs.InvPermLoop
-
 import Proofs.InvPermCall
-
 import Proofs.Mod61Math
-
 import Proofs.Mod61Body
-
 import Proofs.Mul61Body
-
 import Proofs.ScalarCall
-
 import Proofs.Mod61Call
 import Proofs.StraightLine
 import Proofs.ScalarStraight
@@ -341,9 +298,7 @@ import Proofs.PexecKit
 import Proofs.ModIntExec
 import Proofs.ModIntPow
 import Proofs.ModIntCall
-
 import Proofs.ExtremaRef
-
 import Proofs.ExtremaCall
 import Proofs.RollingHashMath
 import Proofs.RollingHashCore
@@ -366,7 +321,6 @@ import Proofs.ForLoopBN
 import Proofs.Vector2dSumExec
 import Proofs.Vector2dSumCall
 import Proofs.NestedWrite
-
 import Proofs.CppRowsFrame
 import Proofs.CppRowsSteps
 import Proofs.CppRootModel
@@ -448,168 +402,46 @@ import Proofs.DynamicVectorScope
 import Proofs.DynamicVectorReturn
 import Proofs.DynamicResultScope
 import Proofs.DynamicResultRuns
-
 import Proofs.UfBounds
-
 import Proofs.UfCompression
-
 import Proofs.Generated.UnionFindCandidate
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import Proofs.CppConstructorFinish
-
 import Proofs.CppConstructionFootprint
-
-
 import Proofs.CppConstructionRetire
-
-
 import Proofs.CppFrameExtension
 import Proofs.CppFrameResolveExtension
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import Proofs.CppConstructorWork
-
-
 import Proofs.CppConstructorPeak
-
-
-
-
-
-
 import Proofs.CppBufferHeaders
-
 import Proofs.CppEvalFrame
-
 import Proofs.CppWriteHeaders
-
 import Proofs.CppScalarFrame
-
 import Proofs.CppEvalScope
-
 import Proofs.CppNoResizeStmt
-
 import Proofs.CppNoResizeScope
-
 import Proofs.CppNoResizeRun
-
 import Proofs.CppCallFrame
-
-
 import Proofs.CppReferenceHeaders
-
-
-
-
 import Proofs.CppExprPrefix
-
 import Proofs.CppFixedWrite
-
 import Proofs.CppFixedScope
-
 import Proofs.CppFixedRun
-
-
 import Proofs.CppFixedCall
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import Proofs.CppVectorCopy
-
 import Proofs.CppNestedCopy
-
 import Proofs.CppFrameCopy
-
-
-
-
-
-
-
 import Proofs.CppClassCopy
-
-
 import Proofs.CppFrameCopyCore
-
 import Proofs.CppCopyStatement
-
 import Proofs.CppCopyStatementFacts
-
 import Proofs.CppClassCopyCommands
-
 import Proofs.CppNestedInvoke
-
 import Proofs.CppConstructorView
-
-
-
-
-
-
-
-
-
 import Proofs.CppVectorCopyAssign
-
 import Proofs.CppFrameCopyAssign
-
 import Proofs.CppClassAssign
-
 import Proofs.CppClassAssignValues
-
-
-
-
 import Proofs.CppMoveHeaders
-
 import Proofs.CppMoveAssign
 import Proofs.CppMoveViews
 import Proofs.CppMoveFrame
@@ -625,40 +457,10 @@ import Proofs.CppMoveCallRestore
 import Proofs.CppNoResizeValid
 import Proofs.CppMovePreparedCall
 import Proofs.CppMoveCallBindings
-
 import Proofs.CppMoveReceiverLayout
-
-
 import Proofs.CppMoveReceiverResolve
-
 import Proofs.CppMoveObjectReceiver
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import Proofs.CppMoveReadReceiver
-
-
-
-
-
-
 import Proofs.CppClassMoveConstruct
 import Proofs.MultiVecCallB
 import Proofs.TreeDpAlg
@@ -694,39 +496,9 @@ import Proofs.DijkstraPMath
 import Proofs.DijkstraOldScan
 import Proofs.DijkstraOldExec
 import Proofs.DijkstraOldCall
-
 import Proofs.TreeOrderToDp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import Proofs.CppConstructorRoots
-
 import Proofs.CppConstructorMultiFinish
-
-
-
-
-
-
 import Proofs.MonoidCallCore
 import Proofs.MonoidCallCoreInt
 import Proofs.CppScalarContents
@@ -766,3 +538,5 @@ import Proofs.Generated.CsrBuild
 import Proofs.Cpp.CsrBuild
 import Proofs.Generated.CumulativeSum
 import Proofs.Cpp.CumulativeSum
+import Proofs.Generated.Interval
+import Proofs.Cpp.Interval

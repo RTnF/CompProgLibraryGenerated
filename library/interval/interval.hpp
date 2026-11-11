@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cassert>
 #include <vector>  // the common nested generator audits the standard vector declarations of every source
 
@@ -35,15 +36,7 @@ template <class T = long long> struct Interval {
     if (b.s >= e || s >= b.e) {
       return Interval();
     }
-    T ns = s;
-    if (b.s > s) {
-      ns = b.s;
-    }
-    T ne = e;
-    if (b.e < e) {
-      ne = b.e;
-    }
-    return Interval(ns, ne);
+    return Interval(std::max(s, b.s), std::min(e, b.e));
   }
 };
 

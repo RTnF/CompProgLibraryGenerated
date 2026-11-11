@@ -179,8 +179,13 @@ class Harness:
             quals = self.param_quals(sig)
             decls, names = [], []
             for i, q in enumerate(quals):
-                t = cpp_value_type(q, self.instance)
-                decls.append(f"{t} a{i}; difftest::rd(a{i});")
+                pty = sig.params[i][1]
+                if pty.kind == "cls":
+                    # an object argument is given by its number
+                    decls.append(f"long long a{i}k; std::cin >> a{i}k; auto a{i} = objects_{pty.name}[a{i}k];")
+                else:
+                    t = cpp_value_type(q, self.instance)
+                    decls.append(f"{t} a{i}; difftest::rd(a{i});")
                 names.append(f"a{i}")
             if info is None:
                 targs = [self.instance[t.removesuffix("_value_type")] if t.removesuffix("_value_type") in sig.containers
@@ -205,7 +210,10 @@ class Harness:
                 lines.append(f"        objects_{info.name}.emplace_back({', '.join(names)});")
                 lines.append("        std::cout << \"new\\n\";")
             else:
-                if sig.ret.kind != "void":
+                if sig.ret.kind == "cls":
+                    lines.append(f"        objects_{sig.ret.name}.push_back({call});")
+                    lines.append("        std::cout << \"ok obj\";")
+                elif sig.ret.kind != "void":
                     lines.append(f"        auto r = {call};")
                     lines.append("        std::cout << \"ok\"; difftest::pr(r);")
                 else:
@@ -256,7 +264,11 @@ class Harness:
                 lines.append(f"    let obj := objs.o_{info.name}[k.toNat]!")
             names = []
             for i, (pname, pty, is_ref) in enumerate(sig.params):
-                lines.append(f"    let (a{i}, ts) ← DiffTest.arg (α := {self.lean_type_inst(pty)}) ts")
+                if pty.kind == "cls":
+                    lines.append(f"    let (a{i}k, ts) ← DiffTest.arg (α := Int) ts")
+                    lines.append(f"    let a{i} := objs.o_{pty.name}[a{i}k.toNat]!")
+                else:
+                    lines.append(f"    let (a{i}, ts) ← DiffTest.arg (α := {self.lean_type_inst(pty)}) ts")
                 names.append(f"a{i}")
             call = " ".join([sig.lean_name] + (["obj"] if info is not None and not sig.is_ctor else []) + names)
             lines.append(f"    match ({call}).run 0 with")
@@ -271,9 +283,15 @@ class Harness:
                 sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
                 if o == "self":
                     continue
+                if o == "ret" and sig.ret.kind == "cls":
+                    parts.append('" obj"')
+                    continue
                 parts.append(f"DiffTest.Pr.pr {sel}")
             text = " ++ ".join(['"ok"'] + parts)
             objs = "objs"
+            if sig.ret.kind == "cls" and outputs and outputs[0] == "ret":
+                sel = "r" if len(outputs) == 1 else "r.1"
+                objs = f"{{ objs with o_{sig.ret.name} := objs.o_{sig.ret.name}.push {sel} }}"
             if "self" in outputs:
                 j = outputs.index("self")
                 sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
