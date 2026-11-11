@@ -764,3 +764,5 @@ import Proofs.Generated.RunLength
 import Proofs.Cpp.RunLength
 import Proofs.Generated.CsrBuild
 import Proofs.Cpp.CsrBuild
+import Proofs.Generated.CumulativeSum
+import Proofs.Cpp.CumulativeSum

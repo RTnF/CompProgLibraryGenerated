@@ -4,99 +4,90 @@
 
 namespace cp {
 
-// One-dimensional cumulative sums (experiments/library/cpp/array/cumulative_sum.hpp, CumulativeSum): cs[i] is the
-// sum of the first i elements of the array (so cs.size() == n + 1), built in O(n), static, and a range sum in O(1).
-// The class template keeps its type parameter T (the verified instances are CumulativeSum<long long> and
-// CumulativeSum<int>, instantiated explicitly below).
-// Differences from the original: the field n is not kept (it is cs.size() - 1 at all times); the queries are const; the
-// asserts of the original are kept as checks, written one condition at a time; the loop of the constructor starts at 0.
-// Preconditions: v.size() < 2^31 - 1, every prefix sum and the difference of two prefix sums fits in T.
+// One- and two-dimensional prefix sums (experiments/library/cpp/array/cumulative_sum.hpp). The element type T is a
+// template parameter; the arrays cannot be updated after construction.
+// Differences from the original: std:: qualification and the namespace only.
+
+/**
+ * @brief 1次元累積和
+ * 構築 O(n)
+ * 更新不可
+ * 部分和 O(1)
+ * @tparam T
+ */
 template <class T = long long> class CumulativeSum {
   std::vector<T> cs;
+  int n;
 
 public:
-  CumulativeSum(const std::vector<T> &v) : cs(v.size() + 1) {
-    int n = (int)v.size();
+  CumulativeSum(const std::vector<T> &v) : cs(v.size() + 1), n(v.size()) {
     cs[0] = T(0);
-    for (int i = 0; i < n; i++) {
-      cs[i + 1] = cs[i] + v[i];
+    for (int i = 1; i <= n; i++) {
+      cs[i] = cs[i - 1] + v[i - 1];
     }
   }
-  // sum of [0, a)   0 <= a <= n
-  T sum(int a) const {
-    assert(0 <= a);
-    assert(a < (int)cs.size());
+  // [0, a) 0-n
+  T sum(int a) {
+    assert(0 <= a && a <= n);
     return cs[a];
   }
-  // sum of [a, b)   0 <= a <= b <= n
-  T sum(int a, int b) const {
-    assert(0 <= a);
-    assert(a <= b);
-    assert(b < (int)cs.size());
+  // [a, b) 0-a-b-n
+  T sum(int a, int b) {
+    assert(0 <= a && a <= b && b <= n);
     return cs[b] - cs[a];
   }
 };
 
-
-// Two-dimensional cumulative sums (CumulativeSum2D of the original): cs[a][b] is the sum of v[0, a) x [0, b) for the
-// n x m matrix v, so cs has n + 1 rows of m + 1 elements.  Differences from the original: the fields n and m are not
-// kept (n = cs.size() - 1, m = cs[0].size() - 1); the constructor fills the table in one pass over the rows (the running
-// sum of the row plus the entry above) instead of a row-wise pass followed by a column-wise pass (the same table); the
-// queries are const, and every row access is written as a separate declaration.  The constructor still requires a
-// non-empty rectangular matrix (the asserts of the original).
-// Preconditions: n, m < 2^31 - 1 and every prefix sum, running row sum and the table entries fit in T.
+/**
+ * @brief 2次元累積和
+ * 構築 O(nm)
+ * 更新不可
+ * 部分和 O(1)
+ * @tparam T
+ */
 template <class T = long long> class CumulativeSum2D {
   std::vector<std::vector<T>> cs;
+  int n, m;
 
 public:
-  CumulativeSum2D(const std::vector<std::vector<T>> &v)
-      : cs(v.size() + 1, std::vector<T>(v.empty() ? 1 : v[0].size() + 1, T(0))) {
-    int n = (int)v.size();
+  CumulativeSum2D(const std::vector<std::vector<T>> &v) {
+    n = v.size();
     assert(n > 0);
-    int m = (int)v[0].size();
+    m = v[0].size();
     assert(m > 0);
-    for (int i = 0; i < n; i++) {
-      int len = (int)v[i].size();
-      assert(len == m);
+    for (int i = 1; i < n; i++) {
+      assert(int(v[i].size()) == m);
     }
-    for (int i = 0; i < n; i++) {
-      T run = T(0);
+    cs.resize(n + 1);
+    cs[0] = std::vector<T>(m + 1, T(0));
+    for (int i = 1; i <= n; i++) {
+      cs[i].reserve(m + 1);
+      cs[i].emplace_back(T(0));
       for (int j = 0; j < m; j++) {
-        T x = v[i][j];
-        run = run + x;
-        T up = cs[i][j + 1];
-        cs[i + 1][j + 1] = up + run;
+        cs[i].emplace_back(cs[i].back() + v[i - 1][j]);
       }
     }
+    for (int i = 2; i <= n; i++) {
+      for (int j = 1; j <= m; j++)
+        cs[i][j] += cs[i - 1][j];
+    }
   }
-  // sum of [0, a) x [0, b)
-  T sum(int a, int b) const {
-    assert(0 <= a);
-    int rows = (int)cs.size();
-    assert(a < rows);
-    assert(0 <= b);
-    int cols = (int)cs[a].size();
-    assert(b < cols);
-    T x = cs[a][b];
-    return x;
+  // [0, a) 0-n
+  // [0, b) 0-m
+  T sum(int a, int b) {
+    assert(0 <= a && a <= n);
+    assert(0 <= b && b <= m);
+    return cs[a][b];
   }
-  // sum of [a1, a2) x [b1, b2)
-  T sum(int a1, int b1, int a2, int b2) const {
-    assert(0 <= a1);
-    assert(a1 <= a2);
-    int rows = (int)cs.size();
-    assert(a2 < rows);
-    assert(0 <= b1);
-    assert(b1 <= b2);
-    int cols = (int)cs[a2].size();
-    assert(b2 < cols);
-    T p = cs[a2][b2];
-    T q = cs[a1][b2];
-    T r = cs[a2][b1];
-    T s = cs[a1][b1];
-    return p - q - r + s;
+  // [a1, a2) 0-a1-a2-n
+  // [b1, b2) 0-b1-b2-m
+  T sum(int a1, int b1, int a2, int b2) {
+    assert(0 <= a1 && a1 <= a2 && a2 <= n);
+    assert(0 <= b1 && b1 <= b2 && b2 <= m);
+    return cs[a2][b2] - cs[a1][b2] - cs[a2][b1] + cs[a1][b1];
   }
 };
+
 template class CumulativeSum<long long>;
 template class CumulativeSum2D<long long>;
 template class CumulativeSum<int>;
