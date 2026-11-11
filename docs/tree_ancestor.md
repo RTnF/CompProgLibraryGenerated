@@ -9,10 +9,13 @@
 
 前提: `0 <= i < 2^30`（`j` が符号付き `int` であふれない）、`0 <= v < n`、`2^k <= i` を満たす各 `k` について行 `anc[k]` が存在して `n` 個の要素を持ち、すべて `[0, n)` にある。`n < 2^31`。
 
-結果（`Proofs/TreeAncestorCall.lean`、一般の入力について証明）: 表が関数 `f` の `2^k` 回の合成になっている（`TabOK`: `2^k <= i` の各 `k` と各 `x < n` について `anc[k][x] == f^(2^k)(x)`、`anc[k][x] < n`、`x < anc[k].size()`）とき、返り値は `f^i(v)`（`i` 回適用）で `n` 未満である。`f` は任意の写像でよく、親配列そのものでなくてよい。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: 反復は `bits(i)`（`i` の 2 進の桁数）回で、モデル上の仕事量は呼び出し側の引数評価を除いて `210 * bits(i) + 300` 以下（`i < 2^30` なので高々 30 桁）。追加領域は局所変数だけ。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeAncestor.lean` を生成し、`Proofs/Cpp/TreeAncestor.lean` が前提を満たす全入力について次を証明する。
 
-証明は `Proofs/TreeAncestorMath.lean`（再帰版 `ancQ` と、表の正しさからの `ancQ T i 0 v = f^i(v)`）、`Proofs/TreeAncestorExec.lean`（`pexecM` による `while` の実行）、`Proofs/TreeAncestorPrepare.lean`/`Proofs/TreeAncestorCall.lean`（呼び出し）。
+- `tree_ancestor_spec`: `f` が `[0, n)` をそれ自身に写し、`0 <= v < n`、`0 <= i < 2^30`、表が `f` の `2^k` 回の合成になっている（`TabOK`: `2^k <= i` の各 `k` と `0 <= x < n` について `anc[k][x] == f^(2^k)(x)`）とき、返り値は `f^i(v)`（`i` 回適用）。`f` は任意の写像でよく、親配列そのものでなくてよい。
+- tick 数はちょうど `bitWidth i + 2`（`O(log i)`）。ループの不変条件は、`j = 2^k` と、`v` がそれまでに読んだ下位 `k` ビットぶん進んでいること（`f^(i mod 2^k)(v)`。`mod_two_pow_succ`）。
+- 定理に含めていないこと: `anc` が `doubling` の出力であること（`doubling` の定理と合わせて使う）、`lowest_common_ancestor` などの他の `Tree` の機能。
 
-定理に含めていないこと: `anc` が `doubling` の出力であること（`doubling` の定理と合わせて使う）、`lowest_common_ancestor` などの他の `Tree` の機能。C++ のテストは `tests/tree_ancestor.cpp`（行数 0〜8 のランダムな表と一般の写像を素朴な反復と照合し、`i = 2^30 - 1` の 30 行の表も確認する）。
+差分テスト（`tests/diff/tree_ancestor.py`）と C++ のテスト `tests/tree_ancestor.cpp`（行数 0〜8 のランダムな表と一般の写像を素朴な反復と照合し、`i = 2^30 - 1` の 30 行の表も確認する） で翻訳と実装を確かめる。
+

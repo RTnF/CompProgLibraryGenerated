@@ -10,14 +10,15 @@
 
 前提: `0 <= depth < 2^30`、`u`、`v` は根付き木（根の親は根自身）の頂点で、どちらも深さ `depth`、`0 <= u, v < n`、`n < 2^31`、`depth < 2^(K+1)` を満たす `K` について、各レベル `k <= K` の行 `anc[k]` が `n` 個の要素を持ち、すべて `[0, n)` にある。表は `anc[k][x] == f^(2^k)(x)`（`f` は親写像）。
 
-結果（`Proofs/TreeLcaCall.lean`、一般の入力について証明）: 返り値 `w` は `n` 未満で、ある `k` について `f^k(u) == w == f^k(v)` かつ `s < k` なら `f^s(u) != f^s(v)`（2 つの軌道が最初に合流する点）。`u == v` なら `k = 0`、`w == u`。木の深さの性質（根の深さ 0、親の深さ +1 = 子の深さ）から、各軌道が `depth` ステップ後に根に着くため合流点が存在する。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: `top` の求めと降下で合わせて `O(log depth)` 回の反復で、モデル上の仕事量は呼び出し側の引数評価を除いて `300 * (K + 1) + 500` 以下。追加領域は局所変数だけ。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeLcaSameDepth.lean` を生成し、`Proofs/Cpp/TreeLcaSameDepth.lean` が前提を満たす全入力について次を証明する。
 
-証明は `Proofs/TreeLcaMath.lean`（最初に合流する時刻の存在 `first_meet`、降下の関数版 `descA` とその不変条件 `descA_spec`: `u = f^a(u0)`、`v = f^a(v0)`、まだ合流していない、残り距離が `2^c` 未満）、`Proofs/TreeLcaExec.lean`（`pexecM` による 3 つのループと全体の実行）、`Proofs/TreeLcaPrepare.lean`/`Proofs/TreeLcaCall.lean`（呼び出し）。
+- `tree_lca_same_depth_spec`: `f` が `[0, n)` をそれ自身に写し、`u`、`v` が `[0, n)` にあり、`depth < 2^30`、`f^depth(u) == f^depth(v)`、表が `k = 0` と `2^k <= depth` の各 `k` について `anc[k][x] == f^(2^k)(x)`（`TabLca`）のとき、返り値 `w` は 2 つの経路が最初に合流する点（`FirstMeet`: ある `a` について `f^a(u) == w == f^a(v)` かつ `s < a` なら `f^s(u) != f^s(v)`）。根付き木で同じ深さの 2 頂点なら、どちらも `depth` ステップで根に着くので前提を満たし、`w` は最近共通祖先である。
+- tick 数は `2 bitWidth(depth) + 4` 以下（`O(log depth)`）。降下の不変条件 `Inv2` は、`(u', v') = (f^a(u), f^a(v))` がまだ合流しておらず、`2^(k+1)` ステップ以内に合流すること（`step_diff`、`step_same`）。
+- 定理に含めていないこと: 表が `doubling` の出力であること、深さの異なる頂点（`tree_ancestor` で揃える）。
 
-定理に含めていないこと: 表が `doubling` の出力であること、返り値が「共通祖先のうち深さ最大のもの」であることの Lean での定理（合流点なので従うが、証明はしていない）、深さの異なる頂点（`tree_ancestor` で揃える）。C++ のテストは `tests/tree_lca_same_depth.cpp`（頂点数 1〜14 のランダムな根付き木で、同じ深さのランダムな 2 頂点を素朴な持ち上げと照合する）。
-
+差分テスト（`tests/diff/tree_lca_same_depth.py`）と C++ のテスト `tests/tree_lca_same_depth.cpp`（頂点数 1〜14 のランダムな根付き木で、同じ深さのランダムな 2 頂点を素朴な持ち上げと照合する） で翻訳と実装を確かめる。
 
 2026-11-08の原本修正:
 

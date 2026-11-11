@@ -143,6 +143,29 @@ theorem bitWidth_lt_pow (n k : Nat) (h : n < 2 ^ k) : bitWidth n ≤ k := by
     have := (Nat.log2_lt hn).mpr h
     omega
 
+theorem lt_bitWidth {m n : Nat} (h : 2 ^ m ≤ n) : m < bitWidth n := by
+  have hn : n ≠ 0 := by have := Nat.one_le_two_pow (n := m); omega
+  unfold bitWidth; simp only [hn, ite_false]
+  have := (Nat.le_log2 hn).mpr h; omega
+
+/-! ## Iterating a map (`f^[k] x`) -/
+
+theorem iter_add (f : Int → Int) (m k : Nat) (x : Int) : f^[m + k] x = f^[m] (f^[k] x) := by
+  induction k generalizing x with
+  | zero => rfl
+  | succ k ih => rw [← Nat.add_assoc]; exact ih (f x)
+
+theorem iter_range (f : Int → Int) (n : Int) (hf : ∀ x, 0 ≤ x → x < n → 0 ≤ f x ∧ f x < n) (m : Nat) :
+    ∀ x, 0 ≤ x → x < n → 0 ≤ f^[m] x ∧ f^[m] x < n := by
+  induction m with
+  | zero => intro x h0 h1; exact ⟨h0, h1⟩
+  | succ m ih => intro x h0 h1; have := hf x h0 h1; exact ih (f x) this.1 this.2
+
+/-- Once two paths along `f` meet they stay together. -/
+theorem met_mono (f : Int → Int) (u v : Int) {m m' : Nat} (h : f^[m] u = f^[m] v) (hm : m ≤ m') :
+    f^[m'] u = f^[m'] v := by
+  rw [show m' = (m' - m) + m by omega, iter_add, iter_add, h]
+
 end Proofs.Cpp
 
 namespace Proofs.Cpp

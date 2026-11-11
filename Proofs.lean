@@ -556,3 +556,7 @@ import Proofs.Generated.TreeDistance
 import Proofs.Cpp.TreeDistance
 import Proofs.Generated.TreePath
 import Proofs.Cpp.TreePath
+import Proofs.Generated.TreeAncestor
+import Proofs.Cpp.TreeAncestor
+import Proofs.Generated.TreeLca
+import Proofs.Cpp.TreeLcaSameDepth
