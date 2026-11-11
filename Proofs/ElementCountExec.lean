@@ -1,7 +1,7 @@
 import Proofs.FamilySteps
 import Proofs.MultiVecDynamicScope
 import Proofs.DynamicConstructRows
-import Proofs.DoublingPrologue
+import Proofs.DoublingConstruct
 import Proofs.RunLengthMath
 
 /-!
@@ -961,5 +961,82 @@ theorem rest_run (F : Fix) (ok : FixOK F) (D : NState) (x0 : Int) (W : Nat)
       by simp [sh.scope]⟩
   refine ⟨D.left E.state,leave,rfl,rfl,?_⟩
   exact runs_weaken (tail_run F ok (D.left E.state) C pre cnt _ shG stG cbG math hpre hc (Nat.le_refl _)) (by omega)
+
+/-! ## The whole body -/
+
+theorem rowLimit_two : 2 ≤ rowLimit := by
+  have : rowLimit = 384307168202282325 := by simp [rowLimit]
+  omega
+
+/-- The state just after `ret` is constructed. -/
+theorem construct_step (F : Fix) (ok : FixOK F) (S0 : NState)
+    (sh0 : Sh S0 F.P F.B [.vector 0] [] [] F.sc)
+    (fam0 : Family [pv F.ty F.V F.vsc F.mV] F.h0 S0.frame (resources S0.frame))
+    (fb0 : S0.frame.bindings.length = 1)
+    (ctx0 : ∀ o c, S0.frame.state.forest.context o = some c → c < F.sc)
+    (hR : F.R = S0.frame.state.storage.objects.length) (hLc : F.Lc = S0.frame.state.liveSpace+3)
+    (hTc : F.Tc = S0.frame.state.storage.work+3) (hbase : F.base = S0.frame.state.storage.baseSpace)
+    (tp0 : max S0.frame.state.storage.peak (S0.frame.state.liveSpace+4-F.base) ≤ F.TPB)
+    (cb0 : Cb F S0) :
+    ∃ S1, (NStmt.constructRows F.ty true (.literal tu 2)).run S0 = some ⟨S1,none,false⟩ ∧
+      Sh S1 F.P F.B [.vector 0,.vector 1] [] [] F.sc ∧ St F S1 [] ∧ Cb F S1 ∧ S1.scalars.work ≤ S0.scalars.work+4 := by
+  have v2 : tu.valid 2 = true := by simpa using u64_valid_small 2 (by omega)
+  have two : (NExpr.literal tu 2).denote (envOf S0) = some ((2 : Nat) : Int) := by
+    simp [NExpr.denote,v2]
+  obtain ⟨t,next,ran,run,frame,sl,sc,me,bi,ba,wl,wu,pl,pu,ql,qu⟩ := construct_rows_stmt S0 (.literal tu 2) 2 F.ty
+    (by simp [NExpr.scalarOnly]) two ok.supported rowLimit_two fam0.valid fam0.lengths
+  obtain ⟨out,run',fam,_,_,_,_⟩ := DynamicConstructRows.sound [pv F.ty F.V F.vsc F.mV] F.h0 (resources S0.frame)
+    (snapshot S0) S0 fam0 (DynamicRealizes.of_family _ _ _ S0 fam0) F.ty true (.literal tu 2) 2
+    (by rw [denote_scalar _ _ _ _ (by simp [NExpr.scalarOnly]),snapshot_env]; simpa using two) (by omega)
+    ok.supported (by simpa using rowLimit_two)
+  have same : out = t := by
+    rw [run] at run'; exact (congrArg NStep.state (Option.some.inj run')).symm
+  subst out
+  obtain ⟨_,_,_,nextEq⟩ := constructRows_inv _ _ _ _ next ran
+  have state : t.frame.state = next := by rw [frame]
+  have params : [pv F.ty F.V F.vsc F.mV] ++ [DynamicConstructCore.parameter S0 (.vector (.integer F.ty)) true] =
+      F.params := by
+    simp [DynamicConstructCore.parameter,Fix.params,pr,fb0,← hR,sh0.scope]
+  have heap : put F.h0 S0.frame.state.storage.objects.length
+      (.rows F.ty S0.scope (rowIds S0.frame.state.storage.objects.length (2 : Int).toNat) 0
+        (List.replicate (2 : Int).toNat [])) = F.heap [] := by
+    simp [Fix.heap,heapOf,← hR,sh0.scope,firsts,seconds]
+  rw [params,heap] at fam
+  have liveT : t.frame.state.liveSpace = S0.frame.state.liveSpace+2+1 := by
+    rw [state]; exact Proofs.DoublingPrologue.construct_live _ _ _ _ _ ran
+  have r0 := constructRows_storage_row _ _ _ _ 0 next ran (by omega)
+  have r1 := constructRows_storage_row _ _ _ _ 1 next ran (by omega)
+  have pot0 : CppVectorGrowth.potential (rowBuffer F.ty (S0.frame.state.storage.objects.length+1+0)) = 0 := by
+    simp [CppVectorGrowth.potential,rowBuffer]
+  have pot1 : CppVectorGrowth.potential (rowBuffer F.ty (S0.frame.state.storage.objects.length+1+1)) = 0 := by
+    simp [CppVectorGrowth.potential,rowBuffer]
+  have shT : Sh t F.P F.B [.vector 0,.vector 1] [] [] F.sc :=
+    ⟨by rw [sl,sh0.slots,fb0]; rfl,by rw [me]; exact sh0.memory,by rw [bi]; exact sh0.bindings,
+      by rw [ba]; exact sh0.base,by rw [sc]; exact sh0.scope⟩
+  have tpT : t.frame.state.storage.peak ≤ F.TPB := by
+    rw [state,nextEq]; simp only []; rw [← hbase]; omega
+  refine ⟨t,run,shT,⟨fam,⟨rowBuffer F.ty (F.R+1),rowBuffer F.ty (F.R+2),?_,?_,?_,?_,?_,?_,?_,?_,?_,?_⟩,?_,?_,?_,tpT⟩,
+    ?_,by simp [NExpr.nodes] at wu; omega⟩
+  · rw [state,hR]; exact r0
+  · rw [state,hR]; exact r1
+  · simp [rowBuffer,firsts]
+  · simp [rowBuffer,seconds]
+  · simp [rowBuffer]
+  · simp [rowBuffer]
+  · simp [rowBuffer]
+  · simp [rowBuffer]
+  · rw [liveT,hLc]; simp [rowBuffer]
+  · rw [state,nextEq,hTc]; simp [CppVectorGrowth.potential,rowBuffer]
+  · rw [state,nextEq,hbase]
+  · intro o c h
+    rw [state] at h
+    rcases Proofs.DoublingPrologue.construct_ctx _ next F.ty S0.scope 2 ran o c h with old | ⟨_,eq⟩
+    · have := ctx0 o c old; omega
+    · rw [eq]; exact Nat.le_of_eq sh0.scope
+  · rw [frame]; simp [fb0]
+  · have := cb0.scalarPeak; have := cb0.peak
+    have live : liveS S0+1 ≤ F.SPB := by rw [liveS_sh sh0]; have := ok.spb; have := ok.baseLe; simp; omega
+    simp [NExpr.nodes] at pu
+    exact ⟨by omega,by omega⟩
 
 end Proofs.ElementCountExec
