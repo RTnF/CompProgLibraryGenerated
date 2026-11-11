@@ -161,6 +161,13 @@ LEAN_KEYWORDS = {
     "continue", "unless", "namespace", "section", "variable", "universe", "example", "abbrev", "inductive",
     "deriving", "calc", "λ", "Type", "Prop", "Sort", "self", "default", "pure", "tick", "size", "get", "set",
     "range", "failure", "true", "false", "not", "and", "or", "max", "min", "id", "this", "prefix", "suffix",
+    "to", "import", "export", "local", "private", "protected", "noncomputable", "mutual", "notation", "attribute",
+    "try", "catch", "finally", "nomatch", "nofun", "termination_by", "decreasing_by", "omit", "include", "opaque",
+    "set_option", "fuel", "check", "forever",
+    # identifiers that the proof source screening (tools/proof_security.py) rejects
+    "sorry", "sorryAx", "native_decide", "axiom", "unsafe", "extern", "implemented_by", "partial", "initialize",
+    "builtin_initialize", "run_elab", "run_tac", "run_meta", "run_cmd", "elab", "elab_rules", "macro", "macro_rules",
+    "syntax", "prelude",
 }
 
 
