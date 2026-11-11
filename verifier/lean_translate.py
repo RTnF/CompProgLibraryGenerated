@@ -1235,21 +1235,25 @@ class Fn:
             return out
         kind = node.get("kind")
         def root(n):
-            n = strip(n)
+            """The changed variable; `v[]` when only elements of `v` change (its size does not)."""
+            n = strip_casts(n)
+            element = False
             while True:
                 k = n.get("kind")
                 if k == "DeclRefExpr":
-                    return n["referencedDecl"]["name"]
+                    return n["referencedDecl"]["name"] + ("[]" if element else "")
                 if k == "MemberExpr":
                     b = strip(inner(n)[0])
                     if b.get("kind") == "CXXThisExpr":
-                        return "this." + n["name"]
+                        return "this." + n["name"] + ("[]" if element else "")
                     n = b
                     continue
                 if k == "ArraySubscriptExpr":
+                    element = True
                     n = strip(inner(n)[0])
                     continue
                 if k == "CXXOperatorCallExpr" and self.operator_name(n) == "[]":
+                    element = True
                     n = strip(inner(n)[1])
                     continue
                 return None
@@ -1291,11 +1295,33 @@ class Fn:
         if kind in ("CallExpr", "CXXMemberCallExpr"):
             callee = strip(inner(node)[0])
             name = callee.get("name") or callee.get("member")
-            if name not in ("size",):
+            if name == "size" and inner(callee):
+                base = strip(inner(callee)[0])
+                if base.get("kind") == "DeclRefExpr":
+                    out.add(base["referencedDecl"]["name"] + ".size")
+                    return out
+                if base.get("kind") == "MemberExpr" and strip(inner(base)[0]).get("kind") == "CXXThisExpr":
+                    out.add("this." + base["name"] + ".size")
+                    return out
+            elif name not in ("size",):
                 out.add("*call")
         for c in inner(node):
             self.read_names(c, out)
         return out
+
+    def conflicts(self, read, changed):
+        """Whether a change in `changed` can affect an expression reading `read`."""
+        if "*call" in read:
+            return True
+        for r in read:
+            if r.endswith(".size"):
+                if r.removesuffix(".size") in changed:
+                    return True
+            elif r in changed or r + "[]" in changed:
+                return True
+            if r.startswith("this.") and ("this.*" in changed or "*call" in changed):
+                return True
+        return False
 
     def counted(self, init, cond, inc, body):
         """Recognise `for (int i = a; i < b; i++)` / `for (int i = a; i >= b; i--)`. Returns (var, list text) or None."""
@@ -1326,10 +1352,7 @@ class Fn:
         changed = self.assigned_names(body)
         bound = inner(c)[1]
         read = self.read_names(bound)
-        if var in changed or "*call" in read or (read & changed) or ("this.*" in changed and
-                                                                       any(r.startswith("this.") for r in read)):
-            return None
-        if "*call" in changed and any(r.startswith("this.") for r in read):
+        if var in changed or var + "[]" in changed or self.conflicts(read, changed):
             return None
         return var, inner(d)[0], c["opcode"], bound, step
 
@@ -1414,7 +1437,8 @@ class Fn:
         if "&" in qual and "const" not in qual:
             raise Unsupported("range for by mutable reference")
         changed = self.assigned_names(body)
-        if self.read_names(rng_init) & changed:
+        read = {r.removesuffix(".size") for r in self.read_names(rng_init)}
+        if self.conflicts(read, changed):
             raise Unsupported("range for over a vector the body changes")
         self.flush(pre)
         self.scopes.append({})
@@ -1671,7 +1695,7 @@ class Translator:
                 fn.scopes[0][fname] = fty
             fn.scopes.append({})
         for pname, pty, is_ref in sig.params:
-            if pname in assigned:
+            if pname in assigned or pname + "[]" in assigned:
                 fn.emit(f"let mut {lean_name(pname)} := {lean_name(pname)}")
         fn.scopes.append({})
         for s in inner(body):
