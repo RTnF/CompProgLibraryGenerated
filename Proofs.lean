@@ -743,3 +743,11 @@ import Proofs.Generated.VectorFill
 import Proofs.Cpp.VectorFill
 import Proofs.Generated.Vector2dSum
 import Proofs.Cpp.Vector2dSum
+import Proofs.Generated.SafeMod
+import Proofs.Cpp.SafeMod
+import Proofs.Generated.GcdU64
+import Proofs.Cpp.GcdU64
+import Proofs.Generated.BitWidthU64
+import Proofs.Cpp.BitWidthU64
+import Proofs.Generated.CountrZero
+import Proofs.Cpp.CountrZero

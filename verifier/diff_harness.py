@@ -43,18 +43,25 @@ def lean_instance_type(cpp: str) -> str:
 CPP_PRELUDE = r"""
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace difftest {
-template <class X> void rd(X &x) { long long v; std::cin >> v; x = (X)v; }
+template <class X> void rd(X &x) {
+  if constexpr (std::is_unsigned_v<X>) { unsigned long long v; std::cin >> v; x = (X)v; }
+  else { long long v; std::cin >> v; x = (X)v; }
+}
 inline void rd(bool &x) { int v; std::cin >> v; x = v != 0; }
 template <class X> void rd(std::vector<X> &v) {
   long long n; std::cin >> n; v.assign(n, X());
   for (long long i = 0; i < n; i++) { X e; rd(e); v[i] = e; }
 }
 template <class A, class B> void rd(std::pair<A, B> &p) { rd(p.first); rd(p.second); }
-template <class X> void pr(const X &x) { std::cout << ' ' << (long long)x; }
+template <class X> void pr(const X &x) {
+  if constexpr (std::is_unsigned_v<X>) std::cout << ' ' << (unsigned long long)x;
+  else std::cout << ' ' << (long long)x;
+}
 inline void pr(bool x) { std::cout << ' ' << (x ? 1 : 0); }
 template <class X> void pr(const std::vector<X> &v) {
   std::cout << ' ' << v.size();
@@ -73,6 +80,12 @@ class Rd (α : Type) where
 
 instance : Rd Int where
   rd | t :: ts => (t.toInt?).map (·, ts) | [] => none
+
+instance : Rd UInt64 where
+  rd | t :: ts => (t.toNat?).map (fun v => (UInt64.ofNat v, ts)) | [] => none
+
+instance : Rd UInt32 where
+  rd | t :: ts => (t.toNat?).map (fun v => (UInt32.ofNat v, ts)) | [] => none
 
 instance : Rd Bool where
   rd | t :: ts => (t.toInt?).map (fun v => (v ≠ 0, ts)) | [] => none
@@ -97,6 +110,8 @@ class Pr (α : Type) where
   pr : α → String
 
 instance : Pr Int where pr x := s!" {x}"
+instance : Pr UInt64 where pr x := s!" {x.toNat}"
+instance : Pr UInt32 where pr x := s!" {x.toNat}"
 instance : Pr Bool where pr x := if x then " 1" else " 0"
 instance {α : Type} [Pr α] : Pr (Array α) where
   pr v := s!" {v.size}" ++ String.join (v.toList.map Pr.pr)
