@@ -201,3 +201,32 @@ theorem getElem!_push {α : Type} [Inhabited α] (v : Array α) (x : α) (j : Na
   rw [getElem!_set _ _ _ _ (by simpa using hi)]; simp
 
 end Proofs.Cpp
+
+namespace Proofs.Cpp
+
+/-! ## The last element of a vector -/
+
+theorem back_of_toList {α : Type} [Inhabited α] (ret : Array α) (L : List α) (p : α) (h : ret.toList = L ++ [p]) :
+    back ret = p := by
+  have hsz : ret.size = L.length + 1 := by rw [← Array.length_toList, h]; simp
+  simp only [back, Array.back!, hsz, Nat.add_sub_cancel]
+  rw [getElem!_pos ret L.length (by omega), ← Array.getElem_toList]
+  simp [h]
+
+theorem get_last_of_toList {α : Type} [Inhabited α] (ret : Array α) (L : List α) (p : α) (h : ret.toList = L ++ [p]) :
+    get ret (size ret - 1) = p := by
+  have hsz : ret.size = L.length + 1 := by rw [← Array.length_toList, h]; simp
+  simp only [get_eq, size, hsz]
+  rw [show ((L.length + 1 : Nat) : Int) - 1 = (L.length : Int) by omega, Int.toNat_natCast,
+    getElem!_pos ret L.length (by omega), ← Array.getElem_toList]
+  simp [h]
+
+theorem set_last_toList {α : Type} (ret : Array α) (L : List α) (p q : α) (h : ret.toList = L ++ [p]) :
+    (set ret (size ret - 1) q).toList = L ++ [q] := by
+  have hsz : ret.size = L.length + 1 := by rw [← Array.length_toList, h]; simp
+  simp only [set, size, hsz]
+  rw [show ((L.length + 1 : Nat) : Int) - 1 = (L.length : Int) by omega, Int.toNat_natCast, Array.set!,
+    Array.toList_setIfInBounds, h, List.set_append_right _ _ (by simp)]
+  simp
+
+end Proofs.Cpp

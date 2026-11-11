@@ -540,3 +540,5 @@ import Proofs.Generated.CumulativeSum
 import Proofs.Cpp.CumulativeSum
 import Proofs.Generated.Interval
 import Proofs.Cpp.Interval
+import Proofs.Generated.IntervalUnion
+import Proofs.Cpp.IntervalUnion
