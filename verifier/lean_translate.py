@@ -691,6 +691,12 @@ class Fn:
                 vt, _ = self.expr(args[1], pre, ty.args[0])
                 tmp = self.fresh()
                 pre.append(f"let {tmp} := {at}")
+                if ty.args[0].kind == "vec":
+                    # n copies of a vector value: n * (its length) element copies
+                    val = self.fresh()
+                    pre.append(f"let {val} := {vt}")
+                    pre.append(f"Cpp.tickN ({tmp}.toNat * ({val}.size + 1))")
+                    return f"(Cpp.replicate {tmp} {val})"
                 pre.append(f"Cpp.tickN {tmp}.toNat")
                 return f"(Cpp.replicate {tmp} {vt})"
             raise Unsupported("vector constructor")
