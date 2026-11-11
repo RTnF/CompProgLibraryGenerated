@@ -10,8 +10,7 @@ namespace cp {
 // order in which the original appends them to the adjacency lists. Differences: the arcs are written to two
 // caller-provided vectors instead of adjacency lists (feed them to `csr_build`, which keeps the order of the arcs of each
 // vertex), and the range assertions of the original are preconditions. The costs of the arcs (the cost of an edge for both
-// of its arcs, or 1 for the constructor without costs) are not written here; copying them is a second loop of the same
-// shape that is not verified yet.
+// of its arcs, or 1 for the constructor without costs) are written by `tree_arc_costs`.
 // Preconditions: 0 <= m < 2^29, from.size() >= m, to.size() >= m, af.size() >= 2 * m and at.size() >= 2 * m.
 // Time O(m), extra space O(1).
 inline void tree_arcs_from_list(const std::vector<int> &from, const std::vector<int> &to, std::vector<int> &af,

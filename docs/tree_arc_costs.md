@@ -11,8 +11,11 @@
 
 前提: `0 <= m < 2^29`、`cost.size() >= m`、`ac.size() >= 2 * m`。
 
-結果（`Proofs/TreeArcCostsCall.lean`、一般の入力について証明）: 終了後 `ac` の先頭 `2 * m` 要素が `cost[0], cost[0], cost[1], cost[1], ...` になり、以降は変わらない（`ACt`）。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: モデル上の仕事量は呼び出し側の引数評価を除いて `220 * m + 100` 以下、書き込みは `2 * m` 回以下、追加領域は局所変数だけ。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeArcCosts.lean` を生成し、`Proofs/Cpp/TreeArcCosts.lean` が前提を満たす全入力について次を証明する。
 
-証明は `Proofs/TreeArcCostsExec.lean`（1 反復 `b_body`、全体 `body_exec`、途中状態 `ACt`）、`Proofs/TreeArcCostsPrepare.lean`/`Proofs/TreeArcCostsCall.lean`（呼び出し）。C++ のテストは `tests/tree_arc_costs.cpp`。
+- `tree_arc_costs_spec`: 任意の `Cost` について、`0 <= m`、`2m <= ac.size()` のとき、終了後 `ac[2i] == ac[2i+1] == cost[i]`（`i < m`）、`2m` 以降の要素と長さは変わらない。
+- tick 数はちょうど `m + 1`。
+
+差分テスト（`tests/diff/tree_arc_costs.py`）と C++ のテスト `tests/tree_arc_costs.cpp` で翻訳と実装を確かめる。

@@ -12,10 +12,12 @@
 
 前提: `0 <= n < 2^31 - 1`、`cost_depth0`、`cost_depth1`、`h` がどれも `n` 個以上の要素を持つ。
 
-結果（`Proofs/TreeHeightCall.lean`、一般の入力について証明）: 終了後 `h[i] == max(cost_depth0[i], cost_depth1[i])`（`i < n`）、`n` 以降の要素と `h` の長さは変わらない。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: モデル上の仕事量は呼び出し側の引数評価を除いて `120 * n + 200` 以下、書き込みは `n` 回以下、追加領域は局所変数だけ。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeHeight.lean` を生成し、`Proofs/Cpp/TreeHeight.lean` が前提を満たす全入力について次を証明する。
 
-証明は `Proofs/TreeHeightExec.lean`（`pexecM` による 1 反復 `b_body` とループ全体 `body_exec`、途中状態 `hfill`）、`Proofs/TreeHeightPrepare.lean`/`Proofs/TreeHeightCall.lean`（呼び出し）。
+- `tree_height_spec`: 任意の `Cost` について、`0 <= n <= h.size()` のとき、終了後 `h[i] == pick cost_depth0[i] cost_depth1[i]`（`a < b` なら `b`、そうでなければ `a`。全順序では大きい方。`Int` では `pick_eq_max`）（`i < n`）、`n` 以降の要素と長さは変わらない。
+- tick 数はちょうど `n + 1`。
+- 定理に含めていないこと: 2 本の `cost_depth` が直径の両端を根にしたものであることと、そのとき `h[i]` が本当に最遠頂点までの距離であること。
 
-定理に含めていないこと: 2 本の `cost_depth` が直径の両端を根にしたものであることと、そのとき `h[i]` が本当に最遠頂点までの距離であること。C++ のテストは `tests/tree_height.cpp`（ランダムな配列で先頭 `n` 個が最大値になり、残りが変わらないことを確認する）。
+差分テスト（`tests/diff/tree_height.py`）と C++ のテスト `tests/tree_height.cpp`（ランダムな配列で先頭 `n` 個が最大値になり、残りが変わらないことを確認する）で翻訳と実装を確かめる。

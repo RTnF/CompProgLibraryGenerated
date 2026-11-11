@@ -542,3 +542,17 @@ import Proofs.Generated.Interval
 import Proofs.Cpp.Interval
 import Proofs.Generated.IntervalUnion
 import Proofs.Cpp.IntervalUnion
+import Proofs.Generated.TreeFindRoot
+import Proofs.Cpp.TreeFindRoot
+import Proofs.Generated.TreeArcs
+import Proofs.Cpp.TreeArcs
+import Proofs.Generated.TreeArcCosts
+import Proofs.Cpp.TreeArcCosts
+import Proofs.Generated.TreeEdges
+import Proofs.Cpp.TreeEdges
+import Proofs.Generated.TreeHeight
+import Proofs.Cpp.TreeHeight
+import Proofs.Generated.TreeDistance
+import Proofs.Cpp.TreeDistance
+import Proofs.Generated.TreePath
+import Proofs.Cpp.TreePath

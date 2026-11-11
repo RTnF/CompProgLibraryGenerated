@@ -11,8 +11,11 @@
 
 前提: `0 <= n < 2^30`、`parent.size() >= n`、`from.size() >= 2 * n`、`to.size() >= 2 * n`。
 
-結果（`Proofs/TreeEdgesCall.lean`、一般の入力について証明）: 返り値 `m` は、条件を満たす `i` の個数の 2 倍で、`from[0..m)`、`to[0..m)` は上の順序に並んだ辺列、`m` 以降の要素は変わらない（`FFt`、`TTt`）。`parent` の要素が負でも範囲外でも未定義の挙動はない（`32` ビット整数として正しく比較される）。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: モデル上の仕事量は呼び出し側の引数評価を除いて `420 * n + 200` 以下、書き込みは `4 * n` 回以下、追加領域は局所変数だけ。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeEdges.lean` を生成し、`Proofs/Cpp/TreeEdges.lean` が前提を満たす全入力について次を証明する。
 
-証明は `Proofs/TreeEdgesExec.lean`（途中状態 `FFt`/`TTt`/`arcP`、6 つの文 `y3_exec`、入れ子の分岐 `bi_exec`、ループ全体 `body_exec`）、`Proofs/TreeEdgesPrepare.lean`/`Proofs/TreeEdgesCall.lean`（呼び出し）。C++ のテストは `tests/tree_edges.cpp`（根・範囲外の親を含むランダムな親配列で、元の構築と同じ隣接順序になることを `csr_build` との合成で確認する）。
+- `tree_edges_spec`: `0 <= n`、`2n <= from.size()`、`2n <= to.size()` のとき、返り値は弧の列 `arcs parent n n`（`i` の昇順に、`HasParent`（`parent[i] != i` かつ `0 <= parent[i] < n`）を満たす `i` について `(parent[i], i)`、`(i, parent[i])`）の長さで、`from`/`to` の先頭はその始点・終点の列、以降の要素は変わらない（`Holds`）。弧の数は `2n` 以下（`arcs_length_le`）。
+- tick 数はちょうど `n + 1`。
+
+差分テスト（`tests/diff/tree_edges.py`）と C++ のテスト `tests/tree_edges.cpp`（根・範囲外の親を含むランダムな親配列で、元の構築と同じ隣接順序になることを `csr_build` との合成で確認する）で翻訳と実装を確かめる。

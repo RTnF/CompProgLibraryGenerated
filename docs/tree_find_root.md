@@ -9,8 +9,11 @@
 
 前提: `0 <= n < 2^31 - 1`、`parent.size() >= n`。
 
-結果（`Proofs/TreeFindRootCall.lean`、一般の入力について証明）: 返り値は `rootT parent n`（`rootT` は、`i` の昇順に条件を満たす `i` で更新する関数）。つまり条件を満たす最後の添字、なければ `-1`。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: モデル上の仕事量は呼び出し側の引数評価を除いて `220 * n + 200` 以下、追加領域は局所変数だけ。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeFindRoot.lean` を生成し、`Proofs/Cpp/TreeFindRoot.lean` が前提を満たす全入力について次を証明する。
 
-証明は `Proofs/TreeFindRootExec.lean`（`rootT`、代入 `yas_exec`、1 反復 `bfr_exec`、全体 `body_exec`。入れ子の `if` には `Proofs/TreeEdgesExec.lean` の `wrap_true`/`wrap_false` を使う）、`Proofs/TreeFindRootPrepare.lean`/`Proofs/TreeFindRootCall.lean`（呼び出し）。C++ のテストは `tests/tree_find_root.cpp`（自己親・負の親・大きな値を含むランダムな配列で、元のループと照合する）。
+- `tree_find_root_spec`: `0 <= n` のとき、返り値は `lastRoot parent n`（`i < n` で `IsRoot parent i`（`parent[i] == i` または `parent[i] < 0`）を満たす最後の `i`、なければ `-1`。`lastRoot_spec`）。
+- tick 数はちょうど `n + 1`。
+
+差分テスト（`tests/diff/tree_find_root.py`）と C++ のテスト `tests/tree_find_root.cpp`（自己親・負の親・大きな値を含むランダムな配列で、元のループと照合する）で翻訳と実装を確かめる。

@@ -11,8 +11,11 @@
 
 前提: `0 <= m < 2^29`、`from.size() >= m`、`to.size() >= m`、`af.size() >= 2 * m`、`at.size() >= 2 * m`、`from`・`to` の要素が `int` の範囲にある。
 
-結果（`Proofs/TreeArcsCall.lean`、一般の入力について証明）: 終了後 `af[2*i] == from[i]`、`at[2*i] == to[i]`、`af[2*i+1] == to[i]`、`at[2*i+1] == from[i]`（`i < m`）、`2 * m` 以降の要素は変わらない（`AFt`、`ATt`）。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: モデル上の仕事量は呼び出し側の引数評価を除いて `320 * m + 200` 以下、書き込みは `4 * m` 回以下、追加領域は局所変数だけ。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeArcs.lean` を生成し、`Proofs/Cpp/TreeArcs.lean` が前提を満たす全入力について次を証明する。
 
-証明は `Proofs/TreeArcsExec.lean`（添字式 `2 * i`、`2 * i + 1` の評価、途中状態 `AFt`/`ATt`、1 反復 `b_body`、全体 `body_exec`。2 要素の書き込みの補題 `pair_pad` は `Proofs/TreeEdgesExec.lean`）、`Proofs/TreeArcsPrepare.lean`/`Proofs/TreeArcsCall.lean`（呼び出し）。C++ のテストは `tests/tree_arcs.cpp`（`csr_build` との合成で、元の構築と同じ隣接順序になることを確認する）。
+- `tree_arcs_spec`: `0 <= m`、`2m <= af.size()`、`2m <= at.size()` のとき、終了後 `af[2i] == from[i]`、`af[2i+1] == to[i]`、`at[2i] == to[i]`、`at[2i+1] == from[i]`（`i < m`）、`2m` 以降の要素と長さは変わらない。
+- tick 数はちょうど `m + 1`。
+
+差分テスト（`tests/diff/tree_arcs.py`）と C++ のテスト `tests/tree_arcs.cpp`（`csr_build` との合成で、元の構築と同じ隣接順序になることを確認する）で翻訳と実装を確かめる。

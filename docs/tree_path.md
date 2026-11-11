@@ -10,8 +10,12 @@
 
 前提: `parent` を `to` から親へ `m` 回たどると初めて `from` に着く（`tree_root` の出力では、`to` が `from` から到達可能なら `m = depth[to]`）。途中の頂点（`to`、`from` を含む）はすべて `[0, parent.size())` にある。`out.size() >= m + 1`、`m + 1 < 2^31`。
 
-結果（`Proofs/TreePathCall.lean`、一般の入力について証明）: 返り値は `m + 1`、`out` の先頭 `m + 1` 要素が連鎖 `ch 0 = to`、…、`ch m = from`（`Ot`）、以降の要素は変わらない。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: モデル上の仕事量は呼び出し側の引数評価を除いて `400 * m + 200` 以下、書き込みは `m + 1` 回以下、追加領域は局所変数だけ。`m < n` なので全体で `O(n)`。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreePath.lean` を生成し、`Proofs/Cpp/TreePath.lean` が前提を満たす全入力について次を証明する。
 
-証明は `Proofs/TreePathExec.lean`（1 反復 `b_body`、`while_exec`（`m - t` についての帰納）、全体 `body_exec`、途中状態 `Ot`）、`Proofs/TreePathPrepare.lean`/`Proofs/TreePathCall.lean`（呼び出し）。`tree_root` の出力との接続は `Proofs/TreePathMath.lean` の `tree_path_chain` で、`tree_root` の事後条件 `TreeSpec`（`HeadOK` の CSR 配列、`to` が到達可能）から、前提の連鎖 `ch`（`m = dep[to]`、`ch 0 = to`、`ch m = from`、`m` より前は `from` でない、`parent[ch i] = ch (i+1)`）の存在を導く。C++ のテストは `tests/tree_path.cpp`（`tree_root` との合成で、元の `Tree::path` と照合する）。
+- `tree_path_spec`: `parent` を `to` から `m` 回たどると初めて `from` に着く（`up parent to m = from`、`j < m` では `from` でない）、`m + 1 <= out.size()`、`m < 2^31` のとき、返り値は `m + 1`、`out[j] == up parent to j`（`j <= m`。`out[0] = to`、`out[m] = from`）、以降の要素と長さは変わらない。`while` ループの停止は測度 `m - k` で示す。
+- tick 数はちょうど `m + 2`。`m < n` なので全体で `O(n)`。
+- `tree_root` の出力がこの前提を満たすこと（`m = depth[to]`）は、旧方式の `Proofs/TreePathMath.lean` の `tree_path_chain` が示している。`tree_root` の移行時に新方式へ移す。
+
+差分テスト（`tests/diff/tree_path.py`）と C++ のテスト `tests/tree_path.cpp`（`tree_root` との合成で、元の `Tree::path` と照合する）で翻訳と実装を確かめる。
