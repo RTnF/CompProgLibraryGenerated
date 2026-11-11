@@ -42,9 +42,7 @@ Doublingの変更検出では、値を変える変更はoracleの失敗を要求
 
 vector_copy_irの生成実行はroot/行header両入力を扱い、借用した行への書込みとcaller aliasへの反映、readonly→mutable要求、stale epoch、owner/header不一致の拒否も確認する。
 
-`test_ret_unit_ir.py`はvoid/constructorのbare returnで後続処理が停止し、local vectorを退去すること、元vector/scalar aliasへの更新、void method/void free callerのreturn式を生成モデルとnative UBSanで照合する。unit関数がscalar returnを返す不正なモデルはfaultを要求する。新命令とunit finishの一般補題はCppUnitReturnで確認する。
 
-`test_class_default_arguments.py`は構築子・外部receiver methodの元宣言に属する既定式を生成Lean/native UBSanで照合する。全省略/一部省略/明示指定、scalar/void/const、対象GCCの整数変換、local退去、node IDを保って式だけを変えた不正な展開の拒否、省略時の副作用拒否と明示指定時の非評価を扱う。内部inlinerや任意の副作用のサポートを意味しない。
 
 UnionFind の代入検査は、代入の線形仕事量とコピー後の5種類の通常操作列について、初期 potential を含む一般的な償却上界への接続も確認する。
 

@@ -26236,30 +26236,21 @@
             "bug": "unknown",
             "cpp_tested": true,
             "common_translator": true,
-            "lean_proved": true,
+            "lean_proved": false,
             "include_verified": false,
             "published": false
           },
           "evidence": [
             "verifier/context_method_ir.py",
-            "Proofs/Generated/DisjointSetMethods.lean",
-            "Proofs/DisjointSetGetter.lean",
-            "tests/test_context_method_selection.py",
             "tests/imports/disjoint_set_getter.cpp",
-            "tests/lean/disjoint_set_getter.lean",
             "docs/disjoint_set_getter.md",
-            "Proofs/CppScalarGetterCall.lean",
-            "Proofs/CppMoveValueReceiver.lean",
-            "Proofs/DisjointSetGetterCall.lean",
-            "tests/test_disjoint_set_getter_call.py",
-            "tests/lean/disjoint_set_getter_call_body.lean",
-            "tests/lean/disjoint_set_getter_call_source.lean",
             "docs/scalar_getter_call.md"
           ],
           "review_notes": [
             "2026-10-24: 元DisjointSet/getNumのみを同一TU FieldDecl監査から選択生成し、本体の任意有効counter値の返却・保持・仕事量2をLeanで証明。通常/空/moved-from Contextおよび元C++ UBSanを検査。元クラス全体、任意caller準備/復元・総資源の一般証明、recursive root等と公開版対応は未完了。",
             "2026-10-25: 元getNumのfield/header/capabilityとtyped heap/scope条件からprepare/compact/body/finish/restoreを構成し、実fuel2終了・全scalar memory/全owner payload lookup保持・work≤元+10・caller-only scalar/heap/total peak上界を正本登録。n=vector長や成功した中間操作を前提にしない。通常/空/moved-from、readonly size、counter権限不足を検査。旧classの他API/constructor・任意caller ASTは未完了。新全件gateの確定までは宣言のlean_provedを昇格させない。",
-            "2026-10-25 all211確定: 実full gate終了0、公開41部品/220checks、raw35908監査、独立kernel33522宣言エラーなし。getNum宣言だけlean_proved=trueへ更新。対象は記載したfield/header/capability・typed heap/scope条件下の元生成getterの意味/停止/値保持/仕事量/3peak。クラス全体のreviewはpartial、他method/constructor/任意caller AST/公開版復元は未完了。"
+            "2026-10-25 all211確定: 実full gate終了0、公開41部品/220checks、raw35908監査、独立kernel33522宣言エラーなし。getNum宣言だけlean_proved=trueへ更新。対象は記載したfield/header/capability・typed heap/scope条件下の元生成getterの意味/停止/値保持/仕事量/3peak。クラス全体のreviewはpartial、他method/constructor/任意caller AST/公開版復元は未完了。",
+            "2026-11-11: 旧方式の証明とテスト（寿命・レシーバのモデル）を削除した（docs/redesign_2026-11.md）。lean_proved を false に戻した。"
           ]
         }
       ],
@@ -26292,24 +26283,15 @@
       "byte_identical_sources": [],
       "evidence": [
         "verifier/context_method_ir.py",
-        "Proofs/Generated/DisjointSetMethods.lean",
-        "Proofs/DisjointSetGetter.lean",
-        "tests/test_context_method_selection.py",
         "tests/imports/disjoint_set_getter.cpp",
-        "tests/lean/disjoint_set_getter.lean",
         "docs/disjoint_set_getter.md",
-        "Proofs/CppScalarGetterCall.lean",
-        "Proofs/CppMoveValueReceiver.lean",
-        "Proofs/DisjointSetGetterCall.lean",
-        "tests/test_disjoint_set_getter_call.py",
-        "tests/lean/disjoint_set_getter_call_body.lean",
-        "tests/lean/disjoint_set_getter_call_source.lean",
         "docs/scalar_getter_call.md"
       ],
       "review_notes": [
         "2026-10-24: 元DisjointSet/getNumのみを同一TU FieldDecl監査から選択生成し、本体の任意有効counter値の返却・保持・仕事量2をLeanで証明。通常/空/moved-from Contextおよび元C++ UBSanを検査。元クラス全体、任意caller準備/復元・総資源の一般証明、recursive root等と公開版対応は未完了。",
         "2026-10-25: 元getNumのfield/header/capabilityとtyped heap/scope条件からprepare/compact/body/finish/restoreを構成し、実fuel2終了・全scalar memory/全owner payload lookup保持・work≤元+10・caller-only scalar/heap/total peak上界を正本登録。n=vector長や成功した中間操作を前提にしない。通常/空/moved-from、readonly size、counter権限不足を検査。旧classの他API/constructor・任意caller ASTは未完了。新全件gateの確定までは宣言のlean_provedを昇格させない。",
-        "2026-10-25 all211確定: 実full gate終了0、公開41部品/220checks、raw35908監査、独立kernel33522宣言エラーなし。getNum宣言だけlean_proved=trueへ更新。対象は記載したfield/header/capability・typed heap/scope条件下の元生成getterの意味/停止/値保持/仕事量/3peak。クラス全体のreviewはpartial、他method/constructor/任意caller AST/公開版復元は未完了。"
+        "2026-10-25 all211確定: 実full gate終了0、公開41部品/220checks、raw35908監査、独立kernel33522宣言エラーなし。getNum宣言だけlean_proved=trueへ更新。対象は記載したfield/header/capability・typed heap/scope条件下の元生成getterの意味/停止/値保持/仕事量/3peak。クラス全体のreviewはpartial、他method/constructor/任意caller AST/公開版復元は未完了。",
+        "2026-11-11: 旧方式の証明とテスト（寿命・レシーバのモデル）を削除した（docs/redesign_2026-11.md）。lean_proved を false に戻した。"
       ]
     },
     {
