@@ -644,4 +644,97 @@ theorem no_run (F : Fix) (ok : FixOK F) (u : NState) (C : List (Int × Nat)) (pr
   · rw [workL]; have : u.scalars.work ≤ T.scalars.work := wl; omega
   · rw [workL]; have : T.scalars.work ≤ u.scalars.work+40 := wu; omega
 
+theorem bool_convert (v : Int) (h : v = 0 ∨ v = 1) : tb.convert v = some v :=
+  Ty.convert_of_valid _ _ (by rcases h with rfl | rfl <;> rfl)
+
+theorem rleAdd_eq (C : List (Int × Nat)) (pre : Int) (cnt : Nat) (x : Int) (h : pre = x) :
+    rleAdd (C ++ [(pre,cnt)]) x = C ++ [(pre,cnt+1)] := by simp [rleAdd,h]
+
+theorem rleAdd_ne (C : List (Int × Nat)) (pre : Int) (cnt : Nat) (x : Int) (h : ¬ pre = x) :
+    rleAdd (C ++ [(pre,cnt)]) x = (C ++ [(pre,cnt)]) ++ [(x,1)] := by simp [rleAdd,h]
+
+/-- One iteration of the loop body after the condition `i < n` held. -/
+theorem iter_run (F : Fix) (ok : FixOK F) (u0 : NState) (C : List (Int × Nat)) (pre : Int) (cnt t : Nat) (x : Int)
+    (sh : Sh u0 F.P F.B slotsI (cellsI F.ty F.X.length pre cnt t) (bindsI F.P) (F.sc+1))
+    (st : St F u0 C) (cb : Cb F u0) (hpre : F.ty.valid pre = true) (hc : cnt ≤ t) (ht : t < F.X.length)
+    (len : C.length ≤ t) (item : F.X[t]? = some x) :
+    ∃ T C' pre' cnt', (∀ Q : NStep → Prop, Q ⟨T,none,false⟩ → RunsTo (iterC F.ty F.cv) u0 Q) ∧
+      Sh T F.P F.B slotsI (cellsI F.ty F.X.length pre' cnt' (t+1)) (bindsI F.P) (F.sc+1) ∧ St F T C' ∧ Cb F T ∧
+      rleAdd (C ++ [(pre,cnt)]) x = C' ++ [(pre',cnt')] ∧ C'.length ≤ t+1 ∧ cnt' ≤ t+1 ∧ F.ty.valid pre' = true ∧
+      u0.scalars.work ≤ T.scalars.work ∧ T.scalars.work ≤ u0.scalars.work+80 := by
+  have small := ok.small
+  have xv : F.ty.valid x = true := ok.valid x (List.mem_of_getElem? item)
+  have sh1 := sh_enter sh
+  obtain ⟨_,ep,_,ei⟩ := envI sh1 (by omega) hpre (by omega) (by omega)
+  -- the condition `pre == v[i]`
+  have pure : denote F.params (snapshot {u0 with scope := u0.scope+1}) (eraseHeap (F.heap C)) (cEq F.ty) =
+      some (if pre = x then 1 else 0) := by
+    apply denote_binary_left _ _ _ tb .eq (.variable F.ty 3) (eAt F.ty) pre x _ (by simp [NExpr.scalarOnly])
+    · rw [snapshot_env]; simpa [NExpr.denote] using ep
+    · exact denote_at F ok _ C t x (by simp [sh.slots,slotsI,slotsC,slotsP,slotsN]) ei item
+    · by_cases e : pre = x <;> simp [binaryValue,e] <;> exact bool_convert _ (by simp)
+  obtain ⟨next,eval,rel⟩ := FamilySteps.condition (st_enter st).family (cEq F.ty) _ pure
+  let u1 := (next.release {u0 with scope := u0.scope+1}).charge 1 0
+  have sh2 : Sh u1 F.P F.B slotsI (cellsI F.ty F.X.length pre cnt t) (bindsI F.P) (F.sc+2) := sh_released rel sh1
+  have st2 : St F u1 C := st_released rel (st_enter st)
+  have cb2 : Cb F u1 := cb_released rel (cb_enter cb) (st_enter st) (by
+    have := live_loop sh ok; have e : liveS {u0 with scope := u0.scope+1} = liveS u0 := rfl
+    simp [NExpr.nodes,Container.nodes]; omega)
+  have wRel : u1.scalars.work ≤ u0.scalars.work+2*(cEq F.ty).nodes+1 := rel.workUpper
+  have wRel' : u0.scalars.work ≤ u1.scalars.work := rel.workLower
+  -- the two branches
+  obtain ⟨T1,C1,pre1,cnt1,run1,sh3,st3,cb3,math,len1,cnt1le,pre1v,wl1,wu1⟩ :
+      ∃ T1 C1 pre1 cnt1, (∀ Q : NStep → Prop, Q ⟨T1,none,false⟩ →
+          RunsTo (if (if pre = x then (1 : Int) else 0) = 0 then noC F.ty F.cv else yesC) u1 Q) ∧
+        Sh T1 F.P F.B slotsI (cellsI F.ty F.X.length pre1 cnt1 t) (bindsI F.P) (F.sc+2) ∧ St F T1 C1 ∧ Cb F T1 ∧
+        rleAdd (C ++ [(pre,cnt)]) x = C1 ++ [(pre1,cnt1)] ∧ C1.length ≤ t+1 ∧ cnt1 ≤ t+1 ∧
+        F.ty.valid pre1 = true ∧ u1.scalars.work ≤ T1.scalars.work ∧ T1.scalars.work ≤ u1.scalars.work+41 := by
+    by_cases e : pre = x
+    · obtain ⟨T,run,shT,stT,cbT,wl,wu⟩ := yes_run F ok u1 C pre cnt t sh2 st2 cb2 hpre (by omega) ht (by omega)
+      exact ⟨T,C,pre,cnt+1,by simpa [e] using run,shT,stT,cbT,rleAdd_eq C pre cnt x e,by omega,by omega,hpre,wl,
+        by omega⟩
+    · obtain ⟨T,run,shT,stT,cbT,wl,wu⟩ := no_run F ok u1 C pre cnt t x sh2 st2 cb2 hpre (by omega) ht (by omega) item
+      exact ⟨T,C ++ [(pre,cnt)],x,1,by simpa [e] using run,shT,stT,cbT,rleAdd_ne C pre cnt x e,by simp; omega,
+        by omega,xv,wl,wu⟩
+  -- leave the iteration block
+  obtain ⟨leave,stL,cbL,workL,_,_⟩ := leave_ok F ok u0 T1 C1 st3 cb3 cb
+    (by rw [sh3.memory,sh.memory]; simp [cellsI]) (by rw [sh3.memory,sh.memory]; exact types_cells ..)
+    st.frameBindings (by rw [sh.scope]; omega) (by have := live_loop sh ok; omega) (by omega)
+  have shL : Sh (u0.left T1) F.P F.B slotsI (cellsI F.ty F.X.length pre1 cnt1 t) (bindsI F.P) (F.sc+1) :=
+    left_sh sh sh3.memory (by simp [cellsI])
+  -- i++
+  obtain ⟨_,_,_,eiL⟩ := envI shL (by omega) pre1v (by omega) (by omega)
+  have conv : ti.convert ((t : Int)+1) = some ((t : Int)+1) :=
+    Ty.convert_of_valid _ _ (by have := i32_valid_nat (t+1) (by omega); simpa using this)
+  obtain ⟨t2,run2,fam2,state2,rights2,fb2,sl2,sc2,me2,bi2,ba2,wl2,wu2,pl2,pu2,ql2,qu2⟩ :=
+    FamilySteps.assign stL.family (.binary ti .add (.variable ti 5) (.literal ti 1)) 5 3 ti ((t : Int)+1) ((t : Int)+1)
+      ⟨F.P.length+3,true⟩ ⟨ti,(t : Int)⟩
+      (by rw [denote_scalar _ _ _ _ (by simp [NExpr.scalarOnly]),snapshot_env]
+          exact denote_inc _ 5 ti _ eiL (by simpa using i32_valid_nat 1 (by omega)) conv)
+      conv
+      (by rw [shL.slots]; simp [slotsI,slotsC,slotsP,slotsN]) (by rw [shL.bindings]; simp [bindsI,bindsC,bindsP,bindsN])
+      (by rw [shL.memory]; simp [cellsI]) rfl (i32_valid_nat t (by omega)) rfl
+  have sh4 : Sh t2 F.P F.B slotsI (cellsI F.ty F.X.length pre1 cnt1 (t+1)) (bindsI F.P) (F.sc+1) :=
+    ⟨by rw [sl2]; exact shL.slots,by rw [me2,shL.memory]; have := set_i F.P F.ty F.X.length pre1 cnt1 t (t+1); simpa using this,
+      by rw [bi2]; exact shL.bindings,by rw [ba2]; exact shL.base,by rw [sc2]; exact shL.scope⟩
+  have st4 : St F t2 C1 := st_frame stL fam2 state2 (by rw [fb2]; exact stL.frameBindings)
+  have liveL := live_loop shL ok
+  have cb4 : Cb F t2 := by
+    have := cbL.scalarPeak; have := cbL.peak; have := st4.storagePeak
+    simp [NExpr.nodes] at pu2
+    exact ⟨by omega,by omega⟩
+  refine ⟨t2,C1,pre1,cnt1,?_,sh4,st4,cb4,math,len1,cnt1le,pre1v,?_,?_⟩
+  · intro Q post
+    apply RunsTo.seq
+    apply RunsTo.scopeSimple
+    apply RunsTo.seq
+    refine RunsTo.branch eval ?_
+    refine run1 _ ⟨rfl,rfl,RunsTo.skip ⟨rfl,rfl,u0.left T1,leave,rfl,rfl,?_⟩⟩
+    exact RunsTo.seq (RunsTo.primitive run2 ⟨rfl,rfl,RunsTo.skip post⟩)
+  · have := wl2; have := workL; omega
+  · have := workL
+    have hn : (cEq F.ty).nodes ≤ 10 := by simp [NExpr.nodes,Container.nodes]
+    have hw2 : t2.scalars.work ≤ (u0.left T1).scalars.work+2*3+1 := by simpa [NExpr.nodes] using wu2
+    omega
+
 end Proofs.ElementCountExec
