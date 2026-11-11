@@ -1340,6 +1340,8 @@ class Fn:
                     out.add(root(inner(callee)[0]))
                     if strip(inner(callee)[0]).get("kind") == "CXXThisExpr":
                         out.add("this.*")
+            elif callee.get("referencedDecl", {}).get("name") == "__assert_fail" or callee.get("name") == "__assert_fail":
+                pass   # a failed assert stops the call; it changes nothing the loop could observe
             else:
                 out.add("*call")
                 for a in inner(node)[1:]:
@@ -1584,7 +1586,7 @@ class Translator:
             elif kind == "FunctionDecl":
                 if any(x.get("kind") == "CompoundStmt" for x in inner(node)):
                     self.collect_function(node, [])
-            elif kind in ("ClassTemplateSpecializationDecl", "TypeAliasTemplateDecl", "TypeAliasDecl"):
+            elif kind in ("ClassTemplateSpecializationDecl", "TypeAliasTemplateDecl", "TypeAliasDecl", "FullComment"):
                 pass
             else:
                 raise Unsupported(f"top-level {kind}")
@@ -1648,6 +1650,8 @@ class Translator:
                           is_ctor=is_ctor, node=c, tparams=[], public=access == "public")
                 info.methods.append(sig)
             elif kind == "CXXDestructorDecl" and c.get("isImplicit"):
+                continue
+            elif kind == "FullComment":
                 continue
             elif kind in ("CXXRecordDecl", "AccessSpecDecl", "TypeAliasDecl", "TypedefDecl"):
                 if kind == "CXXRecordDecl" and c.get("completeDefinition"):
@@ -1904,7 +1908,7 @@ def translate_file(source: Path, imports: list[str], deps=()) -> str:
     tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d)), Path(d).read_bytes()) for d in deps])
     body = tr.translate()
     imp = "\n".join(f"import {m}" for m in ["Proofs.Cpp.Prelude", *imports])
-    rel = source.resolve().relative_to(ROOT).as_posix()
+    rel = source.resolve().relative_to(ROOT).as_posix() if source.resolve().is_relative_to(ROOT) else source.name
     return HEADER.format(source=rel, imports=imp) + "\n" + body + "\nend Proofs.Cpp.Gen\n"
 
 

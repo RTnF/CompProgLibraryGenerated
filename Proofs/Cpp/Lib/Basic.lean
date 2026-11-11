@@ -185,3 +185,19 @@ theorem gcdCost_step (a b : Nat) (hb : 0 < b) : 1 + gcdCost b (a % b) ≤ gcdCos
       omega
 
 end Proofs.Cpp
+
+namespace Proofs.Cpp
+
+theorem getElem!_push {α : Type} [Inhabited α] (v : Array α) (x : α) (j : Nat) :
+    (v.push x)[j]! = if j < v.size then v[j]! else if j = v.size then x else default := by
+  by_cases h1 : j < v.size
+  · simp [h1, getElem!_pos, Array.getElem_push_lt, Nat.lt_succ_of_lt h1]
+  · by_cases h2 : j = v.size
+    · subst h2; simp [getElem!_pos]
+    · simp [h1, h2, getElem!_neg, show ¬ j < v.size + 1 by omega]
+
+@[simp] theorem size_get_set_self {α : Type} [Inhabited α] (v : Array (Array α)) (i : Nat) (x : Array α)
+    (hi : i < v.size) : (set v (i : Int) x)[i]! = x := by
+  rw [getElem!_set _ _ _ _ (by simpa using hi)]; simp
+
+end Proofs.Cpp

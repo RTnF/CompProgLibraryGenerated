@@ -12,6 +12,9 @@
 - 移行済み: vector_sum, fenwick_tree, vector_max, vector_min, vector_fill, vector2d_sum, safe_mod, gcd_u64, bit_width_u64, countr_zero, search_util（`counts` を復元）, element_count。旧証明・旧モデルは `verifier/support.toml` の共有モジュールに移して残してある（最後にまとめて削除する）。
 - 手順（1 部品）: `python3 .cache/wip/newmethod/tools/migrate.py NAME 'T=long long;T=int'`（ローカル補助。TOML 書き換え・旧証明の共有化・Proofs.lean）→ `Proofs/Cpp/<Stem>.lean` に仕様（正しさ＋tick の上界）を mvcgen で証明 → `tests/diff/NAME.py` → `python3 verifier/model_bridge.py --component NAME` → docs 更新 → commit。
 - 証明のこつ: `mvcgen [f]` → `simp +zetaDelta at *`（`simp_all` は仮定を消すことがある）。仮定は型パターン `‹_ ∧ _›`、カーソルは `range_cursor ‹range _ _ = _ ++ _ :: _›` と `subst`。名前が要るときは Mathlib の `set`。`Proofs.Cpp.size` は `Array.size` と紛れるので修飾する。
+- 2026-11-12 追記: 移行済みは上記＋pow_mod, inv_gcd（原本の pair API に復元、依存 safe_mod の呼び出し）, run_length（計 17）。statements.json は再生成済み（d17a096 の後）。証明ソースでは `#` が禁止（`#[]` は `([] : List T).toArray` と書く）。
+- 作業中（`.cache/wip/newmethod/scratch/`）: `CsrScratch.lean`（csr_build の証明が完成。生成コードを内包しているので、登録時は Gen と証明に分ける）、`CsScratch.lean`（CumulativeSum 1 次元が完成）、`Cs2Scratch.lean`（2 次元の構築: 補題は完成、残りの VC は `extract_goal` の名前順で `rename_i` して補題を当てる途中）、`cs.hpp`（原本どおりの cumulative_sum.hpp。登録時に library へ置き、TOML の hash を更新）。
+- 全件 gate（`check_public.py --mode all`）を実行中のまま中断した。ログ `.cache/wip/newmethod/gate.log`。旧方式の test_template_class_layout が verifier 変更で毎回再実行され非常に遅い（CI 20 分の障害。monoid_lazy 移行後に削除する）。
 - 未了: statements.json の再生成（`tools/regenerate_statements.py`。登録を変える作業と並行に走らせない）、全件 gate、push（原本単位・手動承認）、残り約 42 部品＋取り下げ 4 部品、旧方式の削除、CI 20 分の計測。
 
 
