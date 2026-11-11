@@ -47,7 +47,7 @@ theorem run_length_spec (v vals : Array T) (cnts : Array Int) (hv : v.size ≤ v
         c = t0 + 1 + xs.prefix.length⌝
   all_goals simp +zetaDelta at *
   · -- empty v
-    have : v = #[] := Array.eq_empty_of_size_eq_zero (by simp [Proofs.Cpp.size] at *; omega)
+    have : v = ([] : List T).toArray := Array.eq_empty_of_size_eq_zero (by simp [Proofs.Cpp.size] at *; omega)
     subst this
     exact ⟨by simp [pairsOf, rle, rrle], by omega⟩
   · -- the same value continues the run

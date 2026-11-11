@@ -11,7 +11,7 @@ structure cp.FenwickTree (T : Type) where
 
 def cp.FenwickTree.init_0 {T : Type} : Cpp.M (cp.FenwickTree T) := do
   Cpp.tick
-  let mut tree : (Array T) := (#[] : (Array T))
+  let mut tree : (Array T) := ([] : List T).toArray
   return (⟨tree⟩ : (cp.FenwickTree T))
 
 def cp.FenwickTree.init_int {T : Type} [Inhabited T] (n : Int) : Cpp.M (cp.FenwickTree T) := do

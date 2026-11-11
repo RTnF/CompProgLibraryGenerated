@@ -19,7 +19,7 @@ def cp.count {T : Type} [Inhabited T] [DecidableEq T] (v : (Array T)) (value : T
 
 def cp.counts {T : Type} [Inhabited T] [DecidableEq T] (v_sorted : (Array T)) : Cpp.M (Array (T × Int)) := do
   Cpp.tick
-  let mut ret : (Array (T × Int)) := (#[] : (Array (T × Int)))
+  let mut ret : (Array (T × Int)) := ([] : List (T × Int)).toArray
   let mut s : Int := (Cpp.size v_sorted)
   for i in (Cpp.range 0 s) do
     Cpp.tick

@@ -654,7 +654,7 @@ class Fn:
         if kind == "InitListExpr":
             if ty.kind == "vec":
                 items = [self.expr(a, pre, ty.args[0])[0] for a in args]
-                return "#[" + ", ".join(items) + "]"
+                return "([" + ", ".join(items) + f"] : List {lean_type(ty.args[0])}).toArray"
             if ty.kind == "pair" and len(args) == 2:
                 a = self.expr(args[0], pre, ty.args[0])[0]
                 b = self.expr(args[1], pre, ty.args[1])[0]
@@ -666,7 +666,7 @@ class Fn:
             args = inner(strip(args[0]))
         if ty.kind == "vec":
             if not args:
-                return "#[]"
+                return f"([] : List {lean_type(ty.args[0])}).toArray"
             if len(args) == 1:
                 at, aty = self.expr(args[0], pre)
                 if aty.kind == "vec":
@@ -715,7 +715,7 @@ class Fn:
             self.need("Inhabited", ty)
             return f"(default : {ty.name})"
         if ty.kind == "vec":
-            return f"(#[] : {lean_type(ty)})"
+            return f"([] : List {lean_type(ty.args[0])}).toArray"
         if ty.kind == "pair":
             return f"({self.default_value(ty.args[0])}, {self.default_value(ty.args[1])})"
         raise Unsupported(f"default value of {ty}")
@@ -1217,7 +1217,7 @@ class Fn:
                 self.emit(line)
             return True
         if name == "clear" and not args:
-            for line in self.assign_lines(target, f"(#[] : {lean_type(bty)})"):
+            for line in self.assign_lines(target, f"([] : List {lean_type(elem)}).toArray"):
                 self.emit(line)
             return True
         if name in ("resize", "assign") and len(args) in (1, 2):

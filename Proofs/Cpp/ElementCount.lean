@@ -19,7 +19,7 @@ theorem element_count_spec {T : Type} [Inhabited T] [DecidableEq T] (v : Array T
       ⌜((xs.prefix = [] ∧ ret.toList = [] ∧ cnt = 0 ∧ pre = get v 0) ∨
         (ret.toList ++ [(pre, cnt)] = rle (xs.prefix.map (get v)))) ∧ c ≤ t0 + 1 + 2 * xs.prefix.length⌝
   all_goals simp +zetaDelta at *
-  · have : v = #[] := Array.eq_empty_of_size_eq_zero (by simp [size] at *; omega)
+  · have : v = ([] : List T).toArray := Array.eq_empty_of_size_eq_zero (by simp [size] at *; omega)
     subst this
     exact ⟨by simp [rle, rrle], by omega⟩
   · obtain ⟨hinv, hc⟩ := ‹(_ ∨ _) ∧ _›

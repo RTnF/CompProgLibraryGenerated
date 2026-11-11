@@ -7,7 +7,7 @@ namespace Proofs.Cpp.Gen
 
 def cp.element_count {T_value_type : Type} [Inhabited T_value_type] [DecidableEq T_value_type] (v : (Array T_value_type)) : Cpp.M (Array (T_value_type × Int)) := do
   Cpp.tick
-  let mut ret : (Array (T_value_type × Int)) := (#[] : (Array (T_value_type × Int)))
+  let mut ret : (Array (T_value_type × Int)) := ([] : List (T_value_type × Int)).toArray
   let mut n : Int := (Cpp.size v)
   if (decide (n = 0)) then
     return ret
