@@ -273,8 +273,24 @@ def pristine_pair():
         return trusted_views(roots,primary)
 
 
+def pair_row_type(first, second):
+    """The row type of a vector of `std::pair<first, second>` of integer types: the type of the field whose
+    range contains the other field's range (a vector of such pairs is two rows of that type), or None."""
+    if first not in TYPES or second not in TYPES or 'bool' in (first, second):
+        return None
+    def contains(wide, narrow):
+        (ww, ws, _), (nw, ns, _) = TYPES[wide], TYPES[narrow]
+        return (ws == ns and nw <= ww) or (ws and not ns and nw < ww)
+    if contains(first, second):
+        return first
+    if contains(second, first):
+        return second
+    return None
+
+
 def audit_pairs(roots):
-    """Scalar pairs `std::pair<T, T>` of the pristine pinned library: {spelling: element spelling}."""
+    """Scalar pairs `std::pair<A, B>` of the pristine pinned library whose field ranges are nested:
+    {spelling: row element spelling}. With A == B the rows are of A; otherwise the rows have the wider type."""
     try:
         primary,instances=pair_declarations(roots)
     except ValueError:
@@ -286,10 +302,10 @@ def audit_pairs(roots):
     for instance in instances:
         arguments=[c.get('type',{}).get('qualType') for c in instance.get('inner',[]) if c.get('kind')=='TemplateArgument']
         if (instance.get('TemplateInstantiationPattern')==primary['id'] and len(arguments)==2 and
-                arguments[0]==arguments[1] and arguments[0] in TYPES and arguments[0]!='bool'):
+                pair_row_type(*arguments) is not None):
             declared=[c for c in instance.get('inner',[]) if c.get('kind')=='FieldDecl']
             if [c.get('name') for c in declared]==['first','second']:
-                pairs[f'std::pair<{arguments[0]}, {arguments[1]}>']=arguments[0]
+                pairs[f'std::pair<{arguments[0]}, {arguments[1]}>']=pair_row_type(*arguments)
                 for c in declared:
                     fields[c['id']]=(c['name'],f'std::pair<{arguments[0]}, {arguments[1]}>')
     return pairs,fields
@@ -617,7 +633,9 @@ def audit_vector_nodes(source,functions,roots,include_dirs=(),sorts=(),*,copy_as
     functions,scalar_choices=lower_scalar_choices(functions,roots)
     result={'coverage':'callee_identity_only','operations':records,'functions':functions,
             'vector_types':sorted(name for name,element in candidates.items() if supported_element(element)),
-            'pair_types':dict(pairs)}
+            # Only pairs of one type are parameter types; mixed pairs are local vectors and results only.
+            'pair_types':{spelling:row for spelling,row in pairs.items()
+                          if spelling==f'std::pair<{row}, {row}>'}}
     if scalar_choices:
         result['scalar_choices']=scalar_choices
     return result

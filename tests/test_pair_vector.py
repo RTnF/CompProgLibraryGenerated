@@ -107,6 +107,56 @@ inline long long f(const std::vector<pair<long long, long long>> &v) { return v[
         with self.assertRaises(Exception):
             self.model(text)
 
+    MIXED = '''#include <algorithm>
+#include <utility>
+#include <vector>
+namespace cp {
+template <class T>
+std::vector<std::pair<typename T::value_type, int>> runs(const T &v) {
+  std::vector<std::pair<typename T::value_type, int>> ret;
+  typename T::value_type x = v[0];
+  int c = 1;
+  BODY
+  return ret;
+}
+template std::vector<std::pair<long long, int>> runs<std::vector<long long>>(const std::vector<long long> &);
+}
+'''
+
+    def test_mixed_pair_rows_have_the_wider_type_and_widen_the_narrow_field(self):
+        model = self.model(self.MIXED.replace('BODY', 'ret.emplace_back(x, c);'))
+        row = lambda which: f"(.row (.local 1) (.integer ⟨64, true, false⟩) (.literal ⟨64, false, false⟩ ({which})))"
+        # the result type `typename std::vector<long long>::value_type` resolves to long long; rows are long long
+        self.assertIn("[.vector ⟨64, true, false⟩ false],.vector (.vector (.integer ⟨64, true, false⟩))", model)
+        self.assertIn("(.constructRows ⟨64, true, false⟩ true (.literal ⟨64, false, false⟩ (2)))", model)
+        self.assertIn(f"(.append {row(0)} ⟨64, true, false⟩ (.variable ⟨64, true, false⟩ 2))", model)
+        # the int field is stored widened to long long
+        self.assertIn(f"(.append {row(1)} ⟨64, true, false⟩ (.cast ⟨64, true, false⟩ (.variable ⟨32, true, false⟩ 3)))",
+                      model)
+
+    def test_mixed_pair_unsupported_operations_are_rejected(self):
+        for body in ('ret.emplace_back(x, c); c = ret[0].second;',  # narrow field read
+                     'ret.emplace_back(x, c); ret.back().second = c;',  # narrow field write
+                     'ret.emplace_back(x, x);',  # long long argument for the int field
+                     'ret.emplace_back(x, c); std::sort(ret.begin(), ret.end());',
+                     'ret.emplace_back(x, c); for (auto &&[a, b] : ret) { c = 0; }'):
+            with self.subTest(body=body), self.assertRaises(Exception):
+                self.model(self.MIXED.replace('BODY', body))
+
+    def test_pairs_without_nested_field_ranges_are_rejected(self):
+        text = '''#include <utility>
+#include <vector>
+namespace cp {
+inline std::vector<std::pair<int, unsigned int>> f(int a, unsigned int b) {
+  std::vector<std::pair<int, unsigned int>> ret;
+  ret.emplace_back(a, b);
+  return ret;
+}
+}
+'''
+        with self.assertRaises(Exception):
+            self.model(text)
+
 
 if __name__ == "__main__":
     unittest.main()

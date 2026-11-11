@@ -17,7 +17,7 @@ from state_ir import ValueCalls, lean_statement
 from vector_bindings import bindings_from_audit, verify_type_probes
 from vector_ir import Body, unwrap_lvalue
 from scalar_stl import walk as walk_nodes
-from vector_stl import audit_vector_operations
+from vector_stl import audit_vector_operations, pair_row_type
 
 UINT64 = dict(width=64, signed=False, boolean=False)
 BOOL = dict(width=1, signed=False, boolean=True)
@@ -53,13 +53,29 @@ def parse_element(spelling):
     match = re.fullmatch(r'std::vector<(.+)>', spelling)
     if match:
         return dict(vector=parse_element(match.group(1)))
-    pair = re.fullmatch(r'std::pair<(.+), (.+)>', spelling)
-    if pair and pair.group(1) == pair.group(2):
-        # std::pair<T, T> of a vector of pairs: the vector is two rows of T (first, second).
-        scalar = parse_element(pair.group(1))
-        if 'vector' not in scalar:
-            return dict(vector=scalar)
+    fields = pair_fields(spelling)
+    if fields is not None:
+        # std::pair<A, B> of a vector of pairs: the vector is two rows (first, second) of the field type whose
+        # range contains the other's (A when A == B). A narrower field's values are stored widened.
+        return dict(vector=fields[2])
     raise ValueError('unsupported vector element type: ' + spelling)
+
+
+def pair_fields(spelling):
+    """(first, second, row) element types of an integer `std::pair<A, B>` with nested field ranges, or None."""
+    pair = re.fullmatch(r'std::pair<(.+), (.+)>', spelling.strip())
+    if not pair:
+        return None
+    first, second = (ALIASES.get(part.strip(), part.strip()) for part in pair.groups())
+    row = pair_row_type(first, second)
+    if row is None:
+        return None
+    return parse_element(first), parse_element(second), parse_element(row)
+
+
+def mixed_pair(container):
+    fields = container.get('pair_fields')
+    return fields is not None and fields[0] != fields[1]
 
 
 def lean_element(element):
@@ -137,7 +153,8 @@ class NestedBody(Body):
                             writable=binding['writable'], pair=binding.get('pair', False))
             slot, binding = self.binding(node, 'vector')
             return dict(kind='local', slot=slot, element=binding['element'], writable=binding['writable'],
-                        pair=binding.get('pair', False))
+                        pair=binding.get('pair', False),
+                        **({'pair_fields': binding['pair_fields']} if 'pair_fields' in binding else {}))
         if (node['kind'] == 'CXXOperatorCallExpr' and node.get('verifiedVectorOperation') == 'operator[]'
                 and len(children) == 3):
             parent = self.container(children[1])
@@ -386,7 +403,8 @@ class NestedBody(Body):
         self.slots[declaration['id']] = len(self.bindings)
         is_pair = flat and element_spelling.startswith('std::pair<')
         self.bindings.append(dict(kind='vector', element=element, writable=not readonly,
-                                  **(dict(pair=True) if is_pair else {})))
+                                  **(dict(pair=True, pair_fields=list(pair_fields(element_spelling)[:2]))
+                                     if is_pair else {})))
         if is_pair:
             # An empty vector of pairs: the two empty rows (first, second).
             return [dict(kind='construct_rows', element=element['vector'], writable=not readonly,
@@ -453,6 +471,8 @@ class NestedBody(Body):
         container = self.container(origin)
         if not container.get('pair'):
             raise ValueError('range-for supports vectors of pairs')
+        if mixed_pair(container):
+            raise ValueError('range-for over pairs of two different types is unsupported')
         decomposition = parts[5]['inner'][0]
         names = [c for c in decomposition.get('inner', []) if c.get('kind') == 'BindingDecl']
         if decomposition.get('kind') != 'DecompositionDecl' or len(names) != 2:
@@ -497,14 +517,18 @@ class NestedBody(Body):
             return [dict(kind='append_row', container=container, element=element)]
         if container.get('pair') and operation == 'emplace_back' and len(args) == 2:
             scalar = container['element']['vector']
+            fields = container.get('pair_fields', [scalar, scalar])
             values = []
-            for argument in args:
+            for argument, field in zip(args, fields, strict=True):
                 plain = unwrap_lvalue(argument)
                 if plain['kind'] != 'DeclRefExpr':
                     raise ValueError('pair emplace_back requires plain variables as arguments')
                 value = self.expr(argument)
-                if value['type'] != scalar:
+                if value['type'] != field:
                     raise ValueError('pair emplace_back argument type mismatch')
+                if field != scalar:
+                    # The narrower field is stored in the wider row type; the conversion preserves the value.
+                    value = dict(kind='cast', type=scalar, operand=value)
                 values.append(value)
             return [dict(kind='append_reserved', container=self.pair_row(container, row), element=scalar, value=value)
                     for row, value in enumerate(values)]
@@ -543,6 +567,8 @@ class NestedBody(Body):
         if endpoints[0] != endpoints[1]:
             raise ValueError('std::sort endpoints must belong to the same vector')
         container = endpoints[0]
+        if container.get('pair') and mixed_pair(container):
+            raise ValueError('std::sort of pairs of two different types is unsupported')
         if container.get('pair'):
             # std::sort of std::pair<T, T> with the default lexicographic operator<: both rows are permuted together.
             scalar = container['element']['vector']
@@ -598,9 +624,28 @@ class NestedBody(Body):
         slot, binding = self.binding(operand, 'vector')
         if not binding['writable'] or binding['element'] != self.result['vector']:
             raise ValueError('returned local vector type mismatch')
+        if binding.get('pair_fields') != self.result.get('pair_fields'):
+            raise ValueError('returned local vector of pairs field type mismatch')
         if slot < len(self.parameters):
             raise ValueError('a parameter vector cannot be returned')
         return dict(kind='return_vector', slot=slot, element=binding['element'])
+
+    def result_spelling(self, spelling):
+        """The written result type with each `typename std::vector<X, std::allocator<X>>::value_type` (a dependent
+        element type of an instantiated template) replaced by X; a type-identity probe checks each replacement."""
+        pattern = re.compile(r'typename (std::vector<([^<>]+), std::allocator<\2>>)::value_type')
+        for match in pattern.finditer(spelling):
+            vector, element = match.group(1), match.group(2)
+            if self.body_end is None:
+                raise ValueError('function body required')
+            probe = ('\n#if defined(__is_same) || defined(static_assert) || defined(std) || defined(vector) || '
+                     'defined(allocator) || defined(value_type) || defined(int) || defined(long) || '
+                     'defined(unsigned) || defined(signed)\n'
+                     '#error value_type identity keywords must not be macros\n#endif\n'
+                     f'static_assert(__is_same(typename {global_spelling(vector)}::value_type,'
+                     f'{global_spelling(element)}),"vector value_type must be its element type");\n')
+            self.probes.append((self.body_end, probe))
+        return pattern.sub(lambda match: match.group(2), spelling)
 
     def lower(self):
         if self.node.get('variadic') or self.node.get('storageClass'):
@@ -609,7 +654,7 @@ class NestedBody(Body):
         if len(bodies) != 1 or any(child['kind'] not in ('ParmVarDecl', 'CompoundStmt', 'AlwaysInlineAttr')
                                    for child in self.node.get('inner', [])):
             raise ValueError('function body required; attributes and templates are unsupported')
-        spelling = self.node['type']['qualType'].split(' (')[0]
+        spelling = self.result_spelling(self.node['type']['qualType'].split(' (')[0])
         scalar = TYPES.get(spelling)
         if scalar is not None and spelling != 'bool':
             self.result = dict(width=scalar[0], signed=scalar[1], boolean=scalar[2])
@@ -618,6 +663,9 @@ class NestedBody(Body):
         elif spelling.startswith('std::vector<'):
             self.result = parse_element(spelling) if False else dict(vector=parse_element(
                 spelling[len('std::vector<'):-1]))
+            fields = pair_fields(spelling[len('std::vector<'):-1])
+            if fields is not None:
+                self.result['pair_fields'] = list(fields[:2])
         else:
             self.result = scalar_type({'type': {'qualType': spelling}})
         statements = []
