@@ -756,3 +756,5 @@ import Proofs.Cpp.SearchUtil
 import Proofs.Cpp.Lib.Rle
 import Proofs.Generated.ElementCount
 import Proofs.Cpp.ElementCount
+import Proofs.Generated.PowMod
+import Proofs.Cpp.PowMod
