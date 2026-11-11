@@ -21,7 +21,7 @@
 | graph/bellman_ford.hpp | 一部 | `bellman_ford`（辺の平行配列、親配列と負閉路の印 `-inf` を含む。元の `NEGATIVE_CYCLE` の値でなく `-inf`） |
 | graph/dijkstra.hpp | 一部 | `dijkstra`（CSR 配列、`priority_queue` の代わりに線形探索の O(n²+m)。親の配列 `parent` を含む。2026-10-29） |
 | graph/edge.hpp, edge_flow.hpp | 対象外（方針） | 利用者の決定（2026-10-12）: 標準入出力（`operator<<`）と ID 管理（静的カウンタ `next_id`）は本質から外れるので Lean の証明は要らない。辺は端点・費用（・容量）の配列で表すグラフアルゴリズムの正しさと計算量を優先する |
-| graph/find_cycle.hpp | 一部 | `library/graph/find_cycle.hpp`（CSR・反復 DFS。閉路の有無と、閉路の頂点列を返す仕様、`O(n+m)` の仕事量まで証明。辺の構造体の配列で返す元の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の形を頂点列に変更） |
+| graph/find_cycle.hpp | 検証待ち | 2026-11-11 に公開を取り下げた（検証待ち）。旧方式の証明が全件CIの30分予算を超えるため、新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。取り下げ前の記録: `library/graph/find_cycle.hpp`（CSR・反復 DFS。閉路の有無と、閉路の頂点列を返す仕様、`O(n+m)` の仕事量まで証明。辺の構造体の配列で返す元の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の形を頂点列に変更） |
 | graph/graph_flow.hpp, graph_list.hpp, graph_matrix.hpp | 一部 | `library/graph/csr_build.hpp`（`graph_list` の辺リストから CSR 配列を作る計数ソート。辺の属性と `vector<vector<>>` の形は未。違反一覧: `ListGraph` クラスを辺リスト→CSR の関数に変更）。`graph_flow`/`graph_matrix` は未（`vector<vector<>>`、`map`、構造体の vector） |
 | graph/topological_sort.hpp | 一部 | `topological_sort`（CSR 配列、カーンの方法のキュー版。辞書順最小版は未） |
 | graph/lowlink.hpp | 一部 | `library/graph/lowlink.hpp`（CSR 配列・反復 DFS。橋と関節点の同値、ord/par/low/sep の仕様と `O(n+m)` の仕事量まで証明。元の「ソート済みの配列を返す」形、`ListGraph` の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の配列を呼び出し側の配列に変更） |
@@ -39,8 +39,8 @@
 | number_theory/floor_sum.hpp | 済 | `floor_sum`, `floor_sum_unsigned`, `safe_mod`。2026-11-10に「元のソースからの変更」を文書化（元ヘッダーと同一の生成モデルを毎回照合） |
 | random/xorshift.hpp | 済 | `xorshift` |
 | segment_tree/binary_indexed_tree.hpp | 済 | `fenwick_tree`（クラス。構築子 3 種、`sum(r)`、`sum(l, r)`、`add`。`T` はテンプレートのまま、検証した具体化は `long long`） |
-| segment_tree/segment_tree.hpp | 一部 | `segtree_sum`（和のみ）、`segment_tree`（クラス `SegmentTree<方針>`。モノイドは `value_type`・静的 `e()`・静的 `apply` を持つ方針として与え、`long long` の最大値 `SegMax<long long>` と最小値 `SegMin<long long>` を検証した。構成子・`set`・`get`・`product`・`product_all`。値ではなくモノイドのオブジェクトを持つ元の形、`search_prod_right`/`left`、他のモノイドの具体化は未） |
-| segment_tree/lazy_segment_tree.hpp | 一部 | `lazy_segment_tree`（クラス `LazySegmentTree<方針>`。値と作用を `value_type`/`action_type`・静的 `e`/`id`/`op`/`mapping`/`composition` を持つ方針として与え、`long long` の最大値に chmin を作用させる `LazyChminMax<long long>` を検証した。構成子・`set`・`get`・`product`・`product_all`・`update(idx, f)`・`update(l, r, f)`。値と作用のオブジェクトを持つ元の形、`search_prod_right`/`left`、他の作用の具体化は未） |
+| segment_tree/segment_tree.hpp | 検証待ち | 2026-11-11 に公開を取り下げた（検証待ち）。旧方式の証明が全件CIの30分予算を超えるため、新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。取り下げ前の記録: `segtree_sum`（和のみ）、`segment_tree`（クラス `SegmentTree<方針>`。モノイドは `value_type`・静的 `e()`・静的 `apply` を持つ方針として与え、`long long` の最大値 `SegMax<long long>` と最小値 `SegMin<long long>` を検証した。構成子・`set`・`get`・`product`・`product_all`。値ではなくモノイドのオブジェクトを持つ元の形、`search_prod_right`/`left`、他のモノイドの具体化は未） |
+| segment_tree/lazy_segment_tree.hpp | 検証待ち | 2026-11-11 に公開を取り下げた（検証待ち）。旧方式の証明が全件CIの30分予算を超えるため、新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。取り下げ前の記録: `lazy_segment_tree`（クラス `LazySegmentTree<方針>`。値と作用を `value_type`/`action_type`・静的 `e`/`id`/`op`/`mapping`/`composition` を持つ方針として与え、`long long` の最大値に chmin を作用させる `LazyChminMax<long long>` を検証した。構成子・`set`・`get`・`product`・`product_all`・`update(idx, f)`・`update(l, r, f)`。値と作用のオブジェクトを持つ元の形、`search_prod_right`/`left`、他の作用の具体化は未） |
 | segment_tree/segment_tree_beats*.hpp | 検証待ち | 2026-11-11 に公開版（`library/segment_tree/segment_tree_beats.hpp`）と旧方式の証明（`Proofs/*Beats*` 228モジュール、全体の約50%）を外した。C++ の文ごとの記号実行による証明が全件CIの30分予算を超えるため。新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。`_sum`版は未検証 |
 | set/set.hpp, multiset.hpp | 未 | `std::set`/`map`/`multiset`（STL の契約が未登録） |
 | string/char_count.hpp | 一部 | `run_length`（文字列ではなく `long long` の vector） |

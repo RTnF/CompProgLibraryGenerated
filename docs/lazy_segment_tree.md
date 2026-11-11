@@ -1,5 +1,7 @@
 # lazy_segment_tree
 
+> 2026-11-11 に公開を取り下げた（検証待ち）。旧方式の証明が全件CIの30分予算を超えるため、新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。取り下げ前の記録。以下は取り下げ前の記録で、記載の `library/`・`Proofs/` のファイルには現在のツリーにないものがある。
+
 `cp::LazySegmentTree<P>` は、モノイド（値）と、その上に作用する写像（作用）を方針 `P` として与える遅延伝播セグメント木（`experiments/library/cpp/segment_tree/lazy_segment_tree.hpp`、ACL ベース）である。構成子 `LazySegmentTree(const vector<T>& v)`、1 点代入 `set(idx, val)`、1 点取得 `get(idx)`、区間積 `product(l, r)`（`[l, r)`）、全体の積 `product_all()`、1 点作用 `update(idx, f)`、区間作用 `update(l, r, f)` を持つ。検証した具体化は `LazySegmentTree<LazyChminMax<long long>>` である。値は `long long` の最大値のモノイド（単位元 `e()` は最小値、`op` は max）、作用は chmin（作用 `f` は `x` を `min(f, x)` にする。恒等 `id()` は最大値、`composition(f, g) = min(f, g)`）である。
 
 方針 `P` は、`value_type`、`action_type`、静的な `e()`、`id()`、`op(a, b)`、`mapping(f, x)`、`composition(f, g)` を持つ。ライブラリが仮定する法則は、`mapping(f, op(a, b)) == op(mapping(f, a), mapping(f, b))`、`mapping(composition(f, g), x) == mapping(f, mapping(g, x))`、`mapping(id, x) == x`、`composition` が結合的で `id` が単位元、の 4 つである。他の方針（区間加算・区間 max など）は、同じ形の方針と `template class LazySegmentTree<方針>;` を足して検証する（Lean の数学部分 `Proofs/LazySegMath.lean` は法則を `LMon` の構造として一般に証明してあり、実行の証明は具体化ごとに書く）。

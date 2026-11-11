@@ -1,5 +1,7 @@
 # segment_tree
 
+> 2026-11-11 に公開を取り下げた（検証待ち）。旧方式の証明が全件CIの30分予算を超えるため、新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。取り下げ前の記録。以下は取り下げ前の記録で、記載の `library/`・`Proofs/` のファイルには現在のツリーにないものがある。
+
 `cp::SegmentTree<M>` は、モノイド `M` の反復型セグメント木（`experiments/library/cpp/segment_tree/segment_tree.hpp`、ACL ベース）である。構成子 `SegmentTree(const vector<T>& v)`、1 点更新 `set(idx, val)`、1 点取得 `get(idx)`、区間積 `product(l, r)`（`[l, r)`）、全体の積 `product_all()` を持つ。検証した具体化は `SegmentTree<SegMax<long long>>`（`long long` の最大値。`SegMax<T>` は `monoid.hpp` の `MonoidMax<T>` に当たる方針）と `SegmentTree<SegMin<long long>>`（最小値。`MonoidMin<T>` に当たる）。
 
 モノイド `M` は、`value_type`、静的な `e()`（単位元）、静的な `apply(a, b)`（結合的な演算）を持つ方針（policy）として与える。他のモノイド（`MonoidMin`、`MonoidMul`、和など）は、同じ形の方針と `template class SegmentTree<方針>;` を足して検証する（Lean の数学部分 `Proofs/SegTreeMath.lean` は任意のモノイドについて証明済みで、実行の証明は具体化ごとに書く）。

@@ -6,13 +6,13 @@
 | --- | --- |
 | `algebraic_structure/` | `group`, `monoid`, `monoid_lazy` |
 | `array/` | `cumulative_sum`, `doubling`, `search_util`, `sort_util`, `vector2d_sum`, `vector_fill`, `vector_max`, `vector_min`, `vector_sum` |
-| `graph/` | `bellman_ford`, `csr_build`, `dijkstra`, `find_cycle`, `floyd_warshall`, `lowlink`, `prim`, `topological_sort` |
+| `graph/` | `bellman_ford`, `csr_build`, `dijkstra`, `floyd_warshall`, `lowlink`, `prim`, `topological_sort` |
 | `interval/` | `interval`, `interval_union` |
 | `modint/` | `dynamic_modint`, `mod61`, `modint` |
 | `number/` | `extrema`, `ratio`, `square_matrix` |
 | `number_theory/` | `bit_width_u64`, `countr_zero`, `enumerate_quotients`, `floor_sum`, `floor_sum_unsigned`, `gcd_u64`, `inv_gcd`, `is_prime`, `pow_mod`, `safe_mod` |
 | `random/` | `xorshift` |
-| `segment_tree/` | `fenwick_tree`, `lazy_segment_tree`, `segment_tree`, `segtree_sum` |
+| `segment_tree/` | `fenwick_tree`, `segtree_sum` |
 | `string/` | `rolling_hash`, `run_length` |
 | `tree/` | `tree_ancestor`, `tree_arc_costs`, `tree_arcs`, `tree_distance`, `tree_edges`, `tree_find_root`, `tree_full_dp`, `tree_height`, `tree_lca_same_depth`, `tree_order`, `tree_path`, `tree_root` |
 | `union_find/` | `union_find` |

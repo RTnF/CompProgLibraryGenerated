@@ -1,5 +1,7 @@
 # find_cycle
 
+> 2026-11-11 に公開を取り下げた（検証待ち）。旧方式の証明が全件CIの30分予算を超えるため、新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。取り下げ前の記録。以下は取り下げ前の記録で、記載の `library/`・`Proofs/` のファイルには現在のツリーにないものがある。
+
 `cp::find_cycle(head, target, state, it, stk, cyc, n)` は、有向グラフの閉路を 1 つ見つける反復 DFS である。`experiments/library/cpp/graph/find_cycle.hpp` の `ListGraph::find_cycle_directed` から、検証できる形に書き直した。
 
 元のソースからの変更:
