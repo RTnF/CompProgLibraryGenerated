@@ -325,6 +325,10 @@ import Proofs.CumulativeSumIntCall
 import Proofs.CumulativeSum2DIntExec
 import Proofs.CumulativeSum2DIntCall
 import Proofs.CumulativeSumComponent
+import Proofs.AppendCapacity
+import Proofs.FamilySteps
+import Proofs.ElementCountExec
+import Proofs.ElementCountCall
 import Proofs.VecPrepare
 import Proofs.PexecKit
 import Proofs.ModIntExec

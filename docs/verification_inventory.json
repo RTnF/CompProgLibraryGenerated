@@ -3082,32 +3082,52 @@
           "line": 5,
           "declaration": "element_count",
           "template_instantiation_review": "defect_reproduced",
-          "verification_target": "experiments/verification/array/element_count.hpp",
+          "verification_target": "library/array/element_count.hpp",
           "status": {
-            "review": "pending",
-            "bug": "confirmed",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
+            "review": "done",
+            "bug": "fixed",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": true
+          },
+          "evidence": [
+            "library/array/element_count.hpp",
+            "tests/element_count.cpp",
+            "Proofs/ElementCountCall.lean",
+            "docs/element_count.md",
+            "tests/imports/element_count.repro.cpp"
+          ],
+          "review_notes": [
+            "要素型の不具合を typename T::value_type に修正して公開（docs/agent/fixes.md）。Leanの証明は具体化 std::vector<long long>・std::vector<int>。他のコンテナ・要素型はC++回帰のみ。"
+          ]
         },
         {
           "kind": "FunctionDecl",
           "line": 5,
           "declaration": "element_count 'vector<pair<T, int>> (const T &)'",
           "template_instantiation_review": "defect_reproduced",
-          "verification_target": "experiments/verification/array/element_count.hpp",
+          "verification_target": "library/array/element_count.hpp",
           "status": {
-            "review": "pending",
-            "bug": "confirmed",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
+            "review": "done",
+            "bug": "fixed",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": true
+          },
+          "evidence": [
+            "library/array/element_count.hpp",
+            "tests/element_count.cpp",
+            "Proofs/ElementCountCall.lean",
+            "docs/element_count.md",
+            "tests/imports/element_count.repro.cpp"
+          ],
+          "review_notes": [
+            "要素型の不具合を typename T::value_type に修正して公開（docs/agent/fixes.md）。Leanの証明は具体化 std::vector<long long>・std::vector<int>。他のコンテナ・要素型はC++回帰のみ。"
+          ]
         }
       ],
       "declaration_scan": {
