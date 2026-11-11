@@ -29,10 +29,10 @@ def cp.FenwickTree.init_vec {T : Type} [Inhabited T] [Add T] (v : (Array T)) : C
   for i in (Cpp.range 0 (Cpp.size v)) do
     Cpp.tick
     tree := (Cpp.set tree (i + 1) (Cpp.get v i))
-  for i in (Cpp.range 1 (Cpp.size v)) do
+  for i_1 in (Cpp.range 1 (Cpp.size v)) do
     Cpp.tick
-    if (decide ((i + (Cpp.land i (-i))) < (Cpp.size tree))) then
-      tree := (Cpp.set tree (i + (Cpp.land i (-i))) ((Cpp.get tree (i + (Cpp.land i (-i)))) + (Cpp.get tree i)))
+    if (decide ((i_1 + (Cpp.land i_1 (-i_1))) < (Cpp.size tree))) then
+      tree := (Cpp.set tree (i_1 + (Cpp.land i_1 (-i_1))) ((Cpp.get tree (i_1 + (Cpp.land i_1 (-i_1)))) + (Cpp.get tree i_1)))
   return (⟨tree⟩ : (cp.FenwickTree T))
 
 def cp.FenwickTree.sum_int {T : Type} [Inhabited T] [Zero T] [Add T] (self : (cp.FenwickTree T)) (r : Int) : Cpp.M T := do

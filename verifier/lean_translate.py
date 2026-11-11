@@ -31,27 +31,36 @@ class Unsupported(Exception):
 
 @dataclass(frozen=True)
 class Ty:
-    kind: str                 # int, bool, tparam, vec, pair, cls, void
+    kind: str                 # int, u32, u64, bool, tparam, vec, pair, cls, void
     name: str = ""            # tparam/cls name
     args: tuple = ()          # vec: (elem,), pair: (a, b), cls: template arguments
+    width: int = field(default=64, compare=False)   # int: the C++ width (32, 64, 128); not part of the Lean type
 
     def __str__(self):
         return lean_type(self)
 
 
 INT = Ty("int")
+INT32 = Ty("int", width=32)
+U32 = Ty("u32")
+U64 = Ty("u64")
 BOOL = Ty("bool")
 VOID = Ty("void")
 
-INTEGER_NAMES = {
-    "int", "long", "long long", "short", "signed char", "char", "long int", "long long int", "short int",
-    "difference_type", "std::int64_t", "std::int32_t", "int64_t", "int32_t", "ll",
+# Signed integers are mathematical integers (Int) under the stated precondition; the width only decides the
+# usual arithmetic conversions with unsigned operands. Unsigned 32/64 bit integers wrap around (UInt32/UInt64).
+SIGNED_WIDTHS = {
+    "int": 32, "short": 32, "signed char": 32, "char": 32, "short int": 32, "std::int32_t": 32, "int32_t": 32,
+    "long": 64, "long long": 64, "long int": 64, "long long int": 64, "difference_type": 64, "std::int64_t": 64,
+    "int64_t": 64, "ll": 64, "size_type": 64, "__int128": 128, "__int128_t": 128,
+    # 128 bit unsigned values are used only below 2^127 (precondition), so they are integers as well.
+    "unsigned __int128": 128, "__uint128_t": 128,
 }
-# Unsigned arithmetic wraps around; it is not modelled by mathematical integers (docs/translation.md).
+INTEGER_NAMES = set(SIGNED_WIDTHS)
 UNSIGNED_NAMES = {
-    "unsigned char", "unsigned", "unsigned int", "unsigned long", "unsigned long long", "unsigned short",
-    "long unsigned int", "long long unsigned int", "size_t", "std::size_t", "size_type", "std::uint64_t",
-    "std::uint32_t", "uint64_t", "uint32_t", "ull",
+    "unsigned": U32, "unsigned int": U32, "std::uint32_t": U32, "uint32_t": U32,
+    "unsigned long": U64, "unsigned long long": U64, "long unsigned int": U64, "long long unsigned int": U64,
+    "size_t": U64, "std::size_t": U64, "std::uint64_t": U64, "uint64_t": U64, "ull": U64,
 }
 
 
@@ -78,10 +87,12 @@ def parse_type(text: str, tparams: set[str], classes: set[str]) -> Ty:
     s = s.replace("&", " ").strip()
     s = re.sub(r"\s+", " ", s)
     s = re.sub(r"^cp::", "", s)
-    if s in INTEGER_NAMES:
-        return INT
+    if s in SIGNED_WIDTHS:
+        return Ty("int", width=SIGNED_WIDTHS[s])
     if s in UNSIGNED_NAMES:
-        raise Unsupported(f"unsigned type {text!r}")
+        return UNSIGNED_NAMES[s]
+    if s in ("unsigned char", "unsigned short", "unsigned short int"):
+        raise Unsupported(f"type {text!r}")
     if s == "bool":
         return BOOL
     if s == "void":
@@ -106,6 +117,10 @@ def parse_type(text: str, tparams: set[str], classes: set[str]) -> Ty:
 def lean_type(ty: Ty) -> str:
     if ty.kind == "int":
         return "Int"
+    if ty.kind == "u32":
+        return "UInt32"
+    if ty.kind == "u64":
+        return "UInt64"
     if ty.kind == "bool":
         return "Bool"
     if ty.kind == "void":
@@ -161,16 +176,22 @@ def strip(node):
     """Skip nodes that do not change the value in the integer/bool/vector model."""
     while True:
         kind = node.get("kind")
-        if kind in ("CStyleCastExpr", "CXXStaticCastExpr", "CXXFunctionalCastExpr", "BinaryOperator",
-                    "UnaryOperator", "CompoundAssignOperator") and unsigned_type(node):
-            raise Unsupported(f"unsigned arithmetic ({kind} of type {node['type']['qualType']})")
         if kind in ("ImplicitCastExpr", "ParenExpr", "ExprWithCleanups", "MaterializeTemporaryExpr",
-                    "CXXBindTemporaryExpr", "ConstantExpr", "CXXFunctionalCastExpr", "CStyleCastExpr",
-                    "CXXStaticCastExpr") and len(inner(node)) == 1:
-            if kind in ("CStyleCastExpr", "CXXStaticCastExpr", "CXXFunctionalCastExpr", "ImplicitCastExpr"):
-                cast = node.get("castKind")
-                if cast in ("IntegralToBoolean", "FloatingToIntegral", "IntegralToFloating"):
-                    return node
+                    "CXXBindTemporaryExpr", "ConstantExpr") and len(inner(node)) == 1:
+            if kind == "ImplicitCastExpr" and node.get("castKind") in (
+                    "IntegralToBoolean", "FloatingToIntegral", "IntegralToFloating", "FloatingCast"):
+                return node
+            node = inner(node)[0]
+            continue
+        return node
+
+
+def strip_casts(node):
+    """`strip` and also explicit casts (for lvalues and syntactic patterns)."""
+    while True:
+        node = strip(node)
+        if node.get("kind") in ("CStyleCastExpr", "CXXStaticCastExpr", "CXXFunctionalCastExpr") \
+                and len(inner(node)) == 1 and node.get("castKind") in ("NoOp", "LValueToRValue"):
             node = inner(node)[0]
             continue
         return node
@@ -231,7 +252,7 @@ class Requirements:
             self.items.append(item)
 
 
-ORDER = ["Inhabited", "Zero", "One", "IntCast", "Add", "Sub", "Mul", "Neg", "Div", "Mod", "LT", "LE",
+ORDER = ["Inhabited", "Zero", "One", "NatCast", "IntCast", "Add", "Sub", "Mul", "Neg", "Div", "Mod", "LT", "LE",
          "DecidableLT", "DecidableLE", "DecidableEq", "Min", "Max"]
 
 
@@ -262,10 +283,29 @@ class Fn:
         self.field_names = {}
         self.continue_prefix: list[list[str]] = []
         self.callees: list[Sig] = []
+        self.used_names: set[str] = set()
 
     # scopes
     def declare(self, name, ty):
-        self.scopes[-1][name] = ty
+        """Declare a C++ variable; a name already used in the function gets a fresh Lean name, since Lean's
+        `do` notation does not let a mutable variable be shadowed (even by a later sibling block)."""
+        visible = self.lookup(name) is not None
+        lean = lean_name(name)
+        if visible or lean in self.used_names or lean in self.visible_lean_names():
+            k = 1
+            while f"{name}_{k}" in self.used_names or f"{name}_{k}" in self.visible_lean_names():
+                k += 1
+            lean = f"{name}_{k}"
+        self.used_names.add(lean)
+        scope = self.scopes[-1]
+        scope[name] = ty
+        scope.setdefault("__names__", {})[name] = lean
+
+    def visible_lean_names(self):
+        out = set(self.field_names.values())
+        for scope in self.scopes:
+            out |= set(scope.get("__names__", {}).values())
+        return out
 
     def lookup(self, name):
         for scope in reversed(self.scopes):
@@ -299,9 +339,30 @@ class Fn:
 
     def convert(self, text, ty, expected, node=None):
         if expected is None or ty == expected:
-            return text, ty
+            return text, (expected if expected is not None and ty.kind == expected.kind == "int" else ty)
+        lit = strip(node) if node is not None else None
+        is_lit = lit is not None and lit.get("kind") == "IntegerLiteral"
+        if expected.kind in ("u32", "u64"):
+            lt = lean_type(expected)
+            if is_lit:
+                return f"({lit['value']} : {lt})", expected
+            if ty.kind == "int":
+                return f"({lt}.ofInt {text})", expected
+            if ty.kind in ("u32", "u64"):
+                return f"({text}.to{lt})", expected
+            if ty.kind == "bool":
+                return f"(if {text} then (1 : {lt}) else 0)", expected
+        if ty.kind in ("u32", "u64"):
+            if expected.kind == "int":
+                # unsigned to signed: the value must fit the signed type (precondition)
+                return f"({text}.toNat : Int)", expected
+            if expected.kind == "bool":
+                return f"(decide ({text} ≠ 0))", BOOL
+            if expected.kind == "tparam":
+                self.need("NatCast", expected)
+                return f"(Nat.cast {text}.toNat : {expected.name})", expected
         if ty.kind == "int" and expected.kind == "tparam":
-            n = strip(node) if node is not None else None
+            n = lit
             if n is not None and n.get("kind") == "IntegerLiteral" and n["value"] in ("0", "1"):
                 self.need("Zero" if n["value"] == "0" else "One", expected)
                 return f"({n['value']} : {expected.name})", expected
@@ -324,18 +385,28 @@ class Fn:
         n = strip(node)
         kind = n.get("kind")
         if kind == "IntegerLiteral":
-            return n["value"], INT
+            lty = self.tr.ty(n["type"]["qualType"], self)
+            if lty.kind in ("u32", "u64"):
+                return f"({n['value']} : {lean_type(lty)})", lty
+            return n["value"], lty
         if kind == "CXXBoolLiteralExpr":
             return ("true" if n["value"] else "false"), BOOL
         if kind == "CharacterLiteral":
             return str(n["value"]), INT
         if kind in ("CStyleCastExpr", "CXXStaticCastExpr", "CXXFunctionalCastExpr", "ImplicitCastExpr"):
             cast = n.get("castKind")
-            sub = inner(n)[0]
+            subs = inner(n)
+            if len(subs) != 1:
+                raise Unsupported(f"cast {cast} with {len(subs)} operands")
+            sub = subs[0]
             if cast == "IntegralToBoolean":
                 t, ty = self.expr(sub, pre)
-                return f"(decide ({t} ≠ 0))", BOOL
-            raise Unsupported(f"cast {cast}")
+                return self.convert(t, ty, BOOL, sub)
+            if cast in ("FloatingToIntegral", "IntegralToFloating", "FloatingCast"):
+                raise Unsupported(f"floating point cast {cast}")
+            target = self.tr.ty(n["type"]["qualType"], self)
+            t, ty = self.expr(sub, pre)
+            return self.convert(t, ty, target, sub)
         if kind == "DeclRefExpr":
             name = n["referencedDecl"]["name"]
             ty = self.lookup(name)
@@ -375,6 +446,10 @@ class Fn:
             if op == "-":
                 if ty.kind == "tparam":
                     self.need("Neg", ty)
+                if ty.kind in ("u32", "u64"):
+                    return f"(0 - {t})", ty
+                if ty.kind == "bool":
+                    t, ty = self.convert(t, ty, INT32, sub)
                 return f"(-{t})", ty
             if op == "+":
                 return t, ty
@@ -382,7 +457,9 @@ class Fn:
                 t, ty = self.convert(t, ty, BOOL, sub)
                 return f"(!{t})", BOOL
             if op == "~":
-                return f"(-{t} - 1)", INT
+                if ty.kind in ("u32", "u64"):
+                    return f"(~~~{t})", ty
+                return f"(-{t} - 1)", ty
             raise Unsupported(f"unary {op}")
         if kind == "BinaryOperator":
             return self.binary(n, pre)
@@ -452,41 +529,68 @@ class Fn:
             return f"({at} {op} {bt})", BOOL
         at, aty = self.expr(a, pre)
         bt, bty = self.expr(b, pre)
-        if aty != bty:
-            if aty.kind == "int" and bty.kind == "tparam":
-                at, aty = self.convert(at, aty, bty, a)
-            elif bty.kind == "int" and aty.kind == "tparam":
-                bt, bty = self.convert(bt, bty, aty, b)
-            elif aty.kind == "bool" and bty.kind == "int":
-                at, aty = self.convert(at, aty, INT, a)
-            elif bty.kind == "bool" and aty.kind == "int":
-                bt, bty = self.convert(bt, bty, INT, b)
-            else:
-                raise Unsupported(f"operands {aty} {op} {bty}")
-        ty = aty
+        return self.arith(op, at, aty, a, bt, bty, b)
+
+    def common_type(self, aty, bty):
+        """C++'s usual arithmetic conversions on the modelled types."""
+        if aty.kind == "tparam" or bty.kind == "tparam":
+            if aty.kind == "tparam" and bty.kind == "tparam" and aty != bty:
+                raise Unsupported(f"operands {aty} and {bty}")
+            return aty if aty.kind == "tparam" else bty
+        def promote(t):
+            return INT32 if t.kind == "bool" else t
+        aty, bty = promote(aty), promote(bty)
+        for t in (aty, bty):
+            if t.kind not in ("int", "u32", "u64"):
+                raise Unsupported(f"arithmetic on {t}")
+        if aty.kind == bty.kind == "int":
+            return Ty("int", width=max(aty.width, bty.width))
+        if "u64" in (aty.kind, bty.kind):
+            other = bty if aty.kind == "u64" else aty
+            return Ty("int", width=128) if other.kind == "int" and other.width > 64 else U64
+        other = bty if aty.kind == "u32" else aty
+        if other.kind == "int" and other.width > 32:
+            return other
+        return U32
+
+    def arith(self, op, at, aty, a, bt, bty, b):
+        if op in ("<<", ">>"):
+            ty = INT32 if aty.kind == "bool" else aty
+            if ty.kind in ("u32", "u64"):
+                bt, _ = self.convert(bt, bty, ty, b)
+                return f"({at} {'<<<' if op == '<<' else '>>>'} {bt})", ty
+            if ty.kind != "int":
+                raise Unsupported(f"shift of {ty}")
+            bt, _ = self.convert(bt, bty, INT, b)
+            return f"(Cpp.{'shl' if op == '<<' else 'shr'} {at} {bt})", ty
+        if aty.kind == bty.kind == "bool" and op in ("==", "!="):
+            ty = BOOL
+        else:
+            ty = self.common_type(aty, bty)
+        at, _ = self.convert(at, aty, ty, a)
+        bt, _ = self.convert(bt, bty, ty, b)
         arith = {"+": "Add", "-": "Sub", "*": "Mul"}
         if op in arith:
             if ty.kind == "tparam":
                 self.need(arith[op], ty)
-            elif ty.kind != "int":
-                raise Unsupported(f"{op} on {ty}")
             return f"({at} {op} {bt})", ty
         if op in ("/", "%"):
             if ty.kind == "int":
-                return f"(Cpp.{'div' if op == '/' else 'mod'} {at} {bt})", INT
-            self.need("Div" if op == "/" else "Mod", ty)
+                return f"(Cpp.{'div' if op == '/' else 'mod'} {at} {bt})", ty
+            if ty.kind == "tparam":
+                self.need("Div" if op == "/" else "Mod", ty)
             return f"({at} {op} {bt})", ty
-        if op in ("&", "|", "^", "<<", ">>"):
+        if op in ("&", "|", "^"):
+            if ty.kind in ("u32", "u64"):
+                return f"({at} {dict(zip('&|^', ['&&&', '|||', '^^^']))[op]} {bt})", ty
             if ty.kind != "int":
                 raise Unsupported(f"bit operation on {ty}")
-            fn = {"&": "land", "|": "lor", "^": "lxor", "<<": "shl", ">>": "shr"}[op]
-            return f"(Cpp.{fn} {at} {bt})", INT
+            fn = {"&": "land", "|": "lor", "^": "lxor"}[op]
+            return f"(Cpp.{fn} {at} {bt})", ty
         if op in ("<", ">", "<=", ">="):
             if ty.kind == "tparam":
                 self.need("LT" if op in ("<", ">") else "LE", ty)
                 self.need("DecidableLT" if op in ("<", ">") else "DecidableLE", ty)
-            elif ty.kind == "bool":
-                raise Unsupported("ordering of bool")
             sym = {"<": "<", ">": ">", "<=": "≤", ">=": "≥"}[op]
             return f"(decide ({at} {sym} {bt}))", BOOL
         if op in ("==", "!="):
@@ -498,9 +602,12 @@ class Fn:
 
     # ------------------------------------------------------------------ variables and fields
     def var_name(self, name):
-        if self.cls is not None and name in self.field_names and self.lookup(name) is not None \
-                and self.scope_of(name) == 0:
+        depth = self.scope_of(name)
+        if self.cls is not None and name in self.field_names and depth == 0 and \
+                name not in {p[0] for p in self.sig.params}:
             return self.field_names[name]
+        if depth is not None:
+            return self.scopes[depth].get("__names__", {}).get(name, lean_name(name))
         return lean_name(name)
 
     def scope_of(self, name):
@@ -565,7 +672,7 @@ class Fn:
                 pre.append(f"Cpp.tickN {tmp}.toNat")
                 return f"(Cpp.replicate {tmp} {vt})"
             raise Unsupported("vector constructor")
-        if ty.kind in ("int", "bool", "tparam"):
+        if ty.kind in ("int", "u32", "u64", "bool", "tparam"):
             if not args:
                 return self.default_value(ty)
             if len(args) == 1:
@@ -585,6 +692,8 @@ class Fn:
     def default_value(self, ty: Ty):
         if ty.kind == "int":
             return "(0 : Int)"
+        if ty.kind in ("u32", "u64"):
+            return f"(0 : {lean_type(ty)})"
         if ty.kind == "bool":
             return "false"
         if ty.kind == "tparam":
@@ -990,7 +1099,7 @@ class Fn:
             return
         if kind == "UnaryOperator" and n["opcode"] in ("++", "--"):
             target = self.lvalue(inner(n)[0])
-            if target[3].kind != "int":
+            if target[3].kind not in ("int", "u32", "u64"):
                 raise Unsupported("increment of a non-integer")
             current = self.read_lvalue(target)
             sym = "+" if n["opcode"] == "++" else "-"
@@ -1022,27 +1131,16 @@ class Fn:
                 return False
             if x.get("kind") == "DeclRefExpr" and x.get("referencedDecl", {}).get("name") == "__assert_fail":
                 return True
+            if x.get("kind") == "UnresolvedLookupExpr" and x.get("name") == "__assert_fail":
+                return True
             return any(calls_assert_fail(c) for c in x.get("inner", []))
         return calls_assert_fail(kids[2])
 
     def binary_parts_text(self, op, current, cty, rhs, pre):
+        """`x op= rhs`: `x = (type of x)(x op rhs)`."""
         rt, rty = self.expr(rhs, pre)
-        if rty != cty:
-            rt, rty = self.convert(rt, rty, cty, rhs)
-        arith = {"+": "Add", "-": "Sub", "*": "Mul"}
-        if op in arith:
-            if cty.kind == "tparam":
-                self.need(arith[op], cty)
-            return f"({current} {op} {rt})", cty
-        if op in ("/", "%"):
-            if cty.kind == "int":
-                return f"(Cpp.{'div' if op == '/' else 'mod'} {current} {rt})", cty
-            self.need("Div" if op == "/" else "Mod", cty)
-            return f"({current} {op} {rt})", cty
-        fn = {"&": "land", "|": "lor", "^": "lxor", "<<": "shl", ">>": "shr"}.get(op)
-        if fn and cty.kind == "int":
-            return f"(Cpp.{fn} {current} {rt})", cty
-        raise Unsupported(f"compound {op}= on {cty}")
+        value, vty = self.arith(op, current, cty, None, rt, rty, rhs)
+        return self.convert(value, vty, cty)
 
     def vector_stmt(self, n):
         kids = inner(n)
@@ -1258,7 +1356,7 @@ class Fn:
             else:
                 rng = f"(Cpp.rangeDown ({b} + 1) {a})"
             self.declare(var, INT)
-            self.emit(f"for {lean_name(var)} in {rng} do")
+            self.emit(f"for {self.var_name(var)} in {rng} do")
             self.indent += 1
             self.emit("Cpp.tick")
             self.continue_prefix.append([])
@@ -1267,6 +1365,9 @@ class Fn:
             self.indent -= 1
         else:
             if init is not None:
+                # the variable of the initializer is local to the loop
+                self.emit("do")
+                self.indent += 1
                 self.stmt(init)
             inc_lines = []
             if inc is not None:
@@ -1279,6 +1380,8 @@ class Fn:
                 self.lines = saved
                 self.indent = saved_indent
             self.while_loop(None, cond, body, inc_lines)
+            if init is not None:
+                self.indent -= 1
         self.scopes.pop()
 
     def while_loop(self, _init, cond, body, inc_lines):
@@ -1316,7 +1419,7 @@ class Fn:
         self.flush(pre)
         self.scopes.append({})
         self.declare(var["name"], rty.args[0])
-        self.emit(f"for {lean_name(var['name'])} in {rt} do")
+        self.emit(f"for {self.var_name(var['name'])} in {rt} do")
         self.indent += 1
         self.emit("Cpp.tick")
         self.continue_prefix.append([])
@@ -1383,6 +1486,15 @@ class Translator:
                 pass
             else:
                 raise Unsupported(f"top-level {kind}")
+        for name, sigs in self.functions.items():
+            if len(sigs) > 1:
+                tags = set()
+                for sig in sigs:
+                    tag = "_".join(type_tag(p[1]) for p in sig.params) if sig.params else "0"
+                    if tag in tags:
+                        raise Unsupported(f"overloads of {name} with the same parameter kinds")
+                    tags.add(tag)
+                    sig.lean_name = f"cp.{lean_name(name)}_{tag}"
 
     def param_list(self, node, tps):
         params = []
@@ -1523,6 +1635,7 @@ class Translator:
             names = {p[0] for p in sig.params} | local_names(node)
             for fname, fty, _ in info.fields:
                 fn.field_names[fname] = ("this_" + fname) if fname in names else lean_name(fname)
+                fn.used_names.add(fn.field_names[fname])
         body = next(x for x in inner(node) if x.get("kind") == "CompoundStmt")
         assigned = fn.assigned_names(body)
         fn.emit("Cpp.tick")
