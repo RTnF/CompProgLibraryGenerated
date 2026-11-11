@@ -85,3 +85,24 @@ theorem range_prefix_length {a b : Int} {pref suff : List Int} {cur : Int} (h : 
   omega
 
 end Proofs.Cpp
+
+namespace Proofs.Cpp
+
+theorem toNat_add_natCast (a : Int) (n : Nat) (ha : 0 ≤ a) : (a + (n : Int)).toNat = a.toNat + n := by omega
+
+@[simp] theorem toNat_one_add (n : Nat) : (1 + (n : Int)).toNat = n + 1 := by omega
+
+@[simp] theorem toNat_zero_add (n : Nat) : (0 + (n : Int)).toNat = n := by omega
+
+end Proofs.Cpp
+
+namespace Proofs.Cpp
+
+@[simp] theorem range_zero_map_get {α : Type} [Inhabited α] (v : Array α) :
+    (range 0 (v.size : Int)).map (get v) = v.toList := range_map_get v
+
+@[simp] theorem range_zero_length (n : Nat) : (range 0 (n : Int)).length = n := by simp [range]
+
+@[simp] theorem get_natCast {α : Type} [Inhabited α] (v : Array α) (n : Nat) : get v (n : Int) = v[n]! := rfl
+
+end Proofs.Cpp

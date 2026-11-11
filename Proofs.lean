@@ -735,3 +735,11 @@ import Proofs.GenericCall
 import Proofs.GenericLazy
 import Proofs.GenericExtrema
 import Proofs.MemberSupport
+import Proofs.Generated.VectorMax
+import Proofs.Cpp.VectorMax
+import Proofs.Generated.VectorMin
+import Proofs.Cpp.VectorMin
+import Proofs.Generated.VectorFill
+import Proofs.Cpp.VectorFill
+import Proofs.Generated.Vector2dSum
+import Proofs.Cpp.Vector2dSum

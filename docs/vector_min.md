@@ -1,15 +1,15 @@
 # vector_min
 
-`cp::vector_min(const std::vector<long long> &x)` は空でない `x` の最小要素を返す。元の `experiments/library/cpp/template/template.cpp` の `min<T>(const vector<T>&)`（`*min_element`）に対応し、変換器が扱える形（`long long` に具体化した添字ループ）に書き換えた。
+`cp::vector_min<T>(const std::vector<T> &x)` は空でない `x` の最小要素を返す。元の `experiments/library/cpp/template/template.cpp` の `min<T>(const vector<T>&)`（`*min_element`）に対応する。
 
-- 前提: `0 < x.size() < 2^31`。空のときは `assert`（検査として扱う）で停止し、定理の対象外である。
-- 結果: `x` に含まれ、かつ全要素以下の値。
-- 時間と領域: 時間 O(x.size())、追加領域は局所変数 2 個。仕事量は呼び出し側の引数評価を除いて高々 `27 * x.size() + 40`。入力 vector は変更しない。
+前提: `x.size() >= 1`（`assert` で確認する）、`x.size() < 2^31`。計算量: 時間 O(n)、追加領域 O(1)。
 
-共通の入れ子 vector 生成器（`verifier/nested_ir.py`）が C++ の AST から Lean の本体（`Proofs/Generated/VectorMin.lean`）を生成する。`Proofs/VectorMinCall.lean` の `vector_min_correct` が、前提を満たす全入力について、呼び出しの結果、停止、未定義動作の不在（添字が範囲内であること）、仕事量の上界を証明する。実行器は `pexecV`（`Proofs/VecStraight.lean`）、呼び出し定理は `call_vec`（`Proofs/VecCall.lean`）である。
+## 検証（新方式、`docs/translation.md`）
 
-定理に含めていないこと: 呼び出し側の `v` 以外のオブジェクトが変化しないこと、入力 vector の内容が呼び出し後も同じであることの明示的な主張、空 vector での異常終了の証明。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/VectorMin.lean` を生成する。`Proofs/Cpp/VectorMin.lean` の `vector_min_spec` が、任意の全順序 `T` と空でない `x` について、呼び出しが停止し、結果が `x` のある要素に等しく、どの要素もそれ以上であること、tick 数がちょうど `x.size` であることを証明する。
 
-C++ のテストは `tests/vector_min.cpp` で、`std::min_element` を独立した基準として、3 値ベクタ（長さ 1〜7）の全件、極値、乱数の大きなベクタを照合する。
+差分テスト（`tests/diff/vector_min.py`、`T = long long` と `T = int`）と C++ のテスト（`tests/vector_min.cpp`）で翻訳と実装を確かめる。
 
-型 `T` はテンプレート引数のままで、元と同じく任意の型で使える。検証した具体化は `long long`（`template ... vector_min<long long>(...)` で明示的に具体化している）。
+## 元のソースからの変更
+
+`*min_element` を添字ループに書き換えた（同じ入力に同じ値を返す）。

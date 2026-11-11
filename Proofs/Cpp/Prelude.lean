@@ -34,8 +34,8 @@ abbrev PS := PostShape.arg Nat (PostShape.except PUnit PostShape.pure)
 /-- `n` steps of work (building or copying `n` elements). -/
 @[inline] def tickN (n : Nat) : M Unit := modify (· + n)
 
-/-- `assert(c)`: the call stops (`none`) when `c` is false. -/
-@[inline] def check (c : Bool) : M Unit := if c then pure () else failure
+/-- `assert(c)`: the call stops (`none`) when `c` is false. `mvcgen` unfolds it into the two cases. -/
+@[inline, spec] def check (c : Bool) : M Unit := if c then pure () else failure
 
 @[spec] theorem tick_spec {Q : PostCond Unit PS} :
     ⦃fun t => Q.1 () (t + 1)⦄ tick ⦃Q⦄ := by
@@ -45,10 +45,6 @@ abbrev PS := PostShape.arg Nat (PostShape.except PUnit PostShape.pure)
     ⦃fun t => Q.1 () (t + n)⦄ tickN n ⦃Q⦄ := by
   mvcgen [tickN]
 
-@[spec] theorem check_spec {c : Bool} {Q : PostCond Unit PS} :
-    ⦃fun t => ⌜c = true⌝ ∧ Q.1 () t⦄ check c ⦃Q⦄ := by
-  mvcgen [check]
-  all_goals simp_all
 
 /-! ## Loops -/
 
