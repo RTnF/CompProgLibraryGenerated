@@ -216,3 +216,18 @@
 - include/test/doc/台帳と配布ZIPを同時に更新する。配置前後のheader hashで本文保持を確認し、相対includeの変更は別に検査する。
 - 全件gateで既存変換器と古いモデルのずれを見つけたら、移動前配置からの生成とも比較して原因を分ける。検査を弱めず、全件成功とは報告しない。
 - 完全なパス文字列の置換だけでは、`DIRECTORY / 'doubling.hpp'`のような分割されたパスを見落とす。パスの組立も調べ、変異テスト用の一時配置には相対include先の階層を再現する。nested oracle全3区分・native ASan/UBSan・変異テストで新配置を確認した。
+
+## 2026-11-11: element_count（vector<pair> の返却と行の伸長）
+
+- 原本が具体化できない不具合（要素型に `T` を使う）を直すときは、引数の形を狭めず `typename T::value_type` で直す。`const vector<T>&` への変更は標準コンテナ全般（`string` など）を落とす。
+- モデルのスコープ退出は、返す根を退出するスコープからしか移さない。外側で宣言した vector を `if (...) { return ret; }` で返すと fault するので、生成物を確かめる（宣言のないブロックはスコープなしで下げる）。
+- 行への `emplace_back` の空間上界には、追加後の容量（`max old (2 len + 1)`）とその行の実 buffer が必要。償却仕事量だけの補題では足りない（`Proofs/AppendCapacity.lean`）。
+- 不変条件は「文脈の上界」より「構築直後の森と等しい」の方が、呼び出し終了時の「関数スコープの根は結果の木だけ」まで使える。入力 buffer の不変も最初から運ぶ。
+- `simp [Ty.valid]` を大きな simp の中で具体的なリテラルに使うとカーネルが深く再帰する。`i32_valid_nat` などの一般補題で示す。`let F := ...` の構造体を含む文脈では `omega` や `rw` が展開して時間切れになるので、必要な等式を取り出して `clear_value`・`generalize` し、算術は小さな独立補題に切り出す。
+- 検査ツールの引数が OS の上限（2 MiB）を超えたら、上限を上げず渡すものを減らす。lean4export は根の閉包を出力するので、他の宣言から使われる定理・定義を根から除き、出力後に全宣言が含まれることを検証する。
+
+## 2026-11-11: CI の短縮と大量削除
+
+- CI が遅いときは、まずステップ別・検査別の所要時間をジョブログから集計する。`LEAN_NUM_THREADS=1` は Lake のモジュール並列も止める（Lake はモジュールのビルドを Lean のスレッドプールで動かす）。小さな Lake プロジェクトで確かめられる。
+- モジュールやテストをまとめて消すときは、自作の参照スキャンだけで済ませない。CI と同じ入口（`inventory_imports.py --check`、`check_public.py --mode cpp/bridge`、残す全検査）で確かめる。テスト同士の `import test_*` と、`docs/verification_inventory.json` の根拠パスは見落としやすい。ファイルを追加で消したら、依存の走査をやり直す。
+- 未 push のコミットの間に割り込ませて push するときは、一時 worktree で cherry-pick し、最終ツリーが元の local main と一致することを `git diff` で確かめてから `reset --soft` で付け替える。`statements.json` は環境ダンプから閉包を再計算して照合する。

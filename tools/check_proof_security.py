@@ -45,6 +45,54 @@ def check_independent_kernel(nanoda, config, scratch, env):
     return message.strip()
 
 
+# Kinds whose declarations cannot reference each other in a cycle (the kernel admits a theorem, definition,
+# opaque or axiom only after everything it uses). Inductive blocks are never dropped: an inductive and its
+# constructors reference each other.
+ACYCLIC_KINDS = {'theorem', 'definition', 'opaque', 'axiom'}
+
+
+def export_roots(names, rows):
+    """A subset of `names` whose export closure contains all of `names`.
+
+    lean4export dumps every constant that occurs in the type or value of a dumped declaration, so a theorem,
+    definition, opaque or axiom used by another safe declaration of `names` need not be passed itself. This
+    keeps the exporter's argument list within the operating system's limit as the proof library grows;
+    `exported_names` checks afterwards that the export still contains every name.
+    """
+    used = set()
+    for name in names:
+        row = rows[name]
+        if not row['unsafe']:
+            used.update(dependency for dependency in row['dependencies'] if dependency != name)
+    return [name for name in names if not (rows[name]['kind'] in ACYCLIC_KINDS and name in used)]
+
+
+def exported_names(path):
+    """The names of the declarations in a lean4export NDJSON file."""
+    parts = {0: None}
+    declared = []
+    with path.open() as export:
+        for line in export:
+            item = json.loads(line)
+            if 'in' in item and 'str' in item:
+                parts[item['in']] = (item['str']['pre'], item['str']['str'])
+            elif 'in' in item and 'num' in item:
+                parts[item['in']] = (item['num']['pre'], str(item['num']['i']))
+            for kind in ('axiom', 'def', 'thm', 'opaque', 'quot'):
+                if kind in item:
+                    declared.append(item[kind]['name'])
+            if 'inductive' in item:
+                block = item['inductive']
+                declared.extend(entry['name'] for group in ('types', 'ctors', 'recs') for entry in block[group])
+    def render(index):
+        components = []
+        while parts.get(index) is not None:
+            index, component = parts[index]
+            components.append(component)
+        return '.'.join(reversed(components))
+    return {render(index) for index in declared}
+
+
 def compact_replay_targets(modules):
     """Keep the same leanchecker prefix coverage with fewer filesystem scans."""
     targets = []
@@ -321,6 +369,10 @@ def main():
             raise ValueError(f'unsupported public export names: {unsupported_roots}')
         roots = [name for name, row in rows.items() if row['module'].startswith('Proofs')
                  and re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*', name)]
+        exported_roots = export_roots(roots, rows)
+        # The exporter skips unsafe declarations (it always did when every name was passed).
+        safe_roots = {name for name in roots if not rows[name]['unsafe']}
+        print(f'{len(exported_roots)} of {len(roots)} project declarations passed to the exporter as roots')
         # No later phase needs declaration bodies. In particular, do not keep
         # them alive while either kernel builds its own expression tables.
         del rows
@@ -354,7 +406,19 @@ def main():
         export = scratch / 'proofs.ndjson'
         with export.open('w') as output:
             run([lake, 'env', str(exporter), 'Proofs', '--', *BUILTINS,
-                 *[entry['name'] for entry in permitted], *roots], scratch, env, stdout=output)
+                 *[entry['name'] for entry in permitted], *exported_roots], scratch, env, stdout=output)
+        missing = sorted(safe_roots - exported_names(export))
+        if missing:
+            # Partial definitions' auxiliaries are skipped by the exporter even when passed as roots (as they were
+            # when every name was passed); any other missing name means the reduced roots lost coverage.
+            probe = scratch / 'skipped.ndjson'
+            with probe.open('w') as output:
+                run([lake, 'env', str(exporter), 'Proofs', '--', *missing], scratch, env, stdout=output)
+            lost = sorted(set(missing) & exported_names(probe))
+            probe.unlink()
+            if lost:
+                raise ValueError(f'export lacks {len(lost)} project declaration(s): {lost[:10]}')
+            print(f'{len(missing)} declaration(s) skipped by the exporter itself (partial or unsafe)')
         config = scratch / 'nanoda.json'
         config.write_text(json.dumps({'export_file_path': str(export),
             'permitted_axioms': [entry['name'] for entry in permitted],

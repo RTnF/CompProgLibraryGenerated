@@ -16,8 +16,8 @@ from offline import disable_network
 from proof_security import (audit_axiom_definitions, audit_contract, audit_dependencies,
     audit_source, changed_axiom_entries, contract_dependents, definition_digest, lean_code, load_contracts,
     statement_contract)
-from check_proof_security import (BUILTINS, check_independent_kernel, compact_replay_targets,
-                                  prune_stale_olean_parts, publish_test_imports)
+from check_proof_security import (BUILTINS, check_independent_kernel, compact_replay_targets, export_roots,
+                                  exported_names, prune_stale_olean_parts, publish_test_imports)
 import check_proof_security
 from test_scalar_ir import lean_environment
 
@@ -163,6 +163,33 @@ class SecurityTests(unittest.TestCase):
             self.assertLessEqual(len(reduced), len(original))
             self.assertTrue(set(reduced) <= set(original))
             self.assertEqual(covered(reduced), covered(original))
+
+    def test_export_roots_drop_only_used_acyclic_declarations(self):
+        rows = {
+            'P.lemma': row('P.lemma', 'theorem', 'T'),
+            'P.main': row('P.main', 'theorem', 'T', dependencies=['P.lemma', 'P.def', 'P.Ind']),
+            'P.def': row('P.def', 'definition', 'T'),
+            'P.Ind': row('P.Ind', 'inductive', 'T', dependencies=['P.Ind.mk']),
+            'P.Ind.mk': row('P.Ind.mk', 'constructor', 'T', dependencies=['P.Ind']),
+            'P.unsafeUser': dict(row('P.unsafeUser', 'definition', 'T', dependencies=['P.onlyUnsafe']), unsafe=True),
+            'P.onlyUnsafe': row('P.onlyUnsafe', 'definition', 'T'),
+            'P.self': row('P.self', 'theorem', 'T', dependencies=['P.self']),
+        }
+        kept = export_roots(list(rows), rows)
+        # used theorems/definitions are reached from their users; inductive blocks and the declarations
+        # referenced only by unsafe ones (which the exporter skips) stay roots, as does self-reference
+        self.assertEqual(kept, ['P.main', 'P.Ind', 'P.Ind.mk', 'P.unsafeUser', 'P.onlyUnsafe', 'P.self'])
+
+    def test_exported_names_reads_declarations_of_an_ndjson_export(self):
+        lines = [{'meta': {}}, {'in': 1, 'str': {'pre': 0, 'str': 'P'}}, {'in': 2, 'str': {'pre': 1, 'str': 'a'}},
+                 {'in': 3, 'str': {'pre': 1, 'str': 'I'}}, {'in': 4, 'str': {'pre': 3, 'str': 'mk'}},
+                 {'in': 5, 'num': {'pre': 3, 'i': 7}},
+                 {'thm': {'name': 2}}, {'def': {'name': 5}},
+                 {'inductive': {'types': [{'name': 3}], 'ctors': [{'name': 4}], 'recs': []}}]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'export.ndjson'
+            path.write_text(''.join(json.dumps(line) + '\n' for line in lines))
+            self.assertEqual(exported_names(path), {'P.a', 'P.I.7', 'P.I', 'P.I.mk'})
 
     def test_independent_kernel_diagnostics_and_success_validation(self):
         with tempfile.TemporaryDirectory() as directory:
