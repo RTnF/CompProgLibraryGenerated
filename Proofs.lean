@@ -762,3 +762,5 @@ import Proofs.Generated.InvGcd
 import Proofs.Cpp.InvGcd
 import Proofs.Generated.RunLength
 import Proofs.Cpp.RunLength
+import Proofs.Generated.CsrBuild
+import Proofs.Cpp.CsrBuild

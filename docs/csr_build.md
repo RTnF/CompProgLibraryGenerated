@@ -4,16 +4,20 @@
 
 辺 `i` は `from[i] -> to[i]`（無向辺は両方向を並べて渡す）。計数ソートで作るので、構築後の `target[head[v] .. head[v + 1])` は頂点 `v` から出る辺の行き先で、入力の順に並ぶ（安定）。
 
-元のソースからの変更: `ListGraph` は頂点ごとの `vector<Edge>`（`vector<vector<>>`）で、辺の構造体（ID、重み、流量）を持つ。ここでは辺の属性を持たない整数の平行配列と CSR 配列に置き換えた。`edge`/`edge_flow` の静的カウンタ `next_id` と標準入出力は方針により対象外（`docs/experiments_status.md`）。
+前提: `from.size() == to.size() == target.size() == m`、`head.size() == n + 1` で全要素が `0`、`pos.size() == n`（作業用、中身は何でもよい）、すべての `from[i]` が `[0, n)`、`n < 2^31 - 2`、`m < 2^31 - 1`。計算量 O(n + m)、追加領域は `pos` だけ。
 
-前提: `from.size() == to.size() == target.size() == m`、`head.size() == n + 1` で全要素が `0`、`pos.size() == n`（作業用、中身は何でもよい）、すべての `from[i]` が `[0, n)`、すべての `to[i]` が非負の `int`（グラフとして使うなら `[0, n)`）、`n < 2^31 - 2`、`m < 2^31 - 2`。
+## 検証（新方式、`docs/translation.md`）
 
-結果（`Proofs/CsrBuildCall.lean` の `csr_build_correct`、一般の入力について証明）: 返り値の `head`、`target` について `CSROut`（`Proofs/CsrBuildSpec.lean`）が成り立つ。
-- `HeadOK`: `head.size() == n + 1`、`head[0] == 0`、`head` は広義単調増加、`head[n] == m`（`target.size()`）。
-- 隣接: `u -> w` が CSR 配列の辺（`head[u] <= q < head[u + 1]` かつ `target[q] == w` となる `q` がある）であることと、`from[i] == u` かつ `to[i] == w` となる `i` があることは同値。
-- 安定性: 頂点 `u = from[j]` から出る辺のうち `j` 番目の辺より前にある本数を `k` とすると、`target[head[u] + k] == to[j]`。
-- 証明は `Proofs/CsrBuildMath.lean`（計数 `cnt`/`ocnt` の補題）、`CsrBuildProg.lean`（C++ 本体のモデル）、`CsrBuildExec.lean`（4 つのループの不変条件と仕事量）、`CsrBuildSpec.lean`（最終状態から仕様）、`CsrBuildPrepare.lean`/`CsrBuildCall.lean`（呼び出し）。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/CsrBuild.lean` を生成する。`Proofs/Cpp/CsrBuild.lean` の `csr_build_spec` が、前提を満たす全入力について次を証明する。
 
-時間と領域: 仕事量は呼び出し側の引数評価を除いて高々 `800 * (n + m) + 420`（粗い上限。実際は `O(n + m)`）、追加領域は局所変数と `pos` だけ。
+- `head[k]`（`k <= n`）は始点が `k` 未満の辺の数（`Proofs/CsrBuildMath.lean` の `ocnt`）。したがって `head[0] = 0`、`head` は非減少、`head[n] = m`。
+- 辺 `i` の行き先 `to[i]` は `target[head[from[i]] + c]` に置かれる。`c` は `i` より前の、始点が同じ辺の数（`cnt`）。異なる辺の置き場所は異なり、すべて `[0, m)` に入る（`pos_ne`、`pos_lt`）。これにより頂点 `u` から出る辺は `target[head[u], head[u + 1])` に入力の順で並ぶ。
+- tick 数はちょうど `2 (n + m) + 1`。
 
-定理に含めていないこと: `to[i]` が負の場合（証明は非負の `int` に限る）。C++ のテストは `tests/csr_build.cpp`（頂点数 1〜8 のランダムな辺リストを、頂点ごとに入力順で集めた基準と比較する）。
+4 つのループの不変条件は、数え上げ（`cnt`）、累積和（`ocnt`）、`pos` の初期化、配置の各段階を表す（`inv1_step`〜`inv4_step`）。
+
+差分テスト（`tests/diff/csr_build.py`）と C++ のテスト（`tests/csr_build.cpp`）で翻訳と実装を確かめる。
+
+## 元のソースからの変更
+
+元の `ListGraph`（隣接リスト）を、検証済みのグラフ部品が受け取る CSR 配列に変換する補助部品である（`docs/experiments_status.md` の違反一覧を参照）。
