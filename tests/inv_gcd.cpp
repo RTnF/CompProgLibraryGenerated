@@ -1,5 +1,6 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/number_theory/inv_gcd.hpp"
+#include <type_traits>
 #include <climits>
 #include <numeric>
 #include <random>
@@ -29,20 +30,22 @@ static std::pair<long long, long long> original_inv_gcd(long long a, long long b
 }
 
 static void check(long long a, long long b) {
-    std::vector<long long> out(2 + (b & 1), -7);
-    cp::inv_gcd(out, a, b);
+    const auto out = cp::inv_gcd(a, b);
+    static_assert(std::is_same_v<decltype(cp::inv_gcd(a, b)), std::pair<long long, long long>>);
     auto expected = original_inv_gcd(a, b);
-    assert(out[0] == expected.first && out[1] == expected.second);
+    assert(out == expected);
     // the specification: g = gcd(a mod b, b), 0 <= x < b / g, x * a == g (mod b)
     long long an = a % b;
     if (an < 0) an += b;
     long long g = std::gcd(an, b);
-    assert(out[0] == g);
-    assert(0 <= out[1] && out[1] < b / g);
-    __int128 prod = (__int128)out[1] * (__int128)an;
+    assert(out.first == g);
+    assert(0 <= out.second && out.second < b / g);
+    __int128 prod = (__int128)out.second * (__int128)an;
     assert(((prod - g) % b) == 0);
-    for (size_t i = 2; i < out.size(); ++i) assert(out[i] == -7);  // the rest is untouched
 }
+
+// the original is constexpr
+static_assert(cp::inv_gcd(3, 7).first == 1 && cp::inv_gcd(3, 7).second == 5);
 
 int main() {
     // every pair of small values (including negative a)

@@ -1,18 +1,18 @@
 # inv_gcd
 
-`cp::inv_gcd(out, a, b)` は拡張ユークリッドの互除法で、`gcd` と `a` の逆元に当たる値を求める。AtCoder Library の `inv_gcd`（`experiments/library/cpp/fps/convolution.hpp`）に対応する。
+`cp::inv_gcd(a, b)` は拡張ユークリッドの互除法で、`gcd` と `a` の逆元に当たる値を求める。AtCoder Library の `inv_gcd`（`experiments/library/cpp/fps/convolution.hpp`）そのもので、`safe_mod`（`library/number_theory/safe_mod.hpp`）を使う。
 
-`a' = a mod b`（`[0, b)` の代表元）として、`g = gcd(a', b)`（`a' = 0` なら `g = b`）を `out[0]` に、`0 <= x < b / g` かつ `x * a' ≡ g (mod b)` を満たす `x` を `out[1]` に書く。`g = 1` なら `x` は `a` の `b` を法とする逆元である。
+`a' = a mod b`（`[0, b)` の代表元）として、`(g, x)` を返す。`g = gcd(a', b)`（`a' = 0` なら `g = b`）、`0 <= x < b / g`、`x * a ≡ g (mod b)`。`g = 1` なら `x` は `a` の `b` を法とする逆元である。
 
-元のソースからの変更:
-- 戻り値の `pair<ll, ll>` の代わりに、呼び出し側の `out`（2 要素以上の `vector<long long>`）に書く。ベクトル引数を先頭に置く（検証の枠組みがベクトルのスロットを先に取るため）。
-- `a == 0 (mod b)` のときの早期 `return {b, 0}` は書かず、ループが 0 回で終わって同じ `(b, 0)` になる形にした。`safe_mod(a, b)` は関数の先頭に展開した（`a % b` を取って負なら `b` を足す）。`constexpr` は付けない。
-- 元の `|m0| < b / g` などのコメントで述べていた不変条件は、Lean の定理として証明した。
+- 前提: `1 <= b`（`long long` の範囲）。`a` は `long long` の全値。途中の値の絶対値は `b` 以下で、符号付きオーバーフローは起きない（元のコメントの不変条件 [3]）。
+- 計算量: O(log b)、追加領域 O(1)。`constexpr`。
 
-前提: `1 <= b`（`long long` の範囲）、`out.size() >= 2`、`a` は `long long` の全値。どの入力でも符号付きオーバーフローは起きない（途中の値の絶対値は高々 `b`）。
+## 検証（新方式、`docs/translation.md`）
 
-結果（`Proofs/InvGcdCall.lean`、一般の入力について証明）: `out[0] = Nat.gcd b an`、`an = a mod b`、`0 <= out[1] < b / out[0]`、`b ∣ out[1] * an - out[0]`。`out[2..]` は変わらない。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/InvGcd.lean` を生成する（`safe_mod` の呼び出しは依存部品のモデル `Proofs/Cpp/Gen/SafeMod.lean` を呼ぶ）。`Proofs/Cpp/InvGcd.lean` の `inv_gcd_spec` が、`1 <= b < 2^63` の全入力について、結果が上の `(g, x)` の条件を満たすこと、tick 数が `gcdCost b a' + 4`（`log2 (a' b) + 6` 以下）以下であることを証明する。ループ不変条件は `Proofs/InvGcdMath.lean` の `Inv`（元のコメントの契約 [1]〜[3] と `gcd` の保存）。`safe_mod` の呼び出しには `Proofs/Cpp/SafeMod.lean` の `safe_mod_wp` を使う。
 
-時間と領域: ループの反復は `2 * log2(b) + 1` 回以下（`gcd_u64` と同じ `gsteps` の評価）。モデル上の仕事量は呼び出し側の引数評価を除いて `1040 * log2(b) + 900` 以下、書き込みは 2 回、追加領域は局所変数だけ。
+差分テスト（`tests/diff/inv_gcd.py`）と C++ のテスト（`tests/inv_gcd.cpp`、元のソースの逐語コピーとの比較、仕様の条件、Fibonacci 数の最悪例）で翻訳と実装を確かめる。
 
-証明は `Proofs/InvGcdMath.lean`（ループの不変条件 `Inv`: `s ≡ m0 * a`、`t ≡ m1 * a (mod b)`、`s*|m1| + t*|m0| <= b`、`s*|m0| < b`、`t < s`、`gcd s t = gcd b a`。`inv_step`、`inv_bounds`（途中の値が `b` 以下でオーバーフローしないこと）、`inv_final`、`inv_out`）、`Proofs/InvGcdExec.lean`（前処理 `pre`、1 反復 `b_iter`、`while_exec`、`if_post`、全体 `body_exec`）、`Proofs/InvGcdPrepare.lean`/`Proofs/InvGcdCall.lean`（呼び出し）。C++ のテストは `tests/inv_gcd.cpp`（元の実装との一致、`a` が負の場合、`b` が `LLONG_MAX` 付近、フィボナッチ数、仕様の直接確認、`-fsanitize=address,undefined`）。
+## 元のソースからの変更
+
+`std::` 修飾と名前空間のみ（`safe_mod` は別の部品として include する）。2026-11-12 までの公開版は結果を引数の vector に書く形に変えていたが、元の `pair` を返す形に戻した。

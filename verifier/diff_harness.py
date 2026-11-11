@@ -133,11 +133,12 @@ end DiffTest
 
 
 class Harness:
-    def __init__(self, source: Path, instance: dict, lean_module: str):
+    def __init__(self, source: Path, instance: dict, lean_module: str, deps=()):
         self.source = source
         self.instance = instance             # template parameter -> C++ type
         self.lean_module = lean_module
-        tr = lt.Translator(lt.source_decls(source), source.read_bytes())
+        tr = lt.Translator(lt.source_decls(source), source.read_bytes(),
+                           [(lt.source_decls(Path(d)), Path(d).read_bytes()) for d in deps])
         tr.translate()
         self.tr = tr
         self.lean_instance = {k: lean_instance_type(v) for k, v in instance.items()}
@@ -288,9 +289,9 @@ class Harness:
         return "\n".join(lines) + "\n"
 
 
-def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None):
+def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None, deps=()):
     """Run both interpreters on `cases` (command text) and require identical output."""
-    h = Harness(source, instance, lean_module)
+    h = Harness(source, instance, lean_module, deps)
     lake = str(ROOT / ".tools/elan/bin/lake")
     env = os.environ.copy()
     env["ELAN_HOME"] = str(ROOT / ".tools/elan")

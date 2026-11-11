@@ -758,3 +758,5 @@ import Proofs.Generated.ElementCount
 import Proofs.Cpp.ElementCount
 import Proofs.Generated.PowMod
 import Proofs.Cpp.PowMod
+import Proofs.Generated.InvGcd
+import Proofs.Cpp.InvGcd

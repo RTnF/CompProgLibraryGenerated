@@ -1496,9 +1496,10 @@ def subst(ty: Ty, names, args):
 # ------------------------------------------------------------------------------------------ translator
 
 class Translator:
-    def __init__(self, decls, source_bytes=b""):
+    def __init__(self, decls, source_bytes=b"", external=()):
         self.decls = decls
-        self.source_bytes = source_bytes          # list of top-level AST nodes in source order
+        self.source_bytes = source_bytes
+        self.external = list(external)   # (decls, source bytes) of the dependencies: callable, not emitted          # list of top-level AST nodes in source order
         self.classes: dict[str, ClassInfo] = {}
         self.functions: dict[str, list[Sig]] = {}
         self.order: list = []       # ("class", ClassInfo) / ("fn", Sig)
@@ -1520,6 +1521,16 @@ class Translator:
         return parse_type(text, tps, set(self.classes))
 
     def collect(self):
+        for decls, data in self.external:
+            for node in decls:
+                kind = node.get("kind")
+                if kind == "FunctionDecl" and any(x.get("kind") == "CompoundStmt" for x in inner(node)):
+                    name = node["name"]
+                    ret = parse_type(node["type"]["qualType"].split("(")[0].strip(), set(), set(self.classes))
+                    sig = Sig(name, f"cp.{name}", self.param_list(node, []), ret, node=node)
+                    self.functions.setdefault(name, []).append(sig)
+                elif kind in ("FunctionTemplateDecl", "ClassTemplateDecl", "CXXRecordDecl"):
+                    raise Unsupported(f"templates and classes of a dependency ({node.get('name')})")
         for node in self.decls:
             kind = node.get("kind")
             if kind == "ClassTemplateDecl":
@@ -1853,9 +1864,9 @@ namespace Proofs.Cpp.Gen
 """
 
 
-def translate_file(source: Path, imports: list[str]) -> str:
+def translate_file(source: Path, imports: list[str], deps=()) -> str:
     decls = source_decls(source)
-    tr = Translator(decls, source.read_bytes())
+    tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d)), Path(d).read_bytes()) for d in deps])
     body = tr.translate()
     imp = "\n".join(f"import {m}" for m in ["Proofs.Cpp.Prelude", *imports])
     rel = source.resolve().relative_to(ROOT).as_posix()
@@ -1866,9 +1877,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("source")
     parser.add_argument("--import", dest="imports", action="append", default=[])
+    parser.add_argument("--dep", dest="deps", action="append", default=[], help="header of a dependency")
     parser.add_argument("--output")
     args = parser.parse_args()
-    text = translate_file(Path(args.source), args.imports)
+    text = translate_file(Path(args.source), args.imports, args.deps)
     if args.output:
         Path(args.output).write_text(text)
     else:
