@@ -13,6 +13,9 @@ translation uses, once for all components.
   (an `assert` fails, or a `while` loop or a recursion runs out of `Cpp.fuel`).
 * Integers are mathematical integers (`Int`); every component states once that its inputs and intermediate
   values fit the C++ type. `/` and `%` round toward zero as in C++; the bit operations use two's complement.
+* The C++ standard library is taken to behave as documented, with the documented complexity
+  (docs/trust_policy.md): each supported operation is defined here by its documented result, and the
+  translation adds ticks of the documented order. No axiom is involved.
 * `std::vector<T>` is `Array T`. Element access out of range is undefined behaviour in C++ and is not
   modelled (it reads `default`); the sanitizer tests check that it does not happen.
 
