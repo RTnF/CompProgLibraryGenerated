@@ -350,6 +350,10 @@ import Proofs.CumulativeSumCall
 import Proofs.CumulativeSum2DMath
 import Proofs.CumulativeSum2DExec
 import Proofs.CumulativeSum2DCall
+import Proofs.CumulativeSumIntExec
+import Proofs.CumulativeSumIntCall
+import Proofs.CumulativeSum2DIntExec
+import Proofs.CumulativeSum2DIntCall
 import Proofs.CumulativeSumComponent
 import Proofs.VecPrepare
 import Proofs.PexecKit

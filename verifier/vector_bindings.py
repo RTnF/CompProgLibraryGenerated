@@ -78,11 +78,44 @@ def bindings_from_audit(source, audited, include_dirs=()):
     return {'coverage':'parameter_bindings_only','functions':functions}
 
 
+_IDENTITY=re.compile(r'static_assert\(__is_same\(decltype\((?P<entity>[^()]*|\(\([^()]*\)\))\),'
+                     r'(?P<type>[^"]+)\),(?P<message>"[^"]*")\);')
+
+
+def _identity(assertion):
+    """Split a probe into its guard lines and a final identity assertion (linear time)."""
+    if not assertion.endswith(');\n'):return None
+    head,_,last=assertion[:-1].rpartition('\n')
+    match=_IDENTITY.fullmatch(last)
+    return (head+'\n',match['entity'],match['type'],match['message']) if match else None
+
+
+def merge_type_probes(probes):
+    """Several instantiations of one class template share a body position.
+
+    Identity probes at one position are combined into one assertion that the
+    declared entity has one of the audited types (each instantiation's type was
+    read from that instantiation's AST); other probes must agree exactly."""
+    groups={}
+    for offset,assertion in probes:
+        match=_identity(assertion)
+        key=(offset,match[0],match[1],match[3]) if match else (offset,assertion)
+        groups.setdefault(key,{})[match[2] if match else assertion]=None
+    merged=[]
+    for key,group in groups.items():
+        if len(key)==2:
+            merged.append(key);continue
+        offset,guard,entity,message=key
+        condition=' || '.join(f'__is_same(decltype({entity}),{ty})' for ty in group)
+        merged.append((offset,f'{guard}static_assert({condition},{message});\n'))
+    return merged
+
+
 def verify_type_probes(source, probes, include_dirs=()):
     if probes:
         origin=Path(source).resolve(strict=True)
         text=origin.read_bytes()
-        for offset,assertion in sorted(probes,reverse=True):
+        for offset,assertion in sorted(merge_type_probes(probes),reverse=True):
             text=text[:offset]+assertion.encode()+text[offset:]
         with tempfile.TemporaryDirectory(prefix='vector-parameter-identity-') as directory:
             root=Path(directory);probe=root/'source.hpp';probe.write_bytes(text)

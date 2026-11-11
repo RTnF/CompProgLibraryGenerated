@@ -64,7 +64,7 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 | `L/algebraic_structure/group.hpp` | 完了（整数具体化 long long・int） | 2026-11-09 intを追加、全定理を証明、全件gate成功。浮動小数Tは基盤整備後 |
 | `L/algebraic_structure/monoid.hpp` | 完了（整数具体化 long long・int） | 2026-11-09 intを追加し全定理証明、全件gate成功。浮動小数TはC++回帰のみ、Leanは基盤整備後 |
 | `L/algebraic_structure/monoid_lazy.hpp` | 進行中 | Sum applyの任意caller接続済み。MaxMin apply<M>はLL全入力（Addは加算範囲内）・任意caller接続まで。元API候補はexperimentalにあり、任意T/M・lifetime・公開切替は未 |
-| `L/array/cumulative_sum.hpp` | 部分（調査済み） | 2026-11-10: `int` 具体化を足す試験。`verifier/vector_bindings.py` のvector parameter identity probe が1つのテンプレート本体位置にlong long固定の型を埋めるため複数要素型で失敗（同位置のprobeを要素型の論理和にまとめれば生成は成功し、intモデルはll版と型幅以外同一）。ただし証明は `FenwickTreeExec`/`FenwickRangeCall`/`FenwickTreeVecCall`/`MultiVecCallN`/`BellmanFordExec`/`Vector2dSumCall` 等 s64 固定の補題群に依存し、要素型ごとに依存の塔の再証明（または要素型で一般化する大規模リファクタ）が要る。変更は戻した |
+| `L/array/cumulative_sum.hpp` | 完了（整数具体化 long long・int） | 2026-11-11: `verifier/vector_bindings.py` の `merge_type_probes` で同位置・同実体の型probeを論理和に統合し `int` 具体化を生成。`Proofs/CumulativeSum{,2D}Int{Exec,Call}.lean` に i32 版の全定理（s64 固定の準備補題 `prepare_fs/frr/ft`・`mvFT`・`fwFT_init`・`mvV2D`・`fwV2D_init` は i32 複製を同ファイルに置く）。他の整数型・浮動小数Tは基盤整備後 |
 | `L/array/doubling.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
 | `L/array/element_count.hpp` | 部分 | 候補あり。原本API全体の生成/証明/公開判定は未 |
 | `L/array/search_util.hpp` | 部分 | 公開部品あり。元class/全API・汎用型との一致と全体検証が未完 |
@@ -161,3 +161,5 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 2026-11-11: 全件gateで独立kernel（nanoda）がスタックオーバーフロー。原因は `Proofs/MonoidLazyGeneric/AddSum.lean` の `e_correct`/`default_correct` が `i32.valid 0 = true` を `rfl`（`2^31` 等の評価）で示していたこと。`Proofs.GenericLazy.valid_zero i32` に置換（スタックは増やさない）。切り分けは export の root を module ごと→宣言ごとに絞って nanoda を単独実行（`/tmp/bisect/run.py` 相当: lean4export `Proofs -- BUILTINS permitted names`、cwd はリポジトリ直下）。**教訓: 独立kernelでは具体的な幅の `Ty.valid` を `rfl`/`decide` で示さず、一般補題を使う。**
 
 - 2026-11-11: **`monoid_lazy.hpp` を verify 完了**（チェックリスト `[x]`、コミット 83dbf50）。全件gate成功: `check_public.py --mode all` 59部品、独立kernel 51499宣言エラーなし（セキュリティ検査約850秒、他はキャッシュ）。範囲: 元の入れ子API公開、任意 `ty` の一般証明＋整数4種の生成モデル全数照合。残す制約: `short`/`char`（変換器が整数拡張未対応）・浮動小数T・C++の厳密なオブジェクト寿命（コピー/破棄回数）は未検証として `docs/monoid_lazy.md`・`docs/experiments_status.md` に記載。push は未実施（手動承認待ち）。次のチェックリスト対象は `experiments/library/cpp/array/cumulative_sum.hpp`。
+- 2026-11-11: Lean検証時間の改善候補（AGENTS.md の継続改善方針）: キャッシュ無効時の `tests/test_template_class_layout.py` が単独1853秒（40ケースがそれぞれ固定nanoda約4100宣言を再検査）。`verifier/*.py` のどの変更でも再実行されるため、(1) キャッシュキーを実際に import する verifier モジュールに限定、(2) 同一生成モデルの kernel 検査を共有、(3) ケースを family 単位にまとめる、を検討する。`cumulative_sum` の i32 証明4ファイルは各1分未満。
+- 2026-11-11: **`cumulative_sum.hpp` を verify 完了**（整数具体化 long long・int）。全件gate成功: `check_proof_security.py` と `check_public.py --mode all` 59部品（7200秒上限を1回超過したため2回に分けて実行、失敗なし）、独立kernel 51883宣言エラーなし。statements は既存命題の変更なしで7定理追加。push は未実施。次のチェックリスト対象は `experiments/library/cpp/array/element_count.hpp`。

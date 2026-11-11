@@ -6,8 +6,8 @@ namespace cp {
 
 // One-dimensional cumulative sums (experiments/library/cpp/array/cumulative_sum.hpp, CumulativeSum): cs[i] is the
 // sum of the first i elements of the array (so cs.size() == n + 1), built in O(n), static, and a range sum in O(1).
-// The class template keeps its type parameter T (the verified instance is CumulativeSum<long long>, instantiated
-// explicitly below).
+// The class template keeps its type parameter T (the verified instances are CumulativeSum<long long> and
+// CumulativeSum<int>, instantiated explicitly below).
 // Differences from the original: the field n is not kept (it is cs.size() - 1 at all times); the queries are const; the
 // asserts of the original are kept as checks, written one condition at a time; the loop of the constructor starts at 0.
 // Preconditions: v.size() < 2^31 - 1, every prefix sum and the difference of two prefix sums fits in T.
@@ -99,5 +99,7 @@ public:
 };
 template class CumulativeSum<long long>;
 template class CumulativeSum2D<long long>;
+template class CumulativeSum<int>;
+template class CumulativeSum2D<int>;
 
 } // namespace cp

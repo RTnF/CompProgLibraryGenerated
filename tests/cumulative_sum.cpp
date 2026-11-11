@@ -54,6 +54,40 @@ int main() {
                         }
         }
     }
+    // the verified int instances against the naive sums (values small enough that every sum fits in int)
+    for (int n : {0, 1, 2, 10, 300}) {
+        std::vector<int> a(n);
+        for (int i = 0; i < n; ++i) a[i] = static_cast<int>(random() % 2001) - 1000;
+        cp::CumulativeSum<int> cs(a);
+        for (int x = 0; x <= n; x += 1 + n / 30)
+            for (int y = x; y <= n; y += 1 + n / 30) {
+                int prefix = 0, range = 0;
+                for (int i = 0; i < y; ++i) prefix += a[i];
+                for (int i = x; i < y; ++i) range += a[i];
+                assert(cs.sum(y) == prefix && cs.sum(x, y) == range);
+            }
+    }
+    std::vector<int> wide = {2147483647, -2147483647 - 1, 5};
+    cp::CumulativeSum<int> widesum(wide);
+    assert(widesum.sum(1) == 2147483647 && widesum.sum(2) == -1 && widesum.sum(2, 3) == 5);
+    for (int n : {1, 3, 8}) {
+        for (int m : {1, 4, 9}) {
+            std::vector<std::vector<int>> v(n, std::vector<int>(m));
+            for (int i = 0; i < n; ++i)
+                for (int j = 0; j < m; ++j) v[i][j] = static_cast<int>(random() % 2001) - 1000;
+            cp::CumulativeSum2D<int> cs2(v);
+            for (int a1 = 0; a1 <= n; ++a1)
+                for (int a2 = a1; a2 <= n; ++a2)
+                    for (int b1 = 0; b1 <= m; ++b1)
+                        for (int b2 = b1; b2 <= m; ++b2) {
+                            int expected = 0;
+                            for (int i = a1; i < a2; ++i)
+                                for (int j = b1; j < b2; ++j) expected += v[i][j];
+                            assert(cs2.sum(a1, b1, a2, b2) == expected);
+                            if (a1 == 0 && b1 == 0) assert(cs2.sum(a2, b2) == expected);
+                        }
+        }
+    }
     cp::CumulativeSum2D<int> narrow2(std::vector<std::vector<int>>{{1, 2, 3}, {4, 5, 6}});
     assert(narrow2.sum(2, 3) == 21 && narrow2.sum(1, 1, 2, 3) == 11 && narrow2.sum(0, 1, 2, 2) == 7);
     cp::CumulativeSum2D<double> real2(std::vector<std::vector<double>>{{0.5, 1.5}, {2.0, 4.0}});

@@ -9,7 +9,7 @@ import unittest
 ROOT=Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT/'verifier'))
 sys.path.insert(0,str(ROOT/'tools'))
-from vector_bindings import lower_bindings,emit_lean
+from vector_bindings import lower_bindings,emit_lean,merge_type_probes,verify_type_probes
 from test_scalar_ir import lean_environment
 from offline import disable_network
 from check_public import FLAGS,check_compiler
@@ -53,6 +53,24 @@ example : VectorBindingInstances.g = [.vector ⟨64,false,false⟩ true,.scalar 
             self.lean(scratch,emit_lean(doubling)+'''\nexample : VectorBindingInstances.doubling =
  [.vector ⟨32,true,false⟩ false,.scalar ⟨64,false,false⟩ false true] := rfl
 ''')
+
+    def test_template_instances_share_one_identity_probe(self):
+        guard='\n#if defined(std)\n#error no macros\n#endif\n'
+        probe=lambda entity,ty:f'{guard}static_assert(__is_same(decltype({entity}),{ty}),"canonical");\n'
+        merged=merge_type_probes([(5,probe('v','const ::std::vector<long long> &')),(5,probe('((cs))','::std::vector<long long> &')),
+            (5,probe('v','const ::std::vector<int> &')),(5,probe('v','const ::std::vector<int> &')),(9,'other'),(9,'other')])
+        self.assertEqual(merged,[(5,f'{guard}static_assert(__is_same(decltype(v),const ::std::vector<long long> &) || '
+            '__is_same(decltype(v),const ::std::vector<int> &),"canonical");\n'),
+            (5,probe('((cs))','::std::vector<long long> &')),(9,'other')])
+        text=('#include <vector>\nnamespace cp {template<class T> struct S {int f(const std::vector<T>& v){return 0;}};\n'
+              'template struct S<long long>;template struct S<int>;template struct S<short>;}\n')
+        with tempfile.TemporaryDirectory(prefix='vector-binding-template-') as directory:
+            source=Path(directory)/'source.cpp';source.write_text(text)
+            offset=text.index('{return')+1
+            both=[(offset,probe('v',f'const ::std::vector<{t}> &')) for t in ('long long','int','short')]
+            verify_type_probes(source,both)
+            with self.assertRaisesRegex(ValueError,'identity probe failed'):
+                verify_type_probes(source,both[:2])
 
     def test_lexical_names_cannot_fake_parameter_identity(self):
         text='#include <vector>\nnamespace fake {template<class T>struct vector{};}\nnamespace cp {namespace std=fake;int f(const std::vector<int>& v){return 0;}}\nint actual(::std::vector<int>& v){return v[0];}'
