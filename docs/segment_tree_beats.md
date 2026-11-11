@@ -1,5 +1,7 @@
 # segment_tree_beats
 
+> 2026-11-11: 公開を取り下げた（検証待ち）。旧方式の証明は全件CIの30分予算を超えるため削除し、新方式（`docs/redesign_2026-11.md`）で再検証する。以下は取り下げ前の記録で、記載の `library/`・`Proofs/` のファイルは現在のツリーにない。
+
 `cp::SegmentTreeBeats` は Segment Tree Beats（`experiments/library/cpp/segment_tree/segment_tree_beats.hpp`、tjkendev の実装ベース）である。配列 `a`（`long long`）に対して、区間 chmin `chmin(a, b, x)`、区間 chmax `chmax(a, b, x)`、区間加算 `add_val(a, b, x)`、区間代入 `update_val(a, b, x)`、区間最大 `calc_max(a, b)`、区間最小 `calc_min(a, b)`（いずれも半開区間 `[a, b)`）を持つ。構成子は `SegmentTreeBeats(const std::vector<long long>& a)`。和は持たない（その代わり `INF` = 4×10^18 まで積める）。
 
 木は `[lo, hi)` を中点で分ける。木の節点 `k` の子は `2k+1`、`2k+2`。節点は最大値・次大値・最大値の個数、最小値・次小値・最小値の個数、区間の長さ `len`、保留中の加算 `ladd`、保留中の代入 `lval`（保留なしは `inf`）を持つ。chmin は、節点の次大値が `x` より小さいとき（`smax < x`）その節点の最大値だけを `x` にして止まり、そうでなければ子へ押し下げて再帰する（chmax は対称）。

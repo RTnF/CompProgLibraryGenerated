@@ -12,7 +12,7 @@
 | `number/` | `extrema`, `ratio`, `square_matrix` |
 | `number_theory/` | `bit_width_u64`, `countr_zero`, `enumerate_quotients`, `floor_sum`, `floor_sum_unsigned`, `gcd_u64`, `inv_gcd`, `is_prime`, `pow_mod`, `safe_mod` |
 | `random/` | `xorshift` |
-| `segment_tree/` | `fenwick_tree`, `lazy_segment_tree`, `segment_tree`, `segment_tree_beats`, `segtree_sum` |
+| `segment_tree/` | `fenwick_tree`, `lazy_segment_tree`, `segment_tree`, `segtree_sum` |
 | `string/` | `rolling_hash`, `run_length` |
 | `tree/` | `tree_ancestor`, `tree_arc_costs`, `tree_arcs`, `tree_distance`, `tree_edges`, `tree_find_root`, `tree_full_dp`, `tree_height`, `tree_lca_same_depth`, `tree_order`, `tree_path`, `tree_root` |
 | `union_find/` | `union_find` |

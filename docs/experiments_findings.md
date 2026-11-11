@@ -42,7 +42,7 @@ GCC 13.3.0/C++17/offlineでの再現とログは`.cache/wip/group_api_review_202
 
 ## 2026-10-31: Segment Tree Beats 公開候補の構築サイズ
 
-`library/segment_tree/segment_tree_beats.hpp` の構成子は、節点配列の長さを `8 * (int)a.size() + 8` で計算する。これは符号付き `int` の演算なので、`n >= 1` だけでなく `8*n+8 < 2^31` が必要である。サイズ計算を変更せず、`docs/segment_tree_beats.md` の前提を公開定理 `segment_tree_beats_new0` の `8*n+8 <= L < 2^31` と合わせた。大きい入力を実際に確保したとは扱わない。
+（2026-11-11 に公開を取り下げた）`library/segment_tree/segment_tree_beats.hpp` の構成子は、節点配列の長さを `8 * (int)a.size() + 8` で計算する。これは符号付き `int` の演算なので、`n >= 1` だけでなく `8*n+8 < 2^31` が必要である。サイズ計算を変更せず、`docs/segment_tree_beats.md` の前提を公開定理 `segment_tree_beats_new0` の `8*n+8 <= L < 2^31` と合わせた。大きい入力を実際に確保したとは扱わない。
 
 ## 2026-10-31: 修正済み持ち込みコードの追跡
 

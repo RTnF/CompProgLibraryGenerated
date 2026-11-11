@@ -41,7 +41,7 @@
 | segment_tree/binary_indexed_tree.hpp | 済 | `fenwick_tree`（クラス。構築子 3 種、`sum(r)`、`sum(l, r)`、`add`。`T` はテンプレートのまま、検証した具体化は `long long`） |
 | segment_tree/segment_tree.hpp | 一部 | `segtree_sum`（和のみ）、`segment_tree`（クラス `SegmentTree<方針>`。モノイドは `value_type`・静的 `e()`・静的 `apply` を持つ方針として与え、`long long` の最大値 `SegMax<long long>` と最小値 `SegMin<long long>` を検証した。構成子・`set`・`get`・`product`・`product_all`。値ではなくモノイドのオブジェクトを持つ元の形、`search_prod_right`/`left`、他のモノイドの具体化は未） |
 | segment_tree/lazy_segment_tree.hpp | 一部 | `lazy_segment_tree`（クラス `LazySegmentTree<方針>`。値と作用を `value_type`/`action_type`・静的 `e`/`id`/`op`/`mapping`/`composition` を持つ方針として与え、`long long` の最大値に chmin を作用させる `LazyChminMax<long long>` を検証した。構成子・`set`・`get`・`product`・`product_all`・`update(idx, f)`・`update(l, r, f)`。値と作用のオブジェクトを持つ元の形、`search_prod_right`/`left`、他の作用の具体化は未） |
-| segment_tree/segment_tree_beats*.hpp | 未（途中） | 容量分離した構築/全6操作の本体・Call、実確保からの表現構成、slot/binding置換の実行意味保存、root callerからの構築/export/receiver、更新後BVecs/Scalarsまで型検査済み。複数vectorクラスbundleの生成構成子・全14メソッドは既存モデルとrfl一致し、生成構築→chmin→calc_maxの一般意味も検査済み。const構築viewと一般権限証明を生成し、共通部3037宣言は独立検査成功。構築Call単独の独立検査も成功したが全件独立監査は継続中。child header入力、既存objectのconst参照view/caller接続、copy/move/destructionとexport込み総資源、任意caller AST、Safe導出/任意長操作列/償却、元入力範囲を保つ公開版切替・全件gateは未完了。`_sum`版は別途未検証 |
+| segment_tree/segment_tree_beats*.hpp | 検証待ち | 2026-11-11 に公開版（`library/segment_tree/segment_tree_beats.hpp`）と旧方式の証明（`Proofs/*Beats*` 228モジュール、全体の約50%）を外した。C++ の文ごとの記号実行による証明が全件CIの30分予算を超えるため。新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。`_sum`版は未検証 |
 | set/set.hpp, multiset.hpp | 未 | `std::set`/`map`/`multiset`（STL の契約が未登録） |
 | string/char_count.hpp | 一部 | `run_length`（文字列ではなく `long long` の vector） |
 | string/rolling_hash.hpp | 一部 | `rolling_hash`（`RollingHash<int>`。構成子と `hash(l, r)`/`hash(a)`。文字列版、`match` 系、`starts_with`/`ends_with` は `std::string`/`npos` が未対応で未） |
@@ -104,7 +104,7 @@
 - 機能を落としている（`square_matrix`）: 元の `SquareMatrix<T, N>`（非型テンプレート引数 `N`、`operator*`/`+`/`-`/`==`、`pow`）を、`vector` と `int n` を取る関数 8 個（`mat_mul`・`mat_add_assign`・`mat_sub_assign`・`mat_zero`・`mat_negate`・`mat_identity`・`mat_equal`・`mat_pow`）にしている。値を返す演算子（`+`/`-`/`*`）、クラスとしての形は未（`!=` は `!mat_equal`、`pow` は `mat_pow` が相当し、`pow` の指数は非負の `unsigned long long` に限る）。解消はC配列・非型テンプレート・行参照・初期化状態の変換器対応を足し、公開mat配列と元の全クラスAPI・型traitを維持してクラス全体を検証すること。
 - 入力範囲を狭めている: `union_find` の番兵表現は `n < 2^31 - 1` に制限している。元の別カウンタを復元して解消する。入力assertは復元済みで、正常終了定理に加え、共通の純粋拒否補題と生成モデル/C++の失敗経路テストを持つ。構成子の確保前の検査とは主張しない（元と同じ本体assert）。
 
-- 入力範囲を狭めている（`segment_tree_beats`）: 元の `4*n` から公開版の `8*n+8` へ配列を増やした一方、長さと子添字の計算を32-bit intのままにした。例えばn=2^28では元の4*n/2*n0と全木添字がintに収まるが、新しい8*n+8は収まらない。公開の8*n+8<2^31という前提だけで解決済みとはしない。未使用節点・葉の子への無条件アクセスを含む反復化が理由であり、サイズ/子添字計算の型と安全性証明または制御フローを改善して元の範囲を復元する。巨大入力の実確保はしていない。
+- （解消済み 2026-11-11）入力範囲を狭めていた `segment_tree_beats` の公開版（`4*n` を `8*n+8` に変え、長さと子添字を32-bit intのまま計算）は公開を取り下げた。新方式で再公開するときは元の範囲を保つ。
 
 ### 3. 変換器の拡張（実装済み）と残り
 

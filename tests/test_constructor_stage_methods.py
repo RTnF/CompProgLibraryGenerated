@@ -82,49 +82,6 @@ class ConstructorStageMethodTests(unittest.TestCase):
                                 '-fno-sanitize-recover=all', str(cpp), '-o', str(binary)], check=True)
                 subprocess.run([str(binary)], check=True)
 
-    def test_beats_allocation_prefix_and_verified_body_permutation(self):
-        source = ROOT / 'library/segment_tree/segment_tree_beats.hpp'
-        full = lower_source(source, construction_stages=True)
-        self.assertEqual(emit_lean(full, 'Proofs.BeatsConstructionStage'),
-                         (ROOT / 'Proofs/Generated/BeatsConstructionStage.lean').read_text())
-        stage = full['functions'][0]
-        self.assertEqual([f['name'] for f in full['functions']], ['SegmentTreeBeats_construct0'])
-        fields = stage['construction_fields']
-        self.assertEqual([f['name'] for f in fields],
-                         ['max_v','smax_v','max_c','min_v','smin_v','min_c','len','ladd','lval',
-                          'lo','hi','st_k','st_l','st_r','ent','inf','n'])
-        self.assertEqual([f['slot'] for f in fields], list(range(1, 18)))
-        prefix = stage['body'][:15]
-        self.assertEqual([s['kind'] for s in prefix], ['fill_vector'] * 15)
-        self.assertEqual([s['element']['width'] for s in prefix], [64]*9 + [32]*6)
-        for i in [11, 12, 13]:
-            self.assertEqual(prefix[i]['count']['operand']['value'], 256)
-        for i in [*range(11), 14]:
-            self.assertEqual(prefix[i]['count'], prefix[0]['count'])
-        body_only = lower_source(source)
-        # The existing verified model still comes from the same default path.
-        self.assertEqual(emit_lean(body_only, 'Proofs.BeatsInstance'),
-                         (ROOT / 'Proofs/Generated/SegmentTreeBeats.lean').read_text())
-        constructor = next(f for f in body_only['functions'] if f['name'] == 'SegmentTreeBeats_new0')
-        def permute(node):
-            if isinstance(node, list):
-                return [permute(x) for x in node]
-            if not isinstance(node, dict):
-                return node
-            out = {key: permute(value) for key, value in node.items()}
-            if 'slot' in out and out['slot'] < 16:
-                out['slot'] = (out['slot'] + 1) % 16
-            return out
-        self.assertEqual(stage['body'][15:], permute(constructor['body']))
-        with tempfile.TemporaryDirectory(prefix='beats-construction-stage-') as directory:
-            proof = Path(directory) / 'check.lean'
-            proof.write_text(emit_lean(full, 'BeatsStage'))
-            lake, env = lean_environment()
-            result = subprocess.run([lake, 'env', 'lean', str(proof)], cwd=ROOT,
-                                    env=env, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertNotIn('warning:', result.stdout + result.stderr)
-
     def test_scalar_only_helper_updates_the_constructed_field(self):
         with tempfile.TemporaryDirectory(prefix='ctor-stage-scalar-') as directory:
             source = Path(directory) / 'source.hpp'

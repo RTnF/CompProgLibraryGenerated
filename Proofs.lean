@@ -904,270 +904,43 @@ import Proofs.DijkstraPMath
 import Proofs.DijkstraOldScan
 import Proofs.DijkstraOldExec
 import Proofs.DijkstraOldCall
-import Proofs.BeatsAdd
-import Proofs.BeatsAddSet
-import Proofs.BeatsAlias
-import Proofs.BeatsAll
-import Proofs.BeatsApply
-import Proofs.BeatsApply0
-import Proofs.BeatsApply2
-import Proofs.BeatsAssemble
-import Proofs.BeatsBuild
-import Proofs.BeatsCalc
-import Proofs.BeatsCalcApply
-import Proofs.BeatsCalcApply2
-import Proofs.BeatsCalcFlags
-import Proofs.BeatsCalcFrame
-import Proofs.BeatsCalcMethods
-import Proofs.BeatsCalcMin
-import Proofs.BeatsCalcRun
-import Proofs.BeatsCalcSpec
-import Proofs.BeatsCalcStep
-import Proofs.BeatsCallGen
-import Proofs.BeatsCap
-import Proofs.BeatsCapMin
-import Proofs.BeatsChmax
-import Proofs.BeatsChmin
-import Proofs.BeatsChminSpec
-import Proofs.BeatsCons
-import Proofs.BeatsCtUpdChain
-import Proofs.BeatsCtUpdIter
-import Proofs.BeatsCtUpdRun
-import Proofs.BeatsCtorBase
-import Proofs.BeatsCtorInv
-import Proofs.BeatsCtorIter
-import Proofs.BeatsCtorMath
-import Proofs.BeatsCtorPhase2
-import Proofs.BeatsCtorRep
-import Proofs.BeatsCtorRun
-import Proofs.BeatsCtorStep
-import Proofs.BeatsCtorTop
-import Proofs.BeatsDownF
-import Proofs.BeatsExecAA
-import Proofs.BeatsExecAdd
-import Proofs.BeatsExecBase
-import Proofs.BeatsExecL0
-import Proofs.BeatsExecL1
-import Proofs.BeatsExecL2
-import Proofs.BeatsExecP0
-import Proofs.BeatsExecP1
-import Proofs.BeatsExecS
-import Proofs.BeatsExecU0
-import Proofs.BeatsExecUA
-import Proofs.BeatsExecUM
-import Proofs.BeatsExecUN
-import Proofs.BeatsExecW
-import Proofs.BeatsExec_ApInit
-import Proofs.BeatsExec_ApInitCh0
-import Proofs.BeatsExec_ApInitDefs
-import Proofs.BeatsExec_ApplyLoop
-import Proofs.BeatsExec_ApplyLoopCh0
-import Proofs.BeatsExec_ApplyLoopCh1
-import Proofs.BeatsExec_ApplyLoopCh10
-import Proofs.BeatsExec_ApplyLoopCh11
-import Proofs.BeatsExec_ApplyLoopCh12
-import Proofs.BeatsExec_ApplyLoopCh13
-import Proofs.BeatsExec_ApplyLoopCh2
-import Proofs.BeatsExec_ApplyLoopCh3
-import Proofs.BeatsExec_ApplyLoopCh4
-import Proofs.BeatsExec_ApplyLoopCh5
-import Proofs.BeatsExec_ApplyLoopCh6
-import Proofs.BeatsExec_ApplyLoopCh7
-import Proofs.BeatsExec_ApplyLoopCh8
-import Proofs.BeatsExec_ApplyLoopCh9
-import Proofs.BeatsExec_ApplyLoopDefs
-import Proofs.BeatsExec_ApplyLoopFlags
-import Proofs.BeatsExec_ApplyLoopIterDadd
-import Proofs.BeatsExec_ApplyLoopIterDset
-import Proofs.BeatsExec_ApplyLoopIterS
-import Proofs.BeatsExec_ApplyLoopIterW0
-import Proofs.BeatsExec_ApplyLoopIterW1
-import Proofs.BeatsExec_ApplyLoopIterW2
-import Proofs.BeatsExec_ApplyLoopIterW3
-import Proofs.BeatsExec_CInitCh0r
-import Proofs.BeatsExec_CInitDefs
-import Proofs.BeatsExec_CalcLoop
-import Proofs.BeatsExec_CalcLoopCh0
-import Proofs.BeatsExec_CalcLoopCh1
-import Proofs.BeatsExec_CalcLoopCh2
-import Proofs.BeatsExec_CalcLoopCh3
-import Proofs.BeatsExec_CalcLoopCh4
-import Proofs.BeatsExec_CalcLoopCh5
-import Proofs.BeatsExec_CalcLoopCh6
-import Proofs.BeatsExec_CalcLoopCh7
-import Proofs.BeatsExec_CalcLoopCh8
-import Proofs.BeatsExec_CalcLoopDefs
-import Proofs.BeatsExec_CalcLoopIterDadd
-import Proofs.BeatsExec_CalcLoopIterDset
-import Proofs.BeatsExec_CalcLoopIterS
-import Proofs.BeatsExec_CalcLoopIterW0
-import Proofs.BeatsExec_CalcLoopIterW1
-import Proofs.BeatsExec_CtLoop
-import Proofs.BeatsExec_CtLoopCh0
-import Proofs.BeatsExec_CtLoopCh1
-import Proofs.BeatsExec_CtLoopCh2
-import Proofs.BeatsExec_CtLoopDefs
-import Proofs.BeatsExec_CtUpd
-import Proofs.BeatsExec_CtUpdCh0
-import Proofs.BeatsExec_CtUpdCh1
-import Proofs.BeatsExec_CtUpdCh2
-import Proofs.BeatsExec_CtUpdDefs
-import Proofs.BeatsExec_UpdLoop
-import Proofs.BeatsExec_UpdLoopCh0
-import Proofs.BeatsExec_UpdLoopCh1
-import Proofs.BeatsExec_UpdLoopCh2
-import Proofs.BeatsExec_UpdLoopDefs
-import Proofs.BeatsFrame0
-import Proofs.BeatsFrame0D
-import Proofs.BeatsFuel
-import Proofs.BeatsHeap
-import Proofs.BeatsHeap2
-import Proofs.BeatsHeap3
-import Proofs.BeatsHeap4
-import Proofs.BeatsInv
-import Proofs.BeatsLem
-import Proofs.BeatsLoop0
-import Proofs.BeatsLoop1
-import Proofs.BeatsLoop2
-import Proofs.BeatsLoop3
-import Proofs.BeatsLoop4
-import Proofs.BeatsLoop5
-import Proofs.BeatsLoop6
-import Proofs.BeatsLoop7
-import Proofs.BeatsLoop8
-import Proofs.BeatsLoopExec
-import Proofs.BeatsMax
-import Proofs.BeatsMerge
-import Proofs.BeatsMethods
-import Proofs.BeatsMin
-import Proofs.BeatsModel
-import Proofs.BeatsNeed
-import Proofs.BeatsNeg
-import Proofs.BeatsNode
-import Proofs.BeatsOp1Apply
-import Proofs.BeatsOp1Frame
-import Proofs.BeatsOp1FrameD
-import Proofs.BeatsOp1Loop
-import Proofs.BeatsOp1Step
-import Proofs.BeatsOp1Sums
-import Proofs.BeatsOp2Apply
-import Proofs.BeatsOp2Frame
-import Proofs.BeatsOp2FrameD
-import Proofs.BeatsOp2Loop
-import Proofs.BeatsOp2Step
-import Proofs.BeatsOp2Sums
-import Proofs.BeatsOp3Apply
-import Proofs.BeatsOp3Frame
-import Proofs.BeatsOp3FrameD
-import Proofs.BeatsOp3Loop
-import Proofs.BeatsOp3Step
-import Proofs.BeatsOp3Sums
-import Proofs.BeatsOps
-import Proofs.BeatsPrepGen
-import Proofs.BeatsPush
-import Proofs.BeatsPushT
-import Proofs.BeatsRep
-import Proofs.BeatsRep2
-import Proofs.BeatsRepInv
-import Proofs.BeatsSafe
-import Proofs.BeatsSetRange
-import Proofs.BeatsShape
-import Proofs.BeatsStep
-import Proofs.BeatsSums
-import Proofs.BeatsSums2
-import Proofs.BeatsTag
-import Proofs.BeatsTravProps
-import Proofs.BeatsTree
-import Proofs.BeatsUpd
-import Proofs.BeatsUpdChain
-import Proofs.BeatsUpdIter
-import Proofs.BeatsUpdRun
-import Proofs.BeatsWrap
-import Proofs.SegmentTreeBeatsCall
 
 import Proofs.TreeOrderToDp
 
-import Proofs.BeatsCapCtor
-import Proofs.BeatsCapChmin
-import Proofs.BeatsCapUpdate1
-import Proofs.BeatsCapUpdate2
-import Proofs.BeatsCapUpdate3
-import Proofs.BeatsCapCalc
-import Proofs.Generated.BeatsConstructionStage
-import Proofs.BeatsSlotCycle
 import Proofs.CppSlotRename
-import Proofs.BeatsIndexHeight
 
-import Proofs.BeatsWideExec
 
-import Proofs.BeatsExec_WideCtLoop
-import Proofs.BeatsExec_WideCtLoopCh0
-import Proofs.BeatsExec_WideCtLoopCh1
-import Proofs.BeatsExec_WideCtLoopCh10
-import Proofs.BeatsExec_WideCtLoopCh11
-import Proofs.BeatsExec_WideCtLoopCh12
-import Proofs.BeatsExec_WideCtLoopCh2
-import Proofs.BeatsExec_WideCtLoopCh3
-import Proofs.BeatsExec_WideCtLoopCh4
-import Proofs.BeatsExec_WideCtLoopCh5
-import Proofs.BeatsExec_WideCtLoopCh6
-import Proofs.BeatsExec_WideCtLoopCh7
-import Proofs.BeatsExec_WideCtLoopCh8
-import Proofs.BeatsExec_WideCtLoopCh9
-import Proofs.BeatsExec_WideCtLoopDefs
 
-import Proofs.BeatsWideCtorLoop
 
-import Proofs.BeatsWideCtorExec
 
-import Proofs.BeatsSlotEval
 
-import Proofs.BeatsSlotStmt
 
-import Proofs.BeatsSlotRun
 
-import Proofs.BeatsAllocation
 
-import Proofs.BeatsAllocationLayout
 
-import Proofs.BeatsAllocationArgs
 
-import Proofs.BeatsWideCall
 
-import Proofs.BeatsBindingCycle
 
 import Proofs.MultiVecOwnedSound
 
-import Proofs.BeatsBindingExpr
 
-import Proofs.BeatsBindingStmt
 
-import Proofs.BeatsBindingRun
 
-import Proofs.BeatsInlineFrame
 
-import Proofs.BeatsInlineExec
 
-import Proofs.BeatsInputPrepare
 
-import Proofs.BeatsAllocationResources
 
 import Proofs.CppConstructorRoots
 
 import Proofs.CppConstructorMultiFinish
 
-import Proofs.BeatsConstructorFields
 
-import Proofs.BeatsConstructCall
 
-import Proofs.BeatsConstructReceiver
 
 import Proofs.CppConstructorRetirement
 
-import Proofs.BeatsReceiverCalls
 
 import Proofs.CppCallUnitFrame
-import Proofs.BeatsReceiverRestore
 import Proofs.MonoidCallCore
 import Proofs.MonoidCallCoreInt
 import Proofs.CppScalarContents
