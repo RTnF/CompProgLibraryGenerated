@@ -378,4 +378,60 @@ theorem call_correct (prog : NProgram) (ty : Ty) (cv : NExpr)
       have : caller.peak ≤ caller.peak := Nat.le_refl _
       omega
 
+/-! ## The verified instances -/
+
+abbrev s64 : Ty := ⟨64,true,false⟩
+
+theorem sizeLimit_s64 : 2147483648 ≤ CppVectorBindings.sizeLimit s64 := by
+  have : CppVectorBindings.sizeLimit s64 = 1152921504606846975 := by simp [CppVectorBindings.sizeLimit]
+  omega
+
+theorem sizeLimit_i32 : 2147483648 ≤ CppVectorBindings.sizeLimit ti := by
+  have : CppVectorBindings.sizeLimit ti = 2305843009213693951 := by simp [CppVectorBindings.sizeLimit]
+  omega
+
+theorem i32_in_s64 (c : Int) (h : ti.valid c = true) : s64.valid c = true := by
+  simp [Ty.valid] at h ⊢; omega
+
+theorem body_ll : Proofs.ElementCountInstance.element_count_std_vector_long_long.body =
+    body s64 (.cast s64 (.variable ti 4)) := rfl
+
+theorem body_int : Proofs.ElementCountInstance.element_count_std_vector_int.body = body ti (.variable ti 4) := rfl
+
+/-- `cp::element_count(v)` for `v : std::vector<long long>`: the result's row 0 is the value and row 1 the
+length of each maximal run of equal elements of `v`, in order (`rle`); the runs decode to `v`, have positive
+lengths and adjacent runs differ. `v` is unchanged; time and extra space are linear in `v.size()`. -/
+theorem element_count_ll_correct (caller : NState) {vslot vb V vsc : Nat} {wV m : Bool} {vbuf : Buffer Value}
+    (ok : CallerOK caller s64 vslot vb V vsc wV m vbuf) (X : List Int) (hv : vbuf.items = X.map Value.integer)
+    (hX : ∀ x ∈ X, s64.valid x = true) (hn : X.length < 2147483647) :
+    ∃ Sinit fuel res,
+      prepare caller Proofs.ElementCountInstance.element_count_std_vector_long_long.parameters
+        [.vectorReference vslot] = some Sinit ∧
+      Proofs.ElementCountInstance.element_count_std_vector_long_long.callFuel fuel caller [.vectorReference vslot] =
+        .finished (res,.vector caller.frame.state.storage.objects.length (.vector (.integer s64))) ∧
+      Post caller Sinit res s64 X V vbuf ∧
+      rleFlat (rle X) = X ∧ (∀ p ∈ rle X, 0 < p.2) ∧ AdjOK (rle X) := by
+  obtain ⟨Sinit,fuel,res,hprep,hrun,post⟩ := call_correct _ s64 (.cast s64 (.variable ti 4)) rfl rfl body_ll
+    i32_in_s64 (by simp [CppVectorBindings.supported]) (by simp [NExpr.scalarOnly])
+    (by intro env c h valid; simp [NExpr.denote,h,Ty.convert_of_valid _ _ (i32_in_s64 c valid)])
+    (by simp [NExpr.nodes]) sizeLimit_s64 caller ok X hv hX hn
+  exact ⟨Sinit,fuel,res,hprep,hrun,post,rle_spec X⟩
+
+/-- `cp::element_count(v)` for `v : std::vector<int>`, with the same guarantees. -/
+theorem element_count_int_correct (caller : NState) {vslot vb V vsc : Nat} {wV m : Bool} {vbuf : Buffer Value}
+    (ok : CallerOK caller ti vslot vb V vsc wV m vbuf) (X : List Int) (hv : vbuf.items = X.map Value.integer)
+    (hX : ∀ x ∈ X, ti.valid x = true) (hn : X.length < 2147483647) :
+    ∃ Sinit fuel res,
+      prepare caller Proofs.ElementCountInstance.element_count_std_vector_int.parameters
+        [.vectorReference vslot] = some Sinit ∧
+      Proofs.ElementCountInstance.element_count_std_vector_int.callFuel fuel caller [.vectorReference vslot] =
+        .finished (res,.vector caller.frame.state.storage.objects.length (.vector (.integer ti))) ∧
+      Post caller Sinit res ti X V vbuf ∧
+      rleFlat (rle X) = X ∧ (∀ p ∈ rle X, 0 < p.2) ∧ AdjOK (rle X) := by
+  obtain ⟨Sinit,fuel,res,hprep,hrun,post⟩ := call_correct _ ti (.variable ti 4) rfl rfl body_int
+    (fun _ h => h) (by simp [CppVectorBindings.supported]) (by simp [NExpr.scalarOnly])
+    (by intro env c h _; simp [NExpr.denote,h])
+    (by simp [NExpr.nodes]) sizeLimit_i32 caller ok X hv hX hn
+  exact ⟨Sinit,fuel,res,hprep,hrun,post,rle_spec X⟩
+
 end Proofs.ElementCountCall
