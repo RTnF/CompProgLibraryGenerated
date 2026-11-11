@@ -57,7 +57,8 @@ def returns_vector(statements):
 def lift_vector_returns(statements):
     """A vector returned from inside a block belongs to an enclosing scope, and the model's scope exit only
     transfers roots of the exited scope. A block that declares nothing has no C++ lifetime effect, so such a block
-    around a vector return is lowered without its scope; a declaring block around a vector return is rejected."""
+    around a vector return is lowered without its scope. A declaring block keeps its scope (a vector declared and
+    returned in it is a root of that scope, as before)."""
     lifted = []
     for statement in statements:
         statement = dict(statement)
@@ -66,8 +67,9 @@ def lift_vector_returns(statements):
                 statement[key] = lift_vector_returns(statement[key])
         if statement['kind'] == 'scope' and returns_vector(statement['body']):
             if any(inner['kind'] not in NONDECLARING for inner in statement['body']):
-                raise ValueError('returning a vector from a block with declarations is unsupported')
-            lifted.extend(statement['body'])
+                lifted.append(statement)
+            else:
+                lifted.extend(statement['body'])
         else:
             lifted.append(statement)
     return lifted
