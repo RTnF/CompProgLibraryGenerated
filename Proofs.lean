@@ -590,3 +590,5 @@ import Proofs.Generated.FloorSumSigned
 import Proofs.Cpp.FloorSum
 import Proofs.Generated.IsPrime
 import Proofs.Cpp.IsPrime
+import Proofs.Generated.UnionFind
+import Proofs.Cpp.UnionFind
