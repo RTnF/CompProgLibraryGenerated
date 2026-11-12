@@ -568,3 +568,5 @@ import Proofs.Generated.Xorshift
 import Proofs.Cpp.Xorshift
 import Proofs.Generated.Mod61
 import Proofs.Cpp.Mod61
+import Proofs.Generated.FloorSumUnsigned
+import Proofs.Cpp.FloorSumUnsigned

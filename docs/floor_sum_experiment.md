@@ -8,6 +8,16 @@
 
 元の unsigned 関数のコメントには入力上限がなく、signed 呼び出し側にだけ `n,m < 2^32` の条件がある。unsigned 関数でも条件を明示する必要がある。`n=4294967297,m=1,a=1,b=0` では、元の C++ と生成モデルの結果は `2147483648` であり、数学的な和の64 bit 剰余 `9223372039002259456` と一致しない。`n*(n-1)` が除算前にラップするためである。この入力を UBSan 付き C++ と生成 Lean で再現し、自然数の計算で差が生じることも Lean の `unrestricted_triangle_counterexample` で証明する。元ソースを変更せず、証明対象の前提条件として追跡する。
 
+## 検証（新方式、`floor_sum_unsigned`）
+
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/FloorSumUnsigned.lean` を生成する（`unsigned long long` は `UInt64` で、積と和は C++ と同じく 2^64 を法とする）。`Proofs/Cpp/FloorSumUnsigned.lean` の `floor_sum_unsigned_spec` が、`n < 2^32`、`0 < m < 2^32`（`a`、`b` は 64 bit の全値）のとき、返り値が `Σ_{i<n} ⌊(a i + b) / m⌋ mod 2^64`（`directSum`）であることを示す。
+
+- ループの不変条件 `Inv`: 累積した `ans` と残りの和の合計が 2^64 を法として目標に等しい。1 回の反復は `a`・`b` を `m` で割った余りに直し（`normalize`。三角数 `n(n-1)/2` は `n < 2^32` で途中が折り返さないので正確、`triangle_intermediate_exact`）、`a n + b < m` なら終わり、そうでなければ相反則 `directSum_reciprocity` で `(n, m, a, b)` を `((a n + b)/m, a, m, (a n + b) mod m)` に移す（`round`）。
+- 停止と計算量: 対 `(m, a mod m)` はユークリッドの互除法と同じ列を進むので、測度 `gcdCost m (a mod m)`（Basic の `gcdCost_step`）が毎回 1 以上減る。tick 数は `gcdCost m (a mod m) + 2` 以下で `O(log m)`。
+- 差分テスト（`tests/diff/floor_sum_unsigned.py`）と C++ のテストで翻訳と実装を確かめる。
+
+以下は旧方式の記録である。
+
 ## 補助証明
 
 `Proofs/FloorSumArithmetic.lean` は以下を扱う。
