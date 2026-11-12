@@ -6,8 +6,13 @@
 
 前提: `n >= 1`、`n + 2 < 2^31`、`head.size() == n + 1`、`head[0] == 0`、`head` は広義単調増加、`head[n] == target.size() < 2^31 - 1`、すべての `target[p]` が `[0, n)`、グラフは対称な木（連結、自己ループ・閉路・多重辺なし）、`0 <= root < n`、`parent` は上のとおり（`parent.size() == n`）、`ord.size() == n`（呼び出し前の中身は何でもよい）。
 
-結果（`Proofs/TreeOrderCall.lean` の `tree_order_correct`、上の前提のもとで一般の入力について証明。前提は `Proofs/TreeOrderMath.lean` の `TO` にまとめてある）: 終了後の `ord` は `0 .. n - 1` の順列で、`ord[0] == root`、`root` 以外の各頂点は自分の親より後に来る。停止し、`ord` の範囲外への書き込みなど未定義動作は起きない。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: 辺の数 `m = target.size()` について、モデル上の仕事量は呼び出し側の引数評価を除いて `1100 * m + 1600 * n + 700` 以下、vector への書き込みは `m + 2 * n + 6` 回以下。追加領域はスカラーのセル高々 400 個（呼び出し側の frame に加えて、入力の大きさによらない定数）。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeOrder.lean` を生成し、`Proofs/Cpp/TreeOrder.lean` が前提を満たす全入力について次を証明する。
 
-定理に含めていないこと: 前提を破る入力（未定義動作）、`parent` を作る部分（`tree_root`）。C++ のテストは `tests/tree_order.cpp`（ランダムな木で、`ord` が順列であること、`ord[0] == root`、親が子より先であることを、`ord` の初期値を乱数にして確かめる）。
+- `tree_order_spec`: 外側のループの `L` 回目のあと `ord[0 .. cnt)` は純粋なモデル `Proofs/TreeOrderMath.lean` のキュー `qrun ... L` に等しく（`OInv`）、内側のループは頂点 `Q[L]` の先頭 `k` 本の弧から見つけた子を足した列に等しい（`IInv`、`inner_child`、`inner_skip`）。
+- `tree_order_correct`: 前提（`TO`、`head` の要素が非負で広義単調増加、`target` の要素が非負、`ord.size() == n`）のもとで、終了後の `ord` は `0 .. n - 1` の順列（範囲内で単射）、`ord[0] == root`、`j >= 1` の各 `ord[j]` の親は `j` より前の位置にある（親が子より先）。純粋なモデルの性質は `order_spec`。
+- tick 数は `n + 1 + W` 以下で、`W`（訪れた頂点の弧の数の和）は `head[n] = m` 以下（`W_le`）。全体で `O(n + m)`。
+- 定理に含めていないこと: 前提を破る入力（未定義動作）、`parent` を作る部分（`tree_root`）。
+
+差分テスト（`tests/diff/tree_order.py`）と C++ のテスト `tests/tree_order.cpp`（ランダムな木で、`ord` が順列であること、`ord[0] == root`、親が子より先であることを、`ord` の初期値を乱数にして確かめる） で翻訳と実装を確かめる。
