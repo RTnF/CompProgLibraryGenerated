@@ -574,3 +574,5 @@ import Proofs.Generated.TopologicalSort
 import Proofs.Cpp.TopologicalSort
 import Proofs.Generated.FloydWarshall
 import Proofs.Cpp.FloydWarshall
+import Proofs.Generated.BellmanFord
+import Proofs.Cpp.BellmanFord
