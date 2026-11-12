@@ -576,3 +576,5 @@ import Proofs.Generated.FloydWarshall
 import Proofs.Cpp.FloydWarshall
 import Proofs.Generated.BellmanFord
 import Proofs.Cpp.BellmanFord
+import Proofs.Generated.Dijkstra
+import Proofs.Cpp.Dijkstra

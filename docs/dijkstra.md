@@ -10,15 +10,21 @@
 
 前提: `head.size() == n + 1`、`head[0] == 0`、`head` は広義単調増加、`head[n] == target.size()`、すべての `target[p]` が `[0, n)`、すべての `cost[p]` が `[0, 2^61]`、`dist.size() == done.size() == parent.size() == n`、`dist` の全要素が `[lo, inf]`（`lo ≥ -2^62`）、`inf ≤ 2^62`、`done` は全部 0、`n < 2^31 - 2`、`target.size() < 2^31 - 1`。このとき途中の和 `bd + cost` はすべて `long long` に収まる。
 
-結果（`Proofs/DijkstraCall.lean`、一般の入力について証明）: 初期の `dist` を `d0` とする。
+結果（`Proofs/Cpp/Dijkstra.lean` の `dijkstra_correct`、一般の入力について証明）: 初期の `dist` を `d0` とする。
 - 健全性: `dist[v] != inf` なら、`d0[w] != inf` の頂点 `w` から `v` へのウォークがあり、`dist[v]` は `d0[w]` にそのウォークのコストを足した値に等しい。
 - 完全性: `inf` が「`d0[w]` ＋ 任意のウォークのコスト」より大きいとき（ウォークの長さは問わない）、`w` から `v` への任意のウォーク（コスト `c`）について `dist[v] ≤ d0[w] + c`。したがって `dist[v]` は最短距離に等しい。
 - 親: 各 `v` について `parent[v]` は初期値のままか、確定した頂点 `u = parent[v]`（`done[u] = 1`）から `v` への辺があり `dist[v] = dist[u] + その辺のコスト` が成り立つ（`ParInv`、`Proofs/DijkstraPMath.lean`）。
 - 証明は `Proofs/DijkstraMath.lean`（確定した頂点の集合 `D` についての不変条件 `Dj`: 確定した頂点の `dist` は最短で、確定していない頂点の `dist` は確定した頂点からの辺で緩和済み、確定した頂点の `dist` は確定していない頂点のものより小さい）、`Proofs/DijkstraScan.lean`（最小値の探索ループ）、`Proofs/DijkstraExec.lean`（緩和ループと外側のループ）、`Proofs/DijkstraPMath.lean`（親の更新と不変条件）、`Proofs/DijkstraPrepare.lean`/`Proofs/DijkstraCall.lean`（呼び出し。vector は 6 本）。
 
-時間と領域: 外側 `n` 周、各周で `n` 個の探索と選んだ頂点の出辺の緩和で、モデル上の仕事量は呼び出し側の引数評価を除いて高々 `(320 * n + 420 * m + 420) * n + 150`（粗い上限。実際の反復は `O(n^2 + m)` 回）。追加領域は局所変数だけ。
+時間と領域: 外側 `n` 周、各周で `n` 個の探索と選んだ頂点の出辺の緩和で、tick 数は `1 + n (1 + n) + W` 以下、`W`（確定した頂点の出辺の数の和）は `m = head[n]` 以下（`W_eq` と出次数の和）。全体で `O(n^2 + m)`。追加領域は局所変数だけ。
 
 定理に含めていないこと: `done` の最終的な内容（C++ のテストで、到達できる頂点が 1 になることを確認している）、負の辺（前提で除く）、`priority_queue` 版。親をたどると始点に着くことは C++ のテストで確認している。C++ のテストは `tests/dijkstra.cpp`（頂点数 1〜9 のランダムなグラフ、1〜2 個の始点を、フロイド–ワーシャルから作った基準と比較する）。
 
 
 費用の型 `Cost` はテンプレート引数のままで、元と同じく任意の型で使える。検証した具体化はヘッダー末尾の明示的な具体化 `dijkstra<long long>`。
+
+## 検証（新方式、`docs/translation.md`）
+
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/Dijkstra.lean` を生成する。`Proofs/Cpp/Dijkstra.lean` は `Cost = long long`（Lean では `Int`）について、翻訳した関数の配列が純関数モデル（`Proofs/DijkstraMath.lean` の `djIter`、`Proofs/DijkstraPMath.lean` の `pIter`）の状態に `[0, n)` 上で一致することを示す（`Rel`。最小値の走査は `scan_vc` と `picked`、辺 1 本の緩和は `relax_vc`、頂点の確定は `step_some`/`step_none`）。初期値 `d0` は `[0, n)` の外で `inf` とする（モデルの前提 `d0 w < inf → w < n` のため。配列との対応は `[0, n)` だけで決まる）。上の健全性・完全性・親の性質は、このモデルについての `dijkstra_spec`・`pIter_inv` から従う（`dijkstra_correct`）。
+
+差分テスト（`tests/diff/dijkstra.py`、始点 1〜2 個）と C++ のテスト `tests/dijkstra.cpp` で翻訳と実装を確かめる。
