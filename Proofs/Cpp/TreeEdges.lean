@@ -33,13 +33,13 @@ theorem holds_push (a a0 : Array Int) (l : List Int) (x : Int) (h : Holds a a0 l
     Holds (set a (l.length : Int) x) a0 (l ++ [x]) := by
   obtain ⟨hsz, hd, hr⟩ := h
   refine ⟨by simp [hsz], fun j hj => ?_, fun k hk => ?_⟩
-  · rw [getElem!_set _ _ _ _ (by simp; omega), List.getElem_append]
+  · rw [getElemBang_set _ _ _ _ (by simp; omega), List.getElem_append]
     simp only [List.length_append, List.length_singleton] at hj
     by_cases e : j = l.length
     · subst e; simp
     · simp only [Int.toNat_natCast, e, ite_false, show j < l.length by omega, dite_true]; exact hd j _
   · simp only [List.length_append, List.length_singleton] at hk
-    rw [getElem!_set _ _ _ _ (by simp; omega)]
+    rw [getElemBang_set _ _ _ _ (by simp; omega)]
     simp only [Int.toNat_natCast, show k ≠ l.length by omega, ite_false]; exact hr k (by omega)
 
 theorem step_some (parent from_ to_ : Array Int) (n : Int) (b : Array Int × Array Int × Int) (s t0 L : Nat)

@@ -19,10 +19,10 @@ def ILt (a b : cp.Interval T) : Prop :=
 
 instance (a b : cp.Interval T) : Decidable (ILt a b) := by unfold ILt; infer_instance
 
-theorem ext_iff' (a b : cp.Interval T) : a = b ↔ a.s = b.s ∧ a.e = b.e ∧ a.is_n = b.is_n := by
+theorem ext_iff2 (a b : cp.Interval T) : a = b ↔ a.s = b.s ∧ a.e = b.e ∧ a.is_n = b.is_n := by
   cases a; cases b; simp
 
-instance : DecidableEq (cp.Interval T) := fun a b => decidable_of_iff _ (ext_iff' a b).symm
+instance : DecidableEq (cp.Interval T) := fun a b => decidable_of_iff _ (ext_iff2 a b).symm
 
 theorem init_spec (s e : T) (h : s ≤ e) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.init_T_T s e ⦃⇓ r c => ⌜r = ⟨s, e, decide (s = e)⟩ ∧ c = t0 + 1⌝⦄ := by
@@ -55,14 +55,14 @@ theorem op_eq_spec (a b : cp.Interval T) (t0 : Nat) :
   mvcgen [cp.Interval.op_eq]
   all_goals simp +zetaDelta at *
   refine ⟨?_, by assumption⟩
-  rw [Bool.eq_iff_iff]; simp [ext_iff']; tauto
+  rw [Bool.eq_iff_iff]; simp [ext_iff2]; tauto
 
 theorem op_ne_spec (a b : cp.Interval T) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_ne a b ⦃⇓ r c => ⌜r = decide (a ≠ b) ∧ c = t0 + 1⌝⦄ := by
   mvcgen [cp.Interval.op_ne]
   all_goals simp +zetaDelta at *
   refine ⟨?_, by assumption⟩
-  rw [Bool.eq_iff_iff]; simp [ext_iff']; tauto
+  rw [Bool.eq_iff_iff]; simp [ext_iff2]; tauto
 
 theorem op_lt_spec (a b : cp.Interval T) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_lt a b ⦃⇓ r c => ⌜r = decide (ILt a b) ∧ c = t0 + 1⌝⦄ := by
@@ -86,7 +86,7 @@ theorem op_le_spec (a b : cp.Interval T) (t0 : Nat) :
   rw [Bool.eq_iff_iff]
   simp only [Bool.or_eq_true, decide_eq_true_iff]
   rcases a with ⟨s, e, i⟩; rcases b with ⟨s', e', i'⟩
-  cases i <;> cases i' <;> simp [ILt, ext_iff'] <;> tauto
+  cases i <;> cases i' <;> simp [ILt, ext_iff2] <;> tauto
 
 theorem op_ge_spec (a b : cp.Interval T) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_ge a b ⦃⇓ r c => ⌜r = decide (ILt b a ∨ a = b) ∧ c = t0 + 1⌝⦄ := by
@@ -96,7 +96,7 @@ theorem op_ge_spec (a b : cp.Interval T) (t0 : Nat) :
   rw [Bool.eq_iff_iff]
   simp only [Bool.or_eq_true, decide_eq_true_iff]
   rcases a with ⟨s, e, i⟩; rcases b with ⟨s', e', i'⟩
-  cases i <;> cases i' <;> simp [ILt, ext_iff'] <;> constructor <;> intro h <;>
+  cases i <;> cases i' <;> simp [ILt, ext_iff2] <;> constructor <;> intro h <;>
     (try simp_all [eq_comm]) <;> (try tauto)
 
 /-- `intersection(b)` of two valid intervals: `[max, min)` when they overlap, otherwise `[0, 0)`. -/

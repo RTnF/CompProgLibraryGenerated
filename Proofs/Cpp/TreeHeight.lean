@@ -22,11 +22,11 @@ theorem step {α : Type} [Inhabited α] (a a0 : Array α) (f : Nat → α) (L : 
     (∀ i, i < L + 1 → (set a (L : Int) (f L))[i]! = f i) ∧
       (∀ k, L + 1 ≤ k → (set a (L : Int) (f L))[k]! = a0[k]!) := by
   refine ⟨fun i hi => ?_, fun k hk => ?_⟩
-  · rw [getElem!_set _ _ _ _ (by simpa using hsz)]
+  · rw [getElemBang_set _ _ _ _ (by simpa using hsz)]
     by_cases h : i = L
     · simp [h]
     · simp only [Int.toNat_natCast, h, ite_false]; exact hdone i (by omega)
-  · rw [getElem!_set _ _ _ _ (by simpa using hsz)]
+  · rw [getElemBang_set _ _ _ _ (by simpa using hsz)]
     simp only [Int.toNat_natCast, show k ≠ L by omega, ite_false]; exact hrest k (by omega)
 
 /-- `tree_height(d0, d1, h, n)`: `h[i] = pick d0[i] d1[i]` for `i < n`, the rest of `h` is kept; `n + 1` steps. -/

@@ -25,7 +25,7 @@ theorem init_step (v cs : Array T) (L : Nat) (hL : L < v.size) (hsz : cs.size = 
   intro k hk'
   have e1 : (1 + (L : Int)).toNat = L + 1 := by omega
   have e2 : 1 + (L : Int) - 1 = L := by omega
-  rw [getElem!_set _ _ _ _ (by omega), e1, e2, get_natCast, get_natCast]
+  rw [getElemBang_set _ _ _ _ (by omega), e1, e2, get_natCast, get_natCast]
   by_cases e : k = L + 1
   · subst e; simp only [ite_true]; rw [hk L (le_refl _), pre_succ v L hL]
   · simp only [e, ite_false]; exact hk k (by omega)
@@ -51,7 +51,7 @@ theorem init_spec (v : Array T) (t0 : Nat) :
     obtain ⟨hsz, hk, hc⟩ := ‹_ ∧ _ ∧ _›
     exact ⟨hsz, init_step v _ _ (by omega) hsz hk, by omega⟩
   · refine ⟨by simp [replicate, Proofs.Cpp.size], ?_, by simp [Proofs.Cpp.size]; omega⟩
-    rw [getElem!_set _ _ _ _ (by simp [replicate, Proofs.Cpp.size])]
+    rw [getElemBang_set _ _ _ _ (by simp [replicate, Proofs.Cpp.size])]
     simp [pre]
   · obtain ⟨hsz, hk, hc⟩ := ‹_ ∧ _ ∧ _›
     simp [range, Proofs.Cpp.size] at hk hc
@@ -127,7 +127,7 @@ def RowRect (v : Array (Array T)) (m : Nat) (cs : Array (Array T)) (i : Nat) : P
 theorem set_get_other (b : Array (Array T)) (i k : Nat) (x : Array T) (hk : k ≠ i) :
     (set b (i : Int) x)[k]! = b[k]! := by
   by_cases hi : i < b.size
-  · rw [getElem!_set _ _ _ _ (by simpa using hi)]; simp [hk]
+  · rw [getElemBang_set _ _ _ _ (by simpa using hi)]; simp [hk]
   · simp [set, Array.set!, Array.setIfInBounds, hi]
 
 /-- One step of the inner loop of the second phase: append `v[I-1][J]` to the running row sum of row `I`. -/
@@ -145,7 +145,7 @@ theorem rowpush_step (v b : Array (Array T)) (I J : Nat) (m : Nat) (hI : 1 ≤ I
     congr 2
     rw [hrow]; simp
   refine ⟨by simp [b', hsz], fun k hk => set_get_other _ _ _ _ hk, by rw [hb']; simp [hrow], fun j hj => ?_⟩
-  rw [hb', getElem!_push, hrow]
+  rw [hb', getElemBang_push, hrow]
   by_cases h1 : j < J + 1
   · simp only [h1, ite_true]; exact hval j (by omega)
   · have : j = J + 1 := by omega
@@ -178,8 +178,8 @@ theorem colacc_step (v b : Array (Array T)) (I j m : Nat) (hI : 2 ≤ I) (hIn : 
   have hb' : b'[I]! = set (b[I]!) (j : Int) (b[I]![j]! + b[I - 1]![j]!) := by
     simp only [b', size_get_set_self _ _ _ hIs, get_natCast, e1]
   refine ⟨by simp [b', hsz], fun k hk => set_get_other _ _ _ _ hk, by rw [hb']; simp [hrowsz], fun k hk => ?_, ?_⟩
-  · rw [hb', getElem!_set _ _ _ _ (by simp; omega)]; simp [hk]
-  · rw [hb', getElem!_set _ _ _ _ (by simp; omega)]
+  · rw [hb', getElemBang_set _ _ _ _ (by simp; omega)]; simp [hk]
+  · rw [hb', getElemBang_set _ _ _ _ (by simp; omega)]
     simp only [Int.toNat_natCast, ite_true, hcur, hprev.2 j hj]
     rw [show I = (I - 1) + 1 by omega, rect_succ v (I - 1) j (by omega), add_comm]
     simp
@@ -279,7 +279,7 @@ theorem init2_spec (v : Array (Array T)) (hn : 0 < v.size) (hm : 0 < v[0]!.size)
   · -- phase 2: before the rows
     simp +zetaDelta [Proofs.Cpp.size, get_eq, resize, replicate, range_length] at *
     refine ⟨by simp [Proofs.Cpp.set], fun i h1 h2 => by omega, fun i hi1 hi2 => ?_, by omega⟩
-    · rw [getElem!_set _ _ _ _ (by simp)]
+    · rw [getElemBang_set _ _ _ _ (by simp)]
       simp [show i ≠ 0 by omega, getElem!_pos, show i < v.size + 1 by omega]
   · -- phase 3, inner loop: add row I - 1 to row I at column j
     rename_i cs n m t1 s_1 H1 cs_1 t2 cs_2 r s_2 H2 pref cur suff H3 b s_3 H4 pref_1 cur_1 suff_1 H5 b_1 s_4 cs_3 H6 H7 H8

@@ -44,7 +44,7 @@ theorem cont (parent out o : Array Int) (from_ to_ k v : Int) (m s t0 : Nat)
     · exact absurd (by rw [hv', h]; simpa using hm) hv
   have e : (k + 1).toNat = k.toNat + 1 := by omega
   have hw : ∀ j : Nat, (set o k v)[j]! = if j = k.toNat then v else o[j]! :=
-    fun j => getElem!_set _ _ _ _ (by omega)
+    fun j => getElemBang_set _ _ _ _ (by omega)
   refine ⟨⟨by omega, by omega, by rw [e, up, ← hv']; rfl, by simp [hsz], fun j hj => ?_, fun j hj => ?_,
     by omega⟩, by omega⟩
   · rw [hw]
@@ -62,7 +62,7 @@ theorem post (parent out o : Array Int) (from_ to_ k v : Int) (m s t0 : Nat) (ho
   obtain ⟨hk, -, hsz, hd, hr, hc⟩ := h
   subst hk
   have hw : ∀ j : Nat, (set o (m : Int) from_)[j]! = if j = m then from_ else o[j]! := by
-    intro j; rw [getElem!_set _ _ _ _ (by simp; omega)]; simp
+    intro j; rw [getElemBang_set _ _ _ _ (by simp; omega)]; simp
   refine ⟨rfl, hsz, fun j hj => ?_, fun j hj => ?_, hc⟩
   · rw [hw]
     by_cases hj' : j = m

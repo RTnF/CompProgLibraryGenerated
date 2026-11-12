@@ -36,7 +36,7 @@ theorem stepsS_succ (r : Nat) (hr : 0 < r) : stepsS r = 1 + stepsS (r - lowb r) 
   obtain ⟨r', rfl⟩ : ∃ r', r = r' + 1 := ⟨r - 1, by omega⟩
   rw [stepsS]
 
-theorem log2_mono' (a b : Nat) (h : a ≤ b) : Nat.log2 a ≤ Nat.log2 b := by
+theorem log2_mono1 (a b : Nat) (h : a ≤ b) : Nat.log2 a ≤ Nat.log2 b := by
   rcases Nat.eq_zero_or_pos a with ha | ha
   · subst ha; simp [Nat.log2_zero]
   · exact log2_mono a b ha h
@@ -142,10 +142,10 @@ theorem add_step {t : cp.FenwickTree T} {n : Nat} {A : Nat → T} (h : Rep t n A
   intro k hk hkn
   by_cases e : k = q
   · subst e
-    rw [getElem!_set _ _ _ _ (by simpa using hq), get_eq, Int.toNat_natCast, hnodes k hk hkn]
+    rw [getElemBang_set _ _ _ _ (by simpa using hq), get_eq, Int.toNat_natCast, hnodes k hk hkn]
     have := lowb_pos k hk
     simp [hc, show k < k + lowb k by omega]
-  · rw [getElem!_set _ _ _ _ (by simpa using hq), Int.toNat_natCast, if_neg e]
+  · rw [getElemBang_set _ _ _ _ (by simpa using hq), Int.toNat_natCast, if_neg e]
     rw [hnodes k hk hkn]
     by_cases hlt : k < q
     · simp [hlt, show k < q + lowb q by omega]
@@ -274,7 +274,7 @@ theorem build_step (A : Nat → T) (n k : Nat) (tr : Array T) (hsz : tr.size = n
   rw [hrhs]
   by_cases hj : k + lowb k < n + 1
   · simp only [hj, ite_true]
-    rw [getElem!_set _ _ _ _ (by simp; omega)]
+    rw [getElemBang_set _ _ _ _ (by simp; omega)]
     simp only [Int.toNat_natCast]
     by_cases htj : t = k + lowb k
     · subst htj
@@ -312,7 +312,7 @@ theorem init_vec_spec (v : Array T) (hn : v.size + 1 < 2 ^ 31) (t0 : Nat) :
     have hl := range_prefix_length hcur
     simp [size] at e hl
     refine ⟨fun t ht' htl => ?_, by omega⟩
-    rw [getElem!_set _ _ _ _ (by omega)]
+    rw [getElemBang_set _ _ _ _ (by omega)]
     by_cases h' : t = (cur + 1).toNat
     · simp only [h', ite_true, get_eq]; congr 1; omega
     · simp only [h', ite_false]; exact hv t ht' (by omega)
@@ -392,8 +392,8 @@ theorem sum_range_spec (t : cp.FenwickTree T) (n : Nat) (A : Nat → T) (h : Rep
       simp
     · have := stepsS_le_log r.toNat
       have := stepsS_le_log l.toNat
-      have := log2_mono' r.toNat n (by omega)
-      have := log2_mono' l.toNat n (by omega)
+      have := log2_mono1 r.toNat n (by omega)
+      have := log2_mono1 l.toNat n (by omega)
       omega
 
 end Proofs.Cpp.FenwickTree

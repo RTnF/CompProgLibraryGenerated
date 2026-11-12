@@ -162,14 +162,14 @@ theorem relax_rel (n : Nat) (st : St) (F V a : Nat) (p d c s : Array Int) (sp v 
     refine ⟨by rw [toList_set, hp, hw', hv], by rw [toList_set, hd, hw', get_toList, hd, hv]; simp,
       by rw [toList_set, hc, hw', get_toList, hc, hq, hv]; simp, by simp [hs], by simp [hsp], fun j hj => ?_, ?_⟩
     · simp only [List.length_append, List.length_singleton] at hj
-      rw [getElem!_set _ _ _ _ (by omega)]
+      rw [getElemBang_set _ _ _ _ (by omega)]
       by_cases hjs : j = sp.toNat
       · rw [if_pos hjs, hw]
         have : j = st.S.length := by omega
         subst this; simp [List.getD_eq_getElem?_getD]
       · rw [if_neg hjs, hS j (by omega)]
         simp [List.getD_eq_getElem?_getD, List.getElem?_append_left (show j < st.S.length by omega)]
-    · rw [getElem!_set _ _ _ _ (by omega), if_neg (by omega)]; exact hF
+    · rw [getElemBang_set _ _ _ _ (by omega), if_neg (by omega)]; exact hF
   · unfold relax
     rw [if_neg (fun h => hneg (hcond.mpr h))]
     exact ⟨hp, hd, hc, hs, hsp, hS, hF⟩
@@ -334,8 +334,8 @@ theorem pop_done (P : Pre target cost parent depth cd n root Cb) (hhead : ∀ k 
   · rw [cF, cV] at hlt
     simp only [if_pos hlt]
     refine ⟨hp, hd, hc, by simp [hs], hsp, fun j hj => ?_, ?_⟩
-    · rw [getElem!_set _ _ _ _ (by simp; omega), if_neg (by simp; omega)]; exact hS j hj
-    · rw [getElem!_set _ _ _ _ (by simp; omega), if_pos (by simp)]
+    · rw [getElemBang_set _ _ _ _ (by simp; omega), if_neg (by simp; omega)]; exact hS j hj
+    · rw [getElemBang_set _ _ _ _ (by simp; omega), if_pos (by simp)]
   · rw [cF, cV] at hlt
     simp only [if_neg hlt]
     exact ⟨hp, hd, hc, hs, hsp, hS, hF⟩
@@ -361,9 +361,9 @@ theorem outer_init (P : Pre target cost parent depth cd n root Cb) (stk : Array 
     by rw [toList_set]; simp [X, runA, init0, initSt], by simp [hstk], by simp [X, runA, init0, initSt],
     fun j hj => ?_, ?_⟩
   · simp [X, runA, init0, initSt] at hj; subst hj
-    rw [getElem!_set _ _ _ _ (by simp; omega), if_neg (by simp; omega), getElem!_set _ _ _ _ (by simp; omega)]
+    rw [getElemBang_set _ _ _ _ (by simp; omega), if_neg (by simp; omega), getElemBang_set _ _ _ _ (by simp; omega)]
     simp [X, runA, init0, initSt]
-  · rw [getElem!_set _ _ _ _ (by simp; omega)]; simp [X, runA, init0]
+  · rw [getElemBang_set _ _ _ _ (by simp; omega)]; simp [X, runA, init0]
 
 end Outer
 

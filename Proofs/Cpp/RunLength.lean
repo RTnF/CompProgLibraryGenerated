@@ -25,10 +25,10 @@ theorem pairsOf_snoc (vals : Array T) (cnts : Array Int) (m : Nat) (x : T) (c : 
   · apply List.map_congr_left
     intro k hk
     simp at hk
-    rw [getElem!_set _ _ _ _ (by simpa using hv), getElem!_set _ _ _ _ (by simpa using hc)]
+    rw [getElemBang_set _ _ _ _ (by simpa using hv), getElemBang_set _ _ _ _ (by simpa using hc)]
     simp [show k ≠ m by omega]
   · simp only [List.map_cons, List.map_nil]
-    rw [getElem!_set _ _ _ _ (by simpa using hv), getElem!_set _ _ _ _ (by simpa using hc)]
+    rw [getElemBang_set _ _ _ _ (by simpa using hv), getElemBang_set _ _ _ _ (by simpa using hc)]
     simp
 
 theorem run_length_spec (v vals : Array T) (cnts : Array Int) (hv : v.size ≤ vals.size) (hc : v.size ≤ cnts.size)
@@ -90,7 +90,7 @@ theorem run_length_spec (v vals : Array T) (cnts : Array Int) (hv : v.size ≤ v
       have hsnoc := pairsOf_snoc va co m.toNat pr cn hmv hmc
       rw [show ((m.toNat : Nat) : Int) = m by omega] at hsnoc
       refine ⟨by omega, by omega, by simp [hvs], by simp [hcs], fun k hk => ?_, ⟨?_, by omega⟩, by omega⟩
-      · rw [getElem!_set _ _ _ _ (by omega), getElem!_set _ _ _ _ (by omega)]
+      · rw [getElemBang_set _ _ _ _ (by omega), getElemBang_set _ _ _ _ (by omega)]
         simp only [show k ≠ m.toNat by omega, ite_false]
         exact hkeep k (by omega)
       · rw [show (m + 1).toNat = m.toNat + 1 by omega, hsnoc, rle_snoc_last _ _ _ _ hrle.symm, if_neg hne]
@@ -115,7 +115,7 @@ theorem run_length_spec (v vals : Array T) (cnts : Array Int) (hv : v.size ≤ v
       rw [show ((m.toNat : Nat) : Int) = m by omega] at hsnoc
       refine ⟨by omega, ?_, by simp [hvs], by simp [hcs], fun k hk => ?_, by omega⟩
       · rw [show (m + 1).toNat = m.toNat + 1 by omega, hsnoc, hrle]
-      · rw [getElem!_set _ _ _ _ (by omega), getElem!_set _ _ _ _ (by omega)]
+      · rw [getElemBang_set _ _ _ _ (by omega), getElemBang_set _ _ _ _ (by omega)]
         simp only [show k ≠ m.toNat by omega, ite_false]
         exact hkeep k (by omega)
 

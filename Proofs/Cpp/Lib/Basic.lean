@@ -54,7 +54,7 @@ namespace Proofs.Cpp
 @[simp] theorem size_set {α : Type} (v : Array α) (i : Int) (x : α) : (set v i x).size = v.size := by
   simp [set]
 
-theorem getElem!_set {α : Type} [Inhabited α] (v : Array α) (i : Int) (x : α) (k : Nat)
+theorem getElemBang_set {α : Type} [Inhabited α] (v : Array α) (i : Int) (x : α) (k : Nat)
     (hk : i.toNat < v.size) : (set v i x)[k]! = if k = i.toNat then x else v[k]! := by
   unfold set
   by_cases h : k = i.toNat
@@ -175,7 +175,7 @@ namespace Proofs.Cpp
 /-- A bound on the remaining iterations: the product of the pair halves on each step with `b ≤ a`. -/
 def gcdCost (a b : Nat) : Nat := if b = 0 then 0 else (if b ≤ a then 1 else 2) + Nat.log2 (a * b)
 
-theorem log2_mono'' (a b : Nat) (h : a ≤ b) : Nat.log2 a ≤ Nat.log2 b := by
+theorem log2_mono2 (a b : Nat) (h : a ≤ b) : Nat.log2 a ≤ Nat.log2 b := by
   rcases Nat.eq_zero_or_pos a with ha | ha
   · subst ha; simp [Nat.log2_zero]
   · rw [Nat.le_log2 (by omega)]; exact Nat.le_trans (Nat.log2_self_le (by omega)) h
@@ -198,7 +198,7 @@ theorem gcdCost_step (a b : Nat) (hb : 0 < b) : 1 + gcdCost b (a % b) ≤ gcdCos
         rw [Nat.mul_comm a b]
         calc 2 * (b * (a % b)) = b * (2 * (a % b)) := by rw [← Nat.mul_assoc, Nat.mul_comm 2 b, Nat.mul_assoc]
           _ ≤ b * a := this
-      have := log2_mono'' _ _ hm
+      have := log2_mono2 _ _ hm
       simp [gcdCost, hr0, show b ≠ 0 by omega, hba, show a % b ≤ b by omega]
       omega
   · have e : a % b = a := Nat.mod_eq_of_lt (by omega)
@@ -211,7 +211,7 @@ end Proofs.Cpp
 
 namespace Proofs.Cpp
 
-theorem getElem!_push {α : Type} [Inhabited α] (v : Array α) (x : α) (j : Nat) :
+theorem getElemBang_push {α : Type} [Inhabited α] (v : Array α) (x : α) (j : Nat) :
     (v.push x)[j]! = if j < v.size then v[j]! else if j = v.size then x else default := by
   by_cases h1 : j < v.size
   · simp [h1, getElem!_pos, Array.getElem_push_lt, Nat.lt_succ_of_lt h1]
@@ -221,7 +221,7 @@ theorem getElem!_push {α : Type} [Inhabited α] (v : Array α) (x : α) (j : Na
 
 @[simp] theorem size_get_set_self {α : Type} [Inhabited α] (v : Array (Array α)) (i : Nat) (x : Array α)
     (hi : i < v.size) : (set v (i : Int) x)[i]! = x := by
-  rw [getElem!_set _ _ _ _ (by simpa using hi)]; simp
+  rw [getElemBang_set _ _ _ _ (by simpa using hi)]; simp
 
 end Proofs.Cpp
 

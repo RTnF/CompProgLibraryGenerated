@@ -49,7 +49,7 @@ theorem count_step (target : Array Int) (n : Nat) (hT : ∀ x ∈ natL target, x
   have hxn : x < n := hT x (by rw [hx, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hL']; simp)
   rw [target_val target htarget L, ← hx, take_succ_getD _ _ hL', ← hx]
   refine ⟨by simp [hs], fun w hw => ?_⟩
-  rw [getElem!_set _ _ _ _ (by simp; omega), List.count_append, List.count_singleton]
+  rw [getElemBang_set _ _ _ _ (by simp; omega), List.count_append, List.count_singleton]
   by_cases hwx : w = x
   · subst hwx; simp [get_eq, hc _ hw]
   · rw [if_neg (by simp; omega), hc w hw]; simp [Ne.symm hwx]
@@ -78,7 +78,7 @@ theorem enq_step (target : Array Int) (n : Nat) (d o : Array Int) (q : Int) (L :
     rw [hF, if_pos h0']
     refine ⟨by simp [hs], by simp; omega, fun j hj => ?_⟩
     simp only [List.length_append, List.length_singleton] at hj
-    rw [getElem!_set _ _ _ _ (by omega)]
+    rw [getElemBang_set _ _ _ _ (by omega)]
     by_cases hjq : j = q.toNat
     · rw [if_pos hjq]; simp [List.getD_eq_getElem?_getD, show j = (F target L).length by omega]
     · rw [if_neg hjq, he j (by omega)]
@@ -210,13 +210,13 @@ theorem decr_step (H : HeadOK (natL head) (natL target) n) (hT : ∀ x ∈ natL 
   have hlenx : x < st'.1.length := by rw [Ij.len]; exact hxn
   have hw' : w.toNat = x := by rw [hwx]; simp
   have gset : get dd' w = get dd w - 1 := by
-    simp only [dd']; rw [get_eq, getElem!_set _ _ _ _ (by rw [hw']; omega), if_pos rfl]
+    simp only [dd']; rw [get_eq, getElemBang_set _ _ _ _ (by rw [hw']; omega), if_pos rfl]
   have gdd' : get dd' w = ((st'.1.getD x 0 - 1 : Nat) : Int) := by
     rw [gset, gdd]; omega
   have hset : ∀ w' : Nat, w' < n → dd'[w']! = ((decr x st').1.getD w' 0 : Int) := by
     intro w' hwn
     simp only [dd', decr]
-    rw [getElem!_set _ _ _ _ (by rw [hw']; omega), gdd, hw']
+    rw [getElemBang_set _ _ _ _ (by rw [hw']; omega), gdd, hw']
     by_cases h : w' = x
     · subst h
       rw [if_pos rfl]; simp only [List.getD_eq_getElem?_getD, List.getElem?_set_self hlenx, Option.getD_some]
@@ -235,7 +235,7 @@ theorem decr_step (H : HeadOK (natL head) (natL target) n) (hT : ∀ x ∈ natL 
       by rw [hS, hq]; simp, fun k hk => ?_⟩
     rw [hS] at hk ⊢
     simp only [List.length_append, List.length_singleton] at hk
-    rw [getElem!_set _ _ _ _ (by omega)]
+    rw [getElemBang_set _ _ _ _ (by omega)]
     by_cases hkq : k = q.toNat
     · rw [if_pos hkq, hwx]; simp [List.getD_eq_getElem?_getD, show k = st'.2.length by omega]
     · rw [if_neg hkq, he k (by omega)]

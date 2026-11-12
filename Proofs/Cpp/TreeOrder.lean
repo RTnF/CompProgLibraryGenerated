@@ -161,7 +161,7 @@ theorem inner_child (H : TO (natL head) (natL target) parent.toList n root) (hhe
     simp only [q, List.length_append]; omega
   refine ⟨by simp [hsz], by simp; omega, fun j hj => ?_⟩
   simp only [List.length_append, List.length_singleton] at hj
-  rw [getElem!_set _ _ _ _ (by omega)]
+  rw [getElemBang_set _ _ _ _ (by omega)]
   by_cases hjc : j = cnt.toNat
   · rw [if_pos hjc, hx, show j = q.length by omega, qat_last]
   · rw [if_neg hjc, qat_append_left _ _ _ (by omega)]; exact he j (by omega)
@@ -243,7 +243,7 @@ theorem outer_init (H : TO (natL head) (natL target) parent.toList n root) (ord 
   refine ⟨by simp [hord], by simp [Q, qrun], fun j hj => ?_⟩
   simp [Q, qrun] at hj
   subst hj
-  rw [getElem!_set _ _ _ _ (by simp; omega)]
+  rw [getElemBang_set _ _ _ _ (by simp; omega)]
   simp [qat, Q, qrun]
 
 end

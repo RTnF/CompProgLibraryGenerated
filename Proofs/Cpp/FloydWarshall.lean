@@ -35,7 +35,7 @@ theorem fstep (W : Nat → Nat → Nat) (N K I J : Nat) (hK : K < N) (hI : I < N
   have hlt : I * N + J < N * N := idx_lt N I J hI hJ
   rw [ga, gb, gc]
   refine ⟨fun hv => ⟨by simp [hs], fun p q hp hq => ?_⟩, fun hv => ⟨hs, fun p q hp hq => ?_⟩⟩
-  · rw [getElem!_set _ _ _ _ (by rw [idx]; omega), idx]
+  · rw [getElemBang_set _ _ _ _ (by rw [idx]; omega), idx]
     by_cases hpq : p = I ∧ q = J
     · obtain ⟨rfl, rfl⟩ := hpq
       rw [if_pos rfl, Em_next, hD]; push_cast at hv ⊢; omega
@@ -52,7 +52,7 @@ theorem cur_eq {N : Nat} {pref suff : List Int} {c : Int} (h : range 0 (N : Int)
   have l := range_prefix_length h
   simp at e l; exact ⟨e, l⟩
 
-theorem fstep' (W : Nat → Nat → Nat) (N : Nat) (pk pi pj sk si sj : List Int) (ck ci cj : Int)
+theorem fstep2 (W : Nat → Nat → Nat) (N : Nat) (pk pi pj sk si sj : List Int) (ck ci cj : Int)
     (hk : range 0 (N : Int) = pk ++ ck :: sk) (hi : range 0 (N : Int) = pi ++ ci :: si)
     (hj : range 0 (N : Int) = pj ++ cj :: sj) (d : Array Int) (h : FInv W N pk.length pi.length pj.length d) :
     (get d (ci * N + ck) + get d (ck * N + cj) < get d (ci * N + cj) →
@@ -96,9 +96,9 @@ theorem floyd_warshall_vec_int_spec (d : Array Int) (N : Nat) (hsz : d.size = N 
       c = t0 + 1 + pk.length * (1 + N * (1 + N)) + 1 + pi.length * (1 + N) + 1 + xs.prefix.length⌝
   all_goals simp +zetaDelta at *
   · obtain ⟨hI, hc⟩ := ‹FInv _ N _ _ _ _ ∧ _ = _ + 1 + _›
-    exact ⟨(fstep' _ N _ _ _ _ _ _ _ _ _ (by assumption) (by assumption) (by assumption) _ hI).1 ‹_›, by omega⟩
+    exact ⟨(fstep2 _ N _ _ _ _ _ _ _ _ _ (by assumption) (by assumption) (by assumption) _ hI).1 ‹_›, by omega⟩
   · obtain ⟨hI, hc⟩ := ‹FInv _ N _ _ _ _ ∧ _ = _ + 1 + _›
-    exact ⟨(fstep' _ N _ _ _ _ _ _ _ _ _ (by assumption) (by assumption) (by assumption) _ hI).2 (Int.not_lt.mpr ‹_›), by omega⟩
+    exact ⟨(fstep2 _ N _ _ _ _ _ _ _ _ _ (by assumption) (by assumption) (by assumption) _ hI).2 (Int.not_lt.mpr ‹_›), by omega⟩
   · obtain ⟨hI, hc⟩ := ‹FInv _ N _ _ _ _ ∧ _›
     exact ⟨hI, by omega⟩
   · obtain ⟨hI, hc⟩ := ‹FInv _ N _ _ N _ ∧ _›
@@ -123,7 +123,7 @@ def NInv (W : Nat → Nat → Nat) (N k i j : Nat) (d : Array (Array Int)) : Pro
   d.size = N ∧ (∀ p : Nat, p < N → (d[p]!).size = N) ∧
     ∀ p q : Nat, p < N → q < N → (d[p]!)[q]! = (Em W k i j p q : Int)
 
-theorem nstep' (W : Nat → Nat → Nat) (N : Nat) (pk pi pj sk si sj : List Int) (ck ci cj : Int)
+theorem nstep2 (W : Nat → Nat → Nat) (N : Nat) (pk pi pj sk si sj : List Int) (ck ci cj : Int)
     (hk : range 0 (N : Int) = pk ++ ck :: sk) (hi : range 0 (N : Int) = pi ++ ci :: si)
     (hj : range 0 (N : Int) = pj ++ cj :: sj) (d : Array (Array Int)) (h : NInv W N pk.length pi.length pj.length d) :
     (get (get d ci) ck + get (get d ck) cj < get (get d ci) cj →
@@ -144,15 +144,15 @@ theorem nstep' (W : Nat → Nat → Nat) (N : Nat) (pk pi pj sk si sj : List Int
   have hD : Dm W (K + 1) I J = min (Dm W K I J) (Dm W K I K + Dm W K K J) := rfl
   rw [ga, gb, gc]
   refine ⟨fun hv => ⟨by simp [hs], fun p hp => ?_, fun p q hp hq => ?_⟩, fun hv => ⟨hs, hr, fun p q hp hq => ?_⟩⟩
-  · rw [getElem!_set _ _ _ _ (by simp; omega)]
+  · rw [getElemBang_set _ _ _ _ (by simp; omega)]
     by_cases hpi : p = I
     · simp only [Int.toNat_natCast, hpi, ite_true, size_set, get_eq]; exact hr I hI
     · simp only [Int.toNat_natCast, hpi, ite_false]; exact hr p hp
-  · rw [getElem!_set _ _ _ _ (by simp; omega)]
+  · rw [getElemBang_set _ _ _ _ (by simp; omega)]
     by_cases hpi : p = I
     · subst hpi
       simp only [Int.toNat_natCast, ite_true]
-      rw [getElem!_set _ _ _ _ (by simp [get_eq]; rw [hr _ hp]; omega)]
+      rw [getElemBang_set _ _ _ _ (by simp [get_eq]; rw [hr _ hp]; omega)]
       by_cases hqj : q = J
       · subst hqj; rw [if_pos (by simp), Em_next, hD]; push_cast at hv ⊢; omega
       · rw [if_neg (by simp; omega), Em_other _ _ _ _ _ _ (fun e => hqj e.2), get_eq, Int.toNat_natCast, he _ q hp hq]
@@ -192,9 +192,9 @@ theorem floyd_warshall_vec_spec (d : Array (Array Int)) (hr : ∀ p : Nat, p < d
       c = t0 + 1 + pk.length * (1 + d.size * (1 + d.size)) + 1 + pi.length * (1 + d.size) + 1 + xs.prefix.length⌝
   all_goals simp +zetaDelta [size] at *
   · obtain ⟨hI, hc⟩ := ‹NInv _ _ _ _ _ _ ∧ _ = _ + 1 + _›
-    exact ⟨(nstep' _ _ _ _ _ _ _ _ _ _ _ (by assumption) (by assumption) (by assumption) _ hI).1 ‹_›, by omega⟩
+    exact ⟨(nstep2 _ _ _ _ _ _ _ _ _ _ _ (by assumption) (by assumption) (by assumption) _ hI).1 ‹_›, by omega⟩
   · obtain ⟨hI, hc⟩ := ‹NInv _ _ _ _ _ _ ∧ _ = _ + 1 + _›
-    exact ⟨(nstep' _ _ _ _ _ _ _ _ _ _ _ (by assumption) (by assumption) (by assumption) _ hI).2
+    exact ⟨(nstep2 _ _ _ _ _ _ _ _ _ _ _ (by assumption) (by assumption) (by assumption) _ hI).2
       (Int.not_lt.mpr ‹_›), by omega⟩
   · obtain ⟨hI, hc⟩ := ‹NInv _ _ _ _ _ _ ∧ _›
     exact ⟨hI, by omega⟩

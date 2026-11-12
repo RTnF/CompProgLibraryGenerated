@@ -22,7 +22,7 @@ theorem step {Cost : Type} [Inhabited Cost] (ac : Array Cost) (c : Cost) (L : Na
   have g : ∀ k, ac'[k]! = if k = 2 * L + 1 then c else if k = 2 * L then c else ac[k]! := by
     intro k
     simp only [ac']
-    rw [getElem!_set _ _ _ _ (by simp; omega), getElem!_set _ _ _ _ (by omega), e1, e2]
+    rw [getElemBang_set _ _ _ _ (by simp; omega), getElemBang_set _ _ _ _ (by omega), e1, e2]
   refine ⟨by simp [ac'], fun i hi => ?_, fun k hk => ?_⟩
   · rw [g, g]
     rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hi) with h | h

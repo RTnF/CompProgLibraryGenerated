@@ -23,7 +23,7 @@ theorem vector_fill_spec {T : Type} [Inhabited T] (x : Array T) (value : T) (t0 
     obtain ⟨hsz, hv, hc⟩ := ‹_ ∧ _ ∧ _›
     simp [size] at hl
     refine ⟨fun i hi => ?_, by omega⟩
-    rw [getElem!_set _ _ _ _ (by simp; omega)]
+    rw [getElemBang_set _ _ _ _ (by simp; omega)]
     simp only [toNat_zero_add]
     split
     · rfl

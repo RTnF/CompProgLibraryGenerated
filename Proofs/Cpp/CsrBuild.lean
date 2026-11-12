@@ -28,8 +28,8 @@ theorem inv1_step (n : Int) (hd : Array Int) (L : Nat) (hF : 0 ≤ fr[L]! ∧ fr
   have hidx : (fr[L]! + 1).toNat = (fr[L]!).toNat + 1 := by omega
   have hlt : (fr[L]! + 1).toNat < hd.size := by omega
   refine ⟨?_, fun k hk1 hkn => ?_⟩
-  · rw [getElem!_set _ _ _ _ hlt, if_neg (by omega), h0]
-  · rw [getElem!_set _ _ _ _ hlt, cnt_succ, hidx]
+  · rw [getElemBang_set _ _ _ _ hlt, if_neg (by omega), h0]
+  · rw [getElemBang_set _ _ _ _ hlt, cnt_succ, hidx]
     by_cases hkf : k = (fr[L]!).toNat + 1
     · subst hkf
       simp only [ite_true, show (fr[L]!).toNat + 1 - 1 = (fr[L]!).toNat by omega]
@@ -49,14 +49,14 @@ theorem inv2_step (n : Int) (hd : Array Int) (V : Nat) (hV : (V : Int) < n) (m :
   have hidx : ((V : Int) + 1).toNat = V + 1 := by omega
   have hlt : ((V : Int) + 1).toNat < hd.size := by omega
   refine ⟨fun k hk => ?_, fun k hk hkn => ?_⟩
-  · rw [getElem!_set _ _ _ _ hlt, hidx]
+  · rw [getElemBang_set _ _ _ _ hlt, hidx]
     by_cases e : k = V + 1
     · subst e
       simp only [ite_true, get_eq, hidx, Int.toNat_natCast]
       rw [hhi (V + 1) (by omega) (by omega), hlo V (le_refl _), ocnt]
       simp only [Nat.add_sub_cancel]; push_cast; ring
     · simp only [e, ite_false]; exact hlo k (by omega)
-  · rw [getElem!_set _ _ _ _ hlt, hidx, if_neg (by omega)]
+  · rw [getElemBang_set _ _ _ _ hlt, hidx, if_neg (by omega)]
     exact hhi k (by omega) hkn
 
 theorem inv3_step (ps hd : Array Int) (V : Nat) (n : Int) (hV : (V : Int) < n) (m : Nat) (hps : ps.size = n.toNat)
@@ -64,7 +64,7 @@ theorem inv3_step (ps hd : Array Int) (V : Nat) (n : Int) (hV : (V : Int) < n) (
     (hlo : ∀ v, v < V → ps[v]! = (ocnt (src fr) m v : Int)) :
     ∀ v, v < V + 1 → (set ps (V : Int) (get hd V))[v]! = (ocnt (src fr) m v : Int) := by
   intro v hv
-  rw [getElem!_set _ _ _ _ (by simp; omega), Int.toNat_natCast]
+  rw [getElemBang_set _ _ _ _ (by simp; omega), Int.toNat_natCast]
   by_cases e : v = V
   · subst e; simp only [ite_true, get_natCast]; exact hhd v (by omega)
   · simp only [e, ite_false]; exact hlo v (by omega)
@@ -111,7 +111,7 @@ theorem inv4_step (to_ tg ps : Array Int) (n : Int) (L m : Nat) (hL : L < m) (hF
   have hplt := pos_lt fr m n.toNat L hL hall
   constructor
   · intro v hv
-    rw [getElem!_set _ _ _ _ (by omega), get_eq, cnt_succ]
+    rw [getElemBang_set _ _ _ _ (by omega), get_eq, cnt_succ]
     by_cases e : v = (fr[L]!).toNat
     · subst e
       simp only [ite_true, hp, ← hf]
@@ -123,7 +123,7 @@ theorem inv4_step (to_ tg ps : Array Int) (n : Int) (L m : Nat) (hL : L < m) (hF
     rw [get_eq, hp]
     have hcast : ((ocnt (src fr) m (src fr L) : Int) + (cnt (src fr) (src fr L) L : Int)).toNat =
         ocnt (src fr) m (src fr L) + cnt (src fr) (src fr L) L := by omega
-    rw [getElem!_set _ _ _ _ (by rw [hcast]; omega), hcast]
+    rw [getElemBang_set _ _ _ _ (by rw [hcast]; omega), hcast]
     rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hi) with h | h
     · have hne := pos_ne fr m i L h hL
       simp only [src] at hne
