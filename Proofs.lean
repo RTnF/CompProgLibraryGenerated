@@ -572,3 +572,5 @@ import Proofs.Generated.FloorSumUnsigned
 import Proofs.Cpp.FloorSumUnsigned
 import Proofs.Generated.TopologicalSort
 import Proofs.Cpp.TopologicalSort
+import Proofs.Generated.FloydWarshall
+import Proofs.Cpp.FloydWarshall
