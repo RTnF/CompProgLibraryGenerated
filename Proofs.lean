@@ -586,3 +586,5 @@ import Proofs.Generated.SegtreeSum
 import Proofs.Cpp.SegtreeSum
 import Proofs.Generated.EnumerateQuotients
 import Proofs.Cpp.EnumerateQuotients
+import Proofs.Generated.FloorSumSigned
+import Proofs.Cpp.FloorSum

@@ -382,8 +382,11 @@ class Fn:
                 return f"(if {text} then (1 : {lt}) else 0)", expected
         if ty.kind in ("u32", "u64"):
             if expected.kind == "int":
-                # unsigned to signed: the value must fit the signed type (precondition)
-                return f"({text}.toNat : Int)", expected
+                src = 32 if ty.kind == "u32" else 64
+                if expected.width > src:
+                    return f"({text}.toNat : Int)", expected
+                # unsigned to a signed type of the same or smaller width: two's complement (C++20 [conv.integral])
+                return f"(Cpp.toSigned {expected.width} {text}.toNat)", expected
             if expected.kind == "bool":
                 return f"(decide ({text} ≠ 0))", BOOL
             if expected.kind == "tparam":

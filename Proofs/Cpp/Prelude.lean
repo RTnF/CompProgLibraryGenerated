@@ -159,6 +159,10 @@ def sortCost (n : Nat) : Nat := n * (Nat.log2 n + 1)
 /-- `a / b` (rounds toward zero). -/
 @[inline] def div (a b : Int) : Int := a.tdiv b
 
+/-- Conversion of an unsigned value `v` to a signed `w`-bit type: the value modulo `2^w` in two's complement
+(C++20 [conv.integral]; GCC defines the same for earlier standards). -/
+def toSigned (w v : Nat) : Int := if v % 2 ^ w < 2 ^ (w - 1) then (v % 2 ^ w : Nat) else (v % 2 ^ w : Nat) - 2 ^ w
+
 /-- `a % b` (the sign of `a`). -/
 @[inline] def mod (a b : Int) : Int := a.tmod b
 

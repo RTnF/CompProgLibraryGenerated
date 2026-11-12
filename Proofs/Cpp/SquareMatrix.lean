@@ -283,17 +283,6 @@ theorem mat_mul_spec {T : Type} [Inhabited T] [Zero T] [Add T] [Mul T] (a b c : 
   · exact ⟨⟨rfl, fun i hi => absurd hi (by omega), fun i _ => rfl⟩, ‹_›⟩
   · exact ‹_ ∧ _›
 
-/-- A triple from every start tick, as a step `mvcgen` can use: the continuation must hold for every result with the
-property. -/
-theorem wp_of_triple {α : Type} {x : M α} {P : Nat → α → Nat → Prop}
-    (h : ∀ t0, ⦃fun c => ⌜c = t0⌝⦄ x ⦃⇓ r c => ⌜P t0 r c⌝⦄) {Q : PostCond α PS} :
-    ⦃fun t => ⌜∀ r c, P t r c → (Q.1 r c).down⌝⦄ x ⦃Q⦄ := by
-  apply Triple.iff.mpr
-  intro s hs
-  obtain ⟨r, c, hx, hp⟩ := run_of_triple (h s)
-  simp [wp, hx]
-  exact hs r c hp
-
 /-- The result of `mat_mul`: the product in the first `N * N` entries, `c` after them. -/
 def mulRes {T : Type} [Inhabited T] [Zero T] [Add T] [Mul T] (a b c : Array T) (N : Nat) : Array T :=
   Array.ofFn (n := c.size) (fun i => if i.val < N * N then MMf a b N i.val else c[i.val]!)

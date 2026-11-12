@@ -152,6 +152,15 @@ python3 tools/check_import_floor_sum_signed.py
 
 `tests/floor_sum.cpp` は元実装の独立128 bit参照と同じ74,610入力（表現可能74,402、範囲外208）を公開APIへ適用する。通常実行、ASan/UBSan、テンプレート先行 include、全部品の同時 include を検査する。`tests/test_signed_floor_sum_proofs.py` は元ソースのモデル全文、91入力の数学的計算・生成モデル・C++ の一致、全入力証明の適用、callerの保持、燃料不足・不正入力の拒否、再生成した本体に対する4種類の改変拒否を扱う。公式問題・制限が未設定なので性能測定は未実施である。
 
+## 検証（新方式、signed 版 `floor_sum`）
+
+`verifier/lean_translate.py` が `Proofs/Cpp/Gen/FloorSum.lean` を生成する。`uint64_t` から `int64_t` への変換は 2 の補数での値 `Cpp.toSigned 64`（C++20 の規定、GCC は C++17 でも同じ）に翻訳する。`Proofs/Cpp/FloorSum.lean` の `floor_sum_spec` は `0 <= n < 2^32`、`1 <= m < 2^32`、`a`、`b` が signed 64 bit の全範囲のとき、返り値が `signedDecode64 (signedSum m a b n)`（総和を 2^64 を法として signed 64 bit に復号した値。総和が範囲内なら総和そのもの: `signedDecode64_exact`）であり、tick 数が `t0 + 10 + 2 * log2 m` 以下であることを示す。
+
+- `a < 0` の補正 `0 - n*(n-1)/2 * ((a2 - a) / m)` は `UInt64.ofInt (triangle n * (a / m))` に等しい（`tri_eq`、`coef_eq`、`ansA_eq`）。`b < 0` も同様（`ansB_eq`）。`a2 - a` は `2^63 + 2^32` 未満なので折り返さない。
+- 和の分解は旧来の `Proofs/FloorSumSignedArithmetic.lean` の `signedSum_normalization` から `sum_norm_a`、`sum_norm_b` を導き、非負の係数では `signedSum_of_nat` で `directSum` に移す。`floor_sum_unsigned` の呼び出しには `floor_sum_unsigned_wp`、仕事量には `gcd_bound`（`gcdCost m x <= 3 + 2 log2 m`）を使う。
+
+差分テスト（`tests/diff/floor_sum.py`、型の最小・最大と範囲外の結果を含む）と C++ のテストで翻訳と実装を確かめる。
+
 ## 元のソースからの変更
 
 公開版（`library/number_theory/safe_mod.hpp`、`floor_sum_unsigned.hpp`、`floor_sum.hpp`）は、元の `experiments/library/cpp/number_theory/floor_sum.hpp` の3関数（`safe_mod`、`floor_sum_unsigned`、`floor_sum`）をそれぞれ1部品にしたもので、アルゴリズム・式・assert は元のままである。変更は次の3点だけで、いずれも元と同じ入力に同じ結果を返す。

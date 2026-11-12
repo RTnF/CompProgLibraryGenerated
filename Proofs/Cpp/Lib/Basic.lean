@@ -21,6 +21,17 @@ theorem run_of_triple {α : Type} {x : M α} {t0 : Nat} {P : α → Nat → Prop
   | none => intro h'; exact h'.elim
   | some p => intro h'; exact ⟨p.1, p.2, rfl, h'⟩
 
+/-- A triple from every start tick, as a step `mvcgen` can use: the continuation must hold for every result with the
+property. -/
+theorem wp_of_triple {α : Type} {x : M α} {P : Nat → α → Nat → Prop}
+    (h : ∀ t0, ⦃fun c => ⌜c = t0⌝⦄ x ⦃⇓ r c => ⌜P t0 r c⌝⦄) {Q : PostCond α PS} :
+    ⦃fun t => ⌜∀ r c, P t r c → (Q.1 r c).down⌝⦄ x ⦃Q⦄ := by
+  apply Triple.iff.mpr
+  intro s hs
+  obtain ⟨r, c, hx, hp⟩ := run_of_triple (h s)
+  simp [wp, hx]
+  exact hs r c hp
+
 /-- A triple from a computed run. -/
 theorem triple_of_run {α : Type} {x : M α} {t0 : Nat} {P : α → Nat → Prop} (r : α) (c : Nat)
     (hx : x.run t0 = some (r, c)) (hp : P r c) : ⦃fun c => ⌜c = t0⌝⦄ x ⦃⇓ r c => ⌜P r c⌝⦄ := by

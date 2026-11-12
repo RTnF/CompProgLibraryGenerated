@@ -138,4 +138,11 @@ theorem floor_sum_unsigned_spec (n m a b : UInt64) (hn : n.toNat < inputLimit) (
     omega
   · exact ‹_ ∧ _›
 
+/-- `floor_sum_unsigned_spec` as a step `mvcgen` can use in a caller. -/
+@[spec] theorem floor_sum_unsigned_wp (n m a b : UInt64) (hn : n.toNat < inputLimit) (hm0 : 0 < m.toNat)
+    (hm : m.toNat < inputLimit) {Q : PostCond UInt64 PS} :
+    ⦃fun t => ⌜∀ r c, r.toNat = directSum m.toNat a.toNat b.toNat n.toNat % wordLimit ∧
+      c ≤ t + 2 + gcdCost m.toNat (a.toNat % m.toNat) → (Q.1 r c).down⌝⦄ cp.floor_sum_unsigned n m a b ⦃Q⦄ :=
+  wp_of_triple (fun t0 => floor_sum_unsigned_spec n m a b hn hm0 hm t0)
+
 end Proofs.Cpp.FloorSumUnsigned
