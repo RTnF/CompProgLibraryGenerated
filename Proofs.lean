@@ -592,3 +592,5 @@ import Proofs.Generated.IsPrime
 import Proofs.Cpp.IsPrime
 import Proofs.Generated.UnionFind
 import Proofs.Cpp.UnionFind
+import Proofs.Generated.Lowlink
+import Proofs.Cpp.Lowlink
