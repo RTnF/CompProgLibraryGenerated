@@ -582,3 +582,5 @@ import Proofs.Generated.Prim
 import Proofs.Cpp.Prim
 import Proofs.Generated.SquareMatrix
 import Proofs.Cpp.SquareMatrix
+import Proofs.Generated.SegtreeSum
+import Proofs.Cpp.SegtreeSum

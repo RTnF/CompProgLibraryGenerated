@@ -8,9 +8,14 @@
 - `set` の結果: 呼び出し後の `node` も同じ配置を満たし、葉 `idx` は `val`、他の葉は変わらない。
 - 時間と領域: どちらも反復は `floor(log2 N) + 1` 回以下で、追加領域は局所変数だけ（モデル上の仕事量は呼び出し側の引数評価を除いて `410 * log2 N + 700` 以下（product）、`330 * log2 N + 800` 以下（set））。`set` の記憶域への書き込みは `log2 N + 3` 回以下。
 
-証明は `Proofs/SegtreeSumCall.lean`:
-- 数学: `rsum`（節点の和）、`TInv`（配置）、`rsum_pairs`（偶数位置から始まる節点の和が親の和に等しい）、`prod_step`（`product` の 1 反復で「残りの和」の不変条件 `PInv` が保たれる。`l`、`r` の偶奇 4 通りを `pl1`/`pr1`/`pleft`/`pright` で場合分けなしに書く）。`set` の `SInv`（根までの経路上の節点だけが未更新）と `sinv_step`/`sinv_init`/`sinv_zero`。
-- 実行: 状態を `Proofs/GenState.lean` の `gS`（任意の型のセルの列）で記述し、`gS_decl`/`gS_assign`/`gS_env` で宣言・代入・参照を一般に扱った。`br1_exec`/`br2_exec`（偶奇の分岐）、`prod_iter`、`prod_loop`、`body_execP`、`set_iter`、`set_loop`、`body_execS`、呼び出し定理 `segtree_sum_product_correct`、`segtree_sum_set_correct`。
+## 検証（新方式、`docs/translation.md`）
+
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/SegtreeSum.lean` を生成する。`Proofs/Cpp/SegtreeSum.lean` は `T = unsigned long long`（`UInt64`）について、旧来の `Proofs/SegTreeMath.lean` のモノイド `Mon` を 2^64 を法とする和 `M64` で具体化して次を示す。
+
+- `segtree_sum_product_spec`: 配置 `TInv` と `N < 2^30`、`l <= r <= N` のとき、返り値は葉 `[l, r)` の和 `rfold M64 v (N + l) (r - l)`。ループの不変条件は `PInv`（1 回の反復は `prod_step`。右側の累積 `right + node[r]` は和の可換性で `pright` に一致）。tick 数は `bitWidth (r + N) + 2` 以下。
+- `segtree_sum_set_spec`: 更新後も `TInv` を満たし、葉は `idx` だけが `val` に変わる。ループの不変条件は根への経路以外が整合していること `SInv`（`sinv_init`、`sinv_step`、`sinv_zero`）。tick 数は `bitWidth N + 2` 以下。
+
+差分テスト（`tests/diff/segtree_sum.py`）と C++ のテストで翻訳と実装を確かめる。
 
 `product_all`、`get`、`search_prod_right/left`（ラムダの述語を取る二分探索）、一般のモノイドは扱わない。C++ のテストは `tests/segtree_sum.cpp`（大きさ 1〜40 の全ての区間、非 2 冪、ラップアラウンド、`set` 後の再構築との一致、2^17 要素）。
 
