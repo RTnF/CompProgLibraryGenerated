@@ -70,12 +70,12 @@ def lift_vector_returns(statements):
     lifted = []
     for statement in statements:
         statement = dict(statement)
+        base = statement.pop('base', None)
         for key in ('body', 'yes', 'no'):
             if key in statement:
                 statement[key] = lift_vector_returns(statement[key])
         if statement['kind'] == 'scope' and returns_vector(statement['body']):
             if any(inner['kind'] not in NONDECLARING for inner in statement['body']):
-                base = statement.get('base')
                 if base is None or any(slot < base for slot in returned_slots(statement['body'])):
                     raise ValueError('returning a vector of an enclosing scope from a block with declarations '
                                      'is unsupported')
