@@ -42,7 +42,8 @@ STL:
 | `v.size()`、`v.empty()`、`v[i]`、`v.back()`、`v.front()` | `Cpp.size v`、`v.size = 0`、`Cpp.get v i`、`Cpp.back v`、`Cpp.get v 0` |
 | `v[i] = x`、`v[i][j] = x`、`p.first = x` | `Cpp.set` の入れ子、組の更新 |
 | `v.push_back(x)`、`v.emplace_back(x)`、`emplace_back(a, b)`（pair） | `v.push x` |
-| `v.pop_back()`、`v.clear()`、`v.resize(n[, x])`、`v.assign(n, x)`、`v.reserve(n)` | `v.pop`、`[].toArray`、`Cpp.resize`、`Cpp.replicate`、（何もしない） |
+| `v.pop_back()`、`v.clear()`、`v.resize(n[, x])`、`v.assign(n, x)`、`v.assign(w.begin(), w.end())`、`v.reserve(n)` | `v.pop`、`[].toArray`、`Cpp.resize`、`Cpp.replicate`、`w` のコピー（tick は `w.size()`）、（何もしない） |
+| `std::numeric_limits<T>::min()`/`max()`（`T` は `int`、`long long`、`int64_t`） | 整数リテラル |
 | `std::vector<T> v(n[, x])`、`{a, b}`、コピー | `Cpp.replicate`、`[a, b].toArray`、同じ値 |
 | `std::min`、`std::max`、`std::swap`、`std::abs` | `min`、`max`、入れ替え、`Int.natAbs` |
 | `std::sort(v.begin(), v.end())` | `Cpp.sort v`（安定な mergeSort。tick は `n (log2 n + 1)`）。C++ では同値な要素の順序は不定なので、定理は全順序（整列結果が一意）で述べる |

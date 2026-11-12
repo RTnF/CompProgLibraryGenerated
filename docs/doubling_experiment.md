@@ -18,6 +18,10 @@ C++17 の `bit_width_u64` はゼロに0を返し、それ以外では2による�
 
 `DoublingProgram.body_eq` は、Lean の `bodyCmd` が生成物の本体と `rfl` で一致することを示す。生成物を変えるとこの検査が壊れる（`tests/test_doubling_proof.py` に改変の拒否検査がある）。呼出し側の `v` 以外の buffer が不変であることと、前提違反時に必ず fault になることは、この定理にまだ含めていない。
 
+## 検証（新方式、`docs/translation.md`）
+
+`verifier/lean_translate.py` が `Proofs/Cpp/Gen/Doubling.lean` を生成する（`std::numeric_limits<int>::max()` はリテラル、`ret[0].assign(v.begin(), v.end())` は `v` のコピー）。`Proofs/Cpp/Doubling.lean` の `doubling_spec` は、`0 < kmax`、`v.size() < 2^31`、全要素が `[0, n)` のとき、返る表の行数が `bitWidth kmax`、各行の長さが `n`、行 `i` の `j` 番目が `F v i j = f^(2^i)(j)`（`f x = v[x]`）であり、tick 数が `3 + 2n + 3 bitWidth kmax + bitWidth kmax * (1 + 2n)` 以下（`O(n log kmax)`）であることを示す。行 `i` の要素は行 `i - 1` を 2 回引いて作る（`F_succ`、範囲は `F_range`）。差分テストは `tests/diff/doubling.py`。
+
 ## 元のソースからの変更
 
 元の `experiments/library/cpp/array/doubling.hpp` の `doubling(vector<int> &v, uint64_t kmax)` に対し、公開版 `cp::doubling` は名前空間 `cp` に入れ、次の点だけを変えた。いずれも元と同じ入力に同じ表を返す。

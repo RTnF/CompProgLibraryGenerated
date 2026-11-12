@@ -594,3 +594,5 @@ import Proofs.Generated.UnionFind
 import Proofs.Cpp.UnionFind
 import Proofs.Generated.Lowlink
 import Proofs.Cpp.Lowlink
+import Proofs.Generated.DoublingNested
+import Proofs.Cpp.Doubling

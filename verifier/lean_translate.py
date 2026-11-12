@@ -827,6 +827,16 @@ class Fn:
         raise Unsupported(f"vector::{name} in an expression")
 
     def free_call(self, name, args, pre, callee):
+        if name in ("min", "max") and not args:
+            # std::numeric_limits<T>::min() / max() of a fixed integer type: a literal
+            text = self.tr.span(callee).replace(" ", "")
+            limits = {"int": (-2**31, 2**31 - 1, INT32), "longlong": (-2**63, 2**63 - 1, INT),
+                      "std::int64_t": (-2**63, 2**63 - 1, INT), "int64_t": (-2**63, 2**63 - 1, INT)}
+            for key, (lo, hi, ty) in limits.items():
+                if f"numeric_limits<{key}>::" in text:
+                    v = lo if name == "min" else hi
+                    return (f"({v} : Int)" if v >= 0 else f"(({v}) : Int)"), ty
+            raise Unsupported(f"numeric_limits {text}")
         if name in ("min", "max") and len(args) == 2:
             at, aty = self.expr(args[0], pre)
             bt, bty = self.expr(args[1], pre, aty)
@@ -1248,6 +1258,19 @@ class Fn:
             for line in self.assign_lines(target, f"([] : List {lean_type(elem)}).toArray"):
                 self.emit(line)
             return True
+        if name == "assign" and len(args) == 2 and self.whole_range(args[0], args[1]) is not None:
+            # v.assign(w.begin(), w.end()): a copy of w (one tick per element)
+            src = self.whole_range(args[0], args[1])
+            st, sty = self.expr(src, pre)
+            if sty != bty:
+                raise Unsupported("assign from a vector of another type")
+            tmp = self.fresh()
+            pre.append(f"let {tmp} := {st}")
+            pre.append(f"Cpp.tickN {tmp}.size")
+            self.flush(pre)
+            for line in self.assign_lines(target, tmp):
+                self.emit(line)
+            return True
         if name in ("resize", "assign") and len(args) in (1, 2):
             nt, _ = self.expr(args[0], pre, INT)
             vt = self.expr(args[1], pre, elem)[0] if len(args) == 2 else self.default_value(elem)
@@ -1262,6 +1285,23 @@ class Fn:
         if name == "reserve":
             return True
         raise Unsupported(f"vector::{name}")
+
+    def whole_range(self, a, b):
+        """The vector `w` when the arguments are `w.begin(), w.end()` (the same variable), else None."""
+        def member(node, want):
+            node = strip(node)
+            if node.get("kind") not in ("CXXMemberCallExpr",):
+                return None
+            callee = strip(inner(node)[0])
+            if callee.get("kind") != "MemberExpr" or callee.get("name") != want or not inner(callee):
+                return None
+            return strip(inner(callee)[0])
+        x, y = member(a, "begin"), member(b, "end")
+        if x is None or y is None or x.get("kind") != "DeclRefExpr" or y.get("kind") != "DeclRefExpr":
+            return None
+        if x.get("referencedDecl", {}).get("id") != y.get("referencedDecl", {}).get("id"):
+            return None
+        return x
 
     def std_stmt(self, n):
         kids = inner(n)
@@ -1598,6 +1638,17 @@ class Translator:
         if "offset" not in begin or "tokLen" not in begin:
             raise Unsupported(f"no source location for {node.get('kind')}")
         return self.source_bytes[begin["offset"]:begin["offset"] + begin["tokLen"]].decode()
+
+    def span(self, node):
+        """The source text of a node."""
+        rng = node.get("range", {})
+        begin = rng.get("begin", {})
+        end = rng.get("end", {})
+        begin = begin.get("spellingLoc", begin)
+        end = end.get("spellingLoc", end)
+        if "offset" not in begin or "offset" not in end or "tokLen" not in end:
+            raise Unsupported(f"no source range for {node.get('kind')}")
+        return self.source_bytes[begin["offset"]:end["offset"] + end["tokLen"]].decode()
 
     def ty(self, text, fn: Fn | None = None):
         tps = set()
