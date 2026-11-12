@@ -588,3 +588,5 @@ import Proofs.Generated.EnumerateQuotients
 import Proofs.Cpp.EnumerateQuotients
 import Proofs.Generated.FloorSumSigned
 import Proofs.Cpp.FloorSum
+import Proofs.Generated.IsPrime
+import Proofs.Cpp.IsPrime

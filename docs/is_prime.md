@@ -19,14 +19,18 @@
 - 名前空間 `cp` に置き、`mul_mod_u64` などの小さい関数には `[[gnu::always_inline]]` を付けた（変換器が呼び出し元へ展開する。`docs/scalar_converter.md`）。
 - 元と同じ入力に同じ結果を返すことを `tests/is_prime.cpp` で、元の実装（`__uint128_t` 版）との照合により確認している。
 
-結果（`Proofs/IsPrimeCall.lean`。`unsigned long long` の全値について証明）:
-- `mul_mod_u64_correct`: 返り値は `(a * b) % m`。
-- `pow_mod_u64_correct`: 返り値は `(x ^ y) % m`。
-- `mr_base_correct`: 返り値は `mrb i`（上の表）。
-- `mr_witness_correct`: 返り値は `mrwx n r (a ^ d % n)`（Lean のモデル。`a^d ≡ 1` または `a^(d·2^i) ≡ -1`（`0 <= i < r`）でなければ `true`）。さらに `n - 1 = d * 2^r` かつ `0 < a` のとき、`true` なら `n` は素数でない（素数に witness はない。`Proofs/IsPrimeMr.lean` の `mrwx_prime`、フェルマーの小定理と `y^2 ≡ 1` の解の議論）。
-- `is_prime_correct`: 返り値は `ispSpec n`。`n` が素数なら `ispSpec n = true`（無条件で証明）。逆方向「`ispSpec n = true` なら `n` は素数」は仮説 `MRWitnessSet`（「`n < 2^64` の奇数の合成数 `n >= 3` には、先頭 12 個の素数の中に `n - 2` 以下の witness がある」。先頭 12 個の素数は `3.18 × 10^23` 未満のすべての `n` に対する決定的な基底の集合であるという、公表された計算結果）の下で証明した。**この仮説は Lean では証明していない**。定理は仮説として明示し、公理にはしていない。
-- すべての定理に、呼び出しの前後のモデル上の仕事量・追加領域・記憶の復元が付く（`ScalarPostMB`）。
+## 検証（新方式、`docs/translation.md`）
 
-時間と領域: `mul_mod_u64` は反復 64 回以下、`pow_mod_u64` は乗算 128 回以下（計 64 × 64 規模）、`is_prime` は 12 個の基底それぞれに `pow_mod_u64` と高々 `r <= 63` 回の `mul_mod_u64` を行い、全体で O(12 · 64 · 64)。モデル上の仕事量は呼び出し側の引数評価を除いて `TOPC + 400`（`Proofs/IsPrimeRun.lean`、約 6.4 × 10^7）以下、追加領域は局所変数 O(1)。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/IsPrime.lean` を生成し、`Proofs/Cpp/IsPrime.lean` が 5 つの関数を証明する（`unsigned long long` の全値）。数学側は `Proofs/IsPrimeMath.lean`（旧 `Proofs/IsPrimeMr.lean` の純粋な部分: `wrun`/`mrwx`/`mrb`、素数に witness はない `mrwx_prime`、`badBase`、`MRWitnessSet`）と `Proofs/Fermat.lean`。
+- `mul_mod_spec`: `a < m` のとき返り値は `a * b mod m`、tick 数はちょうど `2 + bitWidth b`。ループ不変条件は `r, x < m` と `(r + x * y) mod m = a * b mod m`。`r + x` は `r >= m - x` のときだけ `r - (m - x)` にする（`addmod_ge`/`addmod_lt`）。
+- `pow_mod_spec`: `x < m`、`2 <= m` のとき返り値は `x^y mod m`、tick 数はちょうど `1 + powLoop m x y`（`powLoop m b e <= 1 + 133 * bitWidth e`）。
+- `mr_base_wp`: 返り値は `mrb i`（`i >= 0`）。11 個の `if` は `i` の値で場合分けする（`mr_base_eq`）。
+- `mr_witness_spec`: `2 <= n`、`a < n`、`0 <= r < 2^31` のとき返り値は `mrwx n r (a^d mod n)`、tick 数はちょうど `witCost n d r a`（`<= 12804`）。
+- `is_prime_spec`: `n` が素数なら `true`（無条件）。仮説 `MRWitnessSet`（「`n < 2^64` の奇数の合成数 `n >= 3` には、先頭 12 個の素数の中に `n - 2` 以下の witness がある」。公表された計算結果で、**Lean では証明していない**。定理の仮説として明示し、公理にはしない）の下で、`true` なら素数。tick 数は `t0 + 160000` 以下。
+- 呼び出し先の仕様は tick 数が入力の関数として決まる形（`mul_mod_wp`、`pow_mod_wp`、`mr_witness_wp`）にして、呼び出し元のループの中で `mvcgen` が使う。
 
-証明の構成: `Proofs/IsPrimeBody.lean`（関数本体の式）、`Proofs/IsPrimeExec.lean`（乗算・冪・witness 1 反復の実行）、`Proofs/IsPrimeWit.lean`（witness を、前に局所変数が並ぶ位置にも置ける形で証明。`is_prime` の中へ展開された `mr_witness` に使う）、`Proofs/IsPrimeMr.lean`（素数に witness がないこと）、`Proofs/IsPrimeTop.lean`（`mr_base`/`is_prime` の本体と生成モデルの一致）、`Proofs/IsPrimeRun.lean`（`is_prime` 全体の実行、`ispSpec`）、`Proofs/IsPrimeSpec.lean`（素数と `ispSpec`）、`Proofs/IsPrimeFun.lean`（5 つの関数の本体全体）、`Proofs/IsPrimePrepare.lean`/`Proofs/IsPrimeCall.lean`（呼び出し）。C++ のテストは `tests/is_prime.cpp`（試し割り、元の実装、`__uint128_t` による乗算・冪・witness の照合、既知の強擬素数、`2^64 - 1` 付近、`-fsanitize=address,undefined`）。
+差分テスト（`tests/diff/is_prime.py`）と C++ のテストで翻訳と実装を確かめる。
+
+時間と領域: `mul_mod_u64` は反復 64 回以下、`pow_mod_u64` は乗算 128 回以下（計 64 × 64 規模）、`is_prime` は 12 個の基底それぞれに `pow_mod_u64` と高々 `r <= 63` 回の `mul_mod_u64` を行い、全体で O(12 · 64 · 64)。追加領域は局所変数 O(1)。
+
+C++ のテストは `tests/is_prime.cpp`（試し割り、元の実装、`__uint128_t` による乗算・冪・witness の照合、既知の強擬素数、`2^64 - 1` 付近、`-fsanitize=address,undefined`）。
