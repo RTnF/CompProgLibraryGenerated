@@ -1,6 +1,6 @@
 # xorshift
 
-`cp::Xor64` は 64 bit の Xorshift 乱数生成器である。元の `experiments/library/cpp/random/xorshift.hpp` の `Xor64` から、状態更新 `get()` を取り出した。`get_int`、`get_ll`、`get_double`、`get_double(lo, hi)`、`get_normal` は、メソッドからメソッドを呼ぶ（`get()` を this に対して呼ぶ）か、浮動小数点を使うため、まだ変換器の対象外で `experiments/` に残している。コンストラクタ `Xor64(s)` は、引数をそのまま状態にする関数として変換され、`xor64_new_correct` が証明している。
+`cp::Xor64` は 64 bit の Xorshift 乱数生成器である。元の `experiments/library/cpp/random/xorshift.hpp` の `Xor64` から、状態更新 `get()` を取り出した。`get_int`、`get_ll`、`get_double`、`get_double(lo, hi)`、`get_normal` は、メソッドからメソッドを呼ぶ（`get()` を this に対して呼ぶ）か、浮動小数点を使うため、まだ変換器の対象外で `experiments/` に残している。コンストラクタ `Xor64(s)` は引数をそのまま状態にする（`init_spec`）。
 
 - `get()`: 状態 `s` を `x = s; x ^= x << 7; x ^= x >> 9; s = x` に進め、新しい状態を返す。前提なし（`uint64_t` の全値）。結果は `[0, 2^64)`。状態 0 は 0 のまま（周期を得るには非零の種が必要）。
 - 時間と領域: 分岐もループもない定数時間、定数個の局所変数。
