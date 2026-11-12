@@ -580,3 +580,5 @@ import Proofs.Generated.Dijkstra
 import Proofs.Cpp.Dijkstra
 import Proofs.Generated.Prim
 import Proofs.Cpp.Prim
+import Proofs.Generated.SquareMatrix
+import Proofs.Cpp.SquareMatrix

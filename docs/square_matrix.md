@@ -16,13 +16,14 @@
 - 前提: 各 vector の長さは `n * n` 以上、`n * n < 2^31`（`mat_pow` は `n * n < 2^31 - 1`、`r`、`y`、`t` の長さも `n * n`、`a`、`r`、`y`、`t` は互いに別の vector）、値は `unsigned long long`。`a`、`b`、`c` は互いに別の vector（`mat_mul` の `a` と `b` は同じでもよい）。`mat_mul` の `c` の元の内容は使わない。`b` は変化しない。範囲外の添字は読まない。
 - 時間は、モデル上の仕事量が `mat_mul` で `n` の 3 次式、他は `n * n` の 1 次式（`mat_identity` は `n` の 2 次式、反復ごとの定数は証明の定理に明記）。追加領域は局所変数の個数（高々 5 個）で `n` によらない。
 
-証明:
-- `Proofs/MatMulExec.lean`（`mat_mul` の三重ループ。実行の補題 `k_body`/`k_loop`、`j_body`/`j_loop`、`i_body`/`i_loop`、`body_exec`、結果の仕様 `matC_spec`）と `Proofs/MatMulPrepare.lean`（3 本の vector と 1 つのスカラーを束縛する呼び出しの準備）。
-- `Proofs/SquareMatrixEw.lean`（`mat_add_assign`/`mat_sub_assign`、二項演算に対して一般の `body_execEw`）、`Proofs/SquareMatrixZero.lean`（`mat_zero`）、`Proofs/SquareMatrixNeg.lean`（`mat_negate`）、`Proofs/SquareMatrixEq.lean`（`mat_equal`。旗の不変条件 `EqInv`、`body_execEq`）、`Proofs/SquareMatrixId.lean`（`mat_identity` の二重ループ。`id_inner_iter`/`id_inner_loop`、`id_outer_iter`/`id_outer_loop`、`body_execId`）、`Proofs/SquareMatrixPrepare.lean`（呼び出しの準備）。
-- `Proofs/SquareMatrixCall.lean`: 呼び出し定理 `mat_add_correct`、`mat_sub_correct`、`mat_zero_correct`、`mat_negate_correct`、`mat_identity_correct`、`mat_equal_correct`（返り値は「`i < n * n` で `a[i] = b[i]`」なら 1、そうでなければ 0）、`MatMul.mat_mul_correct`。結果の vector、仕事量、局所領域を `ScalarPostM` で述べる。
-- 共有基盤は `Proofs/MultiVec.lean`・`Proofs/MultiVecCall.lean`（複数 vector の純粋な実行器と健全性、`call_vecm_unit`）、`Proofs/MultiKit.lean`、`Proofs/ForLoopM.lean`・`Proofs/ForLoopC.lean`。
+## 検証（新方式、`docs/translation.md`）
 
-テストは `tests/square_matrix.cpp`（大きさ 0〜14 のランダムな行列に対して、ループ順を変えた積の参照実装、成分ごとの和差、零行列、単位行列、`I * A == A * I == A`、フィボナッチ行列の冪を比較）。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/SquareMatrix.lean` を生成する。`Proofs/Cpp/SquareMatrix.lean` が次を証明する。
+
+- 任意の要素型 `T` について（代数的な仮定なし）: `mat_add_assign_spec`、`mat_sub_assign_spec`、`mat_zero_spec`、`mat_negate_spec`（先頭 `n * n` 要素が成分ごとの値、残りは変わらない: `EW`）、`mat_identity_spec`（`Idf`）、`mat_equal_spec`（返り値が `true` ⇔ 先頭 `n * n` 要素が等しい）、`mat_mul_spec`（`c[i n + j] = MM a b n i j n`、ループの順に足した積和）。tick 数はそれぞれ `1 + n^2`、`1 + n (1 + n)`、`1 + n (1 + n (1 + n))` ちょうど。
+- `T = unsigned long long`（`UInt64`）について `mat_pow_spec`: `r` の先頭 `n × n` 要素が `PW n A e`（`Proofs/MatPowMath.lean`。積は 2^64 を法とする）。ループの不変条件は `R · Y^e ≡ A^E`（1 回の反復は `pow_round`。結合則 `mulF_assoc`、二乗の冪 `PW_sq`）。`mat_mul` の呼び出しは、その結果を明示した仕様 `mat_mul_wp`（`mulRes`）で扱う。tick 数は `O(n^3 log e)`。
+
+差分テスト（`tests/diff/square_matrix.py`、全関数）と C++ のテストは `tests/square_matrix.cpp`（大きさ 0〜14 のランダムな行列に対して、ループ順を変えた積の参照実装、成分ごとの和差、零行列、単位行列、`I * A == A * I == A`、フィボナッチ行列の冪を比較）。
 
 型 `T` はテンプレート引数のままで、元と同じく任意の型で使える。検証した具体化はヘッダー末尾の明示的な具体化（`template ... <unsigned long long>(...)`）だけ。
 
