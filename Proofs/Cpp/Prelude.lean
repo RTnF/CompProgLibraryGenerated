@@ -159,6 +159,17 @@ def sortCost (n : Nat) : Nat := n * (Nat.log2 n + 1)
 /-- `a / b` (rounds toward zero). -/
 @[inline] def div (a b : Int) : Int := a.tdiv b
 
+/-- `a < b` for values of two template parameters `α`, `β` (the operator of the C++ instance). -/
+class HLt (α β : Type) where
+  hlt : α → β → Bool
+
+/-- The implicit conversion of a value of a template parameter `β` to another one `α`. -/
+class Conv (β α : Type) where
+  conv : β → α
+
+instance {α : Type} [LT α] [DecidableLT α] : HLt α α := ⟨fun a b => decide (a < b)⟩
+instance {α : Type} : Conv α α := ⟨id⟩
+
 /-- Conversion of an unsigned value `v` to a signed `w`-bit type: the value modulo `2^w` in two's complement
 (C++20 [conv.integral]; GCC defines the same for earlier standards). -/
 def toSigned (w v : Nat) : Int := if v % 2 ^ w < 2 ^ (w - 1) then (v % 2 ^ w : Nat) else (v % 2 ^ w : Nat) - 2 ^ w

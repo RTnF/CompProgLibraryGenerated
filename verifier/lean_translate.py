@@ -368,6 +368,10 @@ class Fn:
     def convert(self, text, ty, expected, node=None):
         if expected is None or ty == expected:
             return text, (expected if expected is not None and ty.kind == expected.kind == "int" else ty)
+        if ty.kind == "tparam" and expected.kind == "tparam":
+            # the implicit conversion of a template parameter T to another one S (whatever C++ does for the instance)
+            self.reqs.add(f"Cpp.Conv {ty.name} {expected.name}")
+            return f"(Cpp.Conv.conv {text} : {expected.name})", expected
         lit = strip(node) if node is not None else None
         is_lit = lit is not None and lit.get("kind") == "IntegerLiteral"
         if expected.kind in ("u32", "u64"):
@@ -600,6 +604,11 @@ class Fn:
                 raise Unsupported(f"shift of {ty}")
             bt, _ = self.convert(bt, bty, INT, b)
             return f"(Cpp.{'shl' if op == '<<' else 'shr'} {at} {bt})", ty
+        if aty.kind == bty.kind == "tparam" and aty != bty and op in ("<", ">"):
+            # `a < b` on two template parameters S, T: the operator of the instance (Cpp.HLt S T)
+            x, y, xt, yt = (at, bt, aty, bty) if op == "<" else (bt, at, bty, aty)
+            self.reqs.add(f"Cpp.HLt {xt.name} {yt.name}")
+            return f"(Cpp.HLt.hlt {x} {y})", BOOL
         if aty.kind == bty.kind == "bool" and op in ("==", "!="):
             ty = BOOL
         else:

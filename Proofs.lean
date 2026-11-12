@@ -596,3 +596,5 @@ import Proofs.Generated.Lowlink
 import Proofs.Cpp.Lowlink
 import Proofs.Generated.DoublingNested
 import Proofs.Cpp.Doubling
+import Proofs.Generated.Extrema
+import Proofs.Cpp.Extrema
