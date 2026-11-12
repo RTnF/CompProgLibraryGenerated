@@ -562,3 +562,5 @@ import Proofs.Generated.TreeLca
 import Proofs.Cpp.TreeLcaSameDepth
 import Proofs.Generated.TreeOrder
 import Proofs.Cpp.TreeOrder
+import Proofs.Generated.TreeRoot
+import Proofs.Cpp.TreeRoot
