@@ -146,6 +146,13 @@ the choice does not matter. -/
 def sort {α : Type} [LT α] [DecidableLT α] (v : Array α) : Array α :=
   (v.toList.mergeSort (fun a b => !decide (b < a))).toArray
 
+/-- `std::unique` followed by `erase`: each run of equal adjacent elements collapses to its first element. -/
+def uniqueList {α : Type} [DecidableEq α] : List α → List α
+  | a :: b :: t => if a = b then uniqueList (a :: t) else a :: uniqueList (b :: t)
+  | l => l
+
+def unique {α : Type} [DecidableEq α] (v : Array α) : Array α := (uniqueList v.toList).toArray
+
 /-- `std::sort` of a vector of `std::pair`s: `operator<` on pairs is lexicographic (`Prod.lexLt`). -/
 def sortLex {α β : Type} [LT α] [LT β] [DecidableEq α] [DecidableLT α] [DecidableLT β] (v : Array (α × β)) :
     Array (α × β) :=

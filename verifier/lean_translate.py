@@ -213,6 +213,16 @@ def strip(node):
         return node
 
 
+def peel(node):
+    """`strip` and also one-argument constructions (iterator to const_iterator conversions)."""
+    while True:
+        node = strip(node)
+        if node.get("kind") == "CXXConstructExpr" and len(inner(node)) == 1:
+            node = inner(node)[0]
+            continue
+        return node
+
+
 def strip_casts(node):
     """`strip` and also explicit casts (for lvalues and syntactic patterns)."""
     while True:
@@ -409,8 +419,11 @@ class Fn:
             return f"(if {text} then (1 : Int) else 0)", INT
         if ty.kind == "unknown":
             return text, expected
-        if ty.kind == "tparam" and expected.kind == "int":
-            raise Unsupported(f"conversion from {ty.name} to an integer")
+        if ty.kind == "tparam" and expected.kind in ("int", "u32", "u64"):
+            # the implicit conversion of a template parameter to an integer type (Cpp.Conv)
+            lt = lean_type(expected)
+            self.reqs.add(f"Cpp.Conv {ty.name} {lt}")
+            return f"(Cpp.Conv.conv {text} : {lt})", expected
         if ty.kind == "vec" and expected.kind == "vec":
             if ty.args[0].kind == "unknown" or ty.args[0] == expected.args[0]:
                 return text, expected
@@ -1293,16 +1306,42 @@ class Fn:
             return True
         if name == "reserve":
             return True
+        if name == "erase" and len(args) == 2:
+            # v.erase(std::unique(v.begin(), v.end()), v.end()): collapse runs of equal elements (O(n))
+            call = peel(args[0])
+            ck = inner(call)
+            callee = strip(ck[0]) if ck else {}
+            cname = callee.get("referencedDecl", {}).get("name") if callee.get("kind") == "DeclRefExpr" else callee.get("name")
+            if call.get("kind") != "CallExpr" or cname != "unique" or len(ck) != 3:
+                raise Unsupported("vector::erase other than the erase-unique idiom")
+            src = self.whole_range(ck[1], ck[2])
+            endb = peel(args[1])
+            if src is None or endb.get("kind") not in ("CXXMemberCallExpr", "CallExpr"):
+                raise Unsupported("vector::erase other than the erase-unique idiom")
+            ecallee = strip(inner(endb)[0])
+            if (ecallee.get("name") or ecallee.get("member")) != "end" \
+                    or self.lvalue(inner(ecallee)[0])[:2] != target[:2] or self.lvalue(src)[:2] != target[:2]:
+                raise Unsupported("vector::erase other than the erase-unique idiom")
+            if elem.kind in ("tparam", "int", "u32", "u64", "bool"):
+                self.need("DecidableEq", elem)
+            else:
+                raise Unsupported(f"std::unique of {elem}")
+            self.flush(pre)
+            self.emit(f"Cpp.tickN {cur}.size")
+            for line in self.assign_lines(target, f"(Cpp.unique {cur})"):
+                self.emit(line)
+            return True
         raise Unsupported(f"vector::{name}")
 
     def whole_range(self, a, b):
         """The vector `w` when the arguments are `w.begin(), w.end()` (the same variable), else None."""
         def member(node, want):
-            node = strip(node)
-            if node.get("kind") not in ("CXXMemberCallExpr",):
+            node = peel(node)
+            if node.get("kind") not in ("CXXMemberCallExpr", "CallExpr") or len(inner(node)) != 1:
                 return None
             callee = strip(inner(node)[0])
-            if callee.get("kind") != "MemberExpr" or callee.get("name") != want or not inner(callee):
+            if callee.get("kind") not in ("MemberExpr", "CXXDependentScopeMemberExpr") or not inner(callee) \
+                    or (callee.get("name") or callee.get("member")) != want:
                 return None
             return strip(inner(callee)[0])
         x, y = member(a, "begin"), member(b, "end")

@@ -598,3 +598,5 @@ import Proofs.Generated.DoublingNested
 import Proofs.Cpp.Doubling
 import Proofs.Generated.Extrema
 import Proofs.Cpp.Extrema
+import Proofs.Generated.SortUtil
+import Proofs.Cpp.SortUtil
