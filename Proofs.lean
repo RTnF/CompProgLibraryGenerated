@@ -570,3 +570,5 @@ import Proofs.Generated.Mod61
 import Proofs.Cpp.Mod61
 import Proofs.Generated.FloorSumUnsigned
 import Proofs.Cpp.FloorSumUnsigned
+import Proofs.Generated.TopologicalSort
+import Proofs.Cpp.TopologicalSort

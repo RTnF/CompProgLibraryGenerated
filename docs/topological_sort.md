@@ -11,14 +11,17 @@
 
 前提: `head.size() == n + 1`、`head[0] == 0`、`head` は広義単調増加、`head[n] == target.size()`、すべての `target[p]` が `[0, n)`、`indeg.size() == order.size() == n`、`indeg` の全要素が 0、`n < 2^31 - 2`、`target.size() < 2^31 - 1`。
 
-結果（`Proofs/TopoSortCall.lean`、一般の入力について証明）: 返り値 `k` と `order` の先頭 `k` 個 `Q` について
+結果（`Proofs/Cpp/TopologicalSort.lean` の `topological_sort_correct`、一般の入力について証明）: 返り値 `k` と `order` の先頭 `k` 個 `Q` について
 - `Q` の要素は互いに異なり、すべて `[0, n)` で、`k ≤ n`。
 - `Q[j]` の入ってくる辺の始点 `u`（`Q[j]` が `u` の行き先に含まれる）は、必ず `Q` の `j` 番目より前にある。
 - `Q` に含まれない頂点 `w` には、`Q` に含まれない始点 `u` からの辺 `u → w` がある（したがって `k < n` ならグラフに閉路がある）。`k = n` なら `order` は全頂点の置換で、すべての辺は前から後ろへ向かう。
 `order` の `k` 番目以降は元の値のまま、`indeg` は元の入次数から処理した辺の本数を引いた値になる。
 
-時間と領域: 辺の数 `m` について、モデル上の仕事量は呼び出し側の引数評価を除いて高々 `420 * m * n + 840 * n + 120 * m + 400` に収まる（外側の `qh` のループが `n` 回、内側が処理した頂点の出辺の本数。実際の反復は `O(n + m)` 回だが、証明は「各反復の上限 × 反復回数」の粗い評価）。追加領域は局所変数だけ。
+## 検証（新方式、`docs/translation.md`）
 
-証明は `Proofs/TopoSortMath.lean`（アルゴリズムのリスト版 `kahnL` と不変条件 `Inv`: `indeg[w]` は「まだ処理していない頂点から `w` へ入る辺の本数」、`w` がキューにある ⇔ `indeg[w] = 0`、キューにある頂点の入ってくる辺の始点は先にある）、`Proofs/TopoSortExec.lean`（`pexecM` による各ループの実行）、`Proofs/TopoSortPrepare.lean`/`Proofs/TopoSortCall.lean`（呼び出し）。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TopologicalSort.lean` を生成する。`Proofs/Cpp/TopologicalSort.lean` は、翻訳した 3 つのループの配列が純関数モデル（`Proofs/TopoSortMath.lean` の `initSt`・`kahnL`・`decr`）の状態に常に一致することを示し（`Rel`。入次数の計数 `count_step`、入次数 0 の頂点の投入 `enq_step`、辺 1 本の処理 `decr_step`）、モデルの `kahn_final` から上の結果を導く。
 
-定理に含めていないこと: 辞書順最小版、返り値が `n` であることと閉路が無いことの同値の Lean での定理（上の 3 点から従うが、証明はしていない。C++ のテストで確認している）、`indeg` が 0 でない入力（未定義の挙動ではなく単に結果が変わる）。C++ のテストは `tests/topological_sort.cpp`（頂点数 0〜8 のランダムな DAG と一般のグラフを、到達可能性の閉包による閉路判定と照合し、3 つの性質を直接確認する）。
+- tick 数は `1 + m + n + n + W` で、`W`（取り出した頂点の出辺の数の和）は `m` 以下（`W_le`）。全体で `1 + 2n + 2m` 以下、`O(n + m)`。
+- 定理に含めていないこと: 辞書順最小版、返り値が `n` であることと閉路が無いことの同値の Lean での定理（上の 3 点から従うが、証明はしていない。C++ のテストで確認している）、`indeg` が 0 でない入力（未定義の挙動ではなく単に結果が変わる）。
+
+差分テスト（`tests/diff/topological_sort.py`、DAG と一般のグラフ）と C++ のテスト `tests/topological_sort.cpp`（頂点数 0〜8 のランダムな DAG と一般のグラフを、到達可能性の閉包による閉路判定と照合し、3 つの性質を直接確認する） で翻訳と実装を確かめる。
