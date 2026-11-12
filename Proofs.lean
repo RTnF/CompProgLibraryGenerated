@@ -564,3 +564,5 @@ import Proofs.Generated.TreeOrder
 import Proofs.Cpp.TreeOrder
 import Proofs.Generated.TreeRoot
 import Proofs.Cpp.TreeRoot
+import Proofs.Generated.Xorshift
+import Proofs.Cpp.Xorshift
