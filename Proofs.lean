@@ -566,3 +566,5 @@ import Proofs.Generated.TreeRoot
 import Proofs.Cpp.TreeRoot
 import Proofs.Generated.Xorshift
 import Proofs.Cpp.Xorshift
+import Proofs.Generated.Mod61
+import Proofs.Cpp.Mod61
