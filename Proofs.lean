@@ -584,3 +584,5 @@ import Proofs.Generated.SquareMatrix
 import Proofs.Cpp.SquareMatrix
 import Proofs.Generated.SegtreeSum
 import Proofs.Cpp.SegtreeSum
+import Proofs.Generated.EnumerateQuotients
+import Proofs.Cpp.EnumerateQuotients
