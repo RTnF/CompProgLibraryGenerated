@@ -17,6 +17,10 @@
 - 全件 gate（`check_public.py --mode all`）は失敗: 旧方式の `tests/test_dynamic_result_runs.py` が `returning a vector from a block with declarations is unsupported`（旧変換器が、元の形に戻したヘッダ（inv_gcd/search_util/element_count など）を読んでいる可能性。原因未調査。移行済み部品を参照する旧テストは support.toml の checks から外すか、旧検査を削除して解消する）。ログ `.cache/wip/newmethod/gate.log`。旧方式の test_template_class_layout が verifier 変更で毎回再実行され非常に遅い（CI 20 分の障害。monoid_lazy 移行後に削除する）。
 - 未了: statements.json の再生成（`tools/regenerate_statements.py`。登録を変える作業と並行に走らせない）、全件 gate、push（原本単位・手動承認）、残り約 42 部品＋取り下げ 4 部品、旧方式の削除、CI 20 分の計測。
 
+- 2026-11-12 夕方の状態（ローカル commit、未 push）: 移行済みは計 52 部品。上記に加え csr_build, cumulative_sum, interval, interval_union, tree_* の全断片（tree_full_dp を除く）, xorshift, mod61, floor_sum_unsigned, topological_sort, floyd_warshall, bellman_ford, dijkstra, prim, square_matrix。全件 gate は 2f334ae 時点で成功（監査を含む。statements.json を再生成し、公開定理名から `'` と `!` を除いた）。その後の dijkstra 以降は個別の bridge・ビルドだけ確認済み。
+- 旧数学層の再利用: tree_order（TreeOrderMath の qrun）、tree_root（TreeRootMath の runL/stepD/stepF）、topological_sort（TopoSortMath）、floyd_warshall（FloydWarshallCall の Dm/Em）、bellman_ford（BellmanFordExec/PExec の roundsL など）、dijkstra（DijkstraMath/PMath）、prim（PrimStep の PInv、PrimBridge の prim_msf）、mod61（Mod61Math）、floor_sum_unsigned（FloorSumReciprocity）、square_matrix（MatPowMath）。旧方式を消すときはこれらの純粋な定義・定理を残す（または `Proofs/Cpp/Lib` へ移す）。
+- 補助スクリプト: `.cache/wip/newmethod/tools/leanrun.sh FILE`（RSS 6GB で止める監視つき lean。`simp [Nat.add_mod, Nat.mul_mod]` で OOM になり WSL が落ちた）。
+- 残り: enumerate_quotients, floor_sum（符号つき）, is_prime, segtree_sum, union_find, lowlink（翻訳可）。翻訳器の拡張が要るもの: tree_full_dp（ポリシーの静的メンバー `P::op`）, group/monoid/monoid_lazy, doubling（`max`）, sort_util, modint/dynamic_modint/ratio（friend）, extrema, rolling_hash。取り下げた 4 部品。最後に旧方式の削除と CI 20 分の確認。
 
 更新: 2026-11-09。時系列ログを圧縮して上書きした。目的は **experiments の全137ファイルを検証し、元API・機能・汎用性を保って移植すること**。一部のモデルやCI成功だけで完了としない。
 
