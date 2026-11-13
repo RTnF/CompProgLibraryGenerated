@@ -600,3 +600,5 @@ import Proofs.Generated.Extrema
 import Proofs.Cpp.Extrema
 import Proofs.Generated.SortUtil
 import Proofs.Cpp.SortUtil
+import Proofs.IsPrimeMath
+import Proofs.LowlinkPhiMath
