@@ -201,7 +201,7 @@ theorem init_int_spec (n : Int) (hn : 0 ≤ n) (t0 : Nat) :
 
 theorem init_0_spec (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.UnionFind.init_0
-    ⦃⇓ uf c => ⌜uf.ps = #[-1] ∧ Forest uf.ps (fun _ => 0) ∧ c = t0 + 2⌝⦄ := by
+    ⦃⇓ uf c => ⌜uf.ps = [-1].toArray ∧ Forest uf.ps (fun _ => 0) ∧ c = t0 + 2⌝⦄ := by
   mvcgen [cp.UnionFind.init_0]
   all_goals simp +zetaDelta [get, size] at *
   refine ⟨rfl, ⟨by simp [replicate], fun i hi => absurd hi (by simp [replicate]), fun i hi => absurd hi (by simp [replicate])⟩, ‹_›⟩

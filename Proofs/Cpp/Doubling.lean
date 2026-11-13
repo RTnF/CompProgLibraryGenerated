@@ -23,12 +23,12 @@ def F (v : Array Int) (i : Nat) (j : Int) : Int := (fun x => v[x.toNat]!)^[2 ^ i
 /-- Rows `0 .. K-1` of the table are complete; the rows from `K` are empty. -/
 def DI (v : Array Int) (ret : Array (Array Int)) (w K : Nat) : Prop :=
   ret.size = w ∧ (∀ i, i < K → i < w → ret[i]!.size = v.size ∧ ∀ j, j < v.size → ret[i]![j]! = F v i j) ∧
-    (∀ i, K ≤ i → i < w → ret[i]! = #[])
+    (∀ i, K ≤ i → i < w → ret[i]! = ([] : List Int).toArray)
 
 /-- Row `i` has its first `J` entries; the rows below are complete and the rows above empty. -/
 def RI (v : Array Int) (ret : Array (Array Int)) (w i J : Nat) : Prop :=
   ret.size = w ∧ (∀ i', i' < i → ret[i']!.size = v.size ∧ ∀ j, j < v.size → ret[i']![j]! = F v i' j) ∧
-    ret[i]!.size = J ∧ (∀ j, j < J → ret[i]![j]! = F v i j) ∧ (∀ i', i < i' → i' < w → ret[i']! = #[])
+    ret[i]!.size = J ∧ (∀ j, j < J → ret[i]![j]! = F v i j) ∧ (∀ i', i < i' → i' < w → ret[i']! = ([] : List Int).toArray)
 
 theorem F_range (v : Array Int) (hv : ∀ i, i < v.size → 0 ≤ v[i]! ∧ v[i]! < v.size) (i : Nat) (j : Int)
     (h0 : 0 ≤ j) (h1 : j < v.size) : 0 ≤ F v i j ∧ F v i j < v.size :=
