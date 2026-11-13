@@ -141,8 +141,12 @@ class Harness:
                            [(lt.source_decls(Path(d)), Path(d).read_bytes()) for d in deps])
         tr.translate()
         self.tr = tr
-        self.lean_instance = {k: lean_instance_type(v) for k, v in instance.items()}
+        policies = {pol for _, sig in self.callables() for pol in sig.policies}
+        self.policy_class = {k: re.sub(r"<.*", "", v).removeprefix("cp::") for k, v in instance.items() if k in policies}
+        self.lean_instance = {k: lean_instance_type(v) for k, v in instance.items() if k not in policies}
         for k, v in instance.items():
+            if k in policies:
+                continue
             ty = lt.parse_type(v, set(), set())
             if ty.kind == "vec":   # a container parameter T: its element type is T_value_type
                 self.lean_instance[f"{k}_value_type"] = lt.lean_type(ty.args[0])
@@ -270,7 +274,12 @@ class Harness:
                 else:
                     lines.append(f"    let (a{i}, ts) ← DiffTest.arg (α := {self.lean_type_inst(pty)}) ts")
                 names.append(f"a{i}")
-            call = " ".join([sig.lean_name] + (["obj"] if info is not None and not sig.is_ctor else []) + names)
+            pols = []
+            for pol, methods in sig.policies.items():
+                cls = self.policy_class[pol]
+                fields = ", ".join(f"{lt.lean_name(m)} := cp.{cls}.{lt.lean_name(m)}" for m in methods)
+                pols.append(f"{{ {fields} }}")
+            call = " ".join([sig.lean_name] + pols + (["obj"] if info is not None and not sig.is_ctor else []) + names)
             lines.append(f"    match ({call}).run 0 with")
             lines.append('    | none => run ts objs (out.push "fail")')
             lines.append("    | some (r, _) =>")

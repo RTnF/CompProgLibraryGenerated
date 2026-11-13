@@ -17,11 +17,9 @@
 
 前提: `n >= 1`、`n + 2 < 2^31`、`head.size() == n + 1`、`head[0] == 0`、`head` は広義単調増加、`head[n] == target.size() < 2^31 - 1`、すべての `target[p]` が `[0, n)`、グラフは対称な木（連結、自己ループ・閉路・多重辺なし、各辺 `u -> v` に逆辺 `v -> u` がある）、`0 <= root < n`、`parent` は `root` を根とする親配列（`parent[root] == root`、他の頂点では経路上の隣）、`ord` は `0 .. n - 1` の順列で各頂点が親より後に来る、各 vector の長さ（`parent`・`ord`・`dp`・`up`・`full` は `n`、`pre`・`suf` は `target.size()`）。`dp` と `up` は呼び出し前に `[0, n]` の値を持つ（たとえばゼロ初期化）。`pre`・`suf`・`full` の呼び出し前の値は何でもよい。
 
-結果（`Proofs/TreeFullDpCall.lean` の `tree_full_dp_correct`、上の前提のもとで一般の入力について証明。木の構造は `Proofs/TreeDpMath.lean` の `TS`、DP 値の定義は `Proofs/TreeDpSpec.lean` の `Ef`）: 終了後の `dp'`・`up'`・`full'` について、すべての `v < n` で `dp'[v]`、すべての `w != root` で `up'[w]`、すべての `v < n` で `full'[v]` が、上の意味の値（`Ef` は「隣接頂点のうち除く 1 つを除いた DP の再帰」）に等しい。停止し、未定義動作は起きない（途中の値は `[0, 2n]` に収まり `long long` を超えない）。
+結果（新方式、`docs/translation.md`。`Proofs/Cpp/TreeFullDp.lean` の `tree_full_dp_spec`）: 翻訳器は `P::e()` などポリシーの静的メンバーの呼び出しを、明示的な引数 `P : cp.tree_full_dp.Policy_P T`（使われた静的メンバーを持つ構造体）のフィールドの呼び出しに翻訳する。定理は任意のポリシーについて、その 3 つの関数が可換モノイド `M`（`Proofs/TreeDpAlg.lean` の `CM`。値の集合 `V` の上で結合・可換・単位元 `e()`、`sum_up` は `V` を保つ）の演算を tick 1 で計算するという仮定のもとで述べる。上の前提（`Pre`: CSR 配列の範囲と単調性、木の構造 `TS`）と、`dp`・`up` の呼び出し前の値が `V` に属することのもとで、終了後の `dp'`・`up'`・`full'` が、すべての `v < n` で `dp'[v]`、すべての `w != root` で `up'[w]`、すべての `v < n` で `full'[v]` について、上の意味の値（`Proofs/TreeDpSpec.lean` の `Ef`）に等しく、tick 数は `2 + 7 n + 8 m` 以下（`m = target.size()`）。証明は下から上の走査を不変条件 `P1`（内側ループ `I2`、`I3`）、上から下の走査を `P2`（内側ループ `I5`）で書き、`final_facts` で旧来の `Proofs/TreeDpMath.lean` の `dp_deriv`・`up_deriv`・`full_deriv` の前提に変える。具体化 `DpHeight<long long>` は `heightCM`（非負整数上の `max`、`sum_up(x) = x + 1`）と `height_e`・`height_op`・`height_sum_up` で仮定を満たす。差分テストは `tests/diff/tree_full_dp.py`。
 
-時間と領域: 辺の数 `m = target.size()` について、モデル上の仕事量は呼び出し側の引数評価を除いて `5500 * m + 2400 * n + 700` 以下、vector への書き込みは `5 * m + 5 * n + 8` 回以下。追加領域はスカラーのセル高々 450 個（呼び出し側の frame に加えて、入力の大きさによらない定数）。
-
-定理に含めていないこと: 関数オブジェクトを取る一般の `P`（`DpHeight` 以外の `P` は、同じ手順で証明が要る）、`ord`・`parent` を作る部分（別の関数）、上の前提を破る入力（未定義動作）。C++ のテストは `tests/tree_full_dp.cpp`（ランダムな木で、`dp`・`up`・`full` を再帰による定義どおりの高さと比較する）。
+定理に含めていないこと: 静的メンバーが tick 1 で計算しない `P`、`ord`・`parent` を作る部分（別の関数）、上の前提を破る入力（未定義動作）。C++ のテストは `tests/tree_full_dp.cpp`（ランダムな木で、`dp`・`up`・`full` を再帰による定義どおりの高さと比較する）。
 
 
 ## 順序生成との接続

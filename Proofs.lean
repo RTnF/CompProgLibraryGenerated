@@ -602,3 +602,5 @@ import Proofs.Generated.SortUtil
 import Proofs.Cpp.SortUtil
 import Proofs.IsPrimeMath
 import Proofs.LowlinkPhiMath
+import Proofs.Generated.TreeFullDp
+import Proofs.Cpp.TreeFullDp

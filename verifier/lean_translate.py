@@ -540,7 +540,7 @@ class Fn:
                 tt, tty = self.convert(tt, tty, ety, t)
             return f"(if {ct} then {tt} else {et})", tty
         if kind in ("CallExpr", "CXXMemberCallExpr"):
-            return self.call(n, pre)
+            return self.call(n, pre, expected)
         if kind in ("CXXConstructExpr", "ParenListExpr", "CXXTemporaryObjectExpr", "InitListExpr",
                     "CXXUnresolvedConstructExpr", "CXXScalarValueInitExpr"):
             if expected is None:
@@ -784,7 +784,7 @@ class Fn:
     def has_default(self, sig, i):
         return False
 
-    def call(self, n, pre):
+    def call(self, n, pre, expected=None):
         kids = inner(n)
         callee = strip(kids[0])
         args = [a for a in kids[1:] if strip(a).get("kind") != "CXXDefaultArgExpr"]
@@ -807,8 +807,35 @@ class Fn:
                 pass
             return self.free_call(name, args, pre, callee)
         if ck == "DependentScopeDeclRefExpr":
-            raise Unsupported("call through a dependent scope")
+            return self.policy_call(callee, args, pre, expected)
         raise Unsupported(f"call {ck}")
+
+    def policy_call(self, callee, args, pre, expected):
+        """`P::f(args)` for a template parameter `P` (a policy class with static members): a call of the field `f` of
+        the explicit argument `P : <function>.Policy_P` (docs/translation.md)."""
+        text = re.sub(r"\s+", "", self.tr.span(callee))
+        m = re.fullmatch(r"(?:typename)?(\w+)::(\w+)", text)
+        if not m or m.group(1) not in self.sig.tparams or self.cls is not None:
+            raise Unsupported(f"call through a dependent scope {text}")
+        pol, member = m.group(1), m.group(2)
+        texts, tys = [], []
+        for a in args:
+            t, ty = self.expr(a, pre)
+            texts.append(t)
+            tys.append(ty)
+        if expected is not None and expected.kind not in ("unknown", "void"):
+            rty = expected
+        elif tys:
+            rty = tys[0]
+        else:
+            raise Unsupported(f"result type of {pol}::{member}")
+        methods = self.sig.policies.setdefault(pol, {})
+        if member in methods and methods[member] != (tuple(tys), rty):
+            raise Unsupported(f"{pol}::{member} used with two signatures")
+        methods[member] = (tuple(tys), rty)
+        tmp = self.fresh()
+        pre.append(f"let {tmp} ← {' '.join([f'{pol}.{lean_name(member)}'] + texts)}")
+        return tmp, rty
 
     def self_call(self, name, args, pre):
         if self.cls is None:
@@ -1950,11 +1977,29 @@ class Translator:
         # header
         tps = list(info.tparams if info else []) + list(sig.tparams)
         reqs = list(fn.reqs.items)
+        structs = []
+        pol_args = []
+        for pol, methods in sig.policies.items():
+            # a policy parameter is a value: a structure with the static members used
+            tps.remove(pol)
+            used = []
+            for tys, rty in methods.values():
+                for t in [*tys, rty]:
+                    used += [x for x in sorted(tparams_of(t)) if x not in used]
+            used = [t for t in tps if t in used]
+            sname = f"{sig.lean_name}.Policy_{pol}"
+            lines = [f"/-- The static members of `{pol}` that `{sig.cpp_name}` calls. -/",
+                     f"structure {sname} {' '.join(f'({t} : Type)' for t in used)} where"]
+            for member, (tys, rty) in methods.items():
+                arrow = "".join(f"{lean_type(t)} → " for t in tys)
+                lines.append(f"  {lean_name(member)} : {arrow}Cpp.M {lean_type(rty)}")
+            structs.append("\n".join(lines) + "\n")
+            pol_args.append(f"({pol} : {sname}{''.join(' ' + t for t in used)})")
         for pname, pty, _ in sig.params:
             for t in tparams_of(pty):
                 if t not in tps:
                     raise Unsupported(f"unknown type parameter {t}")
-        args = []
+        args = list(pol_args)
         if info is not None and not sig.is_static and not sig.is_ctor:
             args.append(f"(self : {cls_ty})")
         for pname, pty, _ in sig.params:
@@ -1978,7 +2023,7 @@ class Translator:
         name = sig.lean_name
         header = f"def {name} {binders(tps, reqs)} {' '.join(args)} : Cpp.M {rtype} := do"
         header = re.sub(r"  +", " ", header)
-        return "\n".join([header] + fn.lines) + "\n"
+        return "".join(x + "\n" for x in structs) + "\n".join([header] + fn.lines) + "\n"
 
 
 def type_tag(ty: Ty):
