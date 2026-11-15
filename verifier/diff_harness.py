@@ -10,6 +10,11 @@ Command language (whitespace separated tokens, one command per line):
   new <constructor> <args...>        constructs object number k (0, 1, ... in order of creation)
   do <k> <method> <args...>          calls a member function of object k; prints its outputs
 Values: an integer; a bool as 0/1; a vector as its length and its elements; a pair as its two values.
+Input streams: a token count followed by canonical decimal tokens or `x` (invalid input).
+Character streams also accept `bytes <count> <0..255>...` with canonical byte codes.
+Output streams: no argument tokens (a fresh default-formatted empty output stream).
+Stream output: EOF/failure bits for input, byte count and character codes for output.
+Mutable object arguments: updated in the object table and reported as `objref`.
 Outputs of a call: the returned value (if not void), then each non-const reference argument after the call.
 """
 
@@ -35,9 +40,21 @@ def cpp_value_type(qual: str, instance: dict) -> str:
     return re.sub(r"\s+", " ", s)
 
 
+# These template bindings use mathematical integers under the component's
+# no-narrowing-overflow premise. Their C++ expressions promote to int, rather
+# than computing in UInt8/UInt16 at every operator. Explicit concrete source
+# declarations/casts still go through lean_translate.parse_type and are rejected.
+SMALL_UNSIGNED_BINDINGS = {"unsigned char": 8, "unsigned short": 16, "unsigned short int": 16}
+
+
+def instance_type(cpp: str):
+    if cpp in SMALL_UNSIGNED_BINDINGS:
+        return lt.INT32
+    return lt.parse_type(cpp, set(), set())
+
+
 def lean_instance_type(cpp: str) -> str:
-    ty = lt.parse_type(cpp, set(), set())
-    return lt.lean_type(ty)
+    return lt.lean_type(instance_type(cpp))
 
 
 CPP_PRELUDE = r"""
@@ -46,6 +63,9 @@ CPP_PRELUDE = r"""
 #include <type_traits>
 #include <utility>
 #include <vector>
+#if __cplusplus >= 202002L
+#include <compare>
+#endif
 
 namespace difftest {
 template <class X> void rd(std::vector<X> &v);
@@ -66,6 +86,9 @@ template <class X> void pr(const X &x) {
   if constexpr (std::is_unsigned_v<X>) std::cout << ' ' << (unsigned long long)x;
   else std::cout << ' ' << (long long)x;
 }
+#if __cplusplus >= 202002L
+inline void pr(std::strong_ordering x) { std::cout << ' ' << (x < 0 ? -1 : x > 0 ? 1 : 0); }
+#endif
 inline void pr(bool x) { std::cout << ' ' << (x ? 1 : 0); }
 template <class X> void pr(const std::vector<X> &v) {
   std::cout << ' ' << v.size();
@@ -78,6 +101,12 @@ template <class A, class B> void pr(const std::pair<A, B> &p) { pr(p.first); pr(
 
 LEAN_PRELUDE = r"""
 namespace DiffTest
+
+-- Differential tests compare values, not time. A test-only cost instance lets
+-- them execute numeric contracts whose complexity is unspecified by the standard.
+instance : Proofs.Cpp.NumericCost where
+  gcd _ _ := 1
+  lcm _ _ := 1
 
 class Rd (α : Type) where
   rd : List String → Option (α × List String)
@@ -117,6 +146,8 @@ instance : Pr Int where pr x := s!" {x}"
 instance : Pr UInt64 where pr x := s!" {x.toNat}"
 instance : Pr UInt32 where pr x := s!" {x.toNat}"
 instance : Pr Bool where pr x := if x then " 1" else " 0"
+instance : Pr Ordering where
+  pr | .lt => " -1" | .eq => " 0" | .gt => " 1"
 instance {α : Type} [Pr α] : Pr (Array α) where
   pr v := s!" {v.size}" ++ String.join (v.toList.map Pr.pr)
 instance {α β : Type} [Pr α] [Pr β] : Pr (α × β) where
@@ -132,26 +163,240 @@ end DiffTest
 """
 
 
+CPP_STREAM_PRELUDE = r"""
+#include <sstream>
+#include <stdexcept>
+#include <limits>
+namespace difftest {
+inline bool stream_token(const std::string &s) {
+  if (s == "x" || s == "0") return true;
+  std::size_t i = !s.empty() && s[0] == '-' ? 1 : 0;
+  if (i == s.size() || s[i] < '1' || s[i] > '9') return false;
+  for (++i; i < s.size(); ++i) if (s[i] < '0' || s[i] > '9') return false;
+  return true;
+}
+inline void rd(std::istringstream &s) {
+@@BYTE_INPUT@@
+  long long n;
+  if (!(std::cin >> n) || n < 0) throw std::runtime_error("invalid stream token count");
+  std::string input, token;
+  for (long long i = 0; i < n; ++i) {
+    if (!(std::cin >> token)) throw std::runtime_error("missing stream token");
+    if (!stream_token(token)) throw std::runtime_error("unsupported stream token");
+    if (i) input += ' ';
+    input += token;
+  }
+  s.str(input);
+}
+inline void rd(std::ostringstream &) {}
+inline void pr(const std::istream &s) { std::cout << ' ' << s.eof() << ' ' << s.fail(); }
+inline void pr(const std::istringstream &s) { pr(static_cast<const std::istream &>(s)); }
+inline void pr(const std::ostream &s) {
+  const auto &buffer = dynamic_cast<const std::ostringstream &>(s);
+  const auto text = buffer.str();
+  std::cout << ' ' << text.size();
+  for (unsigned char c : text) std::cout << ' ' << static_cast<unsigned>(c);
+}
+inline void pr(const std::ostringstream &s) { pr(static_cast<const std::ostream &>(s)); }
+} // namespace difftest
+"""
+
+CPP_CHARACTER_BYTE_INPUT = r"""
+  static_assert(std::numeric_limits<unsigned char>::digits == 8,
+                "character differential binding needs 8-bit bytes");
+  static_assert(std::numeric_limits<@@CHAR_TYPE@@>::is_signed == @@CHAR_SIGNED@@,
+                "character differential binding has the wrong character signedness");
+  std::cin >> std::ws;
+  if (std::cin.peek() == 'b') {
+    std::string mode;
+    long long n;
+    if (!(std::cin >> mode >> n) || mode != "bytes" || n < 0)
+      throw std::runtime_error("invalid stream byte count");
+    std::string input;
+    for (long long i = 0; i < n; ++i) {
+      std::string token;
+      if (!(std::cin >> token) || !stream_token(token) || token == "x"
+          || token[0] == '-' || token.size() > 3)
+        throw std::runtime_error("invalid stream byte");
+      const int byte = std::stoi(token);
+      if (byte > 255) throw std::runtime_error("invalid stream byte");
+      input.push_back(static_cast<char>(byte));
+    }
+    s.str(input);
+    return;
+  }
+"""
+
+LEAN_CHARACTER_BYTE_READER = r"""
+partial def streamBytes : Nat → List String → Option (List Char × List String)
+  | 0, ts => some ([], ts)
+  | n + 1, t :: ts => do
+    let byte ← t.toNat?
+    if byte > 255 || toString byte != t then none else do
+      let (rest, ts) ← streamBytes n ts
+      some (Char.ofNat byte :: rest, ts)
+  | _, [] => none
+"""
+
+LEAN_SIGNED_STREAM_OPS = r"""
+instance : @StreamRead Int streams where
+  read input old := do
+    if input.failed then return (old, input)
+    if input.eof then return (old, { input with failed := true })
+    match input.tokens with
+    | [] => return (old, { input with eof := true, failed := true })
+    | none :: rest => return (0, { input with tokens := rest, failed := true })
+    | some value :: rest =>
+      let clipped := max (@@MIN@@ : Int) (min (@@MAX@@ : Int) value)
+      return (clipped, { input with tokens := rest, eof := rest.isEmpty, failed := clipped != value })
+
+instance : @StreamWrite Int streams where
+  write output value := pure (String.append output (toString value))
+"""
+
+LEAN_UNSIGNED_STREAM_OPS = r"""
+instance : @StreamRead @@TYPE@@ streams where
+  read input old := do
+    if input.failed then return (old, input)
+    if input.eof then return (old, { input with failed := true })
+    match input.tokens with
+    | [] => return (old, { input with eof := true, failed := true })
+    | none :: rest => return (0, { input with tokens := rest, failed := true })
+    | some value :: rest =>
+      let overflow := decide (value.natAbs > @@MAX@@)
+      let result := if overflow then @@MAX@@ else
+        if value < 0 then @@CAPACITY@@ - value.natAbs else value.natAbs
+      return (@@TYPE@@.ofNat result,
+        { input with tokens := rest, eof := rest.isEmpty, failed := overflow })
+
+instance : @StreamWrite @@TYPE@@ streams where
+  write output value := pure (String.append output (toString value.toNat))
+"""
+
+LEAN_CHARACTER_STREAM_OPS = r"""
+instance : @StreamRead Int streams where
+  read input old := do
+    if input.failed then return (old, input)
+    if input.eof then return (old, { input with failed := true })
+    match input.chars.dropWhile (fun c => [9, 10, 11, 12, 13, 32].contains c.toNat) with
+    | [] => return (old, { input with chars := [], eof := true, failed := true })
+    | c :: rest =>
+      let value : Int := if @@CHAR_SIGNED@@ then
+        (if c.toNat < 128 then c.toNat else (c.toNat : Int) - 256) else c.toNat
+      return (value, { input with chars := rest })
+
+instance : @StreamWrite Int streams where
+  write output value := pure (String.push output (Char.ofNat (value % 256).toNat))
+"""
+
+LEAN_STREAM_PRELUDE = r"""
+namespace DiffTest
+open Proofs.Cpp
+structure StreamInput where
+  tokens : List (Option Int)
+  chars : List Char := []
+  eof : Bool := false
+  failed : Bool := false
+
+instance streams : Streams where
+  Input := StreamInput
+  Output := String
+
+-- Concrete decimal or ASCII-character test binding, not a universal std::istream parser.
+-- The protocol only accepts canonical decimal tokens or the invalid token "x".
+partial def streamTokens : Nat → List String → Option (List (Option Int) × List String)
+  | 0, ts => some ([], ts)
+  | n + 1, t :: ts => do
+    let token ← if t == "x" then some none else do
+      let value ← t.toInt?
+      if toString value != t then none else some (some value)
+    let (rest, ts) ← streamTokens n ts
+    some (token :: rest, ts)
+  | _, [] => none
+
+@@BYTE_READER@@
+instance : Rd (@IStream streams) where
+  rd ts := do
+    if ts.head? == some "bytes" then
+@@RAW_INPUT@@
+    else
+      let (n, ts) ← (Rd.rd ts : Option (Int × List String))
+      if n < 0 then none else do
+        let (tokens, ts) ← streamTokens n.toNat ts
+        some ((@@INPUT_VALUE@@ : StreamInput), ts)
+
+instance : Rd (@OStream streams) where
+  rd ts := some ("", ts)
+
+@@NUMERIC_OPS@@
+instance : @StreamWrite StreamChar streams where
+  write output value := pure (String.push output (Char.ofNat (value.code % 256).toNat))
+
+instance : Pr (@IStream streams) where
+  pr s := s!" {if s.eof then 1 else 0} {if s.failed then 1 else 0}"
+instance : Pr (@OStream streams) where
+  pr s := " " ++ toString (String.length s) ++ String.join
+    ((String.toList s).map fun c => " " ++ toString c.toNat)
+end DiffTest
+"""
+
+
 class Harness:
-    def __init__(self, source: Path, instance: dict, lean_module: str, deps=()):
+    def __init__(self, source: Path, instance: dict, lean_module: str, deps=(), standard="c++17", calls=None):
+        self.selected_calls = None if calls is None else frozenset(calls)
         self.source = source
         self.instance = instance             # template parameter -> C++ type
         self.lean_module = lean_module
-        tr = lt.Translator(lt.source_decls(source), source.read_bytes(),
-                           [(lt.source_decls(Path(d)), Path(d).read_bytes()) for d in deps])
+        tr = lt.Translator(lt.source_decls(source, standard), source.read_bytes(),
+                           [(lt.source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
         tr.translate()
         self.tr = tr
+        if self.selected_calls is not None:
+            known = {sig.lean_name.removeprefix("cp.") for info, sig in self.callables(unfiltered=True)
+                     if sig.public and not (info is not None and sig.is_static)}
+            unknown = self.selected_calls - known
+            if unknown:
+                raise lt.Unsupported(f"unknown or non-public differential calls: {sorted(unknown)}")
         policies = {pol for _, sig in self.callables() for pol in sig.policies}
         self.policy_class = {k: re.sub(r"<.*", "", v).removeprefix("cp::") for k, v in instance.items() if k in policies}
         self.lean_instance = {k: lean_instance_type(v) for k, v in instance.items() if k not in policies}
         for k, v in instance.items():
             if k in policies:
                 continue
-            ty = lt.parse_type(v, set(), set())
+            ty = instance_type(v)
             if ty.kind == "vec":   # a container parameter T: its element type is T_value_type
                 self.lean_instance[f"{k}_value_type"] = lt.lean_type(ty.args[0])
+        self.has_streams = any(t.kind in ("istream", "ostream")
+                               for _, sig in self.callables() for t in [sig.ret, *[p[1] for p in sig.params]])
+        self.stream_bits = 64
+        self.stream_unsigned = False
+        self.stream_character = False
+        if self.has_streams:
+            signed_bits = {"short": 16, "short int": 16, "int": 32, "std::int32_t": 32, "int32_t": 32,
+                           "long": 64, "long int": 64, "long long": 64, "long long int": 64,
+                           "ll": 64, "std::int64_t": 64, "int64_t": 64}
+            values = [v for k, v in instance.items() if k not in policies]
+            models = []
+            message = "stream differential protocol needs one uniform numeric or character model"
+            for value in values:
+                if value in signed_bits:
+                    models.append((signed_bits[value], False, False))
+                elif value in ("char", "signed char"):
+                    models.append((8, False, True))
+                elif value in SMALL_UNSIGNED_BINDINGS:
+                    bits = SMALL_UNSIGNED_BINDINGS[value]
+                    models.append((bits, True, bits == 8))
+                elif value in lt.UNSIGNED_NAMES:
+                    models.append((32 if lt.UNSIGNED_NAMES[value].kind == "u32" else 64, True, False))
+                else:
+                    raise lt.Unsupported(message)
+            if len(set(models)) > 1:
+                raise lt.Unsupported(message)
+            if models:
+                self.stream_bits, self.stream_unsigned, self.stream_character = models[0]
 
-    def callables(self):
+
+    def callables(self, *, unfiltered=False):
         out = []
         for kind, item in self.tr.order:
             if kind == "fn":
@@ -159,6 +404,9 @@ class Harness:
             else:
                 for sig in item.methods:
                     out.append((item, sig))
+        if self.selected_calls is not None and not unfiltered:
+            out = [(info, sig) for info, sig in out
+                   if sig.lean_name.removeprefix("cp.") in self.selected_calls]
         return out
 
     def param_quals(self, sig):
@@ -172,7 +420,13 @@ class Harness:
     def cpp_driver(self) -> str:
         include = os.path.relpath(self.source.resolve(), (ROOT / "tests/diff").resolve())
         lines = [f'#include "../../experiments/library/cpp/template/small_template.hpp"',
-                 f'#include "{include}"', CPP_PRELUDE, "int main() {", "  std::string cmd, name;"]
+                 f'#include "{include}"', CPP_PRELUDE,
+                 (CPP_STREAM_PRELUDE.replace("@@BYTE_INPUT@@",
+                     CPP_CHARACTER_BYTE_INPUT.replace("@@CHAR_TYPE@@",
+                       "unsigned char" if self.stream_unsigned else (
+                         "char" if "char" in self.instance.values() else "signed char"))
+                       .replace("@@CHAR_SIGNED@@", "false" if self.stream_unsigned else "true")
+                     if self.stream_character else "") if self.has_streams else ""), "int main() {", "  std::string cmd, name;"]
         classes = [item for kind, item in self.tr.order if kind == "class"]
         for info in classes:
             lines.append(f"  std::vector<{self.cpp_class(info)}> objects_{info.name};")
@@ -186,15 +440,21 @@ class Harness:
                 pty = sig.params[i][1]
                 if pty.kind == "cls":
                     # an object argument is given by its number
-                    decls.append(f"long long a{i}k; std::cin >> a{i}k; auto a{i} = objects_{pty.name}[a{i}k];")
+                    decls.append(f"long long a{i}k; std::cin >> a{i}k; auto &a{i} = objects_{pty.name}[a{i}k];")
                 else:
-                    t = cpp_value_type(q, self.instance)
+                    t = {"istream": "std::istringstream", "ostream": "std::ostringstream"}.get(pty.kind,
+                                                                                          cpp_value_type(q, self.instance))
                     decls.append(f"{t} a{i}; difftest::rd(a{i});")
                 names.append(f"a{i}")
             if info is None:
                 targs = [self.instance[t.removesuffix("_value_type")] if t.removesuffix("_value_type") in sig.containers
                          else self.instance[t] for t in sig.tparams]
-                callee = f"cp::{sig.cpp_name}" + (f"<{', '.join(targs)}>" if targs else "")
+                # Hidden friends are found by argument-dependent lookup only.
+                hidden_friend = sig.node.get("lean_hidden_friend", False)
+                if hidden_friend:
+                    # Class template parameters do not make its friend a function template.
+                    targs = []
+                callee = ("" if hidden_friend else "cp::") + sig.cpp_name + (f"<{', '.join(targs)}>" if targs else "")
                 key = f"call {sig.lean_name.removeprefix('cp.')}"
                 call = f"{callee}({', '.join(names)})"
             elif sig.is_ctor:
@@ -218,14 +478,18 @@ class Harness:
                     lines.append(f"        objects_{sig.ret.name}.push_back({call});")
                     lines.append("        std::cout << \"ok obj\";")
                 elif sig.ret.kind != "void":
-                    lines.append(f"        auto r = {call};")
+                    ref = "&" if sig.ret.kind in ("istream", "ostream") else ""
+                    lines.append(f"        auto {ref}r = {call};")
                     lines.append("        std::cout << \"ok\"; difftest::pr(r);")
                 else:
                     lines.append(f"        {call};")
                     lines.append("        std::cout << \"ok\";")
                 for i, (pname, pty, is_ref) in enumerate(sig.params):
                     if is_ref:
-                        lines.append(f"        difftest::pr(a{i});")
+                        if pty.kind == "cls":
+                            lines.append('        std::cout << " objref";')
+                        else:
+                            lines.append(f"        difftest::pr(a{i});")
                 lines.append("        std::cout << '\\n';")
             lines.append("        continue;")
             lines.append("      }")
@@ -237,11 +501,38 @@ class Harness:
 
     # ------------------------------------------------------------------ Lean
     def lean_type_inst(self, ty):
+        if ty.kind in ("istream", "ostream"):
+            return "Proofs." + lt.lean_type(ty)
         return lt.lean_type(lt.subst(ty, list(self.lean_instance), [lt.Ty("tparam", v) for v in self.lean_instance.values()]))
 
     def lean_driver(self) -> str:
         classes = [item for kind, item in self.tr.order if kind == "class"]
-        lines = [f"import {self.lean_module}", LEAN_PRELUDE, "open Proofs.Cpp.Gen", "",
+        streams = ""
+        if self.has_streams:
+            ops = LEAN_CHARACTER_STREAM_OPS if self.stream_character else (
+                LEAN_UNSIGNED_STREAM_OPS if self.stream_unsigned else LEAN_SIGNED_STREAM_OPS)
+            streams = LEAN_STREAM_PRELUDE.replace("@@NUMERIC_OPS@@", ops)
+            input_value = "{ tokens }"
+            if self.stream_character:
+                input_value = ('{ tokens, chars := (String.intercalate " " (tokens.map '
+                               'fun token => match token with | none => "x" | some n => toString n)).toList }')
+            streams = streams.replace("@@INPUT_VALUE@@", input_value)
+            streams = streams.replace("@@BYTE_READER@@", LEAN_CHARACTER_BYTE_READER if self.stream_character else "")
+            raw_input = "      none"
+            if self.stream_character:
+                raw_input = ("      let (n, rest) ← (Rd.rd ts.tail : Option (Int × List String))\n"
+                             "      if n < 0 then none else do\n"
+                             "        let (chars, rest) ← streamBytes n.toNat rest\n"
+                             "        some (({ tokens := [], chars } : StreamInput), rest)")
+            streams = streams.replace("@@RAW_INPUT@@", raw_input)
+            streams = streams.replace("@@MIN@@", str(-(2 ** (self.stream_bits - 1))))
+            maximum = 2 ** (self.stream_bits if self.stream_unsigned else self.stream_bits - 1) - 1
+            streams = streams.replace("@@MAX@@", str(maximum))
+            streams = streams.replace("@@CAPACITY@@", str(2 ** self.stream_bits))
+            streams = streams.replace("@@TYPE@@", "Int" if self.stream_unsigned and self.stream_bits < 32
+                                      else "UInt" + str(self.stream_bits))
+            streams = streams.replace("@@CHAR_SIGNED@@", "false" if self.stream_unsigned else "true")
+        lines = [f"import {self.lean_module}", LEAN_PRELUDE, streams, "open Proofs.Cpp.Gen", "",
                  "structure Objects where"]
         for info in classes:
             cty = self.lean_type_inst(lt.Ty("cls", info.name, tuple(lt.Ty("tparam", t) for t in info.tparams)))
@@ -282,7 +573,7 @@ class Harness:
             call = " ".join([sig.lean_name] + pols + (["obj"] if info is not None and not sig.is_ctor else []) + names)
             lines.append(f"    match ({call}).run 0 with")
             lines.append('    | none => run ts objs (out.push "fail")')
-            lines.append("    | some (r, _) =>")
+            lines.append("    | some (r, _) => do")
             if sig.is_ctor:
                 lines.append(f"      run ts {{ objs with o_{info.name} := objs.o_{info.name}.push r }} (out.push \"new\")")
                 continue
@@ -295,16 +586,24 @@ class Harness:
                 if o == "ret" and sig.ret.kind == "cls":
                     parts.append('" obj"')
                     continue
+                if o != "ret" and next(p[1] for p in sig.params if p[0] == o).kind == "cls":
+                    parts.append('" objref"')
+                    continue
                 parts.append(f"DiffTest.Pr.pr {sel}")
             text = " ++ ".join(['"ok"'] + parts)
             objs = "objs"
             if sig.ret.kind == "cls" and outputs and outputs[0] == "ret":
                 sel = "r" if len(outputs) == 1 else "r.1"
-                objs = f"{{ objs with o_{sig.ret.name} := objs.o_{sig.ret.name}.push {sel} }}"
+                lines.append(f"      let objs := {{ objs with o_{sig.ret.name} := objs.o_{sig.ret.name}.push {sel} }}")
+            for i, (pname, pty, is_ref) in enumerate(sig.params):
+                if is_ref and pty.kind == "cls":
+                    j = outputs.index(pname)
+                    sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
+                    lines.append(f"      let objs := {{ objs with o_{pty.name} := objs.o_{pty.name}.set! a{i}k.toNat {sel} }}")
             if "self" in outputs:
                 j = outputs.index("self")
                 sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
-                objs = f"{{ objs with o_{info.name} := objs.o_{info.name}.set! k.toNat {sel} }}"
+                lines.append(f"      let objs := {{ objs with o_{info.name} := objs.o_{info.name}.set! k.toNat {sel} }}")
             lines.append(f"      run ts {objs} (out.push ({text}))")
         lines.append("  | t :: _ => throw (IO.userError s!\"unknown command {t}\")")
         lines.append("")
@@ -316,9 +615,9 @@ class Harness:
         return "\n".join(lines) + "\n"
 
 
-def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None, deps=()):
+def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None, deps=(), standard="c++17"):
     """Run both interpreters on `cases` (command text) and require identical output."""
-    h = Harness(source, instance, lean_module, deps)
+    h = Harness(source, instance, lean_module, deps, standard)
     lake = str(ROOT / ".tools/elan/bin/lake")
     env = os.environ.copy()
     env["ELAN_HOME"] = str(ROOT / ".tools/elan")
@@ -330,7 +629,7 @@ def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout
         try:
             cpp.write_text(h.cpp_driver())
             binary = scratch / "driver"
-            subprocess.run(["g++", "-std=c++17", "-O1", "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
+            subprocess.run(["g++", f"-std={standard}", "-O1", "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                             str(cpp), "-o", str(binary)], check=True, timeout=timeout)
         finally:
             cpp.unlink(missing_ok=True)
@@ -360,13 +659,14 @@ if __name__ == "__main__":
     parser.add_argument("--module", required=True)
     parser.add_argument("--emit", choices=("cpp", "lean"))
     parser.add_argument("--cases")
+    parser.add_argument("--standard", choices=("c++17", "c++20"), default="c++17")
     args = parser.parse_args()
     inst = dict(item.split("=", 1) for item in args.instance)
-    h = Harness(Path(args.source), inst, args.module)
+    h = Harness(Path(args.source), inst, args.module, standard=args.standard)
     if args.emit == "cpp":
         print(h.cpp_driver())
     elif args.emit == "lean":
         print(h.lean_driver())
     else:
-        n = run_diff(Path(args.source), inst, args.module, Path(args.cases).read_text())
+        n = run_diff(Path(args.source), inst, args.module, Path(args.cases).read_text(), standard=args.standard)
         print(f"{n} outputs agree")

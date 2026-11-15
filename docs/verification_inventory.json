@@ -2988,7 +2988,7 @@
             "tests/doubling.cpp",
             "tests/bit_width_u64.cpp",
             "tests/test_nested_ir.py",
-            "tests/test_doubling_proof.py",
+            "tests/diff/doubling.py",
             "verifier/nested_ir.py",
             "verifier/nested_bridge.py",
             "Proofs/Generated/DoublingNested.lean",
@@ -3048,7 +3048,7 @@
         "tests/doubling.cpp",
         "tests/bit_width_u64.cpp",
         "tests/test_nested_ir.py",
-        "tests/test_doubling_proof.py",
+        "tests/diff/doubling.py",
         "verifier/nested_ir.py",
         "verifier/nested_bridge.py",
         "Proofs/Generated/DoublingNested.lean",
@@ -10725,7 +10725,7 @@
     },
     {
       "source": "experiments/library/cpp/number/ratio.hpp",
-      "source_sha256": "ade7306445af7ac93e6120e278cecfc34b84902478cd3e83476ce0fa1cbb0382",
+      "source_sha256": "d1a1def9423df87bae0336f7f004e95d4d1f53c0d3d8191cefd5227901661bd4",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": null,
@@ -10836,6 +10836,38 @@
           "kind": "CXXConstructorDecl",
           "line": 26,
           "declaration": "Ratio<T> 'void (T)' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 28,
+          "declaration": "operator<=> 'strong_ordering (const Ratio<T> &) const' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 32,
+          "declaration": "operator== 'bool (const Ratio<T> &) const' default implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
           "status": {
@@ -10978,7 +11010,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 81,
+          "line": 84,
           "declaration": "operator+ 'Ratio<T> () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10994,7 +11026,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 82,
+          "line": 85,
           "declaration": "operator- 'Ratio<T> () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11010,7 +11042,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 84,
+          "line": 87,
           "declaration": "friend_undeclared operator+ 'Ratio<T> (const Ratio<T> &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11026,7 +11058,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 87,
+          "line": 90,
           "declaration": "friend_undeclared operator- 'Ratio<T> (const Ratio<T> &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11042,7 +11074,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 90,
+          "line": 93,
           "declaration": "friend_undeclared operator* 'Ratio<T> (const Ratio<T> &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11058,7 +11090,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 93,
+          "line": 96,
           "declaration": "friend_undeclared operator/ 'Ratio<T> (const Ratio<T> &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11074,7 +11106,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 96,
+          "line": 99,
           "declaration": "friend_undeclared operator+ 'Ratio<T> (const Ratio<T> &, const T &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11090,7 +11122,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 97,
+          "line": 100,
           "declaration": "friend_undeclared operator- 'Ratio<T> (const Ratio<T> &, const T &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11106,7 +11138,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 98,
+          "line": 101,
           "declaration": "friend_undeclared operator* 'Ratio<T> (const Ratio<T> &, const T &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11122,7 +11154,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 99,
+          "line": 102,
           "declaration": "friend_undeclared operator/ 'Ratio<T> (const Ratio<T> &, const T &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11138,7 +11170,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 100,
+          "line": 103,
           "declaration": "friend_undeclared operator+ 'Ratio<T> (const T &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11154,7 +11186,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 101,
+          "line": 104,
           "declaration": "friend_undeclared operator- 'Ratio<T> (const T &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11170,7 +11202,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 102,
+          "line": 105,
           "declaration": "friend_undeclared operator* 'Ratio<T> (const T &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11186,7 +11218,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 103,
+          "line": 106,
           "declaration": "friend_undeclared operator/ 'Ratio<T> (const T &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11202,7 +11234,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 105,
+          "line": 108,
           "declaration": "friend_undeclared operator>> 'istream &(istream &, Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11218,7 +11250,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 109,
+          "line": 112,
           "declaration": "friend_undeclared operator<< 'ostream &(ostream &, const Ratio<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -11234,13 +11266,15 @@
         }
       ],
       "declaration_scan": {
-        "status": "partial",
-        "diagnostics": "experiments/library/cpp/number/ratio.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\nexperiments/library/cpp/number/ratio.hpp:28:3: error: unknown type name 'strong_ordering'\n   28 |   strong_ordering operator<=>(const Ratio &r) const {\n      |   ^\nexperiments/library/cpp/number/ratio.hpp:28:27: warning: '<=>' is a single token in C++20; add a space to avoid a change in behavior [-Wc++20-compat]\n   28 |   strong_ordering operator<=>(const Ratio &r) const {\n      |                           ^ \n      |                              \nexperiments/library/cpp/number/ratio.hpp:28:19: error: 'operator<=' cannot be the name of a variable or data member\n   28 |   strong_ordering operator<=>(const Ratio &r) const {\n      |                   ^\nexperiments/library/cpp/number/ratio.hpp:28:29: error: expected ';' at end of declaration list\n   28 |   strong_ordering operator<=>(const Ratio &r) const {\n      |                             ^\n      |                             ;\nexperiments/library/cpp/number/ratio.hpp:30:24: warning: '<=>' is a single token in C++20; add a space to avoid a change in behavior [-Wc++20-compat]\n   30 |     return r.d / g * n <=> d / g * r.n;\n      |                        ^ \n      |                           \n3 warnings and 3 errors generated.\n"
+        "status": "passed",
+        "standard": "c++20",
+        "diagnostics": "experiments/library/cpp/number/ratio.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\n1 warning generated.\n"
       },
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from <scratch>/include.cpp:2:\nexperiments/library/cpp/number/ratio.hpp:28:3: error: ‘strong_ordering’ does not name a type\n   28 |   strong_ordering operator<=>(const Ratio &r) const {\n      |   ^~~~~~~~~~~~~~~\nexperiments/library/cpp/number/ratio.hpp:32:8: error: defaulted ‘bool Ratio<T>::operator==(const Ratio<T>&) const’ only available with ‘-std=c++20’ or ‘-std=gnu++20’\n   32 |   bool operator==(const Ratio &r) const = default;\n      |        ^~~~~~~~\n",
+        "status": "passed",
+        "exit_code": 0,
+        "standard": "c++20",
+        "diagnostics": "experiments/library/cpp/number/ratio.hpp:1:9: warning: #pragma once in main file\n    1 | #pragma once\n      |         ^~~~\n",
         "mode": "syntax-only"
       },
       "problem_url": null,
@@ -11273,7 +11307,13 @@
         "experiments/library3/cpp/Graph/GraphM.hpp",
         "experiments/library3/cpp/ModInt/ModInt.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "tests/test_ratio_original_api.py",
+        "tests/imports/ratio_scalar_left.cpp",
+        "docs/agent/fixes.md"
+      ],
+      "review_notes": "Scalar-left arithmetic and division defects fixed, int/long long sanitizer/Fraction regressions passed. Syntax/declarations checked with C++20. Full source translation (including streams), generic proofs and publication remain pending."
     },
     {
       "source": "experiments/library/cpp/number/square_matrix.hpp",
@@ -11934,8 +11974,8 @@
             "tests/test_safe_mod_proofs.py",
             "library/number_theory/safe_mod.toml",
             "tests/safe_mod.cpp",
-            "verifier/state_bridge.py",
-            "tests/test_state_bridge.py"
+            "verifier/model_bridge.py",
+            "tests/diff/floor_sum.py"
           ],
           "review_notes": [
             "Requires m > 0 and signed 64-bit x,m. Published common-generator component; GitHub Release update has not been verified."
@@ -12021,8 +12061,8 @@
             "library/number_theory/floor_sum.hpp",
             "library/number_theory/floor_sum.toml",
             "tests/floor_sum.cpp",
-            "verifier/state_bridge.py",
-            "tests/test_state_bridge.py",
+            "verifier/model_bridge.py",
+            "tests/diff/floor_sum.py",
             "tests/test_scalar_swap_ir.py",
             "verification/statements.json"
           ],
@@ -12070,8 +12110,8 @@
         "tests/test_safe_mod_proofs.py",
         "library/number_theory/safe_mod.toml",
         "tests/safe_mod.cpp",
-        "verifier/state_bridge.py",
-        "tests/test_state_bridge.py",
+        "verifier/model_bridge.py",
+        "tests/diff/floor_sum.py",
         "tests/test_scalar_swap_ir.py",
         "verifier/scalar_stl.py",
         "docs/scalar_stl_contracts.md",

@@ -34,7 +34,8 @@ def check_component(name, timeout=None):
     check_source_contract(source, metadata)
     imports = [model_module(component(dep)["model"]) for dep in metadata["dependencies"]]
     deps = [repo_file(f"library/{component(dep)['source']}") for dep in metadata["dependencies"]]
-    expected = lean_translate.translate_file(source, imports, deps)
+    standard = metadata["standard"]
+    expected = lean_translate.translate_file(source, imports, deps, standard)
     if repo_file(metadata["model"]).read_text() != expected:
         raise ValueError(f"C++/translated Lean model mismatch for {name}; regenerate with verifier/lean_translate.py")
     proof = repo_file(metadata["proof"]).read_text()
@@ -45,7 +46,7 @@ def check_component(name, timeout=None):
     if not cases.strip():
         raise ValueError(f"no differential test commands for {name}")
     for instance in metadata["diff"]["instances"]:
-        count = diff_harness.run_diff(source, instance, model_module(metadata["model"]), cases, timeout, deps)
+        count = diff_harness.run_diff(source, instance, model_module(metadata["model"]), cases, timeout, deps, standard)
         print(f"differential test of {name} with {instance}: {count} outputs agree")
     print(f"C++ header, translated Lean model and differential test match: {name}")
 

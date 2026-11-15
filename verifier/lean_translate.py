@@ -45,6 +45,9 @@ INT32 = Ty("int", width=32)
 U32 = Ty("u32")
 U64 = Ty("u64")
 BOOL = Ty("bool")
+ORDERING = Ty("ordering")
+ISTREAM = Ty("istream")
+OSTREAM = Ty("ostream")
 VOID = Ty("void")
 
 # Signed integers are mathematical integers (Int) under the stated precondition; the width only decides the
@@ -95,8 +98,14 @@ def parse_type(text: str, tparams: set[str], classes: set[str]) -> Ty:
         raise Unsupported(f"type {text!r}")
     if s == "bool":
         return BOOL
+    if s in ("std::strong_ordering", "strong_ordering"):
+        return ORDERING
     if s == "void":
         return VOID
+    if s in ("std::istream", "istream"):
+        return ISTREAM
+    if s in ("std::ostream", "ostream"):
+        return OSTREAM
     if s in tparams:
         return Ty("tparam", s)
     m = re.fullmatch(r"(?:std::)?vector<(.*)>", s)
@@ -131,8 +140,14 @@ def lean_type(ty: Ty) -> str:
         return "UInt64"
     if ty.kind == "bool":
         return "Bool"
+    if ty.kind == "ordering":
+        return "Ordering"
     if ty.kind == "void":
         return "Unit"
+    if ty.kind == "istream":
+        return "Cpp.IStream"
+    if ty.kind == "ostream":
+        return "Cpp.OStream"
     if ty.kind == "tparam":
         return ty.name
     if ty.kind == "vec":
@@ -171,7 +186,7 @@ LEAN_KEYWORDS = {
 }
 
 
-OPERATOR_NAMES = {"==": "op_eq", "!=": "op_ne", "<": "op_lt", ">": "op_gt", "<=": "op_le", ">=": "op_ge",
+OPERATOR_NAMES = {"++": "op_inc", "--": "op_dec", "==": "op_eq", "!=": "op_ne", "<": "op_lt", ">": "op_gt", "<=": "op_le", ">=": "op_ge",
                   "+": "op_add", "-": "op_sub", "*": "op_mul", "/": "op_div", "%": "op_mod", "+=": "op_add_assign",
                   "-=": "op_sub_assign", "*=": "op_mul_assign", "/=": "op_div_assign", "()": "op_call", "[]": "op_index",
                   "<=>": "op_cmp", "<<": "op_shl", ">>": "op_shr", "&": "op_and", "|": "op_or", "^": "op_xor",
@@ -290,7 +305,7 @@ class Requirements:
             self.items.append(item)
 
 
-ORDER = ["Inhabited", "Zero", "One", "NatCast", "IntCast", "Add", "Sub", "Mul", "Neg", "Div", "Mod", "LT", "LE",
+ORDER = ["Cpp.Streams", "Inhabited", "Zero", "One", "NatCast", "IntCast", "Add", "Sub", "Mul", "Neg", "Div", "Mod", "LT", "LE",
          "DecidableLT", "DecidableLE", "DecidableEq", "Min", "Max"]
 
 
@@ -370,6 +385,22 @@ class Fn:
     # ------------------------------------------------------------------ expressions
     def expr(self, node, pre: list[str], expected: Ty | None = None):
         """Translate an rvalue; calls are hoisted into `pre` as `let t ← ...` lines. Returns (text, Ty)."""
+        if expected is not None and expected.kind == "cls":
+            raw = strip(node)
+            if raw.get("kind") not in ("CXXConstructExpr", "CXXTemporaryObjectExpr", "CXXUnresolvedConstructExpr"):
+                try:
+                    actual = self.tr.ty(raw.get("type", {}).get("qualType", ""), self)
+                except Unsupported:
+                    actual = None
+                if actual is not None and actual != expected:
+                    info = self.tr.classes[expected.name]
+                    candidates = [sig for sig in info.methods if sig.is_ctor and len(sig.params) == 1
+                                  and subst(sig.params[0][1], info.tparams, expected.args) == actual
+                                  and not re.search(r"\bexplicit\b", self.tr.span(sig.node))]
+                    if len(candidates) == 1:
+                        # Recurse with the scalar constructor's parameter type so the
+                        # argument is evaluated only once, including any nested call.
+                        return self.call_sig(candidates[0], None, [node], pre, expected)
         text, ty = self._expr(node, pre, expected)
         if expected is not None:
             text, ty = self.convert(text, ty, expected, node)
@@ -476,11 +507,16 @@ class Fn:
             raise Unsupported(f"member {n['name']}")
         if kind == "CXXDependentScopeMemberExpr":
             member = n.get("member")
-            if member in ("first", "second") and inner(n):
+            if inner(n):
                 t, bty = self.expr(inner(n)[0], pre)
-                if bty.kind == "pair":
+                if bty.kind == "pair" and member in ("first", "second"):
                     i = 0 if member == "first" else 1
                     return f"{t}.{i + 1}", bty.args[i]
+                if bty.kind == "cls":
+                    info = self.tr.classes[bty.name]
+                    for fname, fty, _ in info.fields:
+                        if fname == member:
+                            return f"{t}.{lean_name(fname)}", subst(fty, info.tparams, bty.args)
             raise Unsupported("member access without call")
         if kind == "ArraySubscriptExpr" or (kind == "CXXOperatorCallExpr" and self.operator_name(n) == "[]"):
             base, index = self.subscript_parts(n)
@@ -494,6 +530,8 @@ class Fn:
         if kind == "UnaryOperator":
             op = n["opcode"]
             sub = inner(n)[0]
+            if op == "*" and strip(sub).get("kind") == "CXXThisExpr":
+                return self.self_value(), Ty("cls", self.cls.name, tuple(Ty("tparam", t) for t in self.cls.tparams))
             if op in ("++", "--"):
                 raise Unsupported("increment inside an expression")
             t, ty = self.expr(sub, pre)
@@ -515,12 +553,21 @@ class Fn:
                     return f"(~~~{t})", ty
                 return f"(-{t} - 1)", ty
             raise Unsupported(f"unary {op}")
+        if kind == "CompoundAssignOperator":
+            lhs, rhs = inner(n)
+            return self.method_call(lhs, "operator" + n["opcode"], [rhs], pre)
         if kind == "BinaryOperator":
             return self.binary(n, pre)
         if kind == "CXXOperatorCallExpr":
             op = self.operator_name(n)
             args = inner(n)[1:]
-            if op in ("+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=", "&&", "||") and len(args) == 2:
+            if op in ("++", "--") and args:
+                base = strip(args[0])
+                if base.get("kind") == "UnaryOperator" and base.get("opcode") == "*" and \
+                        strip(inner(base)[0]).get("kind") == "CXXThisExpr":
+                    return self.self_call("operator" + op, args[1:], pre)
+                return self.method_call(args[0], "operator" + op, args[1:], pre)
+            if op in ("+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=", "<=>", "<<", ">>", "&&", "||") and len(args) == 2:
                 return self.binary_parts(op, args[0], args[1], pre)
             if op == "-" and len(args) == 1:
                 t, ty = self.expr(args[0], pre)
@@ -582,8 +629,49 @@ class Fn:
                 raise Unsupported("a call on the right of && or ||")
             return f"({at} {op} {bt})", BOOL
         at, aty = self.expr(a, pre)
+        if aty.kind in ("istream", "ostream"):
+            return self.stream_shift(op, a, at, aty, b, pre)
         bt, bty = self.expr(b, pre)
         return self.arith(op, at, aty, a, bt, bty, b)
+
+    def stream_base(self, node):
+        n = strip(node)
+        if n.get("kind") == "BinaryOperator" and n.get("opcode") in ("<<", ">>"):
+            return self.stream_base(inner(n)[0])
+        if n.get("kind") == "CXXOperatorCallExpr" and self.operator_name(n) in ("<<", ">>"):
+            return self.stream_base(inner(n)[1])
+        return n
+
+    def stream_shift(self, op, left, stream, sty, right, pre):
+        self.reqs.add("Cpp.Streams")
+        receiver = self.lvalue(self.stream_base(left))
+        if sty.kind == "istream" and op == ">>":
+            target = self.lvalue(right)
+            ty = target[3]
+            if ty.kind != "tparam":
+                raise Unsupported("stream extraction of a concrete type needs its source-type contract")
+            self.reqs.add(f"Cpp.StreamRead {lean_type(ty)}")
+            tmp = self.fresh()
+            pre.append(f"let {tmp} ← Cpp.StreamRead.read {stream} {self.read_lvalue(target)}")
+            pre.extend(self.assign_lines(target, f"{tmp}.1"))
+            pre.extend(self.assign_lines(receiver, f"{tmp}.2"))
+        elif sty.kind == "ostream" and op == "<<":
+            value, ty = self.expr(right, pre)
+            if strip(right).get("kind") == "CharacterLiteral" and \
+                    strip(right).get("type", {}).get("qualType") == "char":
+                value = f"(⟨{value}⟩ : Cpp.StreamChar)"
+                self.reqs.add("Cpp.StreamWrite Cpp.StreamChar")
+            else:
+                if ty.kind != "tparam" or strip(right).get("kind") not in (
+                        "DeclRefExpr", "MemberExpr", "CXXDependentScopeMemberExpr", "ArraySubscriptExpr"):
+                    raise Unsupported("stream insertion needs a typed template value or a character literal")
+                self.reqs.add(f"Cpp.StreamWrite {lean_type(ty)}")
+            tmp = self.fresh()
+            pre.append(f"let {tmp} ← Cpp.StreamWrite.write {stream} {value}")
+            pre.extend(self.assign_lines(receiver, tmp))
+        else:
+            raise Unsupported(f"stream operation {op} on {sty}")
+        return self.read_lvalue(receiver), sty
 
     def common_type(self, aty, bty):
         """C++'s usual arithmetic conversions on the modelled types."""
@@ -628,6 +716,10 @@ class Fn:
             ty = self.common_type(aty, bty)
         at, _ = self.convert(at, aty, ty, a)
         bt, _ = self.convert(bt, bty, ty, b)
+        if op == "<=>":
+            self.need("LT", ty)
+            self.need("DecidableLT", ty)
+            return f"(if {at} < {bt} then Ordering.lt else if {bt} < {at} then Ordering.gt else Ordering.eq)", ORDERING
         arith = {"+": "Add", "-": "Sub", "*": "Mul"}
         if op in arith:
             if ty.kind == "tparam":
@@ -750,6 +842,20 @@ class Fn:
                 b = self.expr(args[1], pre, ty.args[1])[0]
                 return f"({a}, {b})"
         if ty.kind == "cls":
+            if len(args) == 1:
+                argty = self.tr.ty(strip(args[0]).get("type", {}).get("qualType", ""), self)
+                if argty == ty:
+                    copies = [s for s in self.tr.classes[ty.name].methods if s.is_ctor and len(s.params) == 1
+                              and s.params[0][1] == ty]
+                    if copies:
+                        if len(copies) != 1:
+                            raise Unsupported("ambiguous record copy")
+                        raise Unsupported("user-defined record copy constructor")
+                    if any(fty.kind not in ("int", "u32", "u64", "bool", "tparam")
+                           for _, fty, _ in self.tr.classes[ty.name].fields):
+                        raise Unsupported("implicit record copy with non-scalar fields")
+                    # Implicit scalar record copy, not a converting constructor.
+                    return self.expr(args[0], pre, ty)[0]
             sigs = [s for s in self.tr.classes[ty.name].methods if s.is_ctor]
             return self.call_sig(self.pick(sigs, args, f"constructor of {ty.name}"), None, args, pre, ty)[0]
         raise Unsupported(f"construct {ty}")
@@ -802,6 +908,18 @@ class Fn:
                 name = self.tr.token(callee)
             if ck == "UnresolvedMemberExpr":
                 return self.self_call(name, args, pre)
+            if ck == "DeclRefExpr" and callee.get("referencedDecl", {}).get("kind") == "CXXMethodDecl":
+                # Resolve the actual declaration, not just its spelling: a global
+                # function or another class can have the same name.
+                ref_id = callee["referencedDecl"].get("id")
+                methods = [] if self.cls is None else [
+                    s for s in self.cls.methods if s.node.get("id") == ref_id and s.is_static]
+                if len(methods) == 1:
+                    return self.call_sig(methods[0], None, args, pre)
+                if self.cls is not None and any(s.cpp_name == name for s in self.cls.methods):
+                    raise Unsupported(f"static member declaration outside the current class: {name}")
+                # Established standard contracts (e.g. numeric_limits::max)
+                # still go through the explicitly checked free-call handler.
             qualifier = ""
             if ck == "UnresolvedLookupExpr":
                 pass
@@ -844,7 +962,7 @@ class Fn:
         sig = self.pick(sigs, args, name)
         if sig.is_static:
             return self.call_sig(sig, None, args, pre)
-        if not self.sig.is_const and not sig.is_const:
+        if (not self.sig.is_const or self.sig.is_ctor) and not sig.is_const:
             return self.call_sig(sig, "self", args, pre)
         if sig.is_const:
             return self.call_sig(sig, self.self_value(), args, pre)
@@ -859,6 +977,10 @@ class Fn:
             sigs = [s for s in info.methods if s.cpp_name == name and not s.is_ctor]
             sig = self.pick(sigs, args, f"{bty.name}::{name}")
             if sig.is_const:
+                return self.call_sig(sig, bt, args, pre)
+            if strip(base).get("kind") in ("CXXConstructExpr", "CXXTemporaryObjectExpr", "CXXUnresolvedConstructExpr"):
+                # A temporary receiver is consumed here. Its updated state is not
+                # written to another object; the returned value is still retained.
                 return self.call_sig(sig, bt, args, pre)
             target = self.lvalue(base)
             return self.call_sig(sig, ("obj", target, bt), args, pre)
@@ -886,6 +1008,25 @@ class Fn:
                     v = lo if name == "min" else hi
                     return (f"({v} : Int)" if v >= 0 else f"(({v}) : Int)"), ty
             raise Unsupported(f"numeric_limits {text}")
+        if name in ("gcd", "lcm"):
+            numeric_text = re.sub(r"\s+", "", self.tr.span(callee))
+            if numeric_text.startswith("std::") and numeric_text != f"std::{name}":
+                raise Unsupported("explicit template arguments of a standard numeric function")
+        if name in ("gcd", "lcm") and len(args) == 2 and \
+                numeric_text == f"std::{name}":
+            # Only explicitly qualified std calls have this trusted contract; do not
+            # replace a same-named user function or an ADL customization.
+            at, aty = self.expr(args[0], pre)
+            bt, bty = self.expr(args[1], pre)
+            ty = self.common_type(aty, bty)
+            if ty.kind not in ("int", "u32", "u64", "tparam"):
+                raise Unsupported(f"std::{name} on {ty}")
+            for operand in (aty, bty, ty):
+                self.need("Cpp.NumericGcd", operand)
+            self.reqs.add("Cpp.NumericCost")
+            cost = "numericGcdCost" if name == "gcd" else "numericLcmCost"
+            pre.append(f"Cpp.tickN (Cpp.{cost} {at} {bt})")
+            return f"(Cpp.numeric{'Gcd' if name == 'gcd' else 'Lcm'} (γ := {lean_type(ty)}) {at} {bt})", ty
         if name in ("min", "max") and len(args) == 2:
             at, aty = self.expr(args[0], pre)
             bt, bty = self.expr(args[1], pre, aty)
@@ -1216,6 +1357,14 @@ class Fn:
                 self.emit(line)
             return
         if kind == "UnaryOperator" and n["opcode"] in ("++", "--"):
+            base = strip(inner(n)[0])
+            if base.get("kind") == "UnaryOperator" and base.get("opcode") == "*" and \
+                    strip(inner(base)[0]).get("kind") == "CXXThisExpr":
+                if n.get("isPostfix"):
+                    raise Unsupported("postfix increment of this in a dependent expression")
+                self.self_call("operator" + n["opcode"], [], pre)
+                self.flush(pre)
+                return
             target = self.lvalue(inner(n)[0])
             if target[3].kind not in ("int", "u32", "u64"):
                 raise Unsupported("increment of a non-integer")
@@ -1237,6 +1386,16 @@ class Fn:
             self.call(n, pre)
             self.flush(pre)
             return
+        if kind == "CXXOperatorCallExpr" and self.operator_name(n) in ("++", "--"):
+            self.expr(n, pre)
+            self.flush(pre)
+            return
+        if kind in ("BinaryOperator", "CXXOperatorCallExpr"):
+            op = n.get("opcode") if kind == "BinaryOperator" else self.operator_name(n)
+            if op in ("<<", ">>"):
+                self.expr(n, pre)
+                self.flush(pre)
+                return
         raise Unsupported(f"statement {kind}")
 
     def is_assert(self, n):
@@ -1466,6 +1625,18 @@ class Fn:
                     n = strip(inner(n)[1])
                     continue
                 return None
+        if kind in ("BinaryOperator", "CXXOperatorCallExpr"):
+            op = node.get("opcode") if kind == "BinaryOperator" else self.operator_name(node)
+            if op in ("<<", ">>"):
+                base = self.stream_base(node)
+                try:
+                    sty = self.tr.ty(base.get("type", {}).get("qualType", ""), self)
+                except Unsupported:
+                    sty = None
+                if sty is not None and sty.kind in ("istream", "ostream"):
+                    out.add(root(base))
+                    if op == ">>":
+                        out.add(root(inner(node)[1 if kind == "BinaryOperator" else 2]))
         if kind in ("BinaryOperator",) and node.get("opcode") == "=":
             out.add(root(inner(node)[0]))
         if kind == "CompoundAssignOperator":
@@ -1766,7 +1937,10 @@ class Translator:
             else:
                 raise Unsupported(f"top-level {kind}")
         for name, sigs in self.functions.items():
-            if len(sigs) > 1:
+            # Operators from different headers share the cp namespace. Stable
+            # parameter tags prevent a lone stream operator in each component
+            # from defining the same Lean constant.
+            if len(sigs) > 1 or name.startswith("operator"):
                 tags = set()
                 for sig in sigs:
                     tag = "_".join(type_tag(p[1]) for p in sig.params) if sig.params else "0"
@@ -1792,13 +1966,15 @@ class Translator:
         tps = [f"{t}_value_type" if t in containers else t for t in tps]
         ret_text = container_text(node["type"]["qualType"].split("(")[0].strip(), containers)
         ret = parse_type(ret_text, set(tps), set(self.classes))
-        sig = Sig(name, f"cp.{name}", self.param_list(node, tps, containers), ret, node=node, tparams=tps)
+        sig = Sig(name, f"cp.{lean_name(name)}", self.param_list(node, tps, containers), ret, node=node, tparams=tps)
         sig.containers = containers
         self.functions.setdefault(name, []).append(sig)
         self.order.append(("fn", sig))
 
     def collect_class(self, rec, tps):
         name = rec["name"]
+        if rec.get("bases"):
+            raise Unsupported("class inheritance")
         info = ClassInfo(name, tps, [], [])
         self.classes[name] = info
         tset = set(tps)
@@ -1809,20 +1985,28 @@ class Translator:
                 access = c.get("access", access)
             if kind == "FieldDecl":
                 init = inner(c)[0] if inner(c) else None
-                info.fields.append((c["name"], parse_type(type_of_decl(c), tset, set(self.classes)), init))
+                fty = parse_type(type_of_decl(c), tset, set(self.classes))
+                if fty.kind in ("istream", "ostream"):
+                    raise Unsupported("stream state stored in a class field")
+                info.fields.append((c["name"], fty, init))
             elif kind in ("CXXMethodDecl", "CXXConstructorDecl"):
                 if c.get("isImplicit"):
                     continue
                 if not any(x.get("kind") == "CompoundStmt" for x in inner(c)):
-                    if c.get("explicitlyDefaulted") or c.get("explicitlyDeleted"):
+                    if c.get("explicitlyDeleted"):
+                        if kind == "CXXConstructorDecl":
+                            raise Unsupported("deleted constructor")
                         continue
-                    raise Unsupported(f"member without a body: {c['name']}")
+                    if not (c.get("explicitlyDefaulted") and c["name"] == "operator=="):
+                        raise Unsupported(f"member without a body: {c['name']}")
                 is_ctor = kind == "CXXConstructorDecl"
                 qual = c["type"]["qualType"]
                 ret = VOID if is_ctor else parse_type(qual.split("(")[0].strip(), tset, set(self.classes))
                 sig = Sig(c["name"].split("<")[0] if is_ctor else c["name"], "", self.param_list(c, tps), ret, owner=name,
                           is_const=qual.rstrip().endswith("const") or is_ctor, is_static=c.get("storageClass") == "static",
                           is_ctor=is_ctor, node=c, tparams=[], public=access == "public")
+                if is_ctor and len(sig.params) == 1 and sig.params[0][1].kind == "cls" and sig.params[0][1].name == name:
+                    raise Unsupported("user-defined record copy constructor")
                 info.methods.append(sig)
             elif kind == "CXXDestructorDecl" and c.get("isImplicit"):
                 continue
@@ -1832,7 +2016,13 @@ class Translator:
                 if kind == "CXXRecordDecl" and c.get("completeDefinition"):
                     raise Unsupported("nested class")
             elif kind == "FriendDecl":
-                raise Unsupported("friend")
+                # a friend function defined in the class is a free function (it may read the private fields)
+                fn = next((x for x in inner(c) if x.get("kind") == "FunctionDecl"), None)
+                if fn is None:
+                    raise Unsupported("friend other than a function")
+                if any(x.get("kind") == "CompoundStmt" for x in inner(fn)):
+                    fn["lean_hidden_friend"] = True
+                    self.collect_function(fn, list(tps))
             else:
                 raise Unsupported(f"class member {kind}")
         # names
@@ -1871,7 +2061,8 @@ class Translator:
                         continue
                     own = set(info.tparams if info else []) | set(sig.tparams)
                     for r in cfn.reqs.items:
-                        if not (set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", r)) - {r.split()[0]}) <= own:
+                        type_names = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", " ".join(r.split()[1:])))
+                        if not type_names <= own | {"Int", "UInt32", "UInt64", "Bool", "Unit", "Ordering", "Array"}:
                             raise Unsupported(f"requirement {r} of {callee.cpp_name} over another type parameter")
                         if r not in fn.reqs.items:
                             fn.reqs.add(r)
@@ -1911,6 +2102,8 @@ class Translator:
 
     def build_function(self, sig: Sig, info: ClassInfo | None) -> Fn:
         fn = Fn(self, sig, info)
+        if any(ty.kind in ("istream", "ostream") for ty in [sig.ret, *[p[1] for p in sig.params]]):
+            fn.reqs.add("Cpp.Streams")
         node = sig.node
         params = []
         for pname, pty, is_ref in sig.params:
@@ -1922,6 +2115,22 @@ class Translator:
             for fname, fty, _ in info.fields:
                 fn.field_names[fname] = ("this_" + fname) if fname in names else lean_name(fname)
                 fn.used_names.add(fn.field_names[fname])
+        if node.get("explicitlyDefaulted"):
+            if info is None or sig.cpp_name != "operator==" or not sig.is_const or len(sig.params) != 1:
+                raise Unsupported("defaulted member other than const equality")
+            pname, pty, is_ref = sig.params[0]
+            expected = Ty("cls", info.name, tuple(Ty("tparam", t) for t in info.tparams))
+            if pty != expected or is_ref or sig.ret != BOOL:
+                raise Unsupported("defaulted equality signature")
+            comparisons = []
+            for fname, fty, _ in info.fields:
+                if fty.kind not in ("int", "u32", "u64", "bool", "tparam"):
+                    raise Unsupported("defaulted equality of a non-scalar field")
+                fn.need("DecidableEq", fty)
+                comparisons.append(f"(self.{lean_name(fname)} = {fn.var_name(pname)}.{lean_name(fname)})")
+            fn.emit("Cpp.tick")
+            fn.emit("return decide (" + (" ∧ ".join(comparisons) if comparisons else "True") + ")")
+            return fn
         body = next(x for x in inner(node) if x.get("kind") == "CompoundStmt")
         assigned = fn.assigned_names(body)
         fn.emit("Cpp.tick")
@@ -2049,12 +2258,12 @@ def local_names(node, out=None):
 
 # ------------------------------------------------------------------------------------------ driver
 
-def source_decls(source: Path):
+def source_decls(source: Path, standard="c++17"):
     """The top-level declarations of namespace cp written in `source`, in source order (template definitions).
 
     Clang's JSON prints a location's file only when it differs from the previously printed location, so the
     file of a node is tracked by walking the whole dump in order."""
-    command = clang_ast.clang_command() + ["-Xclang", "-ast-dump=json", str(source)]
+    command = clang_ast.clang_command(standard) + ["-Xclang", "-ast-dump=json", str(source)]
     ast = json.loads(subprocess.check_output(command, text=True, cwd=ROOT, stderr=subprocess.DEVNULL))
     resolved = source.resolve()
     state = {"file": None}
@@ -2096,9 +2305,9 @@ namespace Proofs.Cpp.Gen
 """
 
 
-def translate_file(source: Path, imports: list[str], deps=()) -> str:
-    decls = source_decls(source)
-    tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d)), Path(d).read_bytes()) for d in deps])
+def translate_file(source: Path, imports: list[str], deps=(), standard="c++17") -> str:
+    decls = source_decls(source, standard)
+    tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
     body = tr.translate()
     imp = "\n".join(f"import {m}" for m in ["Proofs.Cpp.Prelude", *imports])
     rel = source.resolve().relative_to(ROOT).as_posix() if source.resolve().is_relative_to(ROOT) else source.name
@@ -2111,8 +2320,9 @@ def main():
     parser.add_argument("--import", dest="imports", action="append", default=[])
     parser.add_argument("--dep", dest="deps", action="append", default=[], help="header of a dependency")
     parser.add_argument("--output")
+    parser.add_argument("--standard", choices=("c++17", "c++20"), default="c++17")
     args = parser.parse_args()
-    text = translate_file(Path(args.source), args.imports, args.deps)
+    text = translate_file(Path(args.source), args.imports, args.deps, args.standard)
     if args.output:
         Path(args.output).write_text(text)
     else:

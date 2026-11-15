@@ -66,14 +66,22 @@ def check_local_results_untracked():
         raise RuntimeError(f"local benchmark results are tracked by Git: {tracked}")
 
 
-def flags_tag():
-    return " ".join(FLAGS)
+def cpp_flags(standard="c++17"):
+    if standard not in ("c++17", "c++20"):
+        raise ValueError(f"unsupported C++ standard: {standard}")
+    return [f"-std={standard}", *FLAGS[1:]]
+
+
+def flags_tag(standard="c++17"):
+    return " ".join(cpp_flags(standard))
 
 
 def cpp_tasks(entries):
     script = [Path(__file__), ROOT / "tools/public.py", ROOT / "tools/check_cache.py"]
     template = repo_file(TEMPLATE)
     sources = [repo_file(f"library/{data['source']}") for data in entries.values()]
+
+    common_standard = "c++20" if any(data["standard"] == "c++20" for data in entries.values()) else "c++17"
 
     def common():
         with tempfile.TemporaryDirectory(prefix="public-check-") as directory:
@@ -82,11 +90,11 @@ def cpp_tasks(entries):
                 source = scratch / f"{label}.cpp"
                 source.write_text(include_check(names, entries))
                 binary = scratch / label
-                run(["g++", *FLAGS, "-I", str(ROOT), str(source), "-o", str(binary)])
+                run(["g++", *cpp_flags(common_standard), "-I", str(ROOT), str(source), "-o", str(binary)])
                 run([str(binary)])
 
     tasks = [("cpp-common", lambda: check_cache.cached_call(
-        f"cpp-common [{flags_tag()}]", [*script, template, *check_cache.cpp_closure(sources)], common))]
+        f"cpp-common [{flags_tag(common_standard)}]", [*script, template, *check_cache.cpp_closure(sources)], common))]
     for name, data in entries.items():
         tests = [repo_file(test) for test in data["tests"]]
         cases = [repo_file(case[field]) for case in data.get("io_cases", []) for field in ("source", "input", "expected")]
@@ -95,23 +103,24 @@ def cpp_tasks(entries):
         def component(name=name, data=data):
             check_component_cpp(name, data, entries)
 
-        tasks.append((f"cpp:{name}", lambda name=name, tests=tests, library=library, cases=cases, component=component:
-                      check_cache.cached_call(f"cpp:{name} [{flags_tag()}]",
+        tasks.append((f"cpp:{name}", lambda name=name, tests=tests, library=library, cases=cases, component=component, standard=data["standard"]:
+                      check_cache.cached_call(f"cpp:{name} [{flags_tag(standard)}]",
                                               [*script, template, *check_cache.cpp_closure([*tests, *library, *cases])],
                                               component)))
     return tasks
 
 
 def check_component_cpp(name, data, entries):
+    flags = cpp_flags(data["standard"])
     with tempfile.TemporaryDirectory(prefix="public-check-") as directory:
         scratch = Path(directory)
         for index, test in enumerate(data["tests"]):
             require_template_first(test)
             binary = scratch / f"{name}-test-{index}"
-            run(["g++", *FLAGS, str(repo_file(test)), "-o", str(binary)])
+            run(["g++", *flags, str(repo_file(test)), "-o", str(binary)])
             run([str(binary)])
             if data.get("sanitizers", False):
-                run(["g++", "-std=c++17", "-O1", "-g", "-Wall", "-Wextra", "-pedantic",
+                run(["g++", f"-std={data['standard']}", "-O1", "-g", "-Wall", "-Wextra", "-pedantic",
                      "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
                      str(repo_file(test)), "-o", str(binary)])
                 environment = os.environ.copy()
@@ -121,7 +130,7 @@ def check_component_cpp(name, data, entries):
         for index, case in enumerate(data.get("io_cases", [])):
             require_template_first(case["source"])
             binary = scratch / f"{name}-io-{index}"
-            run(["g++", *FLAGS, str(repo_file(case["source"])), "-o", str(binary)])
+            run(["g++", *flags, str(repo_file(case["source"])), "-o", str(binary)])
             result = subprocess.run(
                 [str(binary)], cwd=ROOT,
                 input=repo_file(case["input"]).read_bytes(),
@@ -132,7 +141,7 @@ def check_component_cpp(name, data, entries):
                 raise RuntimeError(f"I/O case {index} failed for {name}: {result.stdout!r} != {expected!r}")
         included = scratch / f"{name}-included.cpp"
         included.write_text(include_check([name], entries))
-        run(["g++", *FLAGS, "-I", str(ROOT), "-fsyntax-only", str(included)])
+        run(["g++", *flags, "-I", str(ROOT), "-fsyntax-only", str(included)])
         print(f"C++ tests and template-first include check passed: {name}")
 
 

@@ -386,6 +386,40 @@ class SupportTests(unittest.TestCase):
             self.assertEqual(json.loads(path.read_text())['seconds'],
                              {'check:a': 50, 'check:b': 81.2, 'check:tests/t.py::A.test_a': 3.0})
 
+    def test_cpp20_component_tests_sanitizers_io_and_include(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "library").mkdir()
+            (root / "tests").mkdir()
+            (root / "template.hpp").write_text("#pragma once\n")
+            (root / "library/x.hpp").write_text(
+                "#pragma once\n#if __cplusplus < 202002L\n#error requires C++20\n#endif\n"
+                "namespace cp { constexpr int value() { return 42; } }\n")
+            (root / "tests/x.cpp").write_text(
+                '#include "../template.hpp"\n#include "../library/x.hpp"\n'
+                'int main() { return cp::value() != 42; }\n')
+            (root / "in.txt").write_text("")
+            (root / "out.txt").write_text("")
+            data = {"standard": "c++20", "source": "x.hpp", "dependencies": [],
+                    "tests": ["tests/x.cpp"], "sanitizers": True,
+                    "io_cases": [{"source": "tests/x.cpp", "input": "in.txt", "expected": "out.txt"}]}
+            with patch.object(public, "ROOT", root), patch.object(check_public, "ROOT", root), \
+                    patch.object(public, "TEMPLATE", "template.hpp"), \
+                    patch.object(check_public, "TEMPLATE", "template.hpp"):
+                check_public.check_component_cpp("x", data, {"x": data})
+                with self.assertRaises(subprocess.CalledProcessError):
+                    check_public.check_component_cpp("x", {**data, "standard": "c++17"}, {"x": data})
+
+    def test_standard_dependencies_do_not_upgrade_cpp17_silently(self):
+        entries = {"a": {"standard": "c++17", "dependencies": ["b"]},
+                   "b": {"standard": "c++20", "dependencies": []}}
+        with self.assertRaisesRegex(ValueError, r"C\+\+17 component a depends"):
+            public.dependency_order("a", entries)
+        entries["a"]["standard"] = "c++20"
+        self.assertEqual(public.dependency_order("a", entries), ["b", "a"])
+        with self.assertRaisesRegex(ValueError, "unsupported"):
+            check_public.cpp_flags("c++19")
+
     def fixture(self, root):
         def write(path, text=""):
             destination = root / path

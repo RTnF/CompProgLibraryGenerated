@@ -255,7 +255,6 @@ import Proofs.ScalarRefs
 import Proofs.ScalarRefsV
 import Proofs.MonoidLazyCall
 import Proofs.DynamicModIntCall
-import Proofs.RatioCall
 import Proofs.PrefixSumsCall
 import Proofs.FenwickMath
 import Proofs.FenwickBuildMath
@@ -604,3 +603,13 @@ import Proofs.IsPrimeMath
 import Proofs.LowlinkPhiMath
 import Proofs.Generated.TreeFullDp
 import Proofs.Cpp.TreeFullDp
+import Proofs.Cpp.Ratio
+import Proofs.Cpp.Lib.RatioMath
+
+import Proofs.Cpp.Lib.RatioCost
+
+import Proofs.Cpp.Lib.RatioSpace
+
+import Proofs.Cpp.Lib.RatioArithmeticSpace
+
+import Proofs.Cpp.Lib.UnsignedMagnitude

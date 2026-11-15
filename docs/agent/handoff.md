@@ -26,6 +26,30 @@
 
 更新: 2026-11-09。時系列ログを圧縮して上書きした。目的は **experiments の全137ファイルを検証し、元API・機能・汎用性を保って移植すること**。一部のモデルやCI成功だけで完了としない。
 
+## 2026-11-14 ratio の移行途中（未コミット・未push）
+
+- `Proofs/Cpp/Ratio.lean` の `init_spec` / `normalize_spec` が `sorry` なしでコンパイル成功。互除法の停止測度、正規化結果、正規化後の互いに素性、`gcdCost + 4` のtick上界を証明。docs/ratio.mdも新定理に更新。
+- `tests/diff/ratio.py` を追加。`model_bridge.py --component ratio` 成功、ASan/UBSan付きC++とLeanで510出力一致（ゼロ・64bit境界・乱数）。friend定義はADLが必要なので、翻訳器で定義元を記録しdiff_harnessで非修飾呼出しを生成。
+- テンプレートクラス内friendの差分テスト呼出しも修正（クラスの型引数を関数テンプレート引数として付けない）。`tests/test_lean_model_friend.py` 成功: 非公開フィールド読取り・ADLと通常の名前空間関数をC++/Leanで比較。support.tomlに登録、翻訳規則をdocs/translation.mdに追記。
+- 2026-11-14 続き: 原本Ratioの前置/後置増減に必要な `*this` の値読取り、`operator++/--`、`++*this/--*this` の前置呼出しを翻訳器へ追加。`tests/test_lean_model_friend.py` の2テスト成功（サニタイザC++/Lean、返却値とreceiverを明示値でも検査）。差分ハーネスでオブジェクト戻り値のpushをreceiver更新が上書きしていた不具合も修正。候補 `.cache/wip/ratio_restore/counter.hpp` の生成Leanがコンパイル成功。原本Ratio全体はまだ置換していない。
+- 2026-11-14 続き: C++20規格を新方式の登録・Clang宣言/AST抽出・翻訳CLI・bridge・差分ハーネス・公開C++/sanitizer/IO/include・配布ZIP検査まで伝播。C++17→C++20依存は拒否。`tests/test_public_support.py` 27テスト成功（C++20必須headerの実compileを含む）。`<=>`→Orderingとスカラー全フィールドのdefaulted operator==を追加、`tests/test_lean_model_friend.py` 4テスト成功（分数の大小・同値とフィールド等値の違いも検査）。元のRatioをnamespace/includeのみ変更した候補 `.cache/wip/ratio_restore/original.hpp` はC++20でAST取得可能、現時点の先頭の翻訳拒否はストリーム型 `istream &`。候補はまだ公開していない。明示defaultedメンバー（等値以外）と継承は黙って省略せず拒否する。
+- 検証ログ（2026-11-14）: `.cache/wip/ratio_restore/models.log` は新方式の登録50モデルを全再生成して一致、`bridge.log` は ratio/interval のbridge成功、`package.log` はZIP56headerの外部include成功。`public_support.log` は27テスト成功。全件C++は同ディレクトリの `cpp.log` で56部品すべて成功（C++/ASan/UBSan/テンプレート先行include）。Lean全件ビルド/最終監査は未実施。
+- 2026-11-14 続き: `std::gcd/lcm` の値モデル（各引数の絶対値→共通型の結果）と混在符号の差分テストを追加。規格には計算量上界がないため `[Cpp.NumericCost]` の費用パラメータを要求し、対数時間と決め打ちしない（規格/cppreferenceをdocs/translation.mdへ引用）。差分テストだけの費用1は時間証明に使わない。スカラーレコードの暗黙コピー、一時receiverの複合代入、非explicit単一引数の暗黙構築を追加。原本算術候補 `.cache/wip/ratio_restore/arithmetic.hpp` の次の拒否は左辺Tへのoperator+=。原本をGCC20でコンパイルして `1LL + Ratio<long long>` の実バグを確認、未修正としてdocs/experiments_findings.mdへ記録。復元時にRatio(a)での演算へ修正する必要がある。ストリームも未対応、公開headerはまだ旧正規化のみ。
+- 最新の検証: `test_lean_model_friend.py` の6件＋ユーザー定義コピー拒否1件が成功。`lake build Proofs.Cpp.Ratio` 成功（Prelude/生成Ratio/共有補題/Ratioを再ビルド）。算術対応追加後も `models.log` の50登録モデルが再生成一致。`git diff --check` とPython compile成功。原本Ratio全体は未完であり、commit/push/新しいCI計測は未実施。
+- 2026-11-14 続き（原本の実修正）: `experiments/library/cpp/number/ratio.hpp` の左辺Tの4演算をRatio(a)で計算する形に修正。operator/=は新分子/分母を先に計算し、代入後normalize（自己除算の別名と負の除数の不具合）。修正前の失敗を確認後、`tests/test_ratio_original_api.py`（`tests/imports/ratio_scalar_left.cpp`）で360入力×int/long longの4演算＋自己除算がFractionと一致、ASan/UBSan成功。fixes.mdに即時追記、experiments_findings.md更新。原本の全API公開完了ではない。
+- 算術移行の到達点: 原本からストリーム2本だけを除いた全算術（28関数）のT一般翻訳が生成・Leanコンパイル成功。構築子→非const helper呼出しと修飾クラスの要求伝播を修正。`test_lean_model_friend.py` は8件成功（原本の正負3組の算術・スカラー/Ratioの両辺の組合せ・前後置・比較・自己除算を含む）。ハーネスのオブジェクト引数もコピーではなく参照束縛へ変更し、本物の別名ケースを検査する。`models.log` は50登録モデル再生成一致。
+- `inventory_imports.py --check` は旧移行で消えたdoubling/floor_sumの3根拠ファイル参照も検出したため、新方式の差分テスト/bridgeへ更新。Ratio行はC++20で33宣言を再抽出、原本hash/構文compile結果を更新し、137ファイルのinventoryチェック成功。review/proof/publicの全体完了フラグはpendingのまま。
+- 2026-11-14 続き（ストリーム）: Preludeへ `Streams`（状態型）/`StreamRead T`（旧値も受け取るM変換）/`StreamWrite T`/文字用`StreamChar`を追加。書式・locale・flags・コスト・失敗/不帰還の実現を明示的なパラメータにし、正本の既定実現は置かない。型引数Tのフィールド等に対する連鎖shift・状態書戻し・narrow文字挿入を翻訳。具体int/long/charの区別や多文字定数を誤って共通契約に落とさず未対応として拒否。単一自由operatorのLean名も正しくop_shr/op_shlへ変換。
+- 原本Ratio全体（30関数、入出力を含む）がnamespace/include/標準gcd/lcm明示修飾だけで生成・Leanコンパイル可能になった。`tests/test_ratio_stream_model.py` 2テスト成功。`tests/lean/ratio_stream_contract.lean` は任意T/任意標準操作について入力2回/条件付き出力と生成関数が一致することをrflで証明（コストも同じM式に保持）。具体既定書式7ケース（空/不正/EOF/生の2/4等）が原本C++ ASan/UBSanと一致し、返却参照もnativeで確認。support.tomlへ登録済み。フル翻訳は `.cache/wip/ratio_restore/restored.hpp` / `Restored.lean` でも確認可能。
+- 最新: 既存friend/算術8テスト成功、50登録モデル再生成一致、inventory137成功、diff --check/py_compile成功。**未完**: 汎用diff_harnessのストリーム引数/参照戻り値のプロトコル（現テストは専用driver）、原本算術の仕様/計算量のLean証明、公開header/TOML/テスト/文書の切替、全件gate/監査/CI計測。他の6旧方式部品＋取り下げ4部品等も残る。標準GCD/LCMの費用パラメータを対数時間と決め打ちしない。公開headerは引き続き旧3フィールドRatioであり、全API移植済みとは扱わない。
+- 2026-11-14 続き（汎用ハーネスへの統合完了）: diff_harnessへ既定書式の入力/出力ストリームを追加。入力はcount+canonical decimal/x、出力はEOF/failまたは長さ/文字コード。返却streamはC++でauto&捕捉。非constクラス参照はobjref表示＋Lean側object表へ更新。int/long longの各9ケースでEOF/不正/欠落/上下限超過の切詰め・オブジェクト更新後の再出力が一致。short/char/unsigned/幅混在を誤った共通規則へ落とさず拒否（テスト実現の制限でありCppテンプレートの変更ではない）。
+- 単独ヘッダ候補 `experiments/verification/number/ratio.hpp` を追加。修正済み原本からnamespace/std修飾/default型表記のみ変更し、全API/本体の一致、standalone include、既定型をテスト。公開libraryへはまだ移していない。自由operatorには単独でも型タグを付け、cp.op_shr_istream_Ratio/cp.op_shl_ostream_Ratioへ改名。別ヘッダの演算子モデルを同時にLean compileする回帰も追加。
+- 数学層 `Proofs/Cpp/Lib/RatioMath.lean` を追加しsupport/Proofs.leanへ登録。Int正規化=Rat正規分子/分母、正の分母・coprime・値保存、GCDのtdiv=ediv、増減/符号反転の値と加減算を証明（11定理）。`tests/lean/ratio_arithmetic_contract.lean` はfresh候補生成コードに対して正規化/2引数ctor/単項minusのIntモデルと費用、1引数ctor/前後置増減/単項plusのT一般のデータ更新と費用を証明、加減算のIntモデルの結果・停止・費用も証明（14定理）。stream contract 2本も同じfresh生成環境で検査。NumericCostを対数時間へ固定しない。
+- **次の作業**: Ratioの乗除算・比較・等値および二項/混合型ラッパーの仕様証明、Intから全T/固定幅のモデル対応（差分バックエンドの型別実現も必要）、GCD/LCMの計算量の根拠（stdは上界未規定なので明示helper等を検討）、全API header/TOML/公開testsの切替、statements.json再生成と全件gate/独立監査、その後に原本単位push・CI20分計測。現公開ヘッダはまだ旧3フィールド版なので原本移植完了としない。追加したshared RatioMathの定理も最終spec/security監査はまだ。
+- この段階の検証: stream/model契約7テスト、既存friend/算術8テスト、原本API1テスト（計16）成功。`models.log` は自由operator名の安定化後も登録50モデルが再生成一致、`bridge.log` は現公開ratio/interval成功、inventory137成功。新しい数学層11定理＋fresh生成との対応14定理＋stream2定理をチェック済み。最終仕様catalog/両kernel監査、公開全APIのgate、push後CI20分は未実施。ローカル候補の成功を原本全体の公開完了としない。
+- 実行環境: `PATH="$PWD/.tools/elan/bin:$PATH" ELAN_HOME="$PWD/.tools/elan"` を指定（通常PATHにlakeなし）。
+- **原本全体の移植完了ではない**。現公開ヘッダは旧来の符号/大きさ3フィールドとnormalizeのみ。原本の任意T・各コンストラクタ・算術/比較/入出力の復元が必要。全件gate・statements再生成・文書更新も未了。部分移行を理由にpushしない。
+
 ## 現在の作業
 
 1. `library/`の59部品を原本に似た12分野へ移動し、隣接するTOML・source/include・テスト・文書・再帰登録/cache・配布ZIPを更新済み。本handoffも原本ごとの表へ圧縮済み。
@@ -193,3 +217,331 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 2026-11-11: **CI の短縮と検証方式の見直し**。(1) CI を16シャード＋最終監査ジョブに分割（`tools/ci_shards.py`、重み `tools/ci_weights.json` は CI ログから `python3 tools/ci_shards.py update LOG...` で更新）。(2) CI の `LEAN_NUM_THREADS=1` で Lake がモジュールを1つずつビルドしていたため、`PROOF_BUILD_THREADS`（CIはコア数）で証明ビルドだけ並列化（冷えた全ビルド 44〜80分→約22分）。run 42994061436 は約2時間→62分（ほぼ全モジュールの再ビルドを含む）。(3) ユーザー決定で方式を変更（`docs/redesign_2026-11.md`、AGENTS.md 反映済み）: モデル証明＋制限構文の機械翻訳、整数範囲は前提、寿命・ヒープ領域は対象外、計算量はオーダー、全ビルド込みCI 30分以内。(4) `segment_tree_beats` の公開を取り下げ（旧証明228モジュール・約50%を削除、`statements.json` は削除のみ）。pushed: 722e957（CI分割）, ab698a6, 30e96f9, 1642172（重み更新・`cold_build` 手動実行入力）。local main は element_count の17コミットが未push（全件gate未完了、作業ツリーの `check_proof_security.py` の ARG_MAX 対策も未コミット）。次: 冷えたビルドの計測（workflow_dispatch `cold_build=true`）、新方式の翻訳器を小さい部品で試作。
 
 - 2026-11-11（続き）: **全件CIが冷えた全ビルド込みで30分以内**。不要な旧方式の証明（寿命・コピー・ムーブ・ピーク領域・所有者/エイリアス）とその検査を削除し、`segment_tree`・`lazy_segment_tree`・`find_cycle` も検証待ちとして取り下げ（`docs/redesign_2026-11.md`）。計測: push run 43020608471 は12.5分、`cold_build=true` の run 43022586938 は22.4分（全ビルド735秒、kernel再生310秒、独立kernel 116秒）。公開55部品。pushed head 7e378fd。local main は element_count の17コミットが未push（全件gate未完了、作業ツリーの `check_proof_security.py` の ARG_MAX 対策も未コミット）。次: 新方式の翻訳器を小さい部品で試作し、取り下げた4部品（beats を含む）を新方式で再公開する。部品を足すたびに冷えたビルドを計測する。
+
+### 2026-11-15 Ratio乗除算の純粋モデルと生成対応
+
+- 前回は進捗あり（全API候補、算術・stream証明と差分検査）。継続して `Proofs/Cpp/Lib/RatioMath.lean` に exact cancellation、非ゼロ商、交差約分mul/divモデル、積・商の値、除算のcanonical fieldsを追加（6定理、既存と合わせ17）。除算はd≠0・m≠0で証明し、入力eの非ゼロはこの等式には不要。乗算の値は両分母≠0で証明するが、未正規化入力の乗算結果のcanonical性は主張しない。
+- `tests/lean/ratio_arithmetic_contract.lean` に生成 `*=`/`/=` のexact runと値の4定理を追加（合わせ18）。成功を仮定せず、前提からsome結果の存在と停止を示す。仕事量は2回のnumericGcdCost（除算はnormalize分も）を保持し、std::gcdの未規定上界を決め打ちしない。
+- shared moduleのlake build成功（葉1.2秒）、fresh全API生成モデルに算術18定理を連結した直接Lean検査成功。公開側は旧3フィールドのまま。次は比較・等値、二項/スカラーwrapperの仕様、型対応と計算量根拠、全API公開への切替。全件gate/独立kernel監査/CI20分とpushは未実施。
+- 更新後のstream/model契約テストは7件すべて成功（ログ `.cache/wip/ratio_restore/stream_harness.log`）。差分ハーネス、ASan/UBSan、fresh生成との対応を同じ入口で再検査した。
+
+### 2026-11-15 Ratio比較・等値
+
+- 前回は進捗あり（乗除算の純粋モデルと生成対応）。今回 `RatioMath` に正分母のGCD約分比較の≤/<対応と、正規化結果の等値iff有理数値等値を追加（数学層20定理）。`ratio_arithmetic_contract.lean` に比較のexact run/値、任意Tのフィールド等値判定、正規化済み入力の有理数等値との対応を追加（算術層22定理）。shared module buildと生成候補連結のLean検査成功、警告なし。
+- 入力operator>>はnormalizeしないため、2/4と1/2のフィールド等値は偽、比較はequalであることを保持。stream差分テストにこれと負数の大小の両方向を追加した。公開側は旧3フィールド版のまま、全APIの移植完了ではない。
+- 次は二項/スカラーwrapperの仕様、全型の対応、GCD/LCM費用根拠と計算量オーダー、全API公開切替・全件gate・独立監査・push後CI20分測定。push未実施。
+- 検証結果: stream/model契約7件成功（37.244秒）。追加した未正規化比較ケースを含む汎用streamハーネスの単独再検査も成功。int/long longのC++ ASan/UBSanとLeanの出力一致、py_compile・diff --check成功。全体gateや独立kernel監査の代用とはしない。
+
+### 2026-11-15 Ratio二項/スカラーwrapper
+
+- 前回は進捗あり（比較・等値証明）。今回は四則それぞれのRatio/Ratio・Ratio/T・T/Ratioの12形について、任意Tの生成関数が複合代入のrunを呼び結果を射影することを証明。スカラー構築込みの追加仕事量は2、Ratio同士は1、非帰還もOption.bindで保持する。
+- 同じ12形に整数有理数値の仕様を追加。前提からsome結果・仕事量の存在を示し、加減乗除と一致。scalar castはRat.divInt_oneで接続し、可換性を仮定して減算/除算の左右を入れ替えない。さらにゼロ除数の複合代入と3wrapper形のrun=noneを証明（assertで失敗する入力を成功扱いしない）。算術契約は22→50定理。fresh生成連結の直接Lean検査成功（警告なし）。
+- 未完: 原本全Tへの整数表現対応・乗算等のcanonical不変条件・GCD/LCMの時間上界と領域のオーダー・公開header/TOML切替・statements再生成・全件gate/独立監査・push後CI20分計測。他の旧方式部品と取り下げ4部品等も残る。公開Ratioは引き続き旧3フィールド、pushなし。
+- 検証: wrapper追加後のstream/model契約7テスト成功（37.809秒、ASan/UBSanとLean差分を含む）。最後に加えたゼロ除数4定理も含めた全50算術定理は直接Lean検査で成功。`git diff --check`成功。公開側の全件gate/独立kernel監査は未実施。
+
+### 2026-11-15 Ratio正規化不変条件
+
+- 前回は進捗あり（二項/スカラー全12形とゼロ除数）。今回 `RatioMath.Canonical n d := 0 < d ∧ Int.gcd n d = 1` を定義。normalizeの成立、canonical fieldsとの一致、normalize固定点、増減・加減・除算での保存を証明した。
+- 乗算はLean標準Rat.mulの交差約分実装とのフィールド一致を証明し、canonicalな両入力から積のcanonical fieldsと不変条件保存を導出。Int.tdiv/edivの差はGCDによる除算の整除性で解消。未正規化のstream入力について保存を仮定していない。
+- 生成モデルの前後置増減4形について、返値と更新されたreceiver両方のcanonical性、値、停止とexact ticksを接続。生成mul_assignについても値・canonical性を接続。数学層20→31定理、算術層50→55定理。shared module build成功（葉1.3秒、警告なし）。
+- 未了: 全T/固定幅と数学Intの対応、GCD/LCM費用上界と時間・追加領域のオーダー、全API公開header/TOML/テストへの切替、statements再生成と全件gate/独立監査。その後に原本単位pushとCI20分確認。他の旧方式部品と取り下げ4部品等も残る。公開Ratioは旧3フィールドのまま、pushなし。
+- 最終検証: 更新後のstream/model契約7件が成功。fresh全API生成に算術55定理＋stream契約を連結してLean検査、C++ ASan/UBSanとのdiffも同じ入口で成功。`py_compile`と`git diff --check`成功。最終spec/security監査や全件gateの成功とは扱わない。
+
+### 2026-11-15 Ratio型別検査と除算の接続
+
+- 前回は進捗あり（canonical不変条件と乗算）。今回はdiff_harnessの数値stream実現にshort/short intの16bit境界を追加。shortを32bit intと同一の抽出へ落とさず、範囲外の読取りは[-32768,32767]へ切詰めとfailで検査する。既存の正負範囲超過/EOF/不正/未正規化比較ケースをshort/int/long longで行う。char/signed charは文字抽出なので引き続き拒否。unsignedと幅混在も未対応。
+- RatioMathへLCM共通分母の左右の除算が整除によりInt.tdiv/edivで一致する2定理を追加（数学層33定理）。GCDの対応と合わせ、Ratioの負数の丸め差を説明する。shared build成功（葉1.3秒、警告なし）。docs/translation.mdの古い「乗除算・比較・ラッパー未証明」の記述を現在の証明範囲へ修正。
+- 未了: 全T/固定幅の数学モデル対応をこの有限差分検査で証明したとはしない。GCD/LCM費用の時間上界・追加領域、全API公開切替、全件gate/独立監査、push後CI20分が残る。公開Ratioは旧3フィールドでpushなし。
+- 検証結果: short追加後のstream/model契約7件成功（46.913秒）。3型のC++ ASan/UBSanとLean差分一致、fresh生成との契約証明、py_compile、diff --check成功。追加したLCM2補題はshared module buildでも検査済み。
+
+### 2026-11-15 Ratioの明示GCD/LCM候補
+
+- 前回は進捗あり（shortの型別streamとLCM整除）。std::gcd/lcmには時間上界規定がないため、差し替え候補 `experiments/verification/number/ratio_numeric.hpp` にtemplateのEuclid/符号処理/LCMを用意した。公開部品ではなく、最終的にはRatioの非公開helperへまとめる。原本の公開APIは変えていない。現全API候補もstd版のままで、まだ差し替えていない。
+- `tests/lean/ratio_numeric_contract.lean` は毎回生成したモデルについて、非負GCD・符号付きGCDが正しい値を返して停止し、仕事量がそれぞれt+2+gcdCost / t+3+gcdCost以下であることを証明。既存gcdCostはlog2(a*b)+最大2なので、STLの費用仮定に頼らない。whileモデルのfuel制約はb.toNat/natAbs<2^64として明示（標準の符号付き64bit値は範囲内）。mvcgenの実験的tactic警告のみ、証明の未解決goalなし。
+- `tests/test_ratio_numeric_model.py` をsupport checksへ登録。生成モデルへ証明を連結してLeanで検査し、190入力×3関数×short/int/long longをPython math.gcd/lcmと照合。C++ ASan/UBSanとLeanの差分も検査する。0、負、互いに素、Fibonacci、short境界を含む（最小負数のabsやLCMオーバーフローは契約外として除外）。
+- 次はLCMの正しさ・時間上界、helperの型一般対応とRatio内部への組込み、既存算術契約の費用式更新、追加領域オーダー、全API公開切替・全件gate/独立監査・push後CI20分。公開Ratioは旧3フィールド、push未実施。
+- 最終検証: 符号付き証明追加後の2テストが10.032秒で成功。fresh生成との2証明、Python期待値、3型のC++ ASan/UBSanとLean一致、py_compile/diff --check成功。全件gate/独立kernel監査は未実施。
+
+### 2026-11-15 Ratio LCM補助の証明
+
+- 前回は進捗あり（明示Euclidと符号付きGCD）。今回 `RatioMath.lcm_magnitude_formula` を追加（数学層34定理）し、絶対値をGCDで割ってから掛ける式とInt.lcmが一致することを証明した。
+- staging ratio_lcmは既に絶対値を取った後の呼出しをratio_gcd_nonnegativeへ変更し、重複した符号処理/入口tickを省いた。生成モデルの `ratio_lcm_signed` は0入力・正負4分岐を含めてInt.lcmとの一致、停止、t+3+gcdCost(|a|,|b|)上界を証明。GCD/LCMのSTL時間仮定を使わない。gcdCost≤2+log2(a*b)も明記した。whileのb.natAbs<fuel制約は維持。
+- `tests/test_ratio_numeric_model.py` はfresh生成にRatioMathをimportしてLCM証明も検査する。190入力×3関数×3型のASan/UBSan・Python・Lean照合を継続。
+- 次はこのhelperをRatioの非公開関数へ組込み、既存の算術/stream契約をfresh生成モデルへ接続して費用式を更新する。元template/APIを保持し、候補の本体同一テストは許可したGCD/LCM置換を明示して修正する必要がある。追加領域・全型対応、公開切替/全件gate/独立監査、push後CI20分は未完了。公開Ratioも全API候補もまだstd版のままでpushなし。
+- 最終検証: LCMとlog上界を含めた更新後の2テスト成功。freshモデルとの4定理、190入力×3関数×3型のPython/C++ ASan/UBSan/Lean一致、py_compile、diff --check成功。mvcgenの実験警告と既存simp分岐のlinter警告は残るが、未解決goalなし。全件gate/独立kernel監査は未実施。
+
+### 2026-11-15 Ratio全API Euclid候補の組込み
+
+- 前回は進捗あり（明示LCMの証明）。`experiments/verification/number/ratio_euclid.hpp` に全APIを保持した別候補を作成し、3個のnumeric helperをRatioの非公開static関数へまとめた。std呼出しをこのhelperへ置換し、不要なnumeric includeを除いた以外は既存std版候補と一致することをテスト。既存std版は55算術契約の比較基準としてまだ残す。最終公開は1headerにまとめる。
+- 翻訳器はDeclRefExprのstatic CXXMethodDeclを名前でなく宣言idで解決。別クラスの同名staticへの誤対応は拒否。std::numeric_limits::max等の既存契約は従来の明示ハンドラを通す（最初の再生成チェックでここを検出して修正）。同名自由関数とprivate staticのnative/Lean回帰、および別クラス参照を誤受理しない負例を追加。
+- `tests/test_ratio_euclid_model.py` をsupport登録。fresh全クラス生成でprivate helperの4定理とstream2定理を接続。`tests/lean/ratio_euclid_contract.lean` にnormalize/2引数構築/単項マイナス/乗算の4仕様を追加。純粋モデルのフィールドに一致し、仕事量はそれぞれ4+gcdCost、5+gcdCost、6+gcdCost、7+2個のgcdCostで上から抑える。停止とhelperのfuel前提を含み、NumericCost仮定は不要。
+- 検証: Euclid候補4テスト40.117秒、既存friend8テスト26.922秒、更新したstatic宣言identity回帰1テスト2.352秒すべて成功。単独include・既定型・自己除算と、short/int/long longの入出力/未正規化比較のASan/UBSanとLean差分も実行。登録50モデルの再生成一致、py_compile/diff --check成功。
+- 次はEuclid版の加減・除算・比較・全wrapperのモデル/費用接続と型一般対応、追加領域上界。全API公開header/TOML/テスト切替とstd候補/一時helper整理、全件gate/独立監査、原本単位pushとCI20分測定が残る。公開Ratioは旧3フィールド、pushなし。他の旧方式部品と取り下げ4部品等の目標も維持する。
+
+### 2026-11-15 Euclid版Ratioの残る演算
+
+- 前回は進捗あり（全API Euclid候補とnormalize/構築/負号/乗算）。今回 `ratio_euclid_contract.lean` に加減・除算・比較の仕様を追加。結果は既存純粋モデルのフィールドに一致し、仕事量上界は加減8+GCD(d,e)+GCD(z,l)、除算11+GCD(n,m)+GCD(d,e)+GCD(z,w)、比較4+GCD(d,e)。GCD表記はgcdCostの評価値。途中のl/wを含むwhile燃料前提を明示し、成功を仮定せず停止を示す。
+- 全12形の二項/左右scalarラッパーに任意Tのrun対応を追加（複合代入の状態・非帰還・費用を保持、追加tickは1/2）。scalar構築・前後置増減・単項plus・任意Tのフィールド等値・正規化済み等値の値・ゼロ除数4形の証明もEuclidモデルへ接続。Euclid算術契約は計32定理。fresh生成連結のLean検査成功（11.558秒、次に全テストでも再検査）。
+- 全クラスを直接呼ぶ算術差分テストを追加。既存friendテストのFraction期待値を再利用し、入力用headerだけをEuclid全API候補へ差替える。これで全12形・複合代入・前後置・比較・自己除算を検査し、stream付きヘッダもそのまま生成する。
+- 未了: これらを最終公開用Proofs/モデル/TOMLへ登録、C++型対応と追加領域オーダー、API全体の仕様catalog/両kernel監査、std候補/一時helper整理。公開Ratioは旧3フィールド、pushなし。全件再公開とCI20分目標は未達で、他の旧方式部品・取り下げ4部品も残る。
+- 最終検証: Euclid全候補5テスト49.894秒、数値helper2テスト13.900秒で成功。32算術＋4helper＋2stream定理をfresh生成で検査。Fraction算術期待値、3型stream、helperのPython期待値とASan/UBSan/Lean差分が成功。py_compile/diff --check成功。最終仕様catalog/独立kernel監査や全件gateの成功とは扱わない。
+
+### 2026-11-15 Ratioのbit数による仕事量上界
+
+- 前回は進捗あり（Euclid算術32定理）。今回共有 `Proofs/Cpp/Lib/RatioCost.lean` を追加してProofs.lean/supportへ登録。各GCD引数≤2^bitsならgcdCost≤2+2*bitsを証明し、有限個のGCD費用の和が(overhead+2*calls)*(bits+1)以下になる一般補題も証明した。leaf build1.4秒成功。定数の費用インスタンスやSTLの未規定上界は使わない。
+- Euclid候補の実演算に5個のbit上界定理を接続（算術32→37定理）。normalize≤6*(bits+1)、乗算≤11*(bits+1)、加減≤12*(bits+1)、除算≤17*(bits+1)。結果の純粋モデルとの一致と停止も同じ仕様に保持。bitsはGCDが読む入力・中間値の共通絶対値上界を表す。特に加減では共通分母l/分子z、除算ではz/wも含める。元入力だけのbit数へ多項式中間値評価を代入する証明はまだないため、入力のみの大きさによるオーダー完了とはしない。
+- 検証: shared RatioCost build成功、5上界を含むfresh全API生成連結のLean検査成功（12.958秒）。今回C++本文/翻訳器は変更なし。追加領域上界、全型対応と公開用spec/catalog・両kernel監査、公開切替、全件gate、push後CI20分は未完了。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 Ratioの入力のみのbit上界
+
+- 前回は進捗あり（中間値を含む共通bit上界）。RatioCostにLCM≤B²、除算/約分の積≤B²、共通分母の拡大項≤B³、加減の正規化前分子≤2B³を追加。Int.natAbs_ediv_le_natAbsを使うため、数学的な商の符号に依存せず成立する。2*(2^bits)^3=2^(3*bits+1)、(2^bits)^2≤2^(3*bits+1)も証明（RatioCost計9定理）。shared leaf build1.5秒成功。
+- これにより、Euclid生成モデルの加減・除算の仕事量を元入力のbit上界だけへ換算。加減≤16*(bits+1)、除算≤23*(bits+1)。構築≤7*(bits+1)、単項負号≤8*(bits+1)、比較≤6*(bits+1)も追加。前回のnormalize/乗算の元入力上界と合わせ、数学Intモデルの主要演算はO(bits+1)を示した。while燃料/入力と途中値のC++範囲前提は残る（計算量関数に中間値の大きさは含めない）。wrapperは前回証明した追加1/2tickのrun対応で接続できる。
+- fresh全API生成にhelper/stream/算術43定理を連結したLean検査成功。新しい数学補題を小さく分割して使い、上限の増加は行わない。今回C++/翻訳器の変更なし。inventory137とdiff --check成功。
+- 未了: 追加領域オーダーと全型対応、最終仕様catalog/両kernel監査、全API公開切替・候補整理・全件gate、原本単位pushとCI20分測定。他の旧方式部品と取り下げ4部品も引き続き対象。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 Ratioの追加整数型の算術検査
+
+- 前回は進捗あり（入力のみのbit上界）。全APIヘッダの差分driverが全stream具体化も要求していたため、明示的な呼出し選択 `Harness(..., calls={...})` を追加。未指定の既存動作は全件のまま。未知名/非公開staticの指定は拒否する。全クラスの翻訳は省略せず、driverが具体化する入口だけを選ぶ。
+- `tests/test_ratio_integral_models.py` をsupport登録。signed char/char/short/int/long/long long/unsigned/unsigned long longの8型について、全12形の四則二項/左右scalar、複合代入の返値とreceiver更新、等値・比較をFraction期待値とnative ASan/UBSan/Leanで検査。正の小入力で全中間値を型範囲内に保ち、unsignedの折返し結果を数学的有理数の結果として扱わない。
+- 選択検査の成功を型一般の証明や未対応stream契約の代用にしない。unsigned short/unsigned charは現翻訳器未対応、文字型とunsignedのstreamも別の契約が必要。公開Ratioは旧3フィールド、pushなし。領域評価/全型対応/最終監査/全API再公開/CI20分と他の旧方式・取り下げ部品の目標は継続。
+- 検証結果: 追加整数型の2テスト56.916秒成功。既存の全stream入口を選択なしで使う汎用harness回帰1テスト29.770秒成功（short/int/long long）。py_compile/diff --checkとinventory137成功。今回数学モデル/証明ソースの変更はなく、全件gate/独立kernel監査は未実施。
+
+### 2026-11-15 Ratioの全二項演算の値・入力bit上界
+
+- 前回は進捗あり（8整数型の算術差分）。今回は既存のrun_of_triple/triple_of_runとwrapper run対応を使い、全12形（四則×Ratio同士/右scalar/左scalar）に、有理数値の一致・停止・元入力bit数による仕事量上界を同じ仕様へ接続。Euclid算術43→55定理。
+- 上界は加減18*(bits+1)、乗算13*(bits+1)、除算25*(bits+1)で、複合代入の入力bit上界と追加1/2tickから導いた。scalarはRat.divInt a 1として埋め込み、左右の順序を保持。正しい有理数操作の非ゼロ分母/除数前提とwhile燃料の範囲を明示し、成功や費用を仮定にしていない。C++の入力/途中値が型範囲内という部品前提は引き続き必要。
+- 検証: fresh Euclid全API生成にhelper4・stream2・算術55定理を連結したLean検査が14.234秒で成功。今回C++/翻訳器/ハーネス変更なし。inventory137、diff --check成功。
+- 未了: 追加領域のモデル評価・型一般の対応、公開用モデル/証明/catalogの登録・両kernel監査、std版候補/一時helper整理と全API公開切替、全件gate、原本単位pushとCI20分測定。他の旧方式・取り下げ部品も目標のまま。公開Ratioは旧3フィールド、push未実施。
+
+### 2026-11-15 ユークリッド法の論理データ領域
+
+- 前回は進捗あり（全12形の値・入力bit上界）。現Mはwork counterだけで領域counterがないため、領域の成功を宣言せず、まず純粋モデルのpayloadを評価。`Proofs/Cpp/Lib/RatioSpace.lean`（8定理）を共有登録。Euclidのstep/stateAt、現在のa,bと一時剰余の3値frame、payloadBitsを定義した。履歴は保持しないモデルであり、Lean評価スタック/C++ヒープ/寿命監査ではない。
+- 各入力≤2^bitsから、全反復でstateの両値も≤2^bitsを証明。任意kのframeは3payload、payloadBits≤3*(bits+1)。整数非負状態のemod更新とNat stepの一致、C++のtmodから同じstepへの一致も証明した。bitsは数値のlog2(value+1)合計で、0のpayloadは0bitとする。
+- `ratio_euclid_contract.lean` に生成private numeric_gcd_nonnegativeそのものがbody反復と等しい定理（rfl）と、非零bodyのrun/純粋step/frame bit上界を接続する定理を追加（Euclid算術55→57定理）。sourceのstate遷移と無関係な定数だけをspaceと定義したものではない。
+- 検証: shared module build成功（葉1.2秒）、fresh全API生成との57算術＋helper/stream契約Lean検査14.390秒成功、inventory137とdiff --check成功。今回C++/翻訳器の変更なし。
+- 未了: このループpayloadに呼出し側の固定個数の値を合成するRatio全体の論理領域上界、全型対応、最終公開モデル/証明/catalogと両kernel監査、全API公開切替・全件gate・原本単位push・CI20分測定。他の旧方式/取り下げ部品の目標も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 呼出し側payloadの合成とLCM
+
+- 前回は進捗あり（Euclidの3値frameと生成ループ対応）。RatioSpaceへpayloadBits_append/context_bits/with_contextを追加。任意の固定contextを保ったままEuclidを任意回反復しても、値の数はcontext.length+3、ビット量は(context.length+3)*(bits+1)以下になる。
+- LCMの純粋モデルはEuclid中にa,bの2値を保持するcontext、最後の拡大段階に[a,b,gcd,a/gcd,a/gcd*b]の5値を保持するモデルとした。a>0かつ両入力≤2^bitsなら、両段階のpayload peak≤10*(bits+1)を証明。これは論理的な値の保持モデルで、C++ヒープやLean評価スタックを計測したものではない。共通RatioSpaceは8→14定理。
+- fresh Euclid版で正のLCM入力について、numeric_lcmがa,bを保持してnumeric_gcd_nonnegativeを呼び、最後にa/g*bを返す計算形と一致することを証明。5値ループcontextの上界へ接続する証明も追加（算術57→59定理）。Ratio全クラスの領域完了とはしていない。
+- shared module leaf build1.6秒成功。今回C++/翻訳器変更なし。未了: 上位Ratioの固定個数の値との合成・型一般対応・公開用証明/model/catalog登録と両kernel監査・候補整理/全API公開切替・全件gate・原本単位pushとCI20分。公開Ratioは旧3フィールド、pushなし。他の旧方式/取り下げ部品の目標も維持。
+- 最終検証: fresh全API生成との算術59定理＋helper/stream契約検査成功。inventory137・diff --check成功。全件gate/独立kernel監査は未実施。
+
+### 2026-11-15 正規化の符号付きpayload
+
+- 前回は進捗あり（固定context合成/LCM）。RatioSpaceにsignedPayloadBits（各Intの符号1bit+natAbsのpayload）とsigned_context_bitsを追加。正規化の保持fields/符号付きGCD引数をnormalizeContext=[n,d,n,d]とし、GCD後は[n,d,g,n/g,d/g]、ゼロ分子では[0,1]を保持する純粋モデルとした。
+- 入力natAbs≤2^bitsから、GCD中のcontext+3値frame≤11*(bits+1)、終了後≤10*(bits+1)、両段階のmax≤11*(bits+1)を証明。ゼロ・負数もspaceモデルで扱い、gcd/商の絶対値が元入力より増えないことを使う。RatioSpaceは14→18定理。C++実メモリ量/寿命を再導入したものではない。
+- fresh Euclid版で非ゼロ分子のnormalizeの計算形（条件付き符号変更→numeric_gcd→両field除算）との一致を証明し、payload上界の定理も追加（Euclid契約59→61）。全クラスの呼出し/stream外部状態を含む領域完了とはしていない。
+- 検証: shared module build1.7秒成功。fresh全API生成との61契約＋helper/stream検査14.004秒成功、inventory137・diff --check成功。今回C++/翻訳器変更なし。
+- 未了: 上位四則/各wrapperの固定保持値との合成、型一般対応、公開モデル/証明/catalog登録と両kernel監査、候補整理/全API公開切替・全件gate、原本単位pushとCI20分測定。他の旧方式・取り下げ部品も目標のまま。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 四則とラッパーの論理領域
+
+- 前回は進捗あり（符号付きnormalize payload）。`RatioArithmeticSpace.lean` を追加してProofs.lean/support登録。四則の全名前付き値を8値の固定contextとして同時に保持する保守的なenvelopeを定義し、LCM/GCD/normalizeの各callee frameのmaxを加えた。実際の寿命やC++ヒープを記号実行するモデルではない。
+- RatioCostにgcd_sizeを追加（計10定理）。既存のB²/2B³上界から全保持値≤2^(3*bits+1)を示し、四則のpayload peak≤81*(bits+1)を証明。ラッパー側の元の4フィールドを合成する一般補題と加減/乗除wrapperの≤89*(bits+1)も証明。ArithmeticSpaceは8定理、leaf build1.7秒成功。
+- fresh全APIで加減・乗除の計算形（LCMまたは2GCD→必要ならnormalize→返値/更新receiver）との一致をrflで証明し、各payload上界も接続。Euclid契約61→69定理。fresh検査14.144秒成功。ラッパーのsource run対応は既存12形の定理にあり、今回のwrapper領域は純粋モデルの保持値合成として証明した。
+- docs/ratio.mdを履歴の追記形式から、現在の公開旧API/全API候補/前提/証明・検査範囲/残件の仕様へ整理。未完の型一般対応や最終監査を隠さず記載。
+- 検証: 共通moduleビルド、fresh69契約＋helper/stream、inventory137、diff --check成功。今回C++/翻訳器の変更なし。未了: 全型と領域の全API対応、公開用model/proof/catalog・両kernel監査、候補整理/公開切替、全件gate、原本単位pushとCI20分。他の旧方式/取り下げ部品も目標のまま。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 全API Ratio候補の公理・両kernel監査
+
+- 前回は進捗あり（四則/wrapperの論理領域）。今回 `tools/audit_ratio_candidate.py` を追加。公開中の非template cp.Ratioと衝突しないよう、全API候補を再生成し、helper4/stream2/算術69のソースを独立module `Proofs.RatioCandidateAudit` に合成する。共通Proofsソースは再帰的にscreenしてLakeでbuild、候補もscreenして再compileする。
+- source/public catalogの全件gateの代わりではない開発用監査。既存InspectEnvironment/audit_dependencies/audit_axiom_definitions/audit_mathlib_coverage/leanchecker/lean4export/nanodaを再利用。入力header・証明・common module・policy・manifest/toolchainのSHA256を記録し、終了時に不変を確認する。Proofs namespaceのmodule探索にはscratchのCpp symlink viewを明示し、想定外のviewは拒否する。
+- 実行結果: 公理依存/source監査5430宣言成功、`leanchecker --fresh Proofs.RatioCandidateAudit`成功、nanoda「Checked 5637 declarations with no errors」。environment上の候補430 theoremにはコンパイラ生成補助も含まれる（手書き契約数とは異なる）。project輸出照合900宣言で、全件監査と同じdirect-export probeによりstateAt/loopFuel/uniqueListの `_unsafe_rec` 3個は輸出器自身が扱わない補助宣言と確認し記録。他の輸出可能rootの欠落は拒否する。
+- ローカル証跡: `.cache/wip/ratio_candidate_audit/result.json`（全入力hash・宣言名・export hash・省略された内部補助・独立kernel結果）、同directoryのenvironment/proofs.ndjson、`.cache/wip/ratio_restore/audit.log`。最終resultと現在の全入力hash一致を再確認、inventory137、py_compile/diff --check成功。
+- 次: 型一般/領域の全API対応を仕上げ、公開用model/proof/catalogへ登録・候補整理/公開切替し、全件gateと最終spec監査/両kernelを実施。その後に原本単位pushとCI20分測定。今回の候補監査成功を全部品の再公開や公開catalog監査の成功とはしない。公開Ratioは旧3フィールド、pushなし。他の旧方式/取り下げ部品も目標のまま。
+
+### 2026-11-15 符号なしGCD・正規化の型対応
+
+- 前回は進捗あり（候補の両kernel監査）。`Proofs/Cpp/Lib/UnsignedMagnitude.lean` を共有登録。自然数への解釈・ゼロiff・剰余・fuel範囲・0未満でないことのインターフェースを定義し、UInt8/16/32/64の具体instanceを証明。さらにUnsignedDivisionで単位元と除算の自然数対応を同じ4幅で証明した。法則はclassの明示的な前提で、具体instanceに未証明公理は置いていない。
+- `tests/lean/ratio_unsigned_contract.lean`（11定理）をfresh全API候補へ追加。generic lawful unsigned型のEuclid本体/符号wrapperの値と停止・gcdCost上界、4幅のGCD具体化、正規化の自然数pair結果、数学Intモデルとの一致、分母非零ならRat canonical fieldsとの一致、2引数構築、入力bit数による正規化の仕事量≤6*(bits+1)を証明した。正規化自身には余分な非overflow前提を置かず、除算/剰余が値を拡大しない性質で扱う。
+- RatioMathへnormalize_nat_pairを追加（数学層35定理）し、NatのGCD/商を使う結果から既存Intの正規化モデルへ接続。符号なし四則・比較・入出力全体の型対応完了とはしない。UInt8/16のLean instance証明とC++のunsigned char/shortの直接binding対応は別であり、後者は未完了。
+- `tests/test_ratio_integral_models.py` にunsigned32/64の最大値近傍8組ずつの正規化を追加。Fraction期待値とC++ ASan/UBSan/Leanの一致。既存8型の算術を含む全3テスト65.317秒成功。helperを共通化し、既存ケースの期待値や選択範囲は維持した。
+- 候補監査toolは新module/契約のscreen・build・入力hash・輸出へ拡張。最終監査結果: 公理依存5685宣言成功、leanchecker --fresh成功、nanoda「Checked 5888 declarations with no errors」。候補481 theoremには生成補助を含む。既存と同じ3内部補助のdirect-export probe確認以外の省略なし。result.jsonと現在の全入力hash一致を再確認した。inventory137、py_compile/diff --check成功。
+- 次はLCMと四則の型対応（乗算/減算の範囲・小幅整数の昇格の扱いを含む）、領域の全API対応、公開用model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査。その後に原本単位pushとCI20分測定。他の旧方式/取り下げ部品の目標も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 符号なしLCMと乗算の表現範囲
+
+- 前回は進捗あり（unsigned GCD/normalize/構築）。UnsignedMagnitudeへUnsignedProductを追加。capacity・各値の範囲・積がcapacity未満なら自然数の積に一致する法則を定義し、UInt8/16/32/64の具体instanceをUInt.toNat_mulとmod_eq_of_ltから証明した。未証明公理や無条件の積の非overflow仮定は置かない。
+- RatioMathへlcm_nat_formulaを追加（数学層36定理）。`ratio_unsigned_lcm` はNat.lcm(mag a,mag b)<capacityという標準LCMと同じ表現可能性の前提から、生成helperが正しい自然数LCMを返して停止し、仕事量≤t+3+gcdCostを証明する。ゼロ分岐は別扱いし、非零では既存generic Euclidのrun結果を合成している。
+- unsigned契約は11→18定理。LCMの入力bit数上界≤5*(bits+1)、Int.lcmとの一致、4幅の具体化を追加。四則全体や小幅unsignedの直接C++bindingへの対応完了とはしていない。
+- `test_unsigned_lcm_boundary_arithmetic` を追加。unsigned32/64それぞれ3組で、分母の積はoverflowするがLCMと結果分子は表現可能な加算を公開APIから検査。Fraction期待値、C++ ASan/UBSan、Leanが一致（新規target test1件12.600秒成功）。既存ケースの本体/範囲は変更していない。今回C++ header/翻訳器の変更なし。
+- 候補監査の最終結果: source/公理依存5733宣言、leanchecker --fresh成功、nanoda「Checked 5936 declarations with no errors」。候補491 theoremは生成補助を含む。既存3内部補助の直接輸出probe以外に省略なし。result.jsonと現在の全入力hash一致を再確認。inventory137、py_compile/diff --check成功。
+- 次は四則の型対応（加減の範囲・整数昇格を含む）、領域の全API接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査。その後に原本単位pushとCI20分測定。他の旧方式/取り下げ部品の目標も維持。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 符号なし乗算の状態・値の対応
+
+- 前回は進捗あり（unsigned LCM）。ratio_unsigned_contractへgeneric unsigned乗算の2定理を追加（18→20）。交差約分後の分子・分母の積がcapacity未満という条件から、生成mul_assignの返値/更新receiver一致、両フィールドの自然数式、停止、仕事量≤t+7+gcdCost(n,e)+gcdCost(m,d)を示す。新しい費用仮定は置かず、2回の既存GCDのrunを合成した。
+- RatioMathへmul_nat_pairを追加（数学層37定理）し、非ゼロ分母の条件の下でunsigned結果をIntの純粋乗算モデル、有理数の積へ接続した。積が表現範囲に収まらない場合の数学的な積の正しさは主張せず、別の入力へ結果をすり替えていない。Cpp本文/翻訳器は今回変更なし。
+- test_unsigned_cross_cancel_boundary追加。unsigned32/64の各4組で、約分前の積はoverflowするが約分後は収まる分数を公開乗算APIで検査。Fraction、C++ ASan/UBSan、Leanが一致（新規target1テスト12.331秒成功）。既存ケースの内容は維持した。
+- 最終候補監査: source/公理依存5746宣言、leanchecker --fresh成功、nanoda「Checked 5949 declarations with no errors」。候補496 theoremには生成補助を含む。既存3内部補助のdirect-export probe以外に省略なし。result.jsonと現在の全入力hash一致を再確認。inventory137、py_compile/diff --check成功。
+- 未了: 加減・除算・比較などの型対応（小幅整数の昇格を含む）、全APIの領域/型接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分。他の旧方式/取り下げ部品も目標のまま。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 符号なし除算の型対応
+
+- 前回は進捗あり（unsigned乗算）。ratio_unsigned_contractへ除算の2定理を追加（20→22）。除数の分子非零と交差約分後の分子/分母の積がcapacity未満という条件から、2GCD→一時値計算→normalizeをrunとして合成。返値と更新receiverが一致し、フィールドが既存Intの純粋divモデルと一致すること、停止とt+11+3個のgcdCost上界を証明した。新しいコスト仮定はない。
+- RatioMathへdiv_nat_pairを追加（数学層38定理）。有効な分母と非零除数では、結果の有理数値が商に一致することも接続した。rawデータのLeanモデル仕様と、C++/有理数操作の有効入力の前提は区別する。Cpp本文/翻訳器は今回変更なし。
+- test_unsigned_division_cross_cancel_and_alias追加。unsigned32/64の各4組で約分前の積が大きい除算を検査し、自己参照の複合除算でも返値・receiverの双方が1になることを確認。Fraction/C++ ASan/UBSan/Leanが一致（新規target1テスト13.020秒成功）。既存ケースの内容は維持。
+- 最終候補監査: source/公理依存5752宣言、leanchecker --fresh成功、nanoda「Checked 5955 declarations with no errors」。候補500 theoremは生成補助込み。既存3内部補助のdirect-export probe以外の省略なし。result.jsonと現在の全入力hash一致を再確認。inventory137、py_compile/diff --check成功。
+- 次は加減・比較などの型対応（小幅整数の昇格を含む）、全APIの型/領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分測定。他の旧方式/取り下げ部品の目標も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 符号なし加減算の型対応
+
+- UnsignedMagnitudeへUnsignedAddSubを追加。加算の和がcapacity未満、減算の右辺が左辺以下という条件で自然数演算と一致する法則をUInt8/16/32/64に対して証明した。具体型のcapacityはrewrite前に指数まで明示し、定義展開への依存を避けた。
+- RatioMathへadd_nat_pair/sub_nat_pairを追加（数学層40定理）。unsigned契約は22→26定理。LCM・スケール後の積・加算結果の表現可能性、減算の非underflowを前提に、生成add_assign/sub_assignの返値と更新receiver、Intモデルのフィールド、有理数値、停止、仕事量≤t+8+gcdCost(d,e)+gcdCost(z,l)を証明した。既存LCM/normalizeのrunを合成し、新しいコスト仮定は追加していない。
+- fresh候補proofテスト1件14.336秒成功。test_unsigned_add_subtract_boundariesを追加し、unsigned32/64の各6組（最大値ちょうどの和、ゼロになる差、大きな共通分母）と自己参照の複合減算について、Fraction/C++ ASan/UBSan/Leanで返値・receiverを検査。新規target1件13.273秒成功。Cpp本文/翻訳器の変更は今回なし。
+- 最終候補監査: source/公理依存5825宣言、leanchecker --fresh成功、nanoda「Checked 6028 declarations with no errors」。候補510 theoremは生成補助込み。既存3内部補助のdirect-export probe以外に省略なし。result.jsonと現在の全入力hash一致を再確認。ログは.cache/wip/ratio_restore/unsigned_add_sub_audit.log。inventory137、py_compile/diff --check成功。
+- 比較などの型対応、小幅整数の昇格、全APIの型/領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分測定が残る。他の旧方式/取り下げ部品の移行も継続対象。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 符号なし比較の型対応
+
+- 前回は進捗あり（符号なし加減算と独立監査）。UnsignedOrderで型のLTとmagnitude上の自然数LTの一致を述べ、UInt8/16/32/64の具体instanceを証明した。RatioMathへcompare_nat_ltを追加（数学層41定理）。
+- unsigned契約26→29定理。分母のGCDで除した後の2積がcapacity未満なら、生成op_cmpのOrderingが自然数の比較に一致する。非ゼロ分母ではRat値の順序に一致し、停止・仕事量≤t+4+gcdCost(d,e)、入力分母≤2^bitsなら≤t+6*(bits+1)を証明した。
+- test_unsigned_comparison_after_denominator_cancellationを追加。unsigned32/64の各5組で、GCDによる分母約分前だけ積が大きくなる比較、大小の両方向、同値、ゼロ、自己比較をFraction/C++ ASan/UBSan/Leanで検査。target1件13.564秒成功。fresh候補proofテスト1件15.148秒成功（bit上界追加前）。その後のbit上界を含む候補全体は監査ツールでfreshコンパイル成功。Cpp本文/翻訳器の変更は今回なし。
+- 最終候補監査: source/公理依存5853宣言、候補517 theorem（生成補助込み）、leanchecker --fresh成功、nanoda「Checked 6056 declarations with no errors」。既存3内部補助のdirect-export probe以外に省略なし。result.jsonの全入力hashを現在のファイルと照合済み。ログは.cache/wip/ratio_restore/unsigned_compare_audit.log。inventory137、py_compile、git diff --checkも成功。
+- 小幅整数の昇格、単項/増減や入出力を含む全APIの型/領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分測定が残る。他の旧方式/取り下げ部品の移行も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 前置・後置増減の値の対応
+
+- 前回は進捗あり（符号なし比較と独立監査）。符号なし契約に増減の値の補題2本と前置/後置のsource仕様4本を追加（29→35定理）。和がcapacity未満、差が非負、分母非零という前提から有理数値が±1変化し、前置は新値、後置は旧値を返す。更新receiverも同時に示し、仕事量は前置t+1・後置t+2と厳密に一致する。
+- Int契約にも前置/後置の値と更新状態を扱う4仕様を追加（69→73定理）。新しい算術仮定は置かず、既存のgeneric source runとRatioMathの増減値の定理を合成した。C++本文・翻訳器・共通数値法則は今回は変更なし。
+- fresh候補proofテスト1件14.603秒成功。test_integral_prefix_postfix_boundariesを追加。8整数型で最大値付近・分数・ゼロになる差、さらに符号付き型では負数・ゼロからの減算を前置/後置の両方で検査。返値と更新receiverをそれぞれFraction/C++ ASan/UBSan/Leanで照合し、target1件45.630秒成功。charの負数は処理系の符号に依存するためケースに含めない。
+- 最終候補監査: source/公理依存5865宣言、候補529 theorem（生成補助込み）、leanchecker --fresh成功、nanoda「Checked 6068 declarations with no errors」。既存3内部補助のdirect-export probe以外に省略なし。result.jsonの全入力hashを現在のファイルと照合済み。ログは.cache/wip/ratio_restore/increment_decrement_audit.log。inventory137、py_compile、git diff --checkも成功。
+- 小幅整数の昇格、単項演算/入出力など残るAPIの型対応、全APIの領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分測定が残る。他の旧方式/取り下げ部品の移行も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 単項演算とスカラー操作の論理領域
+
+- 前回は進捗あり（増減の値と独立監査）。RatioArithmeticSpaceに7定理を追加（8→15）。コピー・等値の整数payload≤8*(bits+1)、前置/後置の保守的なsnapshot込み≤24*(bits+1)、構築と単項負号≤19*(bits+1)、比較≤39*(bits+1)を証明した。比較はoriginal4フィールド・GCD wrapperの2引数・GCD結果・2積をcontextに含め、反復の3payloadを加算する。実行履歴/heap/lifetimeの証明ではない。
+- Int契約73→83定理。単項正号の値・正規化を経由する単項負号の有理数値と入力bit仕事量を接続。比較と単項負号のsource式、およびコピー/等値/増減/構築/負号/比較の領域モデルの仕様を追加。領域上界はInt層で、unsignedなど各具体型への全接続が済んだとはしない。
+- unsigned契約35→41定理。単項正号の値と1tick、数学的負号が表現可能なゼロの正規形0/1と3tick、4幅の具体zero-negation仕様を追加。一般のNeg Tのゼロ法則を無条件に仮定せず、4幅ではUIntの具体定理から導いた。
+- test_integral_unary_boundaries追加。8整数型の単項正号と、符号付き5型/符号なしゼロの負号で、Fraction期待値・C++ ASan/UBSan・Leanの値およびreceiver不変を照合（target1件43.290秒成功）。charの非零負号は処理系の符号に依存するため含めない。fresh proof target1件13.888秒成功後、構築/等値の領域2仕様を追加し、監査ツールで全候補fresh compile成功。C++本文・翻訳器は今回変更なし。
+- 最終候補監査: source/公理依存5948宣言、候補545 theorem（生成補助込み）、leanchecker --fresh成功、nanoda「Checked 6153 declarations with no errors」。既存3内部補助のdirect-export probe以外に省略なし。result.jsonの全入力hashを現在のファイルと照合済み。ログは.cache/wip/ratio_restore/unary_scalar_space_audit.log。inventory137、py_compile、git diff --checkも成功。
+- 残件は小幅整数の昇格・文字/符号なしstream等の具体型対応、全APIの領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分測定。他の旧方式/取り下げ部品の移行も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 入出力の状態・仕事量・論理領域の合成
+
+- 前回は進捗あり（単項演算/スカラー領域と独立監査）。stream契約2→10定理。抽出2read、整数形出力1write、分数形出力3writeの正常終了run式を証明し、それぞれの結果・最終stream状態・返すstreamの一致を示した。抽出は原本どおり生のn,dで、normalizeを追加しない。
+- 各stream操作のrun/仕事量の契約を仮定して、Ratio側の1tickと呼出し先の仕事量の合計を上界にするHoare仕様を3本追加。入出力の定数時間やstream内部の無条件正常終了は仮定していない。EOF/failbitの処理はread/writeの契約へ保持する。
+- Int層の固定保持値とstream操作ピークの最大を合成する領域2仕様も追加。≤8*(bits+1)+maxCalleePeakで、stream内部bufferの領域はcallee側の契約に含める。文字型/unsignedの具体stream解釈、全型の領域接続完了とはしない。
+- test_ratio_stream_model.pyの7テスト全件44.582秒成功。既存の単独include/default、別headerのoperator共存、異なる具象型の拒否、3型のstream差分、EOF/fail/非正規化ケースを維持。新仕様で領域共通補題を使うためfresh proofのimportにRatioArithmeticSpaceを追加。C++本文/翻訳器の変更なし。fresh Euclid proof targetも仕事量仕様まで成功し、領域2仕様はstd候補の全件テストでcompileを確認した。
+- 最終候補監査: source/公理依存5960宣言、候補556 theorem（生成補助込み）、leanchecker --fresh成功、nanoda「Checked 6165 declarations with no errors」。既存3内部補助のdirect-export probe以外に省略なし。result.jsonの全入力hashを現在のファイルと照合済み。ログは.cache/wip/ratio_restore/stream_work_audit.log。inventory137、py_compile、git diff --checkも成功。
+- 残件は小幅整数の昇格・文字/符号なしstream等の具体型対応、全APIの領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分測定。他の旧方式/取り下げ部品の移行も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 符号なし数値streamの具体差分モデル
+
+- 前回は進捗あり（入出力の一般的な状態・仕事量・領域仕様と独立監査）。diff_harnessの既定10進streamへUInt32/UInt64のread/writeを追加。符号なしでは絶対値≤型の最大値の負数を幅付きに変換し、絶対値が超えると最大値とfailbitにする。先行fail/EOFで旧値を保持し、出力は符号なし10進表現を用いる。ローカルlibstdc++の_M_extract_intと、実際のC++呼出しで動作を確認した。
+- signed16/32/64の既存実現を専用template文字列に分け、共通のtoken/stream型部分を共有した。幅とsignednessで具象モデルを選び、異なる幅/符号の混在や文字型を拒否する。型の制約をC++ヘッダへ追加したのではなく、未対応の差分driverが誤った契約で動くことを防ぐ検査である。算術のみのcalls選択も維持した。
+- test_unsigned_numeric_stream_boundaries追加。Euclid候補のunsigned32/64各15ケースで、最大値前後、負の最大値前後、-1、分母側overflow、EOF/fail保持、非正規化2/4とcanonical1/2のfield不等/比較等をASan/UBSan C++・Lean・独立の期待値と照合。target1件13.343秒成功。その後Boolのoverflow判定を明示し、既存7+新規2=9テストを全件59.386秒で成功確認。mixed model拒否の新規テストも含む。inventory137、py_compile、git diff --check成功。
+- C++本文・翻訳器・Lean証明は今回は変更なし。前回の候補監査（leanchecker --fresh、nanoda6165宣言）の入力hashが現在も一致することを確認済み。具体streamの実現は差分テストの対象であり、標準I/O実装の形式証明や全書式のparser検証とは扱わない。
+- 残件は文字型stream・小幅整数の昇格などの具体型対応、全APIの領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分測定。他の旧方式/取り下げ部品の移行も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 char/signed char streamの具体差分モデル
+
+- 前回は進捗あり（符号なし数値stream）。diff_harnessへ文字用read/writeを追加し、char/signed charをIntの数値I/Oへ置換せず文字モデルへ具体化した。既存プロトコルのcanonical token表記を空白で結んだASCII列を用い、空白を飛ばして1文字を抽出する。文字xは数値modelでは不正tokenだが文字modelでは通常の文字になる。
+- 文字読取り成功直後に末尾でもEOFを立てず、次の抽出で空列を検出したときEOF/failを立てる。先行fail/EOFでは旧field値を保持。挿入は下位8bitのbyteであり、整数の10進表記ではない。文字/数値は同じInt carrierでもstream契約が異なるため、driverでモデル種別を保持して混在を拒否する。
+- test_character_stream_extraction_and_insertion追加。2型×12入力ケースで2tokenの2/4と1tokenの24、末尾/余剰文字、-1の2文字抽出、x、空入力、EOF・fail、raw50/52とcanonical25/26の比較を、独立期待値/ASan/UBSan C++/Leanで照合。出力のみのNUL・1・47・127、signed charの-1→255も検査。target1件13.699秒成功。全streamテスト10件76.795秒成功。bool/128bit等の未対応numeric拒否と、charを含む混在拒否も維持した。
+- C++本文・翻訳器・Lean証明は今回変更なし。既存の候補監査（leanchecker --fresh、nanoda6165宣言）の入力hashが現在も一致することを確認済み。inventory137、py_compile、git diff --check成功。今回の文字入力はASCIIプロトコルに限り、128以上の入力byteをsigned/unsignedへ解釈する全parserの証明とはしない。
+- 残件は小幅整数の昇格・unsigned char/short等の具体型対応、文字入力の全バイト等、全APIの領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査、原本単位pushとCI20分測定。他の旧方式/取り下げ部品の移行も継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 文字streamのraw byte入力と符号の検査
+
+- 前回は進捗あり（ASCIIのchar/signed char stream）。文字用driverに `bytes <count> <0..255>...` を追加。numeric driverでは有効化せず、C++/Leanの両側でbyteの範囲とcanonical表記を検査する。C++側は8bit byteと対象文字型がsignedであることをstatic_assertし、対応しない処理系で誤った契約を黙って使わない。公開C++ヘッダのAPIにこの制約を追加したものではない。
+- 文字readの空白処理をCロケールの6種類（9/10/11/12/13/32）に拡張し、128以上の入力byteを負のInt値へ解釈する。EOF/failの扱いとbyte出力を保持する。
+- test_character_stream_all_input_bytes追加。2型で全256byteを先頭に置くケースと、空入力・空白のみ・NUL・負の分母・末尾/残余文字の8ケースを期待値/C++ ASan/UBSan/Leanで比較。単独target1件14.030秒成功。canonical byteのC++側検査を揃えた後、全stream11テスト93.422秒成功。
+- その後、byteの再出力だけでは符号誤りが観測できないため、最初の256ケースへゼロとの大小比較を追加。負値/ゼロ/正値のOrderingをC++/Leanと期待値で検証し、target1件13.913秒成功。この追加後の全件再実行は行わず、変更対象の新規targetを検証した。
+- 入力/途中値の型範囲という部品の前提を維持し、絶対値は実装で計算する場合に含めるとdocs/ratio.mdを明確化。streamから得た-128に対して、分子の絶対値を使わない比較まで不必要に除外しない。これは原本C++の不具合修正ではないのでfixes.mdには追記しない。
+- C++本文・翻訳器・Lean証明は今回変更なし。既存の候補監査（leanchecker --fresh、nanoda6165宣言）の全入力hashが現在も一致することを確認済み。inventory137、py_compile、git diff --check成功。全256byteを試す有限テストで、全byte列・全書式/ロケールのparserを証明したとはしない。標準操作の一般契約は既存のStreamRead/Writeで引き続きパラメータ化している。
+- 次は小幅整数の昇格・unsigned char/shortのbindingを優先し、全APIの領域接続、公開model/proof/catalog登録・候補整理/公開切替・全件gate・最終公開監査へ進む。全書式/ロケールの具体parser実装自体を再公開の追加要件にしない。原本単位pushとCI20分測定、他の旧方式/取り下げ部品の移行も未了。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 小幅unsignedテンプレートbindingと整数昇格
+
+- 前回は進捗あり（全byte入力と符号検査）。diff_harnessへunsigned char/unsigned short（unsigned short int含む）のtemplate instance bindingを追加。Cpp演算のintへの昇格を保存するためIntを用い、演算子ごとのUInt8/16折返しにはしない。入力と格納値を含む途中値の型範囲という既存の非折返し部品の前提を維持する。
+- 宣言/キャストの一般翻訳は拡張していない。instance_typeは差分driverのtemplate置換だけに使い、lean_translate.parse_typeの具体unsigned char/short拒否は維持する。直接書かれた小幅unsignedの戻り値/引数などを誤ったキャスト意味論で受理しない拒否テストも追加した。
+- test_narrow_unsigned_template_promotionsで2型の12二項/スカラーAPI・複合代入・Eq/比較をFraction/C++ ASan/UBSan/Leanと照合。さらに128/1と1/2（16bitでは32768/1と1/2）を比較し、途中のintの積256/65536をTへ折り返す誤りならOrderingが逆転するケースを検査。2つの新targetテスト13.737秒成功。
+- unsigned charはInt carrierの文字read/write、unsigned shortはInt carrierの16bit符号なし数値read/writeへ具体化。符号付き/符号なしの文字を混在させず、C++static_assertでsignednessを照合する。unsigned shortはローカルnum_getが直接unsigned shortを抽出することも確認した。negative tokenの幅変換/overflow、全256byte入力、符号を見る比較、ASCIIとbyte出力の既存テストへ2型を追加。stream全11テスト108.809秒成功。
+- 公開C++/候補C++・翻訳器・Lean証明は今回は変更なし。既存候補監査（leanchecker --fresh、nanoda6165宣言）の全入力hash一致を確認済み。inventory137、py_compile、git diff --check成功。候補全体の両kernel成功と、具体bindingの差分成功を区別して記録する。
+- 次はRatioの公開用model/proof/catalog整理・登録に必要な全APIの領域/型の接続と残件を照合し、候補整理/公開切替・全件gate・最終公開監査へ進む。具体unsigned char/short宣言・キャストの一般翻訳は未対応だが、Tを使う今回の候補に現れない構文までRatio再公開の追加要件にしない。全137原本の目標、原本単位pushとCI20分測定は継続。公開Ratioは旧3フィールド、pushなし。
+
+### 2026-11-15 Ratioの公開側へ全APIを統合
+
+- 前回は進捗あり（小幅unsigned binding）。library/number/ratio.hppをEuclid候補と同じ原本全APIのRatio<T>へ置換。1クラス・既定型・全構築/演算/比較/入出力を維持し、旧固定型3フィールドAPIを撤去した。metadataをC++20/ClassTemplateDecl:Ratio/新hashへ更新。公開作業ツリーの変更であり、push/release更新はまだ行っていない。
+- 公開Gen/Ratio.leanをC++から再生成し、4つのfresh契約（numeric/stream/Euclid/unsigned）をnamespace Proofs.Cpp.RatioでProofs/Cpp/Ratio.leanへ統合。既存共通RatioMath/Cost/Space/ArithmeticSpace/UnsignedMagnitudeをimportする。公開proof module単体build成功、全体Lake1553 jobs成功。移行用の候補/証明断片はまだ重複しており、整理が残る。
+- tests/ratio.cppは10整数型で全12二項/スカラー形・複合代入・前後置増減・単項・比較/Eq・自己除算・返す参照の同一性・非正規化streamを検査する形へ更新。期待の有理数表記は独立のstd::gcd正規化で作る。tests/diff/ratio.pyも全API共通の非overflowケースへ変更し、metadataに10整数型を登録（longも含む）。
+- check_public --mode cpp --component ratio成功（native sanitizer/template-first include）、bridgeも10型で成功（66.974秒）。公開モジュール/metadata/生成caseでの結果で、候補だけの検査ではない。inventory137とdiff --check成功。
+- regenerate_statements.py成功。roots3824→4579、定義閉包7000→7998、削除175、既存の同名宣言の変更なし。追加rootはRatio540・既に作業ツリーで移行済みのTreeFullDp283・Gen16・rangeDown1・TreeDpAlg.CM1、旧RatioCall/TreeFullDpCallのroot86件を置換した。カタログは今回より前の未反映TreeFullDp移行も現在のregistryに従って取り込む。無関係な証明の弱化を--accept-changedで受け入れたものではない。
+- 公開側の全体最終監査は初回にprime付きroot名を拒否して停止し、監査側を修正して再実行した。再実行は両kernelまで成功（後掲）。候補側6165宣言の証跡とは別の公開全体の結果である。
+- 残件: 公開全体監査結果の確認、候補/証明断片の整理と必要な全API領域/型の再点検、全件gate、原本単位pushとそのCI20分測定。他の137原本の移行目標は維持。公開側headerは旧3フィールドではなく原本API復元版になった。次セッションで旧状態と取り違えない。
+
+### 2026-11-15 公開全体監査で見つかったprime付きroot拒否を修正
+
+- 公開全体監査の初回は、source/公理/固定仕様の照合を通過後、既存TreeFullDpの5補題（kid_facts', range'_filter_gt/lt, V_dp', i3_vc'）の名前をASCII root規則が拒否して終了した。証明や仕様を変えていない。実際に失敗した監査ログは.cache/wip/ratio_restore/public_full_audit.log。
+- check_proof_security.pyにproject_export_namesを追加してprimeを許容。subprocessのargvをlean4exportのname-literal parserへ渡す経路で、shellへの文字列展開は行わない。不正な空白/区切りを含む公開名の拒否、全safe rootの輸出coverage、exporter自身が省く内部補助のdirect probeは維持。候補監査ツールも同じ選択関数を利用する。
+- test_proof_security.pyでprime付き定義/定理をcompileし、lean4export後の宣言集合に両方残るintegration testと、不正名拒否を追加。security全21テスト19.598秒成功。公開支援全27テスト3.514秒成功。レッスンにも追記した。
+- 修正後の全公開auditは正常終了（.cache/wip/ratio_restore/public_full_audit_prime.log、session90288は終了済み）。公理/固定仕様/定義閉包46245宣言の照合、110変更moduleを含むProofs prefixのkernel再生、7591 rootからの輸出coverage、nanoda「Checked 43915 declarations with no errors」が成功。190内部補助はexporter自身が省くことをdirect probeで確認した。public checks passed for 56 component(s): audit。
+- 全56部品のcppモード成功（現在の入力fingerprintに対応するcacheを含む）。全56部品のbridgeモードも成功（.cache/wip/ratio_restore/public_all_cpp.log、public_all_bridge.log）。これを全件gate成功や冷えたCI20分の実測とはしない。
+- 未整理の旧Ratio検証はProofs/RatioCall.lean（445行）とProofs/Generated/Ratio.lean（11行）。参照はProofs.lean、support.tomlと旧RatioCall自身だけで、公開registry/canonical specのrootからは外れた。生きている監査の入力を変更しないため、完了後にこれらの旧登録/importとファイルを整理する。候補/証明断片の重複整理、全API型/領域の点検、全件gate、原本単位push・CI20分も未了。
+
+### 2026-11-15 公開全体監査の成功と次の作業
+
+- 全56公開部品のcpp・bridge・auditの各モードが現在のtreeで成功。公開支援27件とsecurity21件も成功。全件gate（全supportチェックを含むall/tests）やCI push後20分を達成したとはしない。
+- 環境情報・正確なphase timing・入力hashはgitignore対象benchmarks/local/ratio_republication_20261115/audit.jsonに保存した。依存/プロジェクトcacheがあるローカル監査であり、冷えたCIやpushからの計測ではない。測定値をtracked資料へ転載しない。
+- 次は旧RatioCall/Generated.Ratioの登録・import・ファイル削除、移行用候補/証明断片の重複整理を行う。必要なsource/frontend検査は保持し、wide boundary等のCppテストが公開headerを検査するように整理する。整理後は入力が変わるため全体監査を再確認する。
+- 監査phaseから、宣言を持たないaggregate Proofs moduleのimport変更だけでProofs prefix全体を再生している可能性が分かった。CI20分へ向けた候補として、実際の所有宣言と読み込まれたmoduleを確認して安全にtargetを減らせるか調べる。検査済みcacheの範囲や独立kernel全coverageを弱めて省略しない。
+- Ratioの原本APIは公開側treeで復元済みだが、原本単位push・release更新は未実施。他の未移行/取り下げ部品と137原本の目標を維持し、未了のgoalをcompleteにしない。
+
+### 2026-11-15 Ratio旧検証の削除と正本への集約
+
+- 前回は進捗あり（公開全56部品cpp/bridge/audit）。Proofs/RatioCall.lean、Proofs/Generated/Ratio.lean、対応するProofs.lean importとsupport登録を削除。依存検索で他の参照がないことを確認し、inventory137も成功。旧方式専用のRatio証明456行を残さない。
+- experiments/verification/number/ratio_euclid.hppを削除し、integral/stream/Euclid検査はlibrary/number/ratio.hppを直接参照。std関数版とfree helperはfrontend比較用fixtureとしてtests/fixtures/ratio_reference.hpp、ratio_numeric.hppへ移動した。元のAPI/本体差分を検査するテストは維持。
+- 公開証明の重複だったtests/lean/ratio_euclid_contract.leanとratio_unsigned_contract.leanを削除。fresh検査はProofs/Cpp/Ratio.leanからmodel importだけを除いてfresh翻訳モデルと組み合わせる。numeric/stream/std arithmeticのfixture契約は、それぞれ別の標準関数/free helperモデルのfrontend検査に必要なので保持する。
+- tools/audit_ratio_candidate.pyはtools/audit_ratio.pyへ改称し、公開header/model/metadataと公開対応証明を入力にする。modelのfresh一致、共通source監査、両kernel、入力hash照合を実行。新scopeの結果は.cache/wip/ratio_audit/result.json、nanoda6165宣言成功。過去のcandidate証跡は.cacheに保持して混同しない。
+- 公開sourceを直接用いるEuclid5テスト、numeric fixture2テスト、integral12テスト、stream11テストが全件成功。Source/frontend/parserで対応を広げたのではなく、検査対象と正本を統一した。従来の境界値・Fraction期待値・全byte・aliasの検査を削っていない。
+
+### 2026-11-15 空の集約moduleの再生と全体監査
+
+- check_proof_security.pyにreplay_required_modulesを追加。screened buildのListModulesに存在し、InspectEnvironmentで所有宣言がないmoduleだけ、変更後のカーネル再生prefixから外す。未観測moduleや所有宣言のあるmoduleは維持。Mathlib基準変更時の--fresh全再生、固定仕様/公理照合、全safe rootの輸出coverage、nanoda全再検証は変えない。
+- 実際に空のimport集約と子の定理moduleをcompileし、ListModules/InspectEnvironmentから子だけを再生対象と判定するintegration testを追加。未観測や宣言ありの場合のunit testも含め、security全23テスト成功。fixtureの実行cwdはscratchとし、既存Proofsパッケージの探索先にshadowされないようにした。
+- 整理後の全56公開部品audit成功（.cache/wip/ratio_restore/public_cleanup_full_audit.log）。source/公理/固定仕様46180宣言、34225 project宣言を7588 rootsで輸出、exporter自身が省く190内部補助のdirect probe、nanoda43865宣言が成功。今回の変更は空のProofs集約だけだったため、既に検査済みでhashが同じ実宣言の再生は不要と判定した。
+- 環境と正確なphase timingはgitignore対象benchmarks/local/ratio_republication_20261115/cleanup_audit.jsonに保存。warmなローカル結果であり、push後のCI20分の実測ではない。
+- 全件gateを実行中: check_public.py --mode all --jobs4 --timeout-seconds7200、.cache/wip/ratio_restore/public_cleanup_full_gate.log、exec session39630。現在のsource/metadataを固定して共有検査も確認している。まだ全件gate成功とはしない。次セッションは同じhandleをpollし、観測が途切れただけで再起動しない。
+- mainはorigin/mainより85 local commits進んだ既存状態で、今回の未commit変更が重なっている。pushは原本1ファイル単位、全件gateと差分確認後の手動承認が必要（docs/agent/git_workflow.md、.codex/rules/git-push.rules）。途中でまとめてpushせず、既存commit/ユーザー作業を尊重する。現時点でpush/commitは行っていない。
+- Ratioの公開側復元は進んだが、全件gate、移植単位完了の型/領域/登録最終点検、push・release・CI20分確認と、他の未移行/取り下げ部品を含む137原本の目標は未完了。
+
+### 2026-11-15 全件gateの継続確認と配布物/API点検
+
+- exec session39630の全件gateは同じprocessで継続中。観測の途切れを理由に再起動していない。Ratio検査群、nested/template/frontend、旧frameworkの共有検査が順に通過し、これまで報告された失敗はない。未完了のためall gate成功とはしない。ログは.cache/wip/ratio_restore/public_cleanup_full_gate.log。
+- 全56hppだけのarchiveをbenchmarks/local/ratio_republication_20261115/library-hpp.zipへ生成し、check_header_package.pyでarchive内容の一致と、そのheaderだけによるcompileが成功。gitignore対象であることを確認済み。外部releaseへは未反映。
+- actual Translatorの公開call28項目を列挙し、登録diff generatorが28項目全てを呼ぶことと、検査済み環境のtheorem type_dependenciesに全項目が現れることを確認した。これは宣言coverageであって、単なる名前出現を仕様レビューや全型証明の代用にはしない。詳細はlocalのpublic_api_declarations.json/public_api_theorem_mentions.json。
+- CI workflowは16 shard＋audit＋release構成。現行planと、nested_templates(10 methods)/ratio_integral(12)/ratio_stream(11)をmethod分割する案を、local current_shard_plan.txt/split_methods_proposal.jsonへ保存した。進行中gateを固定するためtracked CI設定には適用していない。local実測をCI実測のweightsへ混ぜない。新planの評価と、push後の実CI20分確認は引き続き必要。
+- CI・git設定はread-onlyで確認。mainの既存85 local commitsをまとめて送ってよいとは判断していない。Ratio原本単位の完了点検、全件gate終了、差分・secret/配布物点検を先に済ませ、必要なpush承認は具体的な対象が揃った段階で行う。現時点でcommit/pushはしていない。
+
+### 2026-11-15 全件gate成功とCIのメソッド分配
+
+- 整理後の全件gateは正常終了した（.cache/wip/ratio_restore/public_cleanup_full_gate.log、session39630終了0）。全56登録部品と全共有検査が成功し、入力fingerprint一致の全体proof-security成功を含む。全137原本の移行完了やpush後CI20分の達成とは区別する。
+- tools/ci_weights.jsonのsplit_methodsへnested_templates、ratio_integral_models、ratio_stream_modelを追加。既存のCI実測weightは変更せず、検査単位だけを細かくした。支援27テストとworkflow16分割の検査は成功。分割4ファイルの全73methodはunittest discoveryと計画が完全一致し、重複なし。計画は312tasks。ローカル計画の数値はbenchmarks/local/ratio_republication_20261115/split_shard_plan.txtにのみ保存。
+- 分配変更後の全件gateを実行中: .cache/wip/ratio_restore/public_split_full_gate.log、exec session86152。対象source/登録/docsは固定中。次は同じhandleをpollする。完了前に成功と扱わない。
+- docs/ratio.md、docs/experiments_status.mdには公開監査・整理・全件gateが未了という古い記述が残る。gate完了後、成功した検査と残る型/領域接続レビュー・原本単位push・CI計測を区別して更新する。pushなし。
+
+### 2026-11-15 分配変更後の全件gate成功
+
+- session86152は正常終了0。public_split_full_gate.logの312task全件成功、現在の入力fingerprintでproof-security成功cacheを確認し、public checks passed for 56 component(s): all。未実行taskは残っていない。新しいsplit method33件は実行され、残りは必要に応じて既検証cacheを利用した。全件のfresh実行や冷えたCI20分とは主張しない。
+- docs/ratio.mdとexperiments_status.mdの古い未完了記述を更新。公開model/proof/catalog・旧検証整理・全体監査・全件gateは完了、全APIの型/領域対応の最終点検と原本単位push/release・CI計測を残件として明示した。
+- 本セッションではgitのcommit/pushは行っていない。mainの既存85 ahead commitsを無条件にpushしない。次はRatioのAPI/前提/論理payloadの対応を具体的に点検し、原本1ファイルの完了条件を満たしてからgit workflowに従う。全137原本の移行目標は継続中。
+
+### 2026-11-15 Ratio全APIの対応点検と構築仕様の補完
+
+- 前回は進捗あり（312検査成功とCI分配変更）。新方式では非折返し型の演算を、型範囲の前提のもと数学整数で扱う。具体C++整数型全てへの追加証明を完了条件として増やさず、元のtemplate/APIを保ってInt層と純粋領域モデルの対応を点検した。docs/ratio.mdへ公開28入口すべての実行/値/仕事量/論理payloadの証明対応表を追加。12二項形は既存のrun/value定理と共通wrapper envelope、streamは既存のrun/work/payloadと呼出し先契約へ接続する。
+- 1引数構築についてratio_euclid_init_scalar_value_payloadを追加。生成init_Tの返却fields、Rat値=n、1 tickでの停止、入力とコピー保持値の8*(bits+1)上界を同時に示す。fuel前提は不要。既存のstaging/candidateというproof内の古いコメントも整理。公開proof buildとfresh単体compile成功。測定手順・条件・入力hashはignoredのbenchmarks/local/ratio_republication_20261115/scalar_certificate_build.jsonに保存した。
+- カタログ再生成はroots4579→4580、closure7998→8000、削除0、changed existing=[]。既存命題の変更を一括受容していない。追加後の全件gateはexec session74906、.cache/wip/ratio_restore/public_scalar_full_gate.logで実行中。共有検査完了、Ratio moduleのleanchecker再生成功、nanoda全体検査待ち。次は同じhandleをpollする。
+- 次の旧方式Groupをread-onlyで調査。原本の3クラスをそのままcpへ包んだprototypeは、依存式からの暗黙構築・既定の委譲構築・recordのbrace returnが現翻訳器の不足だった。公開/変換器を変えず、.cache/wip/group_restore/lean_translate.pyに試作した。元の3クラス全体を翻訳してLean compile成功、26呼出しのC++ ASan/UBSan/Lean/独立期待値が一致（cases.txt/result.txt/Driver.lean等）。これは公開移行完了ではない。prototypeのROOTはimport後にリポジトリrootへ明示設定する。
+- Groupの公開移行で残る点: namespace qualified cp::opも現公開APIとして維持すること（同じsignatureのhidden friendとのmodel名区別が必要）、default Tを原本llと同型に保つこと、frontendの負例/副作用/構築順を検査すること、group旧Call/Generated専用の登録・テストを整理すること、純粋モデルで群・合成の法則/停止/時間・論理領域を示すこと。library3旧版の別APIは別の原本として未解決台帳から落とさない。gate実行中なのでtracked frontendやGroupには変更していない。
+- 変更/未追跡52ファイルを秘密鍵・GitHub token・AWS access key・代入済みsecretのパターンで検査し検出0。完全な機密監査やstage済み差分レビューの代わりにはしない。git操作はread-only、commit/pushなし。既存85 ahead commitsの原本単位での公開整理は未了。
+
+### 2026-11-15 Ratioの移植単位検証完了
+
+- session74906は終了0。public_scalar_full_gate.logで全312検査成功、変更したRatio moduleのleanchecker再生成功、root coverage/probeを含むnanoda43867宣言成功、全56部品all gate成功を確認した。新しい構築定理も最終公開全体監査に含まれる。
+- docs/ratio.mdの全28入口対応表で型/領域の最終点検を完了し、experiments_status.mdを「移植済（新方式、未push）」へ更新。現在の公開sourceで解消したRatioのAPI縮小は違反一覧から外した。残る具体型全てへの別証明や、実装に現れない小幅unsigned構文を新方式の追加完了条件にしない。
+- fixes.mdのRatio2行が誤って付記後に置かれていたため、実際の修正表の末尾へ移動し、再発防止欄を現在の公開証明に更新した。新しい原本バグの追加記録ではない。
+- Ratioの原本単位の移植・ローカル検証は完了。push/release更新・実CI20分は未完了。既存85 ahead commitsの公開順序を原本単位に保つ必要があり、一括pushしない。Groupはまだignored scratchの試作だけ。

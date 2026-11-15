@@ -6,14 +6,16 @@ import sys
 import tempfile
 import zipfile
 
-from check_public import FLAGS, check_compiler
+from check_public import cpp_flags, check_compiler
 from offline import disable_network
-from public import PUBLIC
+from public import PUBLIC, registry
 
 
 def check(archive_path):
     disable_network()
     check_compiler()
+    entries = registry()
+    standard = "c++20" if any(data["standard"] == "c++20" for data in entries.values()) else "c++17"
     expected = {"library/" + path.relative_to(PUBLIC).as_posix(): path.read_bytes()
                 for path in PUBLIC.rglob("*.hpp")}
     with tempfile.TemporaryDirectory(prefix="headers-only-") as directory:
@@ -30,7 +32,7 @@ def check(archive_path):
             source.write_text("\n".join(f'#include "{name}"' for name in names)
                               + "\nint main() {}\n")
             binary = scratch / "check"
-            subprocess.run(["g++", *FLAGS, "-I", str(scratch), "-I", str(scratch / "library"),
+            subprocess.run(["g++", *cpp_flags(standard), "-I", str(scratch), "-I", str(scratch / "library"),
                             str(source), "-o", str(binary)], cwd=scratch, check=True)
             subprocess.run([str(binary)], cwd=scratch, check=True)
     print("header-only archive contents and compilation passed")

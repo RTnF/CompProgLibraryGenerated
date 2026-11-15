@@ -51,6 +51,24 @@ def check_independent_kernel(nanoda, config, scratch, env):
 ACYCLIC_KINDS = {'theorem', 'definition', 'opaque', 'axiom'}
 
 
+EXPORT_NAME = re.compile(r"[A-Za-z_][A-Za-z_0-9']*(?:\.[A-Za-z_][A-Za-z_0-9']*)*")
+
+
+def project_export_names(rows):
+    """Select exporter-readable names, rejecting unsupported public names.
+
+    Apostrophes are Lean identifier characters. Roots are passed as subprocess
+    arguments to lean4export's name-literal parser, never through a shell.
+    """
+    unsupported = [name for name, row in rows.items()
+        if row['module'].startswith('Proofs') and name.startswith('Proofs.')
+        and not row['internal'] and not EXPORT_NAME.fullmatch(name)]
+    if unsupported:
+        raise ValueError(f'unsupported public export names: {unsupported}')
+    return [name for name, row in rows.items()
+            if row['module'].startswith('Proofs') and EXPORT_NAME.fullmatch(name)]
+
+
 def export_roots(names, rows):
     """A subset of `names` whose export closure contains all of `names`.
 
@@ -170,6 +188,18 @@ def sync_scratch(manifest_text, lakefile_text):
     packages = SCRATCH / '.lake/packages'
     if not packages.is_symlink():
         packages.symlink_to(ROOT / '.lake/packages', target_is_directory=True)
+
+
+def replay_required_modules(changed, imported, declaration_owners):
+    """An imported module with no owned constants has no expressions to replay.
+
+    Ownership and the loaded module list come from the screened build. Modules
+    not in that loaded environment remain targets: absence of observations is
+    not evidence of an empty module. Independent export/kernel coverage is unchanged.
+    """
+    imported = set(imported)
+    declaration_owners = set(declaration_owners)
+    return [name for name in changed if name not in imported or name in declaration_owners]
 
 
 def project_modules():
@@ -362,19 +392,14 @@ def main():
         stage('dependency audit', started)
         audit_contract(contract, rows)
         print(f'raw axiom dependency and statement/definition checks passed: {count} declarations')
-        unsupported_roots = [name for name, row in rows.items()
-            if row['module'].startswith('Proofs') and name.startswith('Proofs.') and not row['internal']
-            and not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*', name)]
-        if unsupported_roots:
-            raise ValueError(f'unsupported public export names: {unsupported_roots}')
-        roots = [name for name, row in rows.items() if row['module'].startswith('Proofs')
-                 and re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*', name)]
+        roots = project_export_names(rows)
         exported_roots = export_roots(roots, rows)
         # The exporter skips unsafe declarations (it always did when every name was passed).
         safe_roots = {name for name in roots if not rows[name]['unsafe']}
         print(f'{len(exported_roots)} of {len(roots)} project declarations passed to the exporter as roots')
         # No later phase needs declaration bodies. In particular, do not keep
         # them alive while either kernel builds its own expression tables.
+        declaration_owners = {row['module'] for row in rows.values()}
         del rows
         gc.collect()
         stage('environment audits finished', started)
@@ -394,14 +419,19 @@ def main():
         else:
             recorded = module_cache.get('modules', {})
             to_replay = sorted(name for name, digest in modules.items() if recorded.get(name) != digest)
-            # leanchecker scans its search path once per prefix. Proofs covers
-            # all its descendants already; repeating them does not add checks.
-            targets = compact_replay_targets(to_replay)
+            required = replay_required_modules(to_replay, listing, declaration_owners)
+            skipped_empty = sorted(set(to_replay) - set(required))
+            if skipped_empty:
+                print('imported modules with no owned declarations: ' + ', '.join(skipped_empty))
+            # Only expression-bearing (or unobserved) modules require replay.
+            # Do not let an empty aggregate expand the prefix to every module.
+            targets = compact_replay_targets(required)
             if targets:
-                stage(f'kernel replay started: {len(to_replay)} changed module(s), '
+                stage(f'kernel replay started: {len(required)} module(s) require checks, '
                       f'{len(targets)} covering prefix(es)', started)
                 run([lake, 'env', 'leanchecker', '--verbose', *targets], scratch, env)
-            stage(f'kernel replay of {len(to_replay)} changed module(s) finished', started)
+            stage(f'kernel replay finished: {len(required)} module(s) required checks; '
+                  f'{len(skipped_empty)} imported empty module(s)', started)
         stage('export started', started)
         export = scratch / 'proofs.ndjson'
         with export.open('w') as output:

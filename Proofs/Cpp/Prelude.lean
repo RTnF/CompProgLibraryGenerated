@@ -163,6 +163,44 @@ def sortCost (n : Nat) : Nat := n * (Nat.log2 n + 1)
 
 /-! ## Integers -/
 
+/-- Integer magnitude and conversion used by the contracts of `std::gcd` and `std::lcm`.
+For a generic C++ integral type these operations are explicit model parameters. -/
+class NumericGcd (α : Type) where
+  magnitude : α → Nat
+  ofNat : Nat → α
+
+instance : NumericGcd Int where
+  magnitude := Int.natAbs
+  ofNat := Int.ofNat
+
+instance : NumericGcd UInt32 where
+  magnitude := UInt32.toNat
+  ofNat := UInt32.ofNat
+
+instance : NumericGcd UInt64 where
+  magnitude := UInt64.toNat
+  ofNat := UInt64.ofNat
+
+def numericGcd {α β γ : Type} [NumericGcd α] [NumericGcd β] [NumericGcd γ] (a : α) (b : β) : γ :=
+  NumericGcd.ofNat (Nat.gcd (NumericGcd.magnitude a) (NumericGcd.magnitude b))
+
+def numericLcm {α β γ : Type} [NumericGcd α] [NumericGcd β] [NumericGcd γ] (a : α) (b : β) : γ :=
+  NumericGcd.ofNat (Nat.lcm (NumericGcd.magnitude a) (NumericGcd.magnitude b))
+
+/-- The standard specifies no complexity bound for gcd/lcm. Proofs using these
+operations therefore receive their cost functions explicitly; there is no default instance. -/
+class NumericCost where
+  gcd : Nat → Nat → Nat
+  lcm : Nat → Nat → Nat
+
+def numericGcdCost {α β : Type} [NumericGcd α] [NumericGcd β] [NumericCost]
+    (a : α) (b : β) : Nat :=
+  NumericCost.gcd (NumericGcd.magnitude a) (NumericGcd.magnitude b)
+
+def numericLcmCost {α β : Type} [NumericGcd α] [NumericGcd β] [NumericCost]
+    (a : α) (b : β) : Nat :=
+  NumericCost.lcm (NumericGcd.magnitude a) (NumericGcd.magnitude b)
+
 /-- `a / b` (rounds toward zero). -/
 @[inline] def div (a b : Int) : Int := a.tdiv b
 
@@ -210,5 +248,28 @@ def lxor : Int → Int → Int
 
 /-- `a >> b` (arithmetic shift, as GCC does for negative values). -/
 @[inline] def shr (a b : Int) : Int := a >>> b.toNat
+
+/-- Abstract standard stream states. Formatting, locale, flags, errors and exception
+masks belong to these states; no decimal-only or successful-input restriction is imposed. -/
+class Streams where
+  Input : Type
+  Output : Type
+
+abbrev IStream [Streams] := Streams.Input
+abbrev OStream [Streams] := Streams.Output
+
+/-- A standard formatted extraction, including its stream state, target's old value,
+and cost. A non-returning extraction is represented by failure in `M`. -/
+class StreamRead (α : Type) [Streams] where
+  read : IStream → α → M (α × IStream)
+
+/-- A standard formatted insertion, including formatting state, errors and cost. -/
+class StreamWrite (α : Type) [Streams] where
+  write : OStream → α → M OStream
+
+/-- Character insertion is distinct from insertion of its integer code. -/
+structure StreamChar where
+  code : Int
+  deriving Inhabited, DecidableEq
 
 end Proofs.Cpp

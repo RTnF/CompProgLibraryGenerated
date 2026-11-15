@@ -253,3 +253,7 @@ const/mutableの両targetで旧scalar memory/binding/slotと既存scalar読取�
 
 
 2026-11-08: `tree/tree.hpp` のLCAループ上限は利用者が実表の最終行へ修正し、旧範囲外を負例で検査する（fixes.md参照）。元の `build_ancestor()` は頂点数1で `doubling(parent,0)` を呼び、同関数の `assert(kmax>0)` を満たさない。singletonでも同一頂点LCAの早期return自体は表に触れない。この既存の構築境界は今回の上限変更とは分けて未解消とする。
+
+## 2026-11-14: Ratioの算術不具合（原本を修正済み）
+
+左辺スカラー演算のコンパイル失敗、負の除数に対する符号正規化不足、自己除算の参照別名による不具合を原本で再現して修正した。詳細は `docs/agent/fixes.md`。`tests/test_ratio_original_api.py` はint/long longの360入力について、左辺スカラー4演算と自己除算をPython Fractionと比較し、ASan/UBSan付きで成功した。原本API全体の新方式の証明・公開移植は未完了である。

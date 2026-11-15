@@ -164,6 +164,69 @@ class SecurityTests(unittest.TestCase):
             self.assertTrue(set(reduced) <= set(original))
             self.assertEqual(covered(reduced), covered(original))
 
+    def test_public_export_names_include_primed_identifiers(self):
+        names = ["Proofs.Test.range'_filter_lt", "Proofs.Test.kid_facts'", "Proofs.Test.i3_vc'"]
+        rows = {name: dict(row(name, 'theorem', 'T'), internal=False) for name in names}
+        self.assertEqual(check_proof_security.project_export_names(rows), names)
+        for name in ['Proofs.Test.x y', 'Proofs.Test.x;echo', 'Proofs.Test..x', 'Proofs.Test.x`']:
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'unsupported public export names'):
+                check_proof_security.project_export_names({name: dict(row(name, 'theorem', 'T'), internal=False)})
+
+    def test_exporter_preserves_primed_public_identifiers(self):
+        lake, env = lean_environment()
+        env.pop('LEAN_PATH', None)
+        exporter = ROOT / '.tools/lean4export/.lake/build/bin/lean4export'
+        with tempfile.TemporaryDirectory(prefix='primed-export-') as directory:
+            scratch = Path(directory)
+            (scratch / 'lean-toolchain').write_text((ROOT / 'lean-toolchain').read_text())
+            (scratch / 'Fixture.lean').write_text(
+                "namespace Proofs.PrimeExport\ndef value' : Nat := 3\n"
+                "theorem value'_spec : value' = 3 := rfl\nend Proofs.PrimeExport\n")
+            subprocess.run([lake, 'env', 'lean', '-o', 'Fixture.olean', 'Fixture.lean'],
+                           cwd=scratch, env=env, check=True)
+            env['LEAN_PATH'] = str(scratch)
+            name = "Proofs.PrimeExport.value'_spec"
+            result = subprocess.run([lake, 'env', str(exporter), 'Fixture', '--', *BUILTINS, name],
+                                    cwd=ROOT, env=env, check=True, capture_output=True, text=True)
+            export = scratch / 'proofs.ndjson'
+            export.write_text(result.stdout)
+            self.assertTrue({name, "Proofs.PrimeExport.value'"} <= exported_names(export))
+
+    def test_replay_skips_only_observed_imported_empty_modules(self):
+        changed = ['Proofs', 'Proofs.Changed', 'Proofs.Unobserved']
+        self.assertEqual(check_proof_security.replay_required_modules(
+            changed, {'Proofs', 'Proofs.Changed'}, {'Proofs.Changed'}),
+            ['Proofs.Changed', 'Proofs.Unobserved'])
+        self.assertEqual(check_proof_security.replay_required_modules(changed, set(), set()), changed)
+        self.assertEqual(check_proof_security.replay_required_modules(changed, changed, changed), changed)
+
+    def test_imported_aggregate_is_empty_but_child_requires_replay(self):
+        lake, env = lean_environment()
+        env.pop('LEAN_PATH', None)
+        with tempfile.TemporaryDirectory(prefix='replay-aggregate-') as directory:
+            scratch = Path(directory)
+            (scratch / 'lean-toolchain').write_text((ROOT / 'lean-toolchain').read_text())
+            (scratch / 'Proofs').mkdir()
+            (scratch / 'Proofs/ReplayChild.lean').write_text(
+                'namespace Proofs.ReplayChild\ntheorem checked : True := True.intro\nend Proofs.ReplayChild\n')
+            (scratch / 'Proofs/ReplayAggregate.lean').write_text('import Proofs.ReplayChild\n')
+            env['LEAN_PATH'] = str(scratch)
+            for module in ['ReplayChild', 'ReplayAggregate']:
+                subprocess.run([lake, 'env', 'lean', '-o', f'Proofs/{module}.olean', f'Proofs/{module}.lean'],
+                               cwd=scratch, env=env, check=True)
+            listing = subprocess.run([lake, 'env', 'lean', '--run', str(ROOT / 'verification/ListModules.lean'),
+                                      'Proofs.ReplayAggregate'], cwd=scratch, env=env,
+                                     check=True, capture_output=True, text=True).stdout.split()
+            dump = subprocess.run([lake, 'env', 'lean', '--run', str(ROOT / 'verification/InspectEnvironment.lean'),
+                                   'Proofs.ReplayAggregate'], cwd=scratch, env=env,
+                                  check=True, capture_output=True, text=True).stdout
+            owners = {json.loads(line)['module'] for line in dump.splitlines()}
+            self.assertIn('Proofs.ReplayAggregate', listing)
+            self.assertNotIn('Proofs.ReplayAggregate', owners)
+            self.assertIn('Proofs.ReplayChild', owners)
+            self.assertEqual(check_proof_security.replay_required_modules(
+                ['Proofs.ReplayAggregate', 'Proofs.ReplayChild'], listing, owners), ['Proofs.ReplayChild'])
+
     def test_export_roots_drop_only_used_acyclic_declarations(self):
         rows = {
             'P.lemma': row('P.lemma', 'theorem', 'T'),

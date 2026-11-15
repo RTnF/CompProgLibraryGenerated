@@ -1,33 +1,148 @@
 #pragma once
 #include <cassert>
-#include <vector>  // the common nested generator audits the standard vector declarations of every source
+#include <compare>
+#include <cstdint>
+#include <istream>
+#include <ostream>
 
 namespace cp {
 
-// A rational number s * n / d in sign-magnitude form: s is 1 for a negative value and 0 otherwise, n and d are the
-// numerator and denominator magnitudes. Derived from experiments/library/cpp/number/ratio.hpp (Ratio::normalize).
-// Differences: the sign is a separate unsigned field (so every field is a 64 bit unsigned integer), and normalize is
-// a friend function returning a new value instead of mutating the object.
-// normalize(r) divides n and d by their greatest common divisor (Euclid's algorithm, written out in the function);
-// a zero numerator gives (0, 0, 1) and otherwise the sign is kept. Precondition: d != 0 (checked by assert).
-// Time O(log(min(n, d))) iterations (at most 2 * (bit width of d) + 2), extra space O(1).
-struct Ratio {
-  unsigned long long s, n, d;
-  Ratio(unsigned long long s_, unsigned long long n_, unsigned long long d_) : s(s_), n(n_), d(d_) {}
-  friend Ratio normalize(const Ratio &r) {
-    assert(r.d != 0);
-    unsigned long long x = r.n;
-    unsigned long long y = r.d;
-    while (y != 0) {
-      unsigned long long t = x % y;
-      x = y;
-      y = t;
+template <typename T = std::int64_t> class Ratio {
+static T numeric_gcd_nonnegative(T a, T b) {
+  while (b != 0) {
+    T r = a % b;
+    a = b;
+    b = r;
+  }
+  return a;
+}
+
+static T numeric_gcd(T a, T b) {
+  if (a < 0) a = -a;
+  if (b < 0) b = -b;
+  return numeric_gcd_nonnegative(a, b);
+}
+
+static T numeric_lcm(T a, T b) {
+  if (a == 0 || b == 0) return 0;
+  if (a < 0) a = -a;
+  if (b < 0) b = -b;
+  return a / numeric_gcd_nonnegative(a, b) * b;
+}
+
+  // n / d
+  T n, d;
+
+  void normalize() {
+    if (n == 0) {
+      d = 1;
+      return;
     }
-    if (r.n == 0) {
-      return Ratio(0, 0, 1);
+    if (d < 0) {
+      n = -n;
+      d = -d;
     }
-    return Ratio(r.s, r.n / x, r.d / x);
+    T g = numeric_gcd(n, d);
+    n /= g;
+    d /= g;
+  }
+
+public:
+  Ratio(T nominator, T denominator) : n(nominator), d(denominator) {
+    normalize();
+  }
+  Ratio(T nominator) : n(nominator), d(1) {}
+
+  std::strong_ordering operator<=>(const Ratio &r) const {
+    T g = numeric_gcd(d, r.d);
+    return r.d / g * n <=> d / g * r.n;
+  }
+  bool operator==(const Ratio &r) const = default;
+
+  Ratio operator++(int) {
+    Ratio r = *this;
+    ++*this;
+    return r;
+  }
+  Ratio &operator++() {
+    n += d;
+    return *this;
+  }
+  Ratio operator--(int) {
+    Ratio r = *this;
+    --*this;
+    return r;
+  }
+  Ratio &operator--() {
+    n -= d;
+    return *this;
+  }
+  Ratio &operator+=(const Ratio &r) {
+    T l = numeric_lcm(d, r.d);
+    n = l / d * n + l / r.d * r.n;
+    d = l;
+    normalize();
+    return *this;
+  }
+  Ratio &operator-=(const Ratio &r) {
+    T l = numeric_lcm(d, r.d);
+    n = l / d * n - l / r.d * r.n;
+    d = l;
+    normalize();
+    return *this;
+  }
+  Ratio &operator*=(const Ratio &r) {
+    T g1 = numeric_gcd(n, r.d);
+    T g2 = numeric_gcd(r.n, d);
+    n = n / g1 * (r.n / g2);
+    d = d / g2 * (r.d / g1);
+    return *this;
+  }
+  Ratio &operator/=(const Ratio &r) {
+    assert(r.n != 0);
+    T g1 = numeric_gcd(n, r.n);
+    T g2 = numeric_gcd(d, r.d);
+    T new_n = n / g1 * (r.d / g2);
+    T new_d = d / g2 * (r.n / g1);
+    n = new_n;
+    d = new_d;
+    normalize();
+    return *this;
+  }
+  Ratio operator+() const { return *this; }
+  Ratio operator-() const { return Ratio(-n, d); }
+
+  friend Ratio operator+(const Ratio &a, const Ratio &b) {
+    return Ratio(a) += b;
+  }
+  friend Ratio operator-(const Ratio &a, const Ratio &b) {
+    return Ratio(a) -= b;
+  }
+  friend Ratio operator*(const Ratio &a, const Ratio &b) {
+    return Ratio(a) *= b;
+  }
+  friend Ratio operator/(const Ratio &a, const Ratio &b) {
+    return Ratio(a) /= b;
+  }
+  friend Ratio operator+(const Ratio &a, const T &b) { return Ratio(a) += b; }
+  friend Ratio operator-(const Ratio &a, const T &b) { return Ratio(a) -= b; }
+  friend Ratio operator*(const Ratio &a, const T &b) { return Ratio(a) *= b; }
+  friend Ratio operator/(const Ratio &a, const T &b) { return Ratio(a) /= b; }
+  friend Ratio operator+(const T &a, const Ratio &b) { return Ratio(a) += b; }
+  friend Ratio operator-(const T &a, const Ratio &b) { return Ratio(a) -= b; }
+  friend Ratio operator*(const T &a, const Ratio &b) { return Ratio(a) *= b; }
+  friend Ratio operator/(const T &a, const Ratio &b) { return Ratio(a) /= b; }
+
+  friend std::istream &operator>>(std::istream &is, Ratio &r) {
+    is >> r.n >> r.d;
+    return is;
+  }
+  friend std::ostream &operator<<(std::ostream &os, const Ratio &r) {
+    os << r.n;
+    if (r.d > 1) {
+      os << '/' << r.d;
+    }
+    return os;
   }
 };
-
 } // namespace cp

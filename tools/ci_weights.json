@@ -277,6 +277,9 @@
   "cpp:xorshift": 3.2
  },
  "split_methods": [
-  "tests/test_template_class_layout.py"
+  "tests/test_template_class_layout.py",
+  "tests/test_nested_templates.py",
+  "tests/test_ratio_integral_models.py",
+  "tests/test_ratio_stream_model.py"
  ]
 }

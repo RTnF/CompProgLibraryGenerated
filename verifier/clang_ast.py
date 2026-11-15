@@ -56,13 +56,15 @@ def gcc_include_dirs():
     return [line.strip() for line in lines[start:end]]
 
 
-def clang_command():
+def clang_command(standard="c++17"):
+    if standard not in ("c++17", "c++20"):
+        raise ValueError(f"unsupported C++ standard: {standard}")
     lean = subprocess.check_output([elan_binary(), "which", "lean"], text=True).strip()
     clang = str(Path(lean).with_name("clang"))
     version = subprocess.check_output([clang, "--version"], text=True).splitlines()[0]
     if not version.startswith(CLANG_VERSION):
         raise RuntimeError(f"expected {CLANG_VERSION}, found {version}")
-    command = [clang, "-x", "c++", "-std=c++17", "-fsyntax-only"]
+    command = [clang, "-x", "c++", f"-std={standard}", "-fsyntax-only"]
     for include_dir in gcc_include_dirs():
         command += ["-isystem", include_dir]
     return command
@@ -76,8 +78,8 @@ def filtered_ast(source: Path, name: str):
     return json.loads(subprocess.check_output(command, text=True, cwd=ROOT))
 
 
-def public_declarations(source: Path):
-    command = clang_command() + [
+def public_declarations(source: Path, standard="c++17"):
+    command = clang_command(standard) + [
         "-Xclang", "-ast-dump=json", "-Xclang", "-ast-dump-filter=cp::",
         str(source),
     ]
@@ -132,7 +134,7 @@ def check_source_contract(source: Path, metadata: dict):
     actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     if actual_hash != metadata["source_sha256"]:
         raise RuntimeError(f"C++ source changed: {source}; review the entire header")
-    actual_declarations = public_declarations(source)
+    actual_declarations = public_declarations(source, metadata.get("standard", "c++17"))
     if actual_declarations != sorted(metadata["public_declarations"]):
         raise RuntimeError(
             f"public declarations changed in {source}: {actual_declarations}; "

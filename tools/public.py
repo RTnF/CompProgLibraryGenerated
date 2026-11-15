@@ -48,7 +48,7 @@ def load_component(metadata: Path) -> dict:
         raise ValueError(f"invalid component name in {metadata}")
     if data.get("source") != metadata.resolve().relative_to(PUBLIC.resolve()).with_suffix(".hpp").as_posix():
         raise ValueError(f"invalid source name for {name}")
-    if data.get("standard") != "c++17":
+    if data.get("standard") not in ("c++17", "c++20"):
         raise ValueError(f"unsupported C++ standard for {name}")
     translation = data.get("translation")
     if translation not in ("state_ir", "nested_ir", "context_class_ir", "lean_model"):
@@ -56,6 +56,8 @@ def load_component(metadata: Path) -> dict:
     if "signed_conversion" in data and (translation != "state_ir" or
             data["signed_conversion"] not in ("checked", "gcc13.3-lp64-twos-complement")):
         raise ValueError(f"invalid signed conversion contract for {name}")
+    if data["standard"] == "c++20" and translation != "lean_model":
+        raise ValueError(f"C++20 requires lean_model translation for {name}")
     namespace = data.get("lean_namespace")
     if (not isinstance(namespace, str) or not re.fullmatch(
             r"Proofs(?:\.[A-Za-z_][A-Za-z_0-9]*)+", namespace)
@@ -241,6 +243,9 @@ def dependency_order(name: str, entries: dict[str, dict]) -> list[str]:
         active.add(current)
         for dependency in entries[current]["dependencies"]:
             visit(dependency)
+            if entries[current].get("standard", "c++17") == "c++17" and \
+                    entries[dependency].get("standard", "c++17") == "c++20":
+                raise ValueError(f"C++17 component {current} depends on C++20 component {dependency}")
         active.remove(current)
         visited.add(current)
         ordered.append(current)

@@ -74,8 +74,11 @@ public:
     assert(r.n != 0);
     T g1 = gcd(n, r.n);
     T g2 = gcd(d, r.d);
-    n = n / g1 * (r.d / g2);
-    d = d / g2 * (r.n / g1);
+    T new_n = n / g1 * (r.d / g2);
+    T new_d = d / g2 * (r.n / g1);
+    n = new_n;
+    d = new_d;
+    normalize();
     return *this;
   }
   Ratio operator+() const { return *this; }
@@ -97,10 +100,10 @@ public:
   friend Ratio operator-(const Ratio &a, const T &b) { return Ratio(a) -= b; }
   friend Ratio operator*(const Ratio &a, const T &b) { return Ratio(a) *= b; }
   friend Ratio operator/(const Ratio &a, const T &b) { return Ratio(a) /= b; }
-  friend Ratio operator+(const T &a, const Ratio &b) { return a += b; }
-  friend Ratio operator-(const T &a, const Ratio &b) { return a -= b; }
-  friend Ratio operator*(const T &a, const Ratio &b) { return a *= b; }
-  friend Ratio operator/(const T &a, const Ratio &b) { return a /= b; }
+  friend Ratio operator+(const T &a, const Ratio &b) { return Ratio(a) += b; }
+  friend Ratio operator-(const T &a, const Ratio &b) { return Ratio(a) -= b; }
+  friend Ratio operator*(const T &a, const Ratio &b) { return Ratio(a) *= b; }
+  friend Ratio operator/(const T &a, const Ratio &b) { return Ratio(a) /= b; }
 
   friend istream &operator>>(istream &is, Ratio &r) {
     is >> r.n >> r.d;
