@@ -128,3 +128,12 @@ unsigned charのstreamは文字操作、unsigned shortのstreamは16bit符号な
 この選択はC++ソースと全クラスの翻訳を変更せず、driverが具体化する入口を限定する。文字・符号なし型の算術検査では入出力を選ばず、その型のストリーム契約を数値の契約へ置換しない。
 `tests/test_ratio_integral_models.py` はEuclid版Ratioの12二項/スカラー演算、複合代入の返値とreceiver、等値・比較をsigned char/char/short/int/long/long long/unsigned/unsigned long longについて照合する。
 値が型の範囲に収まる正の小入力を用い、Fractionの期待値とASan/UBSan付きC++・Leanを比較する。文字型・符号なし型のストリームや全入力の型一般証明を示す検査ではない。
+
+### レコードの返却と既定構築（Group移行用）
+
+- 依存式の結果型がClangの汎用ASTでは未確定でも、翻訳器で求めた型が一意な非explicit・非可変参照の1引数構築に一致すれば、式を一度評価してから構築する。整数literalから型変数の構築引数への変換も、既存のZero/One/IntCastの規則に従う。レコードの波括弧返却は、引数個数で一意に選べる非explicitコンストラクタを呼び、単にフィールドを並べない。
+- 新しく扱う委譲構築は、空body・引数なしの既定コンストラクタが、同じクラスの引数なしstatic factoryの結果を暗黙コピーする形に限定する（例: `GroupSum() : GroupSum(e()) {}`）。factoryの実行と失敗・仕事量を保ち、返されたスカラーフィールドを構築状態へ移す。任意の委譲、引数付きfactory、ユーザー定義copy/dtor、基底クラス、非スカラーの暗黙コピーは追加対応していない。
+- 同じ引数型・参照形式・戻り型を持つhidden friendとnamespace関数templateが併存する場合は、生成名を `_hidden` / `_qualified` で区別し、両方の本体を翻訳する。C++差分driverは前者をADL、後者をnamespace修飾で呼ぶ。型tagだけが同じで実際の署名が異なるものや、他の同tagの曖昧なoverloadは拒否する。
+- 回帰検査は `tests/test_lean_model_construction.py`。hidden/qualifiedで異なる本体、constructorが引数を変更する波括弧返却、factoryと変換引数の実行回数、明示構築・未対応委譲・copy/dtor/継承の拒否を確認する。公開Group本体の移行・群の法則の証明は別途行う。
+
+差分driverでテンプレートの数値型をIntへ具体化するときは、Div/ModをそれぞれInt.tdiv/Int.tmodへ束縛する。Lean標準のEuclid除算では、例えば `-7 / 2` と `-7 % 2` がC++の `-3` と `-1` に一致しない。具体型を直接書いた非テンプレートの演算は従来どおりCpp.tdiv/tmodへ翻訳し、UInt32/64の束縛は変更しない。数学整数の証明で標準除算を用いる部品は、C++の切捨て除算と一致する条件（Ratioでは約数による正確な除算など）を保つ。Groupの整数逆演算では、体の逆元の法則と整数切捨ての仕様を区別する。

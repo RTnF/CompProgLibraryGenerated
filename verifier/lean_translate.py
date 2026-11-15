@@ -402,6 +402,24 @@ class Fn:
                         # argument is evaluated only once, including any nested call.
                         return self.call_sig(candidates[0], None, [node], pre, expected)
         text, ty = self._expr(node, pre, expected)
+        if expected is not None and expected.kind == "cls" and ty != expected:
+            info = self.tr.classes[expected.name]
+            candidates = [sig for sig in info.methods if sig.is_ctor and len(sig.params) == 1
+                          and not sig.params[0][2]
+                          and not re.search(r"\bexplicit\b", self.tr.span(sig.node))]
+            matching = [sig for sig in candidates
+                        if subst(sig.params[0][1], info.tparams, expected.args) == ty]
+            if not matching and ty.kind == "int" and strip(node).get("kind") == "IntegerLiteral":
+                matching = [sig for sig in candidates
+                            if subst(sig.params[0][1], info.tparams, expected.args).kind == "tparam"]
+            if len(matching) == 1:
+                sig = matching[0]
+                pty = subst(sig.params[0][1], info.tparams, expected.args)
+                value, _ = self.convert(text, ty, pty, node)
+                self.callees.append(sig)
+                tmp = self.fresh()
+                pre.append(f"let {tmp} ← {sig.lean_name} {value}")
+                return tmp, expected
         if expected is not None:
             text, ty = self.convert(text, ty, expected, node)
         return text, ty
@@ -787,6 +805,12 @@ class Fn:
     def construct(self, ty: Ty, n, pre):
         kind = n.get("kind")
         args = [a for a in inner(n) if strip(a).get("kind") not in ("CXXDefaultArgExpr",)]
+        if kind == "InitListExpr" and ty.kind == "cls":
+            sigs = [s for s in self.tr.classes[ty.name].methods if s.is_ctor]
+            sig = self.pick(sigs, args, f"list constructor of {ty.name}")
+            if re.search(r"\bexplicit\b", self.tr.span(sig.node)):
+                raise Unsupported("explicit constructor in record list conversion")
+            return self.call_sig(sig, None, args, pre, ty)[0]
         if kind == "InitListExpr":
             if ty.kind == "vec":
                 items = [self.expr(a, pre, ty.args[0])[0] for a in args]
@@ -843,7 +867,8 @@ class Fn:
                 return f"({a}, {b})"
         if ty.kind == "cls":
             if len(args) == 1:
-                argty = self.tr.ty(strip(args[0]).get("type", {}).get("qualType", ""), self)
+                spelling = strip(args[0]).get("type", {}).get("qualType", "")
+                argty = None if spelling in ("<dependent type>", "NULL TYPE") else self.tr.ty(spelling, self)
                 if argty == ty:
                     copies = [s for s in self.tr.classes[ty.name].methods if s.is_ctor and len(s.params) == 1
                               and s.params[0][1] == ty]
@@ -1944,6 +1969,14 @@ class Translator:
                 tags = set()
                 for sig in sigs:
                     tag = "_".join(type_tag(p[1]) for p in sig.params) if sig.params else "0"
+                    twins = [other for other in sigs
+                             if ("_".join(type_tag(p[1]) for p in other.params) if other.params else "0") == tag]
+                    if len(twins) > 1:
+                        if len(twins) != 2 or {bool(other.node.get("lean_hidden_friend")) for other in twins} != {False, True}:
+                            raise Unsupported(f"overloads of {name} with the same parameter kinds")
+                        if twins[0].ret != twins[1].ret or [p[1:] for p in twins[0].params] != [p[1:] for p in twins[1].params]:
+                            raise Unsupported(f"different signatures sharing a hidden-friend tag: {name}")
+                        tag += "_hidden" if sig.node.get("lean_hidden_friend") else "_qualified"
                     if tag in tags:
                         raise Unsupported(f"overloads of {name} with the same parameter kinds")
                     tags.add(tag)
@@ -2138,13 +2171,44 @@ class Translator:
             if sig.is_ctor:
                 fn.scopes[0]["__fields__"] = INT
                 inits = {}
+                delegated = None
                 for c in inner(node):
                     if c.get("kind") == "CXXCtorInitializer":
                         member = c.get("anyInit", {}).get("name")
                         if member is None:
-                            raise Unsupported("delegating or base initializer")
+                            # Only the original Group default-constructor form:
+                            # an implicit scalar-record copy of one static factory.
+                            if sig.params or inner(body):
+                                raise Unsupported("delegation requires an empty default constructor")
+                            if len([x for x in inner(node) if x.get("kind") == "CXXCtorInitializer"]) != 1:
+                                raise Unsupported("mixed delegating initializers")
+                            expected_ty = Ty("cls", info.name, tuple(Ty("tparam", t) for t in info.tparams))
+                            target = c.get("delegatingInit", c.get("baseInit", {})).get("qualType", "")
+                            if self.ty(target, fn) != expected_ty:
+                                raise Unsupported("base initializer")
+                            args = inner(inner(c)[0])
+                            if len(args) != 1:
+                                raise Unsupported("delegation other than one record value")
+                            factory = strip(args[0])
+                            if factory.get("kind") != "CallExpr" or len(inner(factory)) != 1:
+                                raise Unsupported("delegation requires a zero-argument static factory")
+                            callee = strip(inner(factory)[0])
+                            ref = callee.get("referencedDecl", {})
+                            if not any(s.is_static and s.node.get("id") == ref.get("id")
+                                       and not s.params for s in info.methods):
+                                raise Unsupported("delegation factory outside the current class")
+                            if any(fty.kind not in ("int", "u32", "u64", "bool", "tparam") for _, fty, _ in info.fields):
+                                raise Unsupported("delegating record copy with non-scalar fields")
+                            pre = []
+                            value, _ = fn.expr(args[0], pre, expected_ty)
+                            fn.flush(pre)
+                            delegated = value
+                            continue
                         inits[member] = inner(c)[0]
                 for fname, fty, default_init in info.fields:
+                    if delegated is not None:
+                        fn.emit(f"let mut {fn.field_names[fname]} : {lean_type(fty)} := {delegated}.{lean_name(fname)}")
+                        continue
                     pre = []
                     init = inits.get(fname, default_init)
                     if init is None:

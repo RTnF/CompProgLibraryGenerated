@@ -532,7 +532,15 @@ class Harness:
             streams = streams.replace("@@TYPE@@", "Int" if self.stream_unsigned and self.stream_bits < 32
                                       else "UInt" + str(self.stream_bits))
             streams = streams.replace("@@CHAR_SIGNED@@", "false" if self.stream_unsigned else "true")
-        lines = [f"import {self.lean_module}", LEAN_PRELUDE, streams, "open Proofs.Cpp.Gen", "",
+        # A template's Div/Mod instances are chosen at the concrete call site.
+        # Lean's default integer operators use Euclidean division, whereas C++
+        # signed arithmetic truncates toward zero. Concrete non-template Int
+        # operations are already emitted as Cpp.tdiv/tmod by the translator.
+        integer_ops = ""
+        if "Int" in self.lean_instance.values():
+            integer_ops = ("local instance cppTemplateDiv : Div Int := ⟨Int.tdiv⟩\n"
+                           "local instance cppTemplateMod : Mod Int := ⟨Int.tmod⟩\n")
+        lines = [f"import {self.lean_module}", LEAN_PRELUDE, streams, integer_ops, "open Proofs.Cpp.Gen", "",
                  "structure Objects where"]
         for info in classes:
             cty = self.lean_type_inst(lt.Ty("cls", info.name, tuple(lt.Ty("tparam", t) for t in info.tparams)))

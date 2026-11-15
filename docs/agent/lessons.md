@@ -245,3 +245,8 @@
 
 - `range'_filter_lt` や `kid_facts'` は通常のLean識別子である。公開rootのASCII検査がprimeを拒否すると、別部品の移行をcatalogへ反映した段階で全体監査が止まる。補題を輸出集合から除いて通さず、argvで渡す名前の許可規則を実際のname-literal parserに合わせる。
 - lexer相当の単体検査だけでなく、prime付きの定義/定理を実際にcompile→lean4exportし、輸出された宣言集合に両方が含まれることを確認する。空白・区切り文字等の不正名の拒否と、全safe rootの輸出後coverage検査を維持する。
+
+## 2026-11-15: テンプレート整数の除算・剰余の具体化
+
+- 生成関数の `[Div T]` / `[Mod T]` をT=Intとして既定instanceで呼ぶと、C++の切捨てとLeanのEuclid演算が異なる。GroupAffine(2,3).inv()の第2fieldはC++で-1だが、既定Int除算では-2になる。Ratioのような正確な約分だけではこの境界を見落とす。
+- 差分driverでInt carrierのtemplate演算をInt.tdiv/tmodへ明示的に束縛する。非テンプレートIntの既存Cpp.tdiv/tmod経路と、UInt32/64 carrierを維持する。符号全組の商・剰余60呼出しと、非単位元のGroupAffine逆演算をC++ sanitizers/Lean/独立期待値で確認する。元のC++のバグではないのでfixes.mdへは記録しない。

@@ -545,3 +545,15 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - docs/ratio.mdの全28入口対応表で型/領域の最終点検を完了し、experiments_status.mdを「移植済（新方式、未push）」へ更新。現在の公開sourceで解消したRatioのAPI縮小は違反一覧から外した。残る具体型全てへの別証明や、実装に現れない小幅unsigned構文を新方式の追加完了条件にしない。
 - fixes.mdのRatio2行が誤って付記後に置かれていたため、実際の修正表の末尾へ移動し、再発防止欄を現在の公開証明に更新した。新しい原本バグの追加記録ではない。
 - Ratioの原本単位の移植・ローカル検証は完了。push/release更新・実CI20分は未完了。既存85 ahead commitsの公開順序を原本単位に保つ必要があり、一括pushしない。Groupはまだignored scratchの試作だけ。
+
+### 2026-11-15 Ratioを保存しGroupの新方式移行へ着手
+
+- Ratio移植はローカルcommit `0702be8301168d62808ef6bd483ddb872c15fbe9` に保存済み。51ファイル。commit直後はclean、mainはorigin/mainより86 aheadだった。全件gate・両kernelの最終成功は上記public_scalar_full_gate.log。pushはしていない。既存の大量の未push履歴を原本単位で公開する順序の整理は残る。
+- Groupに必要なfrontendを実装: 依存式の型を求めてから一度だけ評価する暗黙1引数構築、constructorを実行するrecordのbrace返却、空の既定構築から同classの引数なしstatic factory結果への委譲コピー、同一署名のhidden friend/qualified template双方の別モデル名。委譲は原本の形式だけに限定し、非空body/引数付き構築/他factory/独自copy/dtor/継承/非scalarコピーは受理しない。既存50 lean_model全件の生成本文は完全一致。
+- experiments/verification/algebraic_structure/group.hppを候補として追加。原本3クラスのT/default/全member/hidden friendを保持し、既存公開のqualified cp::opも維持。defaultのllは同じstd::int64_tへ修飾し、int/long longにだけ依存する旧frontend witness/明示具体化は候補には置かない。既存tests/group.cppを候補includeへ差し替えたnative ASan/UBSan suiteとdefault型のstatic_assert成功。公開libraryのGroupはまだ旧方式であり候補へ切り替えていない。
+- GroupMath.lean（候補）で加法/乗法の結合律・単位元・逆元、アフィン合成/結合律/単位元/逆元を純粋値で証明。一般の逆元はAddGroup/DivisionRing/Field等の条件付きであり、整数を体としない。整数用affineIntInvをInt.tdivで別定義し、傾き±1について逆元の法則を示した。affineEnvelopeは9scalar cellsの保守的モデル。全APIの領域対応はまだ残る。
+- GroupContracts.leanはfresh翻訳とGroupMathへ連結する開発fragment。原本20入口＋qualified op3入口の全23入口について返すfield・停止・定数tick（1/2/3）を証明。GroupMulは実際のconstructor assertの条件を持つ。さらにaffine_integer_inverseはDiv Int=Int.tdivを明示し、非単位元でもC++の切捨てfieldと2tickに一致する。23定理+整数用1定理で、公開登録や両kernel全体監査はまだしていない。
+- 追加検査tests/test_lean_model_construction.pyは最新9テスト成功。全3クラスとhidden/qualified、異なるhidden/qualified本体、変換引数の1回評価とwork、brace返却がconstructorを実行すること、拒否例、fresh候補+純粋モデル+24対応定理を確認する。supportへ登録した。imported TestCase自体を再発見しないようfriend helperはmoduleとしてimportする。
+- 新しく見つけた検査側の実不一致: generic T=IntのDiv/ModをLean標準で具体化していた。符号全組60呼出しで修正前のC++/Lean不一致を再現（template_division_before.log）。diff_harnessのInt carrierのcall-siteだけInt.tdiv/tmodへ明示bindingし、non-template Cpp.tdiv/tmodとUInt32/64を維持した。GroupAffine(2,3).inv()のb=-1も回帰に含む。元C++バグではなくfixes.mdには追加しない。数学Intで標準除算を使うRatio等は、正確な約数による除算という既存条件を維持する。
+- binding修正後の検証: 全56部品bridge成功（public_bridge_after_binding.log、session79910終了0）、RatioIntegral12テスト成功（ratio_integral_after_binding.log、session18634終了0）、RatioStream11テスト成功（ratio_stream_after_binding.log、32798終了0）、friend8テスト成功（friend_after_binding.log、90234終了0）、construction最新9テスト成功（construction_tests.log、50636終了0）。public support27件、inventory137、workflow16、diff --checkも成功。binding/frontend変更後の全件all gate・最終監査はまだであり、Ratio commit時の全件成功と区別する。
+- 次: Groupの全APIの論理領域・整数切捨て仕様と前提を完結し、候補の公開登録/metadata・diff generator・生成model・canonical proofへ統合する。旧GroupCall/Generated.Groupと専用登録/検査の依存を確認して整理し、catalog再生成・両kernel・全件gate・build増分を確認する。library3旧版の異なるpublic-field/Mapping APIの未解消台帳は維持する。frontend整備だけではpushしない。
