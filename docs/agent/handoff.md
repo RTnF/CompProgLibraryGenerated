@@ -606,3 +606,39 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 次の切替では旧MonoidCall(769行)/MonoidCallCore(294)/MonoidCallCoreInt(292)/Generated.Monoidを整理する必要がある。Coreのmul_execは部品固有Generated.Monoidに依存するが、ctor/const/refs/e等の共通補題はLegacyScalarCallCore・IntervalCall・ScalarRefs・MonoidLazyCall等が使う。既存test_original_template_classes/test_nested_templatesとtests/lean/original_nested_max.leanが旧MonoidInstance/MonoidCallへ比較する箇所を持つ。共有部分を必要分だけ保ち、テスト固有参照モデルを分離してから専用生成物を消す。元CPP変更によるbugfixではないのでfixes.mdには追記していない。
 - 同じbridge session81154が正常終了0。全56件が成功し、末尾はpublic checks passed for 56 component(s): bridge。稼働中bridgeはない。候補31root（15入口+12純粋定理+traits4定義）の独立kernelを別のsession37070で実行中（candidate_kernel.log）。
 - 同じcandidate kernel session37070も正常終了0。31rootの閉包1889宣言がnanodaでエラーなし。今回の候補単位の確認であり、全プロジェクトのleanchecker再生・固定仕様catalog更新・全件all gateを代替しない。新規定理/定義はcomponent切替時に固定仕様へ反映する。未完了processはない。
+
+### 2026-11-16 Monoid公開側切替と旧専用証明撤去（全件gate中）
+
+- 前ターンはprogress。全入口候補/traits/field観測をlocal WIP 447fc938b16f99599de0e7937c95219d831a95e8へ保存済みで、そこから作業を続けた。現在は未commitの移行変更がある。全体目標は137原本の全移植・再公開と実push後CI20分であり、登録済み全件の移行だけでは完了にならない。
+- 公開monoid.hppを全3クラス候補へ切替。任意T、public x、暗黙value/default/e、hidden friend/qualified opを保持。既定型は原本ll=int64_tと同じstd::int64_tへ戻し、native static_assert3本を追加。型だけの有限witnessと明示具体化を撤去。旧原本のfield/全method署名・body/hidden friend bodyの比較も成功（パラメータ名とstd修飾・local usingのみ正規化、original_api_review.json）。初期化の意味と停止は生成対応証明/native検査で別に確認する。
+- 登録はlean_model/Proofs.Cpp.Monoidへ切替。新Gen.MonoidとCpp.Monoidを追加し、全15入口の返り値・正常停止・work1/2/3、およびMonoidMath12定理の公開root wrapperを接続。3クラス・6公開宣言・1hpp/1TOML/1文書を維持し、差分は10整数型の各468出力が一致した（public_bridge.log）。cpp/テンプレート先行includeも成功（public_cpp.log、static_assert追加前の対象実行。新assertも全件gateが検査する）。
+- Proofs/MonoidCall.leanとGenerated/Monoid.leanを撤去。Core/CoreIntから部品固有mul_execとGenerated.Monoid importを削除し、共有のconst/ctor/ref/e等の補題だけ残した。旧MonoidCall/Int互換namespaceの一般wrapperはLegacyMonoidCallCore.leanへ移し、IntervalCallのimportを更新。元の声明を弱めてはいない。
+- 旧frontendの既存テストが必要とする閉じたNProgram参照11本をtests/lean/monoid_reference_programs.leanへ移し、残る入れ子Maxテスト用の参照証明だけmonoid_reference_calls.leanへ分離した。public Proofsから参照/依存しない。テスト内のMonoidInstance比較をこの独立参照へ向けた。未公開候補headerと重複contract fixtureは撤去し、構築回帰は公開masterからfresh生成して正本証明を読む。
+- 元クラス8テスト成功。nested_templates10は最初9成功/1失敗。テスト外namespaceへの証明移動でopen Proofsを落としたことと、不要なsimp引数・非推奨補題名を修正。失敗したtest_original_nested_maxだけの再実行は独立kernel3659宣言とnativeを含め成功（nested_max_retry2.log）。検査の警告やエラーを除外していない。construction19も成功。全件gateがnested10件すべてを改めて確認する。
+- 固定仕様catalogはroots4389→4356、closure7855→7825、削除112、既存宣言のhash変更0で更新成功（catalog.log）。--accept-changedは不要で使っていない。移動したhelperが旧rootの型閉包に残らないため、既存声明のmodule移動による変更もない。
+- 暖まった前提oleanの下、1CPU/LEAN_NUM_THREADS1で旧4targetと新6targetを各1回fresh compileし、全10件成功。対象コンパイラ作業量は増加した。新側は純粋法則/全15入口/共有coreを含めて測っており、減少やCI20分達成を主張しない。方法・環境・値・source hashはignored benchmarks/local/monoid_migration_20261116/measure_build.pyとbuild_delta.jsonだけへ保存。冷えた全build・client再build・実push後CIの測定ではない。
+- 現在の公開56hppだけをZIP化し、全ファイル一致・各header単体/同時includeのcompile成功（package.log）。archive/manifestは同じignored benchmark directory。docs/monoid.mdと台帳を新方式の範囲・未完了gate・浮動小数一般誤差の残件へ更新した。traitsの未選択fieldには任意値を渡せることを翻訳表へ明記し、has_infinity等のない非浮動小数の特殊化へC++側の宣言を追加要求しない。
+- 全件gateはexec session20664で実行中: .cache/wip/monoid_restore/public_full_gate.log、check_public.py --mode all --jobs4 --timeout-seconds7200。入力を固定し、以後handoffだけ追記する。同じhandleの実終了コードを確認するまで再起動しない。完了後は失敗対応またはsource/公理/固定仕様/leanchecker/nanodaの結果、全56部品の成功を確認してからdocsの検証完了状態・差分/機密点検・local commitを行う。pushなし、CI/releaseの実確認も未実施。
+
+- gate待機中の次作業調査で、元experiments/library/cpp/modint/modint.hppの2件をASan/UBSan付きで再現した（.cache/wip/modint_restore/original_boundaries.cpp/out、boundaries_review.json）。ModInt<7>(-7).get()とset(-14)が7（期待0）、素数m=4294967291で(m-1)+(m-1)が4294967284（期待4294967289）。前者はpublic modint.hppの既存コメントにも記載されているが、原本は未修正。後者はuint32_t加算のwrapで比較判定を誤る。ここでは前提に吸収せず、次のModInt原本全体移植で修正と専用回帰・docs/agent/fixes.mdへの記録を行う。現在はMonoid gate入力を固定しており、その原本/公開コードや台帳はまだ触っていない。元のmodint constructor/setのsigned/unsigned member template、SFINAE、非型法parameter、負のpow、stream等も復元対象で、既存の縮小public APIを移行完了基準にしない。
+- 次ModInt原本のfirst unsupportedは実際にはclass member FunctionTemplateDecl（frontend_requirements.json）。非型法parameter・SFINAE・member templateの全体対応が必要で、最初の診断だけを全不足項目とはしない。大きな法4294967291は平方根までの試し割りでも素数と確認した。原本の素数前提から外れた例ではない。
+- 直近の同じ全件gate session20664は164件成功/失敗marker0。template_class_layoutのrecord/compose一般回帰を継続中。実終了はまだ確認していない。登録のlean_modelは52/56（Monoidはこのgate待ち）、残る旧登録はmonoid_lazy/modint/dynamic_modint/rolling_hash。今回の切替変更は未commitで、直前のWIP HEADは447fc93。稼働中の検査はこのgateだけで、子テストを別途再起動しない。
+
+### 2026-11-16 全件gate継続と次ModInt修正候補
+
+- 同じgate exec session20664をこのターンでもpollし、liveと確認。直近256件成功/失敗marker0。共有template/旧変換器の回帰を継続しており、最終両kernelはまだ未確認。再起動していない。Monoid関連の正本・証明・metadata・テストは固定したまま、handoff以外のtracked入力を変更していない。
+- 待機中に次ModIntの候補を.cache/wip/modint_restore/repaired_original.hppへ保存した。原本全ファイルのAPI、SFINAE付きsigned/unsigned ctor/set、friend/stream、fac/C/initも削らず、signedのctor/setは2回剰余で0へ正規化、+=/-=はuint64中間値で還元、負powは(pow(-(n+1)) * *this).inv()へ変更してLLONG_MINの符号反転を避ける。これは隔離候補のみで、原本/publicやfixes.mdはまだ変更していない（候補の書換えを原本修正として記録しない規則に従う）。
+- 原本を直接includeするbaseline_driverも用意し、負の法倍数がmになること、大きな法4294967291の加算が4294967284（期待4294967289）、0-(m-1)が6（期待1）、pow(LLONG_MIN)がUBSanのnegationエラーで停止することを確認した。baseline_failures.json/pow_min_baseline.stderrへ保存。法の素数性も試し割りで確認しており、原本の素数前提に反する例ではない。
+- 修正候補は同じ公開演算をnative ASan/UBSanで実行し、5法（2/7/998244353/2147483647/4294967291）×836出力が独立Python整数剰余/モジュラpowと全一致した（check_repair.py、repair_checks.json、cases_*.txt）。符号付き/符号なしの型幅境界・乱数、receiver自己参照の加減算、signed指数両端を含む。候補のCPP正しさの有限検査であり、Lean対応/時間領域の証明やModInt原本全体の公開移植完了ではない。
+- 先にMonoid全件gateを完了してlocal保存した後、これら原本修正と専用回帰・fixes.md記録、ModIntの全API（非型parameter/member template/SFINAE/負pow/streams/fac/C/init等）復元を進める。既存縮小public ModIntを完成形にしない。
+- 次ModInt候補の純粋補題をignored BoundaryMath.leanへ用意した。Int.tmodを2回使う正規化=Int.emod、正規化中間値、1回還元の剰余との一致、uint64加減算の値域・剰余関係・中間幅/非underflow、負指数のnatAbs分解とLL範囲内の段階、inverse/powの代数法則を証明し、警告なしでcompile成功。候補の補題だけで、Cpp非型/member-template/グローバルfacとの機械対応は未実装。独立kernelの確認結果はboundary_kernel.logへ保存する。
+- 同じgate session20664の最新ログは295件成功/失敗marker0。終端のall成功はまだない。ModInt隔離BoundaryMath14rootは別session36535で正常終了し、nanoda2256宣言がエラーなし（boundary_kernel.log）。ModIntの補題/CPP候補/driverはすべて.cache/wip/modint_restore内で、未反映・未commit。Monoid gate以外の検査processは終了済み。次も20664をpollし、止まっていない検査を再起動しない。
+
+- 同じgate session20664で全313検査が成功し、最終監査へ進んだ。raw source/公理依存/固定仕様照合46387宣言が成功。7708rootから34282 project宣言を輸出する準備ができ、126変更moduleのleanchecker再生も成功した。所有宣言0の集約Proofsだけを既存cache規則で再生対象から除いた。現在はexport開始後で、coverage/direct probe/nanoda/最終終了コードはまだ未確認。ここを全件完了と誤読しない。
+- 次ModIntの完全APIをClangから棚卸しし、api_inventory.jsonへ保存した。対象はModInt class templateだけでなくmint/mint17、MAX_FAC、可変global fac、自由関数C/initも含む。既存縮小public側からの棚卸しではこれらを落とすため、原本を基準にする。候補CPP内のsmall_template includeは隔離実行用の絶対パスであり、正本へ丸ごとコピーせず本体の差分だけ反映する。
+
+### 2026-11-16 Monoid新方式の全件gate成功
+
+- 継続していた同じexec session20664が正常終了0。全56部品・313検査に加え、source/公理依存/固定仕様46387宣言、7708roots→34282 project宣言の輸出coverage、126変更moduleのleanchecker再生、nanoda44069宣言がすべて成功した（public_full_gate.log）。exporterが省く190内部補助はdirect probeで同じ省略を確認し、輸出漏れを放置したものではない。所有宣言0の集約Proofsだけを既存の安全な再生cache規則で除外した。未完了の検査processは残っていない。
+- docs/monoid.mdと台帳をこの結果へ更新した。測定値と環境は引き続きbenchmarks/local/だけに置く。対象ビルド増分は増加しており、冷えた全buildや実CI20分達成とはしない。浮動小数の一般演算誤差とlibrary3の別APIなどの残件は引き続き台帳対象で、原本137全体の完了とはしない。
+- 検証済みの移行差分とこの記録をまとめてローカルcommitへ保存する。次セッションはgit log/statusの実状態を確認してからModIntへ進む。公開履歴には先行89 local commitの複数部品/途中作業があるため一括pushしていない。pushは原本1ファイルの完了単位と毎回の手動承認、対象SHAのCI/release確認が必要。

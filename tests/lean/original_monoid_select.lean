@@ -146,8 +146,8 @@ theorem max_op_correct (caller : NState) (sa sb : Nat) (ba bb : CppState.Binding
   rw [h2]
   simp
 
-theorem max_new0 : Original_max.MonoidMax_long_long_new0 = Proofs.MonoidInstance.MonoidMax_long_long_new0 := rfl
-theorem max_e : Original_max.MonoidMax_long_long_e = Proofs.MonoidInstance.MonoidMax_long_long_e := rfl
+theorem max_new0 : Original_max.MonoidMax_long_long_new0 = MonoidReferencePrograms.MonoidMax_long_long_new0 := rfl
+theorem max_e : Original_max.MonoidMax_long_long_e = MonoidReferencePrograms.MonoidMax_long_long_e := rfl
 theorem max_default_correct (caller : NState) (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)
@@ -184,8 +184,8 @@ theorem min_op_correct (caller : NState) (sa sb : Nat) (ba bb : CppState.Binding
   rw [h2]
   simp
 
-theorem min_new0 : Original_min.MonoidMin_long_long_new0 = Proofs.MonoidInstance.MonoidMin_long_long_new0 := rfl
-theorem min_e : Original_min.MonoidMin_long_long_e = Proofs.MonoidInstance.MonoidMin_long_long_e := rfl
+theorem min_new0 : Original_min.MonoidMin_long_long_new0 = MonoidReferencePrograms.MonoidMin_long_long_new0 := rfl
+theorem min_e : Original_min.MonoidMin_long_long_e = MonoidReferencePrograms.MonoidMin_long_long_e := rfl
 theorem min_default_correct (caller : NState) (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
     (strict : ∀ owner c, caller.frame.state.forest.context owner = some c → c ≤ caller.scope)

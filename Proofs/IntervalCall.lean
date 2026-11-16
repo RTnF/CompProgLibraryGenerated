@@ -1,4 +1,4 @@
-import Proofs.MonoidCall
+import Proofs.LegacyMonoidCallCore
 import Proofs.LegacyScalarCallCore
 import Proofs.Generated.Interval
 

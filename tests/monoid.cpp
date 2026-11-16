@@ -4,6 +4,10 @@
 #include <random>
 #include <vector>
 
+static_assert(std::is_same_v<decltype(cp::MonoidMul<>::x), ll>);
+static_assert(std::is_same_v<decltype(cp::MonoidMax<>::x), ll>);
+static_assert(std::is_same_v<decltype(cp::MonoidMin<>::x), ll>);
+
 struct CopyOnly {
     int value;
     explicit CopyOnly(int n) : value(n) {}

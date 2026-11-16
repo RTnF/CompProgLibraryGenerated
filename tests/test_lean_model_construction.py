@@ -13,23 +13,23 @@ import test_lean_model_friend as friends
 
 
 class ConstructionTranslationTests(unittest.TestCase):
-    def test_pending_monoid_full_model_contract(self):
-        source = ROOT / 'experiments/verification/algebraic_structure/monoid.hpp'
+    def test_public_monoid_full_model_contract(self):
+        source = ROOT / 'library/algebraic_structure/monoid.hpp'
         model = lean_translate.translate_file(source, [])
         model = model.replace('import Proofs.Cpp.Prelude',
                               'import Proofs.Cpp.Prelude\nimport Proofs.Cpp.Lib.MonoidMath', 1)
-        contract = (ROOT / 'tests/lean/monoid_model_contract.lean').read_text()
+        contract = (ROOT / 'Proofs/Cpp/Monoid.lean').read_text().split('namespace Proofs.Cpp.Monoid', 1)[1]
         with tempfile.TemporaryDirectory() as directory:
             proof = Path(directory) / 'Monoid.lean'
-            proof.write_text(model + '\n' + contract)
+            proof.write_text(model + '\nnamespace Proofs.Cpp.Monoid' + contract)
             result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(proof)],
                 cwd=ROOT, env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')),
                 text=True, capture_output=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout, '')
 
-    def test_pending_monoid_public_fields_and_both_friends(self):
-        header = (ROOT / 'experiments/verification/algebraic_structure/monoid.hpp').read_text()
+    def test_public_monoid_public_fields_and_both_friends(self):
+        header = (ROOT / 'library/algebraic_structure/monoid.hpp').read_text()
         cases = subprocess.check_output([sys.executable, str(ROOT / 'tests/diff/monoid.py')], text=True)
         values = [1, 0, 1, 3, 7, 11]
         for cpp, lo, hi in [('int', -(2**31), 2**31-1),

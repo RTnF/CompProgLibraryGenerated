@@ -1,5 +1,4 @@
 import Proofs.ModIntCall
-import Proofs.Generated.Monoid
 
 namespace Proofs.MonoidCallCoreInt
 open Proofs.CppScalar Proofs.CppVector Proofs.CppVectorStore Proofs.CppVectorOwnership
@@ -115,38 +114,6 @@ theorem refs2_correct (prog : NProgram) (hp : prog.parameters = [.scalar i32 tru
 
 theorem convI (v : Int) (h : i32.valid v = true) : i32.convert v = some v := by
   unfold Ty.convert; simp [i32, h]
-
-theorem mul_exec (P : List Cell) (a b : Nat) (x y : Int) (hxv : i32.valid x = true) (hyv : i32.valid y = true)
-    (hxy : i32.valid (x*y) = true) (ha : P[a]? = some ⟨i32,x⟩) (hb : P[b]? = some ⟨i32,y⟩) :
-    ∃ r, pexec 1 Proofs.MonoidInstance.op_MonoidMul_int.body ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩ = some r ∧
-      r.ret = some (x*y) ∧ r.cost ≤ 10 ∧ r.need ≤ P.length+16 ∧ r.ps.mem = P ++ [⟨i32,x*y⟩,⟨i32,x*y⟩] := by
-  have e0 : penv ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩ 0 i32 = some x :=
-    penv_ok _ 0 i32 ⟨a,false⟩ ⟨i32,x⟩ rfl ha rfl hxv
-  have e1 : penv ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩ 1 i32 = some y :=
-    penv_ok _ 1 i32 ⟨b,false⟩ ⟨i32,y⟩ rfl hb rfl hyv
-  have hbv : binaryValue .mul x y = x*y := rfl
-  have d1 : (NExpr.binary i32 .mul (.variable i32 0) (.variable i32 1)).denote (penv ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩) = some (x*y) := by
-    rw [den_binary, den_variable, den_variable, e0, e1]
-    simp only [Option.bind_some, hbv]
-    exact convI _ hxy
-  have s1 := pstmt_declare_ok ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩ i32 true _ (x*y) d1 (x*y) (convI _ hxy)
-  have q1 := (pexec_prim 1 _ _).trans s1
-  have e2 : penv ⟨P ++ [(⟨i32,x*y⟩ : Cell)],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩]⟩ 2 i32 = some (x*y) :=
-    penv_ok _ 2 i32 ⟨P.length,true⟩ ⟨i32,x*y⟩ (by simp) (by simp) rfl hxy
-  have d2 : (NExpr.variable i32 2).denote (penv ⟨P ++ [(⟨i32,x*y⟩ : Cell)],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩]⟩) = some (x*y) := by
-    rw [den_variable]; exact e2
-  have s2 := pstmt_declare_ok ⟨P ++ [(⟨i32,x*y⟩ : Cell)],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩]⟩ i32 true _ (x*y) d2 (x*y) (convI _ hxy)
-  have q2 := (pexec_prim 1 _ _).trans s2
-  have e3 : penv ⟨P ++ [(⟨i32,x*y⟩ : Cell)] ++ [⟨i32,x*y⟩],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩] ++ [⟨(P ++ [(⟨i32,x*y⟩ : Cell)]).length,true⟩]⟩ 3 i32 = some (x*y) :=
-    penv_ok _ 3 i32 ⟨P.length+1,true⟩ ⟨i32,x*y⟩ (by simp) (by simp) rfl hxy
-  have q3 := exec_ret 1 ⟨P ++ [(⟨i32,x*y⟩ : Cell)] ++ [⟨i32,x*y⟩],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩] ++ [⟨(P ++ [(⟨i32,x*y⟩ : Cell)]).length,true⟩]⟩
-    (.variable i32 3) (x*y) (by rw [den_variable]; exact e3)
-  have q23 := seq_some q2 rfl q3
-  have q123 := seq_some q1 rfl q23
-  refine ⟨_, q123, rfl, ?_, ?_, ?_⟩
-  · simp [NExpr.nodes]
-  · simp [NExpr.nodes]
-  · simp
 
 abbrev bT : Ty := ⟨1, false, true⟩
 

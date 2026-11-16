@@ -298,44 +298,44 @@ open Proofs.GroupCall
 open Proofs.MonoidLazyCall Proofs.MonoidCall
 
 
-theorem RangeMax_new0 : OriginalSetExtrema.RangeMax_new0 = Proofs.MonoidInstance.MonoidMax_long_long_new0 := rfl
+theorem RangeMax_new0 : OriginalSetExtrema.RangeMax_new0 = MonoidReferencePrograms.MonoidMax_long_long_new0 := rfl
 theorem call_RangeMax_new0 (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalSetExtrema.RangeMax_new0.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMax_long_long_new0.callFuel fuel caller args :=
+  OriginalSetExtrema.RangeMax_new0.callFuel fuel caller args = MonoidReferencePrograms.MonoidMax_long_long_new0.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) RangeMax_new0
 
-theorem RangeMax_new1 : OriginalSetExtrema.RangeMax_new1 = Proofs.MonoidInstance.MonoidMax_long_long_new1 := rfl
+theorem RangeMax_new1 : OriginalSetExtrema.RangeMax_new1 = MonoidReferencePrograms.MonoidMax_long_long_new1 := rfl
 theorem call_RangeMax_new1 (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalSetExtrema.RangeMax_new1.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMax_long_long_new1.callFuel fuel caller args :=
+  OriginalSetExtrema.RangeMax_new1.callFuel fuel caller args = MonoidReferencePrograms.MonoidMax_long_long_new1.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) RangeMax_new1
 
-theorem RangeMax_e : OriginalSetExtrema.RangeMax_e = Proofs.MonoidInstance.MonoidMax_long_long_e := rfl
+theorem RangeMax_e : OriginalSetExtrema.RangeMax_e = MonoidReferencePrograms.MonoidMax_long_long_e := rfl
 theorem call_RangeMax_e (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalSetExtrema.RangeMax_e.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMax_long_long_e.callFuel fuel caller args :=
+  OriginalSetExtrema.RangeMax_e.callFuel fuel caller args = MonoidReferencePrograms.MonoidMax_long_long_e.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) RangeMax_e
 
-theorem RangeMax_op : OriginalSetExtrema.RangeMax_op = Proofs.MonoidInstance.op_MonoidMax_long_long := rfl
+theorem RangeMax_op : OriginalSetExtrema.RangeMax_op = MonoidReferencePrograms.op_MonoidMax_long_long := rfl
 theorem call_RangeMax_op (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalSetExtrema.RangeMax_op.callFuel fuel caller args = Proofs.MonoidInstance.op_MonoidMax_long_long.callFuel fuel caller args :=
+  OriginalSetExtrema.RangeMax_op.callFuel fuel caller args = MonoidReferencePrograms.op_MonoidMax_long_long.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) RangeMax_op
 
-theorem RangeMin_new0 : OriginalSetExtrema.RangeMin_new0 = Proofs.MonoidInstance.MonoidMin_long_long_new0 := rfl
+theorem RangeMin_new0 : OriginalSetExtrema.RangeMin_new0 = MonoidReferencePrograms.MonoidMin_long_long_new0 := rfl
 theorem call_RangeMin_new0 (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalSetExtrema.RangeMin_new0.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMin_long_long_new0.callFuel fuel caller args :=
+  OriginalSetExtrema.RangeMin_new0.callFuel fuel caller args = MonoidReferencePrograms.MonoidMin_long_long_new0.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) RangeMin_new0
 
-theorem RangeMin_new1 : OriginalSetExtrema.RangeMin_new1 = Proofs.MonoidInstance.MonoidMin_long_long_new1 := rfl
+theorem RangeMin_new1 : OriginalSetExtrema.RangeMin_new1 = MonoidReferencePrograms.MonoidMin_long_long_new1 := rfl
 theorem call_RangeMin_new1 (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalSetExtrema.RangeMin_new1.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMin_long_long_new1.callFuel fuel caller args :=
+  OriginalSetExtrema.RangeMin_new1.callFuel fuel caller args = MonoidReferencePrograms.MonoidMin_long_long_new1.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) RangeMin_new1
 
-theorem RangeMin_e : OriginalSetExtrema.RangeMin_e = Proofs.MonoidInstance.MonoidMin_long_long_e := rfl
+theorem RangeMin_e : OriginalSetExtrema.RangeMin_e = MonoidReferencePrograms.MonoidMin_long_long_e := rfl
 theorem call_RangeMin_e (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalSetExtrema.RangeMin_e.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMin_long_long_e.callFuel fuel caller args :=
+  OriginalSetExtrema.RangeMin_e.callFuel fuel caller args = MonoidReferencePrograms.MonoidMin_long_long_e.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) RangeMin_e
 
-theorem RangeMin_op : OriginalSetExtrema.RangeMin_op = Proofs.MonoidInstance.op_MonoidMin_long_long := rfl
+theorem RangeMin_op : OriginalSetExtrema.RangeMin_op = MonoidReferencePrograms.op_MonoidMin_long_long := rfl
 theorem call_RangeMin_op (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalSetExtrema.RangeMin_op.callFuel fuel caller args = Proofs.MonoidInstance.op_MonoidMin_long_long.callFuel fuel caller args :=
+  OriginalSetExtrema.RangeMin_op.callFuel fuel caller args = MonoidReferencePrograms.op_MonoidMin_long_long.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) RangeMin_op
 
 theorem set_new0 (second : Bool) :

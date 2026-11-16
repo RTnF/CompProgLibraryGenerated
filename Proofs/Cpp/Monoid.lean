@@ -1,3 +1,6 @@
+import Proofs.Cpp.Gen.Monoid
+import Proofs.Cpp.Lib.MonoidMath
+
 namespace Proofs.Cpp.Monoid
 open Proofs.Cpp.Gen MonoidMath
 theorem mul_construct {T : Type} (x : T) (t : Nat) :
@@ -64,5 +67,56 @@ theorem min_hidden {T : Type} [Min T] (x y : T) (t : Nat) :
 theorem min_qualified {T : Type} [Min T] (x y : T) (t : Nat) :
   (cp.op_MonoidMin_MonoidMin_qualified (⟨x⟩ : cp.MonoidMin T) ⟨y⟩).run t =
     some ((⟨minOp x y⟩ : cp.MonoidMin T), t + 2) := by rfl
+
+theorem model_mul_associative {T : Type} [Semigroup T] (x y z : T) :
+    mulOp (mulOp x y) z = mulOp x (mulOp y z) := by
+  exact MonoidMath.mul_associative x y z
+
+theorem model_mul_identity {T : Type} [MulOneClass T] (x : T) :
+    mulOp 1 x = x ∧ mulOp x 1 = x := by
+  exact MonoidMath.mul_identity x
+
+theorem model_max_associative {T : Type} [LinearOrder T] (x y z : T) :
+    maxOp (maxOp x y) z = maxOp x (maxOp y z) := by
+  exact MonoidMath.max_associative x y z
+
+theorem model_min_associative {T : Type} [LinearOrder T] (x y z : T) :
+    minOp (minOp x y) z = minOp x (minOp y z) := by
+  exact MonoidMath.min_associative x y z
+
+theorem model_max_identity {T : Type} [LinearOrder T] [NumericTraits "T" T]
+    (x : T) (hx : maxIdentity ≤ x) :
+    maxOp maxIdentity x = x ∧ maxOp x maxIdentity = x := by
+  exact MonoidMath.max_identity x hx
+
+theorem model_min_identity {T : Type} [LinearOrder T] [NumericTraits "T" T]
+    (x : T) (hx : x ≤ minIdentity) :
+    minOp minIdentity x = x ∧ minOp x minIdentity = x := by
+  exact MonoidMath.min_identity x hx
+
+theorem model_max_value {T : Type} [LinearOrder T] (x y : T) :
+    (maxOp x y = x ∨ maxOp x y = y) ∧ x ≤ maxOp x y ∧ y ≤ maxOp x y := by
+  exact MonoidMath.max_value x y
+
+theorem model_min_value {T : Type} [LinearOrder T] (x y : T) :
+    (minOp x y = x ∨ minOp x y = y) ∧ minOp x y ≤ x ∧ minOp x y ≤ y := by
+  exact MonoidMath.min_value x y
+
+theorem model_max_bounds {T : Type} [LinearOrder T] (lo hi x y : T)
+    (hx : lo ≤ x ∧ x ≤ hi) (hy : lo ≤ y ∧ y ≤ hi) :
+    lo ≤ maxOp x y ∧ maxOp x y ≤ hi := by
+  exact MonoidMath.max_bounds lo hi x y hx hy
+
+theorem model_min_bounds {T : Type} [LinearOrder T] (lo hi x y : T)
+    (hx : lo ≤ x ∧ x ≤ hi) (hy : lo ≤ y ∧ y ≤ hi) :
+    lo ≤ minOp x y ∧ minOp x y ≤ hi := by
+  exact MonoidMath.min_bounds lo hi x y hx hy
+
+theorem model_frame_cells {T : Type} (frame : Frame T) : frame.values.length ≤ 4 := by
+  exact MonoidMath.frame_cells frame
+
+theorem model_all_operations_space {T : Type} (frame : Frame T) (calleeCells : Nat)
+    (hc : calleeCells ≤ 4) : peakCells frame calleeCells ≤ 8 := by
+  exact MonoidMath.all_operations_space frame calleeCells hc
 
 end Proofs.Cpp.Monoid

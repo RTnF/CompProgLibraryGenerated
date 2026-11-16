@@ -1,5 +1,4 @@
 import Proofs.ModIntCall
-import Proofs.Generated.Monoid
 
 namespace Proofs.MonoidCallCore
 open Proofs.CppScalar Proofs.CppVector Proofs.CppVectorStore Proofs.CppVectorOwnership
@@ -117,38 +116,6 @@ theorem convS (v : Int) (h : s64.valid v = true) : s64.convert v = some v := by
   rw [valid_s64] at h
   have := of_decide_eq_true h
   exact convert_s64 v this.1 this.2
-
-theorem mul_exec (P : List Cell) (a b : Nat) (x y : Int) (hxv : s64.valid x = true) (hyv : s64.valid y = true)
-    (hxy : s64.valid (x*y) = true) (ha : P[a]? = some ⟨s64,x⟩) (hb : P[b]? = some ⟨s64,y⟩) :
-    ∃ r, pexec 1 Proofs.MonoidInstance.op_MonoidMul_long_long.body ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩ = some r ∧
-      r.ret = some (x*y) ∧ r.cost ≤ 10 ∧ r.need ≤ P.length+16 ∧ r.ps.mem = P ++ [⟨s64,x*y⟩,⟨s64,x*y⟩] := by
-  have e0 : penv ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩ 0 s64 = some x :=
-    penv_ok _ 0 s64 ⟨a,false⟩ ⟨s64,x⟩ rfl ha rfl hxv
-  have e1 : penv ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩ 1 s64 = some y :=
-    penv_ok _ 1 s64 ⟨b,false⟩ ⟨s64,y⟩ rfl hb rfl hyv
-  have hbv : binaryValue .mul x y = x*y := rfl
-  have d1 : (NExpr.binary s64 .mul (.variable s64 0) (.variable s64 1)).denote (penv ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩) = some (x*y) := by
-    rw [den_binary, den_variable, den_variable, e0, e1]
-    simp only [Option.bind_some, hbv]
-    exact convS _ hxy
-  have s1 := pstmt_declare_ok ⟨P,[⟨a,false⟩,⟨b,false⟩]⟩ s64 true _ (x*y) d1 (x*y) (convS _ hxy)
-  have q1 := (pexec_prim 1 _ _).trans s1
-  have e2 : penv ⟨P ++ [(⟨s64,x*y⟩ : Cell)],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩]⟩ 2 s64 = some (x*y) :=
-    penv_ok _ 2 s64 ⟨P.length,true⟩ ⟨s64,x*y⟩ (by simp) (by simp) rfl hxy
-  have d2 : (NExpr.variable s64 2).denote (penv ⟨P ++ [(⟨s64,x*y⟩ : Cell)],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩]⟩) = some (x*y) := by
-    rw [den_variable]; exact e2
-  have s2 := pstmt_declare_ok ⟨P ++ [(⟨s64,x*y⟩ : Cell)],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩]⟩ s64 true _ (x*y) d2 (x*y) (convS _ hxy)
-  have q2 := (pexec_prim 1 _ _).trans s2
-  have e3 : penv ⟨P ++ [(⟨s64,x*y⟩ : Cell)] ++ [⟨s64,x*y⟩],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩] ++ [⟨(P ++ [(⟨s64,x*y⟩ : Cell)]).length,true⟩]⟩ 3 s64 = some (x*y) :=
-    penv_ok _ 3 s64 ⟨P.length+1,true⟩ ⟨s64,x*y⟩ (by simp) (by simp) rfl hxy
-  have q3 := exec_ret 1 ⟨P ++ [(⟨s64,x*y⟩ : Cell)] ++ [⟨s64,x*y⟩],[⟨a,false⟩,⟨b,false⟩] ++ [⟨P.length,true⟩] ++ [⟨(P ++ [(⟨s64,x*y⟩ : Cell)]).length,true⟩]⟩
-    (.variable s64 3) (x*y) (by rw [den_variable]; exact e3)
-  have q23 := seq_some q2 rfl q3
-  have q123 := seq_some q1 rfl q23
-  refine ⟨_, q123, rfl, ?_, ?_, ?_⟩
-  · simp [NExpr.nodes]
-  · simp [NExpr.nodes]
-  · simp
 
 abbrev bT : Ty := ⟨1, false, true⟩
 

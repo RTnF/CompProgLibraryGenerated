@@ -127,7 +127,9 @@ class NestedTemplateTests(unittest.TestCase):
         self.assertEqual(coverage['witness_sha256'],before[witness])
         self.assertFalse(coverage['generic_types_verified'])
         self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
-        proof = 'import Proofs.MonoidCall\n'+emit_lean(ir,'OriginalNestedMax')
+        proof = 'import Proofs.LegacyMonoidCallCore\n'+emit_lean(ir,'OriginalNestedMax')
+        proof += (ROOT/'tests/lean/monoid_reference_programs.lean').read_text()
+        proof += (ROOT/'tests/lean/monoid_reference_calls.lean').read_text()
         proof += (ROOT/'tests/lean/original_nested_max.lean').read_text()
         roots = ['NestedMaxAudit.'+name for name in
                  ('new0','call_new0','new1','call_new1','e','call_e','op','call_op',
@@ -236,6 +238,7 @@ class NestedTemplateTests(unittest.TestCase):
         self.assertFalse(coverage['generic_types_verified'])
         self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
         proof='import Proofs.MonoidLazyCall\n'+emit_lean(ir,'OriginalRecordApply')
+        proof+=(ROOT/'tests/lean/monoid_reference_programs.lean').read_text()
         proof+=(ROOT/'tests/lean/original_record_apply.lean').read_text()
         names=['prep_mutable_value','add_exec','apply_same','apply_call','apply_correct','apply_min_correct']
         for name in ['add_new','add_id',*[c+'_'+op for c in ['max','min'] for op in ['new0','new1','e','op']]]:
@@ -344,6 +347,7 @@ class NestedTemplateTests(unittest.TestCase):
             [ROOT/'experiments/library/cpp'],companion_instances=((
                 'RangeAddRangeSum',TemplateInstance(('long long',),add_witness,nested_members=('RangeSum',))),))
         proof='import Proofs.MonoidLazyCall\n'
+        proof+=(ROOT/'tests/lean/monoid_reference_programs.lean').read_text()
         for bundle,namespace in [(add_ir,'OriginalMixedAddSum'),(ir,'OriginalSetSum'),
                 (extrema_ir,'OriginalSetExtrema')]:
             proof+='\n'.join(line for line in emit_lean(bundle,namespace).splitlines()

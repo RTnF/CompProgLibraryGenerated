@@ -34,7 +34,8 @@ class OriginalTemplateTests(unittest.TestCase):
         self.assertFalse(coverage['generic_types_verified'])
         self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
         roots = []
-        proof = 'import Proofs.MonoidCall\nimport Proofs.CppTargetCast\n'+emit_lean(ir, 'Original_'+case)
+        proof = 'import Proofs.LegacyMonoidCallCore\nimport Proofs.CppTargetCast\n'+emit_lean(ir, 'Original_'+case)
+        proof += (ROOT/'tests/lean/monoid_reference_programs.lean').read_text()
         proof += (ROOT/'tests/lean/scalar_reference_programs.lean').read_text()
         namespace = 'OriginalEquivalence_'+case
         proof += '\nnamespace '+namespace+'\nopen Proofs.CppNestedProgram Proofs.CppNestedCall\n'
@@ -89,7 +90,8 @@ class OriginalTemplateTests(unittest.TestCase):
         self.assertEqual(coverage['witness_sha256'], before[witness])
         self.assertFalse(coverage['generic_types_verified'])
         self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
-        proof = 'import Proofs.MonoidCall\n'+emit_lean(ir, 'Original_monoid_mul')
+        proof = 'import Proofs.LegacyMonoidCallCore\n'+emit_lean(ir, 'Original_monoid_mul')
+        proof += (ROOT/'tests/lean/monoid_reference_programs.lean').read_text()
         proof += (ROOT/'tests/lean/original_monoid_mul.lean').read_text()
         roots = ['OriginalMonoidMulAudit.'+name for name in
                  ('new0','call_new0','e','call_e','op','call_op','default_correct')]
@@ -154,7 +156,8 @@ class OriginalTemplateTests(unittest.TestCase):
     def test_original_monoid_selectors(self):
         source = ROOT/'experiments/library/cpp/algebraic_structure/monoid.hpp'
         includes = [ROOT/'experiments/library/cpp']
-        proof = 'import Proofs.MonoidCall\n'
+        proof = 'import Proofs.LegacyMonoidCallCore\n'
+        proof += (ROOT/'tests/lean/monoid_reference_programs.lean').read_text()
         before = {source: hashlib.sha256(source.read_bytes()).hexdigest()}
         with tempfile.TemporaryDirectory(prefix='original-monoid-select-') as directory:
             directory = Path(directory)

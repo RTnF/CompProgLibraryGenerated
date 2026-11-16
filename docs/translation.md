@@ -55,7 +55,7 @@ STL はドキュメント通りの契約・動作・計算量オーダーを持�
 
 `min/max` は明示した `std::min/max`、または関数内の `using std::min/max` から解決される2引数呼出しを扱う。局所usingはブロックのスコープに従い、依存した名前探索ではusingのshadow宣言のみを候補とする場合に受理する。同名のユーザー関数は通常の関数として翻訳する。他のusing宣言と標準min/maxの明示的テンプレート引数は未対応として拒否する。[using宣言の規則](https://eel.is/c++draft/namespace.udecl)と[標準min/maxの契約](https://eel.is/c++draft/alg.min.max)に基づく。比較演算とLeanのMin/Maxがこの契約に一致することは型の対応条件であり、ADLで別の動作へ変更する型の対応を証明したものではない。
 
-数値traitsは[型カテゴリ](https://eel.is/c++draft/meta.unary.cat)と[numeric_limitsの契約](https://eel.is/c++draft/numeric.limits.members)に従うデータ引数で、公理や全型共通の境界値は置かない。`NumericTraits`の文字列タグはC++型パラメータ名に対応する。TとUが同じLeanのIntに具体化されても、別の引数としてintとlong longの境界を渡せる。型の対応条件としてtraitsの値がそのC++具体型・特殊化の値であることを要求する。無特殊化のユーザー型の境界値を数値ゼロと決めつけない。
+数値traitsは[型カテゴリ](https://eel.is/c++draft/meta.unary.cat)と[numeric_limitsの契約](https://eel.is/c++draft/numeric.limits.members)に従うデータ引数で、公理や全型共通の境界値は置かない。`NumericTraits`の文字列タグはC++型パラメータ名に対応する。TとUが同じLeanのIntに具体化されても、別の引数としてintとlong longの境界を渡せる。型カテゴリと、選択された分岐で参照するtraitsの値がそのC++具体型・特殊化と対応することを型の対応条件とする。constexprで破棄される分岐のフィールドには任意の未使用値を渡せる。非浮動小数の特殊化にhas_infinity/lowest/infinityの宣言がない場合も、それらのC++宣言を追加要求しない。無特殊化のユーザー型の境界値を数値ゼロと決めつけない。
 
 constexprの両分岐をBool分岐として残し、未選択分岐のtraitフィールドは評価しない。浮動小数のthen内に限って負の無限大をtrait値として扱い、破棄される分岐のために非浮動小数型へNegを追加しない。この分岐の認識は上表の直接の条件式・直接の負の無限大式に限る。整数の差分driverはLP64の10型（signed/unsigned char、short、int、long、long long）について具体的なtraitsを渡す。doubleの両無限大と単項minusを持たないユーザー型も専用のnative/Lean検査を行う。この検査だけで浮動小数の一般演算の誤差を証明したとはしない。
 

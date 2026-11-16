@@ -1,12 +1,12 @@
 namespace OriginalMonoidMulAudit
 open Proofs
 open Proofs.CppNestedProgram Proofs.CppNestedCall
-theorem new0 : Original_monoid_mul.MonoidMul_long_long_new0 = Proofs.MonoidInstance.MonoidMul_long_long_new0 := rfl
-theorem call_new0 (fuel : Nat) (caller : NState) (args : List NArgument) : Original_monoid_mul.MonoidMul_long_long_new0.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMul_long_long_new0.callFuel fuel caller args := congrArg (fun p : NProgram => p.callFuel fuel caller args) new0
-theorem e : Original_monoid_mul.MonoidMul_long_long_e = Proofs.MonoidInstance.MonoidMul_long_long_e := rfl
-theorem call_e (fuel : Nat) (caller : NState) (args : List NArgument) : Original_monoid_mul.MonoidMul_long_long_e.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMul_long_long_e.callFuel fuel caller args := congrArg (fun p : NProgram => p.callFuel fuel caller args) e
-theorem op : Original_monoid_mul.MonoidMul_long_long_op = Proofs.MonoidInstance.op_MonoidMul_long_long := rfl
-theorem call_op (fuel : Nat) (caller : NState) (args : List NArgument) : Original_monoid_mul.MonoidMul_long_long_op.callFuel fuel caller args = Proofs.MonoidInstance.op_MonoidMul_long_long.callFuel fuel caller args := congrArg (fun p : NProgram => p.callFuel fuel caller args) op
+theorem new0 : Original_monoid_mul.MonoidMul_long_long_new0 = MonoidReferencePrograms.MonoidMul_long_long_new0 := rfl
+theorem call_new0 (fuel : Nat) (caller : NState) (args : List NArgument) : Original_monoid_mul.MonoidMul_long_long_new0.callFuel fuel caller args = MonoidReferencePrograms.MonoidMul_long_long_new0.callFuel fuel caller args := congrArg (fun p : NProgram => p.callFuel fuel caller args) new0
+theorem e : Original_monoid_mul.MonoidMul_long_long_e = MonoidReferencePrograms.MonoidMul_long_long_e := rfl
+theorem call_e (fuel : Nat) (caller : NState) (args : List NArgument) : Original_monoid_mul.MonoidMul_long_long_e.callFuel fuel caller args = MonoidReferencePrograms.MonoidMul_long_long_e.callFuel fuel caller args := congrArg (fun p : NProgram => p.callFuel fuel caller args) e
+theorem op : Original_monoid_mul.MonoidMul_long_long_op = MonoidReferencePrograms.op_MonoidMul_long_long := rfl
+theorem call_op (fuel : Nat) (caller : NState) (args : List NArgument) : Original_monoid_mul.MonoidMul_long_long_op.callFuel fuel caller args = MonoidReferencePrograms.op_MonoidMul_long_long.callFuel fuel caller args := congrArg (fun p : NProgram => p.callFuel fuel caller args) op
 open Proofs.CppScalar Proofs.CppVector Proofs.CppVectorStore Proofs.CppVectorOwnership
 open Proofs.CppNestedVectorStore Proofs.CppNestedVectorBindings Proofs.CppNestedSim
 open Proofs.CppNestedEval Proofs.CppNestedStmt Proofs.CppNestedRows Proofs.CppNestedConstruct

@@ -171,44 +171,44 @@ theorem call_add_id (fuel : Nat) (caller : NState) (args : List NArgument) :
   OriginalRecordApply.RangeAdd_id.callFuel fuel caller args = zeroFactory.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) add_id
 
-theorem max_new0 : OriginalRecordApply.RangeMax_new0 = Proofs.MonoidInstance.MonoidMax_long_long_new0 := rfl
+theorem max_new0 : OriginalRecordApply.RangeMax_new0 = MonoidReferencePrograms.MonoidMax_long_long_new0 := rfl
 theorem call_max_new0 (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeMax_new0.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMax_long_long_new0.callFuel fuel caller args :=
+  OriginalRecordApply.RangeMax_new0.callFuel fuel caller args = MonoidReferencePrograms.MonoidMax_long_long_new0.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) max_new0
 
-theorem max_new1 : OriginalRecordApply.RangeMax_new1 = Proofs.MonoidInstance.MonoidMax_long_long_new1 := rfl
+theorem max_new1 : OriginalRecordApply.RangeMax_new1 = MonoidReferencePrograms.MonoidMax_long_long_new1 := rfl
 theorem call_max_new1 (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeMax_new1.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMax_long_long_new1.callFuel fuel caller args :=
+  OriginalRecordApply.RangeMax_new1.callFuel fuel caller args = MonoidReferencePrograms.MonoidMax_long_long_new1.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) max_new1
 
-theorem max_e : OriginalRecordApply.RangeMax_e = Proofs.MonoidInstance.MonoidMax_long_long_e := rfl
+theorem max_e : OriginalRecordApply.RangeMax_e = MonoidReferencePrograms.MonoidMax_long_long_e := rfl
 theorem call_max_e (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeMax_e.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMax_long_long_e.callFuel fuel caller args :=
+  OriginalRecordApply.RangeMax_e.callFuel fuel caller args = MonoidReferencePrograms.MonoidMax_long_long_e.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) max_e
 
-theorem max_op : OriginalRecordApply.RangeMax_op = Proofs.MonoidInstance.op_MonoidMax_long_long := rfl
+theorem max_op : OriginalRecordApply.RangeMax_op = MonoidReferencePrograms.op_MonoidMax_long_long := rfl
 theorem call_max_op (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeMax_op.callFuel fuel caller args = Proofs.MonoidInstance.op_MonoidMax_long_long.callFuel fuel caller args :=
+  OriginalRecordApply.RangeMax_op.callFuel fuel caller args = MonoidReferencePrograms.op_MonoidMax_long_long.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) max_op
 
-theorem min_new0 : OriginalRecordApply.RangeMin_new0 = Proofs.MonoidInstance.MonoidMin_long_long_new0 := rfl
+theorem min_new0 : OriginalRecordApply.RangeMin_new0 = MonoidReferencePrograms.MonoidMin_long_long_new0 := rfl
 theorem call_min_new0 (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeMin_new0.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMin_long_long_new0.callFuel fuel caller args :=
+  OriginalRecordApply.RangeMin_new0.callFuel fuel caller args = MonoidReferencePrograms.MonoidMin_long_long_new0.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) min_new0
 
-theorem min_new1 : OriginalRecordApply.RangeMin_new1 = Proofs.MonoidInstance.MonoidMin_long_long_new1 := rfl
+theorem min_new1 : OriginalRecordApply.RangeMin_new1 = MonoidReferencePrograms.MonoidMin_long_long_new1 := rfl
 theorem call_min_new1 (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeMin_new1.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMin_long_long_new1.callFuel fuel caller args :=
+  OriginalRecordApply.RangeMin_new1.callFuel fuel caller args = MonoidReferencePrograms.MonoidMin_long_long_new1.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) min_new1
 
-theorem min_e : OriginalRecordApply.RangeMin_e = Proofs.MonoidInstance.MonoidMin_long_long_e := rfl
+theorem min_e : OriginalRecordApply.RangeMin_e = MonoidReferencePrograms.MonoidMin_long_long_e := rfl
 theorem call_min_e (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeMin_e.callFuel fuel caller args = Proofs.MonoidInstance.MonoidMin_long_long_e.callFuel fuel caller args :=
+  OriginalRecordApply.RangeMin_e.callFuel fuel caller args = MonoidReferencePrograms.MonoidMin_long_long_e.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) min_e
 
-theorem min_op : OriginalRecordApply.RangeMin_op = Proofs.MonoidInstance.op_MonoidMin_long_long := rfl
+theorem min_op : OriginalRecordApply.RangeMin_op = MonoidReferencePrograms.op_MonoidMin_long_long := rfl
 theorem call_min_op (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeMin_op.callFuel fuel caller args = Proofs.MonoidInstance.op_MonoidMin_long_long.callFuel fuel caller args :=
+  OriginalRecordApply.RangeMin_op.callFuel fuel caller args = MonoidReferencePrograms.op_MonoidMin_long_long.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) min_op
 
 end RecordApplyAudit
