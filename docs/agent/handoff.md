@@ -581,3 +581,28 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 次のMonoidに向け、標準draftのnumeric.limits.membersとmeta.unary.catを確認した。隔離native probe numeric_limits_contract.cppは8整数型のbounds、doubleの±infinity、単項minusを持たずdefault値7のNoNeg型でもeが使えることをASan/UBSan付きで確認した。Cppmaster/std traitsの分岐を削らず、不要なNeg T制約やunspecializedの0仮定を導入しない。ignoredの.cache/wip/monoid_restore/next_steps.mdにsource linksと設計上の注意を保存。実frontend/Monoidはまだ未変更。
 
 - stage済みのdiff --checkで新規共通core末尾の空行が見つかったため、その1行だけを削除した（現在532行）。通常projectで再buildしsource audit成功。監査済みscratch版と再build版の保持helper閉包をlean4exportで輸出し、全バイト同一と確認した（eof_cleanup_review.json）。oleanにはメタデータ差があったがkernel式/証明は同一。全件gate後にアルゴリズム/命題/計算定義を変えていない。
+
+### 2026-11-16 Monoid前提: 局所usingと標準min/maxの識別
+
+- Group全体移行はlocal commit `0555ac14bccda589cba81a7e83bbf310fb44d3b4` に保存済み。pushなし。全体目標は継続中で、登録51/56の新方式化と元137原本の全移植・再公開は別である。
+- lean_translate.pyで関数内のUsingDeclはstd::min/maxだけ受理し、ブロックスコープに記録する。依存呼出しはlookup候補がUsingShadowDeclのみの場合に標準演算へ対応させる。従来の関数名だけでのmin/max置換をやめ、ユーザー定義の同名・引数なし関数を通常呼出しとして翻訳する。標準min/maxの明示的template引数は未対応として拒否し、同名ユーザー関数への誤対応を防ぐ。
+- construction12テストが成功。ASan/UBSan C++とLeanの差分で標準/ユーザー関数、局所usingのスコープ、非テンプレート呼出しを確認し、unsupported using/明示template引数の負例を追加した。登録済みlean_model全51部品をfresh生成し、保存モデルと全文一致。Proofs/C++master/TOMLの変更なし。Group後の全件gateをこのfrontend変更後に実行したとはしない。
+- docs/translation.mdに対応範囲と一次資料を追記。ADLで独自動作に差し替える型について標準min/max契約への対応を証明したとはしない。Monoidの依存型traits/numeric_limits、公開field観測、純粋数学証明は引き続き未完了で、部品移植完了・push可能とは扱わない。
+- 既存friend翻訳8テストも成功。Monoid候補の実翻訳はUsingDeclを通過し、次の未対応expression UnresolvedLookupExpr（依存traits）で拒否されることを再確認。git diff --check成功。今回のfrontend/テスト/翻訳仕様/handoffの4ファイルは未commit、稼働中の検査processなし。次はtraitsとnumeric_limitsの契約・型ごとの具体化を実装する。
+
+### 2026-11-16 Monoidの型ごとの数値traits・全入口候補
+
+- 前ターンはprogress（UsingDecl対応・誤った同名min/max置換の修正・20テスト・51生成物照合）。その変更に続けて作業した。公開のMonoid header/TOML/旧証明はまだ変更していない。目標は引き続き137原本の全移植・再公開と実push後CI20分であり、登録51/56で完了とはしない。
+- Cpp.Preludeにデータclass NumericTraits (tag : String) (T : Type)を追加。isFloatingPoint/hasInfinityとmin/max/lowest/±infinityの値を保持し、公理・全Int共通instanceは置かない。tagはC++型パラメータ名なので、T=int/U=long longを同じLean Intにしても別packetを渡せる。LP64の整数10型はdriverが具体packetを束縛する。cppのT型や関数を有限型に制限したものではない。
+- 直接のif constexpr(std::is_floating_point_v<T>)をBool分岐として残し、then内の直接の負のinfinityだけpacketのnegativeInfinityへ対応させる。非浮動小数で破棄される枝のためにNeg Tを要求しない。他の文脈の単項minusは通常のNeg Tを維持する。任意のconstexpr式の分岐消去を一般に実装したものではない。
+- decl/参照のtraitsとdependent numeric_limits min/max/lowest/infinityを翻訳し、e→default構築にも要件が伝播する。両枝returnの末尾へ不要なfailureを出していた点は、構文的なalways_returnsで直した。登録済み51モデルはfresh生成して全件一致を確認済み（public_fields情報追加直前）。
+- ClassInfoはC++のpublic/private/protectedを記録。差分driverにfield Class.field indexを追加した。スカラー/vector/pairだけ観測し、非公開fieldとrecordを含むfieldのコマンドは生成しない。公開APIへgetterを足さずにMonoid.xを比較できる。CPPdriverは従来どおり元small_templateを先にincludeする。
+- constructionの整数10型bounds比較、T/U同carrierの異なるbounds、NoNeg（default値7・Negなし）、doubleの±infinity、浮動小数packetの有限fallback、guard外minusの回帰を追加。浮動小数の演算一般の誤差を証明済みとは扱わない。nativeはASan/UBSan付き。最初のbounds比較は値がすべて一致したが生成Leanのdead-code warningで失敗し、末尾failure修正後に成功した。検査の警告出力を除外して通してはいない。
+- 未公開の全3クラス候補をexperiments/verification/algebraic_structure/monoid.hppへ保存。元のhidden friend・qualified op・public x・value/default ctor・e・floating分岐を保持し、既定型は原本llと同じstd::int64_tへ戻した。型だけの旧witness/明示具体化は候補から除いた。候補全15入口の値・停止・work=1/2/3の証明はtests/lean/monoid_model_contract.leanにあり、fresh候補翻訳と結合してcompileするtestを追加した。
+- 純粋モデルProofs/Cpp/Lib/MonoidMath.leanをsupport/Proofs.leanへ登録。Mulの結合則/単位元、Max/Minの結合則・範囲条件付き単位元・値選択/上下界・範囲の閉包、全operation frame≤4とnested callee≤4の領域上界≤8を証明しbuild成功。T演算の費用/表現サイズは別契約、C++heap/寿命/Leanstackを数えるモデルではない。
+- 候補の全3クラス・hidden/qualified両opの差分は整数10型で成功（ignored verify_candidate.py）。再現用tests/diff/monoid.pyを追加し、候補int/long long/unsigned long longに対して極値のidentityと全組のopをCPP/Lean/独立期待値で比較するtestも成功した。ケース最大積121はsigned charにも収まる。
+- 関連unittest discover test_lean_model_*.pyは26件成功（frontend_tests.log）。その開始後に追加した候補全組差分1件も成功し、現時点の19 construction+8 friendをカバーする。registry全56と編集proof-source監査、diff --checkも成功。全件all gate/両kernel再監査済みとはしない。
+- 登録全56のbridgeを同じexec session81154で継続中（bridge_frontend.log、jobs2、timeout1800）。最後の観測はfenwick_tree開始、ここまでfailureなし。観測の切れだけで再起動しない。終了後にこの段落へ結果を追記する。
+- 次の切替では旧MonoidCall(769行)/MonoidCallCore(294)/MonoidCallCoreInt(292)/Generated.Monoidを整理する必要がある。Coreのmul_execは部品固有Generated.Monoidに依存するが、ctor/const/refs/e等の共通補題はLegacyScalarCallCore・IntervalCall・ScalarRefs・MonoidLazyCall等が使う。既存test_original_template_classes/test_nested_templatesとtests/lean/original_nested_max.leanが旧MonoidInstance/MonoidCallへ比較する箇所を持つ。共有部分を必要分だけ保ち、テスト固有参照モデルを分離してから専用生成物を消す。元CPP変更によるbugfixではないのでfixes.mdには追記していない。
+- 同じbridge session81154が正常終了0。全56件が成功し、末尾はpublic checks passed for 56 component(s): bridge。稼働中bridgeはない。候補31root（15入口+12純粋定理+traits4定義）の独立kernelを別のsession37070で実行中（candidate_kernel.log）。
+- 同じcandidate kernel session37070も正常終了0。31rootの閉包1889宣言がnanodaでエラーなし。今回の候補単位の確認であり、全プロジェクトのleanchecker再生・固定仕様catalog更新・全件all gateを代替しない。新規定理/定義はcomponent切替時に固定仕様へ反映する。未完了processはない。

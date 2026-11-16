@@ -13,6 +13,273 @@ import test_lean_model_friend as friends
 
 
 class ConstructionTranslationTests(unittest.TestCase):
+    def test_pending_monoid_full_model_contract(self):
+        source = ROOT / 'experiments/verification/algebraic_structure/monoid.hpp'
+        model = lean_translate.translate_file(source, [])
+        model = model.replace('import Proofs.Cpp.Prelude',
+                              'import Proofs.Cpp.Prelude\nimport Proofs.Cpp.Lib.MonoidMath', 1)
+        contract = (ROOT / 'tests/lean/monoid_model_contract.lean').read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            proof = Path(directory) / 'Monoid.lean'
+            proof.write_text(model + '\n' + contract)
+            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(proof)],
+                cwd=ROOT, env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')),
+                text=True, capture_output=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout, '')
+
+    def test_pending_monoid_public_fields_and_both_friends(self):
+        header = (ROOT / 'experiments/verification/algebraic_structure/monoid.hpp').read_text()
+        cases = subprocess.check_output([sys.executable, str(ROOT / 'tests/diff/monoid.py')], text=True)
+        values = [1, 0, 1, 3, 7, 11]
+        for cpp, lo, hi in [('int', -(2**31), 2**31-1),
+                            ('long long', -(2**63), 2**63-1),
+                            ('unsigned long long', 0, 2**64-1)]:
+            expected = []
+            for cls, identity in [('MonoidMul', 1), ('MonoidMax', lo), ('MonoidMin', hi)]:
+                data = [identity, *values[1:]]
+                expected += ['new'] * 6 + [f'ok {v}' for v in data]
+                for a in data:
+                    for b in data:
+                        result = a * b if cls == 'MonoidMul' else max(a, b) if cls == 'MonoidMax' else min(a, b)
+                        expected += ['ok obj', f'ok {result}'] * 2
+            with self.subTest(cpp=cpp):
+                friends.FriendTranslationTests().compare(header, cases, expected, instance={'T': cpp})
+
+    def test_public_field_observation_respects_access(self):
+        header = '''#pragma once
+namespace cp {
+template<class T> struct Box {
+  T a;
+private:
+  T b;
+protected:
+  T c;
+public:
+  T d;
+  Box(T x) : a(x), b(x + 1), c(x + 2), d(x + 3) {}
+};
+}
+'''
+        friends.FriendTranslationTests().compare(header,
+            'new Box.init 5\nfield Box.a 0\nfield Box.d 0\nfield Box.a 0\n',
+            ['new', 'ok 5', 'ok 8', 'ok 5'])
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'fields.hpp'
+            source.write_text(header)
+            h = friends.diff_harness.Harness(source, {'T': 'long long'}, 'Unused')
+            self.assertEqual(h.tr.classes['Box'].public_fields, {'a', 'd'})
+            for driver in (h.cpp_driver(), h.lean_driver()):
+                self.assertNotIn('"Box.b"', driver)
+                self.assertNotIn('"Box.c"', driver)
+
+    def test_numeric_traits_integral_bindings(self):
+        header = '''#pragma once
+#include <limits>
+#include <type_traits>
+namespace cp {
+template<class T> class Bounds {
+  T value;
+public:
+  Bounds(T x) : value(x) {}
+  Bounds() : Bounds(e()) {}
+  static Bounds e() {
+    if constexpr (std::is_floating_point_v<T>) {
+      return std::numeric_limits<T>::has_infinity
+        ? -std::numeric_limits<T>::infinity() : std::numeric_limits<T>::lowest();
+    } else { return std::numeric_limits<T>::min(); }
+  }
+  T get() const { return value; }
+};
+template<class T> T upper(T x) { return std::numeric_limits<T>::max(); }
+template<class T> T lowest(T x) { return std::numeric_limits<T>::lowest(); }
+template<class T> bool floating(T x) { return std::is_floating_point_v<T>; }
+template<class T> bool infinity(T x) { return std::numeric_limits<T>::has_infinity; }
+}
+'''
+        for cpp, bits, signed in [('signed char', 8, True), ('unsigned char', 8, False),
+                                 ('short', 16, True), ('unsigned short', 16, False),
+                                 ('int', 32, True), ('unsigned int', 32, False),
+                                 ('long', 64, True), ('unsigned long', 64, False),
+                                 ('long long', 64, True), ('unsigned long long', 64, False)]:
+            lo = -(2 ** (bits - 1)) if signed else 0
+            hi = 2 ** (bits - int(signed)) - 1
+            with self.subTest(cpp=cpp):
+                friends.FriendTranslationTests().compare(header,
+                    'new Bounds.init_0\ndo Bounds.get_ 0\ncall upper 1\ncall lowest 1\n'
+                    'call floating 1\ncall infinity 1\n',
+                    ['new', f'ok {lo}', f'ok {hi}', f'ok {lo}', 'ok 0', 'ok 0'],
+                    instance={'T': cpp})
+
+    def test_numeric_traits_distinguish_parameters_with_same_carrier(self):
+        friends.FriendTranslationTests().compare('''#pragma once
+#include <limits>
+namespace cp {
+template<class T, class U> class Bounds {
+  T lower;
+  U upper;
+public:
+  Bounds(T a, U b) : lower(std::numeric_limits<T>::min()), upper(std::numeric_limits<U>::max()) {}
+  T low() const { return lower; }
+  U high() const { return upper; }
+};
+}
+''', 'new Bounds.init 1 1\ndo Bounds.low 0\ndo Bounds.high 0\n',
+            ['new', 'ok -2147483648', 'ok 9223372036854775807'],
+            instance={'T': 'int', 'U': 'long long'})
+
+    def test_numeric_traits_floating_and_discarded_negation(self):
+        header = '''#include <limits>
+#include <type_traits>
+struct NoNeg { int value; NoNeg() : value(7) {} };
+namespace cp {
+template<class T> class Bounds {
+  T value;
+public:
+  Bounds(T x) : value(x) {}
+  Bounds() : Bounds(e()) {}
+  static Bounds e() {
+    if constexpr (std::is_floating_point_v<T>) {
+      return std::numeric_limits<T>::has_infinity
+        ? -std::numeric_limits<T>::infinity() : std::numeric_limits<T>::lowest();
+    } else { return std::numeric_limits<T>::min(); }
+  }
+  static Bounds high() {
+    if constexpr (std::is_floating_point_v<T>) {
+      return std::numeric_limits<T>::has_infinity
+        ? std::numeric_limits<T>::infinity() : std::numeric_limits<T>::max();
+    } else { return std::numeric_limits<T>::max(); }
+  }
+  T get() const { return value; }
+};
+}
+'''
+        model = self.model(header)
+        self.assertNotIn('[Neg T]', model)
+        proof = '''
+inductive Extended where
+  | finite : Int → Extended
+  | negInf
+  | posInf
+  deriving BEq, Inhabited
+
+instance : Proofs.Cpp.NumericTraits "T" Extended where
+  isFloatingPoint := true
+  hasInfinity := true
+  minimum := .finite 1
+  maximum := .finite 100
+  lowest := .finite (-100)
+  infinity := .posInf
+  negativeInfinity := .negInf
+
+structure NoNeg where
+  value : Int
+  deriving BEq, Inhabited
+
+instance : Proofs.Cpp.NumericTraits "T" NoNeg where
+  isFloatingPoint := false
+  hasInfinity := false
+  minimum := ⟨7⟩
+  maximum := ⟨7⟩
+  lowest := ⟨7⟩
+  infinity := ⟨7⟩
+  negativeInfinity := ⟨7⟩
+
+#guard ((Proofs.Cpp.Gen.cp.Bounds.init_0 (T := Extended)).run 0).map
+  (fun r => (r.1.value, r.2)) == some (.negInf, 3)
+#guard ((Proofs.Cpp.Gen.cp.Bounds.high (T := Extended)).run 0).map
+  (fun r => (r.1.value, r.2)) == some (.posInf, 2)
+#guard ((Proofs.Cpp.Gen.cp.Bounds.init_0 (T := NoNeg)).run 0).map
+  (fun r => (r.1.value.value, r.2)) == some (7, 3)
+#guard ((Proofs.Cpp.Gen.cp.Bounds.high (T := NoNeg)).run 0).map
+  (fun r => (r.1.value.value, r.2)) == some (7, 2)
+
+-- Exercise the fallback branch independently of the infinity branch.
+@[instance_reducible] def finiteTraits : Proofs.Cpp.NumericTraits "T" Extended :=
+  { (inferInstance : Proofs.Cpp.NumericTraits "T" Extended) with hasInfinity := false }
+#guard ((@Proofs.Cpp.Gen.cp.Bounds.e Extended finiteTraits).run 0).map
+  (fun r => (r.1.value, r.2)) == some (.finite (-100), 2)
+#guard ((@Proofs.Cpp.Gen.cp.Bounds.high Extended finiteTraits).run 0).map
+  (fun r => (r.1.value, r.2)) == some (.finite 100, 2)
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            scratch = Path(directory)
+            cpp = scratch / 'traits.cpp'
+            cpp.write_text(header + '''
+#include <cmath>
+#include <iostream>
+int main() {
+  const auto low = cp::Bounds<double>().get();
+  const auto high = cp::Bounds<double>::high().get();
+  std::cout << (std::isinf(low) && std::signbit(low)) << " "
+    << (std::isinf(high) && !std::signbit(high)) << " "
+    << cp::Bounds<NoNeg>().get().value << " "
+    << cp::Bounds<NoNeg>::high().get().value << "\\n";
+}
+''')
+            binary = scratch / 'traits'
+            subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined',
+                            str(cpp), '-o', str(binary)], check=True, timeout=60)
+            env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+                       ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
+            native = subprocess.run([str(binary)], text=True, capture_output=True,
+                                    check=True, timeout=60, env=env)
+            self.assertEqual(native.stdout, '1 1 7 7\n')
+            lean = scratch / 'Traits.lean'
+            lean.write_text(model + proof)
+            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+                                    cwd=ROOT, env=env, text=True, capture_output=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout, '')
+
+    def test_negative_infinity_outside_floating_constexpr_needs_negation(self):
+        model = self.model('''#include <limits>
+namespace cp { template<class T> T f(T x) { return -std::numeric_limits<T>::infinity(); } }
+''')
+        self.assertIn('[Neg T]', model)
+        self.assertNotIn('NumericTraits.negativeInfinity', model)
+
+    def test_standard_extrema_using_and_user_functions_are_distinct(self):
+        friends.FriendTranslationTests().compare('''#pragma once
+#include <algorithm>
+namespace cp {
+template<class T> T max(T a, T b) { return a + b + 100; }
+long long min() { return 73; }
+template<class T> T own(T a, T b) { return max(a, b); }
+template<class T> T standard(T a, T b) {
+  using std::max;
+  using std::min;
+  return max(a, b) + min(a, b);
+}
+template<class T> T qualified(T a, T b) { return std::max(a, b); }
+long long fixed(long long a, long long b) { using std::max; return max(a, b); }
+template<class T> T scoped(T a, T b) {
+  if (a < b) { using std::max; a = max(a, b); }
+  return max(a, b);
+}
+long long own_zero() { return min(); }
+}
+''', 'call own 3 8\ncall standard 3 8\ncall qualified 3 8\ncall fixed 3 8\n'
+     'call scoped 3 8\ncall scoped 8 3\ncall own_zero\n',
+            ['ok 111', 'ok 11', 'ok 8', 'ok 8', 'ok 116', 'ok 111', 'ok 73'])
+
+    def test_unsupported_using_is_rejected(self):
+        with self.assertRaisesRegex(lean_translate.Unsupported, 'using declaration'):
+            self.model('''#include <algorithm>
+namespace cp { template<class T> T f(T a, T b) {
+  using std::swap; return a + b;
+} }
+''')
+
+    def test_explicit_standard_extrema_not_rebound_to_user_function(self):
+        with self.assertRaisesRegex(lean_translate.Unsupported, 'explicit template arguments'):
+            self.model('''#include <algorithm>
+namespace cp {
+template<class T> T max(T a, T b) { return a + b; }
+template<class T> T f(T a, T b) { return std::max<T>(a, b); }
+}
+''')
+
     def model(self, header):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / 'construction.hpp'

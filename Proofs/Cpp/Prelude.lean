@@ -28,6 +28,48 @@ open Std.Do
 
 abbrev M := StateT Nat Option
 
+/-- Standard numeric traits supplied separately for each C++ template parameter.
+The tag distinguishes e.g. `T = int` and `U = long long` even when both are modelled
+by `Int`. No global instance guesses a C++ type from its Lean carrier. Values in
+discarded constexpr branches need not describe operations available on that type.
+`negativeInfinity` is used only in a floating constexpr branch. -/
+class NumericTraits (tag : String) (α : Type) where
+  isFloatingPoint : Bool
+  hasInfinity : Bool
+  minimum : α
+  maximum : α
+  lowest : α
+  infinity : α
+  negativeInfinity : α
+
+/-- LP64 integral limits for the mathematical integer carrier. -/
+@[instance_reducible] def intNumericTraits (tag : String) (bits : Nat) (signed : Bool) : NumericTraits tag Int where
+  isFloatingPoint := false
+  hasInfinity := false
+  minimum := if signed then -(2 ^ (bits - 1) : Int) else 0
+  maximum := (2 ^ (if signed then bits - 1 else bits) : Int) - 1
+  lowest := if signed then -(2 ^ (bits - 1) : Int) else 0
+  infinity := 0
+  negativeInfinity := 0
+
+@[instance_reducible] def u32NumericTraits (tag : String) : NumericTraits tag UInt32 where
+  isFloatingPoint := false
+  hasInfinity := false
+  minimum := 0
+  maximum := 4294967295
+  lowest := 0
+  infinity := 0
+  negativeInfinity := 0
+
+@[instance_reducible] def u64NumericTraits (tag : String) : NumericTraits tag UInt64 where
+  isFloatingPoint := false
+  hasInfinity := false
+  minimum := 0
+  maximum := 18446744073709551615
+  lowest := 0
+  infinity := 0
+  negativeInfinity := 0
+
 /-- The shape of assertions about `M` (the tick counter, then failure). -/
 abbrev PS := PostShape.arg Nat (PostShape.except PUnit PostShape.pure)
 

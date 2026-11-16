@@ -9,6 +9,7 @@ Command language (whitespace separated tokens, one command per line):
   call <function> <args...>          a free function; prints its outputs
   new <constructor> <args...>        constructs object number k (0, 1, ... in order of creation)
   do <k> <method> <args...>          calls a member function of object k; prints its outputs
+  field <Class.field> <k>           reads a public field of object k
 Values: an integer; a bool as 0/1; a vector as its length and its elements; a pair as its two values.
 Input streams: a token count followed by canonical decimal tokens or `x` (invalid input).
 Character streams also accept `bytes <count> <0..255>...` with canonical byte codes.
@@ -349,7 +350,8 @@ class Harness:
         self.lean_module = lean_module
         tr = lt.Translator(lt.source_decls(source, standard), source.read_bytes(),
                            [(lt.source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
-        tr.translate()
+        translated = tr.translate()
+        self.numeric_trait_parameters = sorted(set(re.findall(r'Cpp\.NumericTraits "(\w+)"', translated)))
         self.tr = tr
         if self.selected_calls is not None:
             known = {sig.lean_name.removeprefix("cp.") for info, sig in self.callables(unfiltered=True)
@@ -431,6 +433,13 @@ class Harness:
         for info in classes:
             lines.append(f"  std::vector<{self.cpp_class(info)}> objects_{info.name};")
         lines.append("  while (std::cin >> cmd >> name) {")
+        for info in classes:
+            for name, ty, _ in info.fields:
+                if name in info.public_fields and self.field_is_observable(ty):
+                    lines.append(f'    if (cmd == "field" && name == "{info.name}.{name}") {{')
+                    lines.append('      long long k; std::cin >> k; std::cout << "ok";')
+                    lines.append(f'      difftest::pr(objects_{info.name}[k].{name}); std::cout << "\\n"; continue;')
+                    lines.append('    }')
         for info, sig in self.callables():
             if (sig.is_static and info is not None) or not sig.public:
                 continue
@@ -500,6 +509,12 @@ class Harness:
         return "\n".join(lines) + "\n"
 
     # ------------------------------------------------------------------ Lean
+    @staticmethod
+    def field_is_observable(ty):
+        if ty.kind in ("vec", "pair"):
+            return all(Harness.field_is_observable(t) for t in ty.args)
+        return ty.kind in ("int", "u32", "u64", "bool", "tparam", "ordering")
+
     def lean_type_inst(self, ty):
         if ty.kind in ("istream", "ostream"):
             return "Proofs." + lt.lean_type(ty)
@@ -540,7 +555,24 @@ class Harness:
         if "Int" in self.lean_instance.values():
             integer_ops = ("local instance cppTemplateDiv : Div Int := ⟨Int.tdiv⟩\n"
                            "local instance cppTemplateMod : Mod Int := ⟨Int.tmod⟩\n")
-        lines = [f"import {self.lean_module}", LEAN_PRELUDE, streams, integer_ops, "open Proofs.Cpp.Gen", "",
+        numeric_traits = []
+        signed_bits = {"char": 8, "signed char": 8, "short": 16, "short int": 16,
+                       "int": 32, "std::int32_t": 32, "int32_t": 32,
+                       "long": 64, "long int": 64, "long long": 64, "long long int": 64,
+                       "ll": 64, "std::int64_t": 64, "int64_t": 64}
+        for parameter in self.numeric_trait_parameters:
+            cpp = self.instance[parameter]
+            carrier = self.lean_instance[parameter]
+            if cpp in signed_bits:
+                value = f'Proofs.Cpp.intNumericTraits "{parameter}" {signed_bits[cpp]} true'
+            elif cpp in SMALL_UNSIGNED_BINDINGS:
+                value = f'Proofs.Cpp.intNumericTraits "{parameter}" {SMALL_UNSIGNED_BINDINGS[cpp]} false'
+            elif carrier in ("UInt32", "UInt64"):
+                value = f'Proofs.Cpp.u{32 if carrier == "UInt32" else 64}NumericTraits "{parameter}"'
+            else:
+                raise lt.Unsupported(f"numeric traits differential binding {cpp}")
+            numeric_traits.append(f'local instance cppTraits_{parameter} : Proofs.Cpp.NumericTraits "{parameter}" {carrier} := {value}')
+        lines = [f"import {self.lean_module}", LEAN_PRELUDE, streams, integer_ops, *numeric_traits, "open Proofs.Cpp.Gen", "",
                  "structure Objects where"]
         for info in classes:
             cty = self.lean_type_inst(lt.Ty("cls", info.name, tuple(lt.Ty("tparam", t) for t in info.tparams)))
@@ -551,6 +583,13 @@ class Harness:
         lines.append("partial def run (ts : List String) (objs : Objects) (out : Array String) : IO (Array String) := do")
         lines.append("  match ts with")
         lines.append("  | [] => pure out")
+        for info in classes:
+            for name, ty, _ in info.fields:
+                if name in info.public_fields and self.field_is_observable(ty):
+                    lines.append(f'  | "field" :: "{info.name}.{name}" :: ts => do')
+                    lines.append('    let (k, ts) ← DiffTest.arg (α := Int) ts')
+                    lines.append(f'    let value := objs.o_{info.name}[k.toNat]!.{lt.lean_name(name)}')
+                    lines.append('    run ts objs (out.push ("ok" ++ DiffTest.Pr.pr value))')
         for info, sig in self.callables():
             if (sig.is_static and info is not None) or not sig.public:
                 continue

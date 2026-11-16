@@ -253,6 +253,19 @@ def type_of_decl(node) -> str:
     return node["type"]["qualType"]
 
 
+def always_returns(node) -> bool:
+    """A syntactically total return, without inferring facts about conditions."""
+    kind = node.get("kind")
+    children = inner(node)
+    if kind == "ReturnStmt":
+        return True
+    if kind == "CompoundStmt":
+        return bool(children) and always_returns(children[-1])
+    if kind == "IfStmt" and node.get("hasElse") and not node.get("hasInit") and not node.get("hasVar"):
+        return len(children) == 3 and always_returns(children[1]) and always_returns(children[2])
+    return False
+
+
 # ------------------------------------------------------------------------------------------ context
 
 @dataclass
@@ -294,6 +307,7 @@ class ClassInfo:
     tparams: list
     fields: list              # [(name, Ty, init_node or None)]
     methods: list             # [Sig]
+    public_fields: set[str] = field(default_factory=set)
 
 
 class Requirements:
@@ -337,6 +351,7 @@ class Fn:
         self.continue_prefix: list[list[str]] = []
         self.callees: list[Sig] = []
         self.used_names: set[str] = set()
+        self.floating_constexpr_types: set[str] = set()
 
     # scopes
     def declare(self, name, ty):
@@ -481,6 +496,14 @@ class Fn:
     def _expr(self, node, pre, expected):
         n = strip(node)
         kind = n.get("kind")
+        if kind in ("UnresolvedLookupExpr", "DependentScopeDeclRefExpr"):
+            text = re.sub(r"\s+", "", self.tr.span(n))
+            m = re.fullmatch(r"std::is_floating_point_v<(\w+)>", text)
+            if m:
+                return self.numeric_trait(m.group(1), "isFloatingPoint", BOOL)
+            m = re.fullmatch(r"std::numeric_limits<(\w+)>::has_infinity", text)
+            if m:
+                return self.numeric_trait(m.group(1), "hasInfinity", BOOL)
         if kind == "IntegerLiteral":
             lty = self.tr.ty(n["type"]["qualType"], self)
             if lty.kind in ("u32", "u64"):
@@ -548,6 +571,11 @@ class Fn:
         if kind == "UnaryOperator":
             op = n["opcode"]
             sub = inner(n)[0]
+            text = re.sub(r"\s+", "", self.tr.span(n))
+            neg_inf = re.fullmatch(r"-std::numeric_limits<(\w+)>::infinity\(\)", text)
+            if op == "-" and neg_inf and neg_inf.group(1) in self.floating_constexpr_types:
+                t = neg_inf.group(1)
+                return self.numeric_trait(t, "negativeInfinity", Ty("tparam", t))
             if op == "*" and strip(sub).get("kind") == "CXXThisExpr":
                 return self.self_value(), Ty("cls", self.cls.name, tuple(Ty("tparam", t) for t in self.cls.tparams))
             if op in ("++", "--"):
@@ -953,10 +981,22 @@ class Fn:
             return self.policy_call(callee, args, pre, expected)
         raise Unsupported(f"call {ck}")
 
+    def numeric_trait(self, parameter, member, result_ty):
+        own = set(self.sig.tparams) | (set(self.cls.tparams) if self.cls else set())
+        if parameter not in own:
+            raise Unsupported(f"numeric traits of non-parameter {parameter}")
+        self.reqs.add(f'Cpp.NumericTraits "{parameter}" {parameter}')
+        return f'(Cpp.NumericTraits.{member} (tag := "{parameter}") (α := {parameter}))', result_ty
+
     def policy_call(self, callee, args, pre, expected):
         """`P::f(args)` for a template parameter `P` (a policy class with static members): a call of the field `f` of
         the explicit argument `P : <function>.Policy_P` (docs/translation.md)."""
         text = re.sub(r"\s+", "", self.tr.span(callee))
+        numeric = re.fullmatch(r"std::numeric_limits<(\w+)>::(min|max|lowest|infinity)", text)
+        if numeric and not args:
+            parameter, member = numeric.groups()
+            return self.numeric_trait(parameter, {"min": "minimum", "max": "maximum"}.get(member, member),
+                                      Ty("tparam", parameter))
         m = re.fullmatch(r"(?:typename)?(\w+)::(\w+)", text)
         if not m or m.group(1) not in self.sig.tparams or self.cls is not None:
             raise Unsupported(f"call through a dependent scope {text}")
@@ -1023,7 +1063,10 @@ class Fn:
         raise Unsupported(f"vector::{name} in an expression")
 
     def free_call(self, name, args, pre, callee):
-        if name in ("min", "max") and not args:
+        call_text = re.sub(r"\s+", "", self.tr.span(callee))
+        if name in ("min", "max") and call_text.startswith(f"std::{name}<"):
+            raise Unsupported("explicit template arguments of a standard extrema function")
+        if name in ("min", "max") and not args and "numeric_limits<" in call_text:
             # std::numeric_limits<T>::min() / max() of a fixed integer type: a literal
             text = self.tr.span(callee).replace(" ", "")
             limits = {"int": (-2**31, 2**31 - 1, INT32), "longlong": (-2**63, 2**63 - 1, INT),
@@ -1052,7 +1095,19 @@ class Fn:
             cost = "numericGcdCost" if name == "gcd" else "numericLcmCost"
             pre.append(f"Cpp.tickN (Cpp.{cost} {at} {bt})")
             return f"(Cpp.numeric{'Gcd' if name == 'gcd' else 'Lcm'} (γ := {lean_type(ty)}) {at} {bt})", ty
-        if name in ("min", "max") and len(args) == 2:
+        # A spelling alone is not a standard-library contract: cp::max may
+        # compute something entirely different. Local using declarations are
+        # scoped, and dependent lookup must refer only to their shadow set.
+        local_standard = any(name in scope.get("__std_extrema__", set())
+                             for scope in self.scopes)
+        lookups = callee.get("lookups", [])
+        using_standard = call_text == name and local_standard and (
+            (callee.get("kind") == "UnresolvedLookupExpr" and bool(lookups)
+             and all(d.get("kind") == "UsingShadowDecl" for d in lookups))
+            or (callee.get("kind") == "DeclRefExpr"
+                and callee.get("foundReferencedDecl", {}).get("kind") == "UsingShadowDecl"))
+        if name in ("min", "max") and len(args) == 2 and (
+                call_text == f"std::{name}" or using_standard):
             at, aty = self.expr(args[0], pre)
             bt, bty = self.expr(args[1], pre, aty)
             if aty.kind == "tparam":
@@ -1277,6 +1332,11 @@ class Fn:
         return "(" + ", ".join(outs) + ")"
 
     def decl(self, d):
+        if d.get("kind") == "UsingDecl":
+            if d.get("name") not in ("std::min", "std::max"):
+                raise Unsupported(f"using declaration {d.get('name')}")
+            self.scopes[-1].setdefault("__std_extrema__", set()).add(d["name"].split("::")[-1])
+            return
         if d.get("kind") != "VarDecl":
             raise Unsupported(f"declaration {d.get('kind')}")
         name = d["name"]
@@ -1332,7 +1392,13 @@ class Fn:
         self.flush(pre)
         self.emit(f"if {ct} then")
         self.indent += 1
+        old_floating = self.floating_constexpr_types.copy()
+        floating = re.fullmatch(r"std::is_floating_point_v<(\w+)>",
+                                re.sub(r"\s+", "", self.tr.span(strip(cond))))
+        if node.get("isConstexpr") and floating:
+            self.floating_constexpr_types.add(floating.group(1))
         self.block_or_unit(then)
+        self.floating_constexpr_types = old_floating
         self.indent -= 1
         if other is not None:
             if other.get("kind") == "IfStmt":
@@ -2022,6 +2088,8 @@ class Translator:
                 if fty.kind in ("istream", "ostream"):
                     raise Unsupported("stream state stored in a class field")
                 info.fields.append((c["name"], fty, init))
+                if access == "public":
+                    info.public_fields.add(c["name"])
             elif kind in ("CXXMethodDecl", "CXXConstructorDecl"):
                 if c.get("isImplicit"):
                     continue
@@ -2239,7 +2307,7 @@ class Translator:
             fn.emit("return " + fn.self_value())
         elif sig.ret.kind == "void":
             fn.emit("return " + fn.result(None))
-        elif not inner(body) or inner(body)[-1].get("kind") != "ReturnStmt":
+        elif not always_returns(body):
             fn.emit("failure")
         return fn
 

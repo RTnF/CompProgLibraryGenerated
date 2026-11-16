@@ -44,11 +44,22 @@ STL:
 | `v.push_back(x)`、`v.emplace_back(x)`、`emplace_back(a, b)`（pair） | `v.push x` |
 | `v.pop_back()`、`v.clear()`、`v.resize(n[, x])`、`v.assign(n, x)`、`v.assign(w.begin(), w.end())`、`v.reserve(n)`、`v.erase(std::unique(v.begin(), v.end()), v.end())` | `v.pop`、`[].toArray`、`Cpp.resize`、`Cpp.replicate`、`w` のコピー（tick は `w.size()`）、（何もしない）、`Cpp.unique`（tick は `v.size()`） |
 | `std::numeric_limits<T>::min()`/`max()`（`T` は `int`、`long long`、`int64_t`） | 整数リテラル |
+| `std::is_floating_point_v<T>`、`std::numeric_limits<T>::has_infinity`（型パラメータT） | テンプレート引数ごとの `Cpp.NumericTraits "T" T` のBoolフィールド |
+| `std::numeric_limits<T>::min()`/`max()`/`lowest()`/`infinity()`（型パラメータT） | 同じtraits引数の `minimum`/`maximum`/`lowest`/`infinity` |
+| `if constexpr (std::is_floating_point_v<T>)` のthen内の `-std::numeric_limits<T>::infinity()` | 同じtraits引数の `negativeInfinity`。他の場所の単項minusは通常の `Neg T` 演算 |
 | `std::vector<T> v(n[, x])`、`{a, b}`、コピー | `Cpp.replicate`、`[a, b].toArray`、同じ値 |
 | `std::min`、`std::max`、`std::swap`、`std::abs` | `min`、`max`、入れ替え、`Int.natAbs` |
 | `std::sort(v.begin(), v.end())` | `Cpp.sort v`（安定な mergeSort。tick は `n (log2 n + 1)`）。C++ では同値な要素の順序は不定なので、定理は全順序（整列結果が一意）で述べる |
 
 STL はドキュメント通りの契約・動作・計算量オーダーを持つものと認め（`docs/trust_policy.md`）、上の対応はその動作をそのまま定義したものである。STL の前提条件（添字の範囲など）は部品の前提として述べる。
+
+`min/max` は明示した `std::min/max`、または関数内の `using std::min/max` から解決される2引数呼出しを扱う。局所usingはブロックのスコープに従い、依存した名前探索ではusingのshadow宣言のみを候補とする場合に受理する。同名のユーザー関数は通常の関数として翻訳する。他のusing宣言と標準min/maxの明示的テンプレート引数は未対応として拒否する。[using宣言の規則](https://eel.is/c++draft/namespace.udecl)と[標準min/maxの契約](https://eel.is/c++draft/alg.min.max)に基づく。比較演算とLeanのMin/Maxがこの契約に一致することは型の対応条件であり、ADLで別の動作へ変更する型の対応を証明したものではない。
+
+数値traitsは[型カテゴリ](https://eel.is/c++draft/meta.unary.cat)と[numeric_limitsの契約](https://eel.is/c++draft/numeric.limits.members)に従うデータ引数で、公理や全型共通の境界値は置かない。`NumericTraits`の文字列タグはC++型パラメータ名に対応する。TとUが同じLeanのIntに具体化されても、別の引数としてintとlong longの境界を渡せる。型の対応条件としてtraitsの値がそのC++具体型・特殊化の値であることを要求する。無特殊化のユーザー型の境界値を数値ゼロと決めつけない。
+
+constexprの両分岐をBool分岐として残し、未選択分岐のtraitフィールドは評価しない。浮動小数のthen内に限って負の無限大をtrait値として扱い、破棄される分岐のために非浮動小数型へNegを追加しない。この分岐の認識は上表の直接の条件式・直接の負の無限大式に限る。整数の差分driverはLP64の10型（signed/unsigned char、short、int、long、long long）について具体的なtraitsを渡す。doubleの両無限大と単項minusを持たないユーザー型も専用のnative/Lean検査を行う。この検査だけで浮動小数の一般演算の誤差を証明したとはしない。
+
+差分driverの`field Class.field k`は、公開されたスカラー・vector・pairのフィールドを読む。private/protectedフィールドとrecordを含むフィールドにはこのコマンドを生成しない。CPPのgetter追加や、非公開表現へのアクセスをせずに、公開フィールドをモデルの投影と比較するための観測である。
 
 ここにない構文・型・関数は `Unsupported` として拒否する。拒否された実装は `experiments/` に置く。
 

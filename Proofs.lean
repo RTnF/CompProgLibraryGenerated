@@ -616,3 +616,4 @@ import Proofs.Cpp.Lib.UnsignedMagnitude
 
 import Proofs.Cpp.Lib.GroupMath
 import Proofs.Cpp.Group
+import Proofs.Cpp.Lib.MonoidMath
