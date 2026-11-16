@@ -1,4 +1,4 @@
-import Proofs.GroupCall
+import Proofs.LegacyScalarCallCore
 import Proofs.Generated.MonoidLazy
 
 /-! `Ty`-parametric versions of the per-type (`s64`/`i32`) caller lemmas.

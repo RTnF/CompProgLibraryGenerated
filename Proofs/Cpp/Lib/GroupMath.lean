@@ -91,4 +91,39 @@ theorem affine_envelope_cells {T : Type} [Mul T] [Add T] (p q : Affine T) :
     (affineEnvelope p q).length = 9 := by
   rfl
 
+/-- Envelopes of the pure operations. Computed values are explicit so no
+algebraic laws or element-size assumptions are needed to count scalar cells. -/
+inductive Frame (T : Type) where
+  | copy (x : T)
+  | unary (x result : T)
+  | binary (x y result : T)
+  | affineCopy (p : Affine T)
+  | apply (p : Affine T) (x product result : T)
+  | inverse (p : Affine T) (negative inverseA inverseB : T)
+  | compose (p q : Affine T) (productA productB : T) (result : Affine T)
+
+def Frame.values {T : Type} : Frame T → List T
+  | .copy x => [x, x]
+  | .unary x r => [x, r, r]
+  | .binary x y r => [x, y, r, r]
+  | .affineCopy p => [p.1, p.2, p.1, p.2]
+  | .apply p x product r => [p.1, p.2, x, product, r]
+  | .inverse p negative a b => [p.1, p.2, negative, a, b, a, b]
+  | .compose p q a b r => [p.1, p.2, q.1, q.2, a, b, r.1, r.2, r.1, r.2]
+
+theorem frame_cells {T : Type} (frame : Frame T) : frame.values.length ≤ 10 := by
+  cases frame <;> simp [Frame.values]
+
+/-- A default constructor has at most two nested calls (factory and value
+constructor), with at most four scalar input/result fields in each. Keeping
+both frames simultaneously also bounds the shallower wrappers. -/
+def peakCells {T : Type} (frame : Frame T) (calleeCells : Nat) : Nat :=
+  frame.values.length + calleeCells
+
+theorem all_operations_space {T : Type} (frame : Frame T) (calleeCells : Nat)
+    (hc : calleeCells ≤ 8) : peakCells frame calleeCells ≤ 18 := by
+  have h := frame_cells frame
+  unfold peakCells
+  omega
+
 end Proofs.Cpp.GroupMath

@@ -254,11 +254,11 @@ class Holder {long long value;public:
             self.kernel(scratch,'ConstructorOrderCheck',['ConstructorOrderAudit.'+name for name,_,_ in variants],proof)
 
     def test_general_group_constructor_contracts(self):
-        names = ['groupsum_default_correct','groupmul_default_correct','affine_new_a_correct',
-                 'affine_new_b_correct','affine_default_a_correct','affine_default_b_correct',
-                 'groupsum_friend_program','groupmul_friend_program','affine_friend_a_program','affine_friend_b_program']
+        names = ['sum_default', 'mul_default', 'affine_construct', 'affine_default',
+                 'sum_op_hidden', 'mul_op_hidden', 'affine_op_hidden',
+                 'model_sum_associative', 'model_affine_inverse', 'model_all_operations_space']
         with tempfile.TemporaryDirectory(prefix='group-constructor-kernel-') as directory:
-            self.kernel(Path(directory),'Proofs.GroupCall',['Proofs.GroupCall.'+name for name in names])
+            self.kernel(Path(directory), 'Proofs.Cpp.Group', ['Proofs.Cpp.Group.' + name for name in names])
 
     def test_original_constructor_event_sequences(self):
         common = '''#include <vector>

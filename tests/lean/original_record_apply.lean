@@ -158,14 +158,17 @@ theorem apply_call (fuel : Nat) (caller : NState) (args : List NArgument) :
     applyMax.callFuel fuel caller args = applyMin.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) apply_same
 
-theorem add_new : OriginalRecordApply.RangeAdd_new0 = Proofs.GroupInstance.GroupSum_long_long_new0 := rfl
+def copyConstructor : NProgram := ⟨[.scalar ⟨64, true, false⟩ false true],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 0))) (.primitive .skip))⟩
+def zeroFactory : NProgram := ⟨[],.scalar ⟨64, true, false⟩,(.sequence (.primitive (.declare ⟨64, true, false⟩ true (.cast ⟨64, true, false⟩ (.literal ⟨32, true, false⟩ (0))))) (.sequence (.primitive (.declare ⟨64, true, false⟩ true (.variable ⟨64, true, false⟩ 0))) (.sequence (.primitive (.ret (.variable ⟨64, true, false⟩ 1))) (.primitive .skip))))⟩
+
+theorem add_new : OriginalRecordApply.RangeAdd_new0 = copyConstructor := rfl
 theorem call_add_new (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeAdd_new0.callFuel fuel caller args = Proofs.GroupInstance.GroupSum_long_long_new0.callFuel fuel caller args :=
+  OriginalRecordApply.RangeAdd_new0.callFuel fuel caller args = copyConstructor.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) add_new
 
-theorem add_id : OriginalRecordApply.RangeAdd_id = Proofs.GroupInstance.GroupSum_long_long_e := rfl
+theorem add_id : OriginalRecordApply.RangeAdd_id = zeroFactory := rfl
 theorem call_add_id (fuel : Nat) (caller : NState) (args : List NArgument) :
-  OriginalRecordApply.RangeAdd_id.callFuel fuel caller args = Proofs.GroupInstance.GroupSum_long_long_e.callFuel fuel caller args :=
+  OriginalRecordApply.RangeAdd_id.callFuel fuel caller args = zeroFactory.callFuel fuel caller args :=
   congrArg (fun p : NProgram => p.callFuel fuel caller args) add_id
 
 theorem max_new0 : OriginalRecordApply.RangeMax_new0 = Proofs.MonoidInstance.MonoidMax_long_long_new0 := rfl

@@ -173,3 +173,7 @@ int main() {
     assert(cp::GroupMul<double>(4).inv().x() == 0.25 && cp::GroupAffine<double>(2, 1).inv().a() == 0.5);
     return 0;
 }
+
+static_assert(std::is_same_v<decltype(cp::GroupSum<>().x()), ll>);
+static_assert(std::is_same_v<decltype(cp::GroupMul<>().x()), ll>);
+static_assert(std::is_same_v<decltype(cp::GroupAffine<>().a()), ll>);

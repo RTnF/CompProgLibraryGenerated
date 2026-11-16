@@ -1,5 +1,5 @@
 import Proofs.MonoidCallCore
-import Proofs.GroupCall
+import Proofs.LegacyScalarCallCore
 import Proofs.MonoidCallCoreInt
 
 namespace Proofs.MonoidCall

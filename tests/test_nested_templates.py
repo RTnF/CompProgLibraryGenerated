@@ -301,7 +301,7 @@ class NestedTemplateTests(unittest.TestCase):
         names=('fields_exec','apply_body','apply_exec','prep_mutable_values2','mutable_values2_correct',
             'apply_correct','constant_body_correct','default_fields_exec','e_correct','default_correct',
             'prepare_mixed_values','two_values_body_correct','new_correct','op_correct',
-            'add_new_correct_program','add_new_correct','add_id_correct_program','add_id_correct','compose_correct')
+            'add_new_correct','add_id_correct','compose_correct')
         with tempfile.TemporaryDirectory(prefix='mixed-add-sum-') as tmp:
             directory=Path(tmp)
             scalar_checks.ScalarDelegationTests().kernel(directory,'MixedAddSumCheck',

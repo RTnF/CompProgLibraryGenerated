@@ -1,5 +1,5 @@
 import Proofs.MonoidCall
-import Proofs.GroupCall
+import Proofs.LegacyScalarCallCore
 import Proofs.Generated.Interval
 
 namespace Proofs.IntervalCall

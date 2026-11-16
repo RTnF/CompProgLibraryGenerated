@@ -1,6 +1,9 @@
--- Development fragment: append after a fresh Group translation and GroupMath.
+import Proofs.Cpp.Gen.Group
+import Proofs.Cpp.Lib.GroupMath
+
 namespace Proofs.Cpp.Group
 open Proofs.Cpp.Gen
+open GroupMath
 
 theorem sum_construct {T : Type} (x : T) (t : Nat) :
     (cp.GroupSum.init_T x).run t = some ((⟨x⟩ : cp.GroupSum T), t + 1) := by
@@ -106,5 +109,55 @@ theorem affine_integer_inverse (a b : Int) (t : Nat) :
       some ((⟨(GroupMath.affineIntInv (a, b)).1,
         (GroupMath.affineIntInv (a, b)).2⟩ : cp.GroupAffine Int), t + 2) := by
   rfl
+
+theorem model_sum_associative {T : Type} [AddSemigroup T] (x y z : T) :
+    sumOp (sumOp x y) z = sumOp x (sumOp y z) := by
+  exact GroupMath.sum_associative x y z
+
+theorem model_sum_identity {T : Type} [AddZeroClass T] (x : T) :
+    sumOp 0 x = x ∧ sumOp x 0 = x := by
+  exact GroupMath.sum_identity x
+
+theorem model_sum_inverse {T : Type} [AddGroup T] (x : T) :
+    sumOp (sumInv x) x = 0 ∧ sumOp x (sumInv x) = 0 := by
+  exact GroupMath.sum_inverse x
+
+theorem model_mul_associative {T : Type} [Semigroup T] (x y z : T) :
+    mulOp (mulOp x y) z = mulOp x (mulOp y z) := by
+  exact GroupMath.mul_associative x y z
+
+theorem model_mul_identity {T : Type} [MulOneClass T] (x : T) :
+    mulOp 1 x = x ∧ mulOp x 1 = x := by
+  exact GroupMath.mul_identity x
+
+theorem model_mul_inverse {T : Type} [DivisionRing T] (x : T) (hx : x ≠ 0) :
+    mulOp (mulInv x) x = 1 ∧ mulOp x (mulInv x) = 1 := by
+  exact GroupMath.mul_inverse x hx
+
+theorem model_affine_composition {T : Type} [CommSemiring T] (p q : Affine T) (x : T) :
+    affineApply (affineOp p q) x = affineApply q (affineApply p x) := by
+  exact GroupMath.affine_composition p q x
+
+theorem model_affine_associative {T : Type} [Semiring T] (p q r : Affine T) :
+    affineOp (affineOp p q) r = affineOp p (affineOp q r) := by
+  exact GroupMath.affine_associative p q r
+
+theorem model_affine_identity {T : Type} [Semiring T] (p : Affine T) :
+    affineOp affineIdentity p = p ∧ affineOp p affineIdentity = p := by
+  exact GroupMath.affine_identity p
+
+theorem model_affine_inverse {T : Type} [Field T] (p : Affine T) (ha : p.1 ≠ 0) :
+    affineOp (affineInv p) p = affineIdentity ∧
+    affineOp p (affineInv p) = affineIdentity := by
+  exact GroupMath.affine_inverse p ha
+
+theorem model_affine_integer_inverse_unit (a b : Int) (ha : a = 1 ∨ a = -1) :
+    affineOp (affineIntInv (a, b)) (a, b) = affineIdentity ∧
+    affineOp (a, b) (affineIntInv (a, b)) = affineIdentity := by
+  exact GroupMath.affine_integer_inverse_unit a b ha
+
+theorem model_all_operations_space {T : Type} (frame : Frame T) (calleeCells : Nat)
+    (hc : calleeCells ≤ 8) : peakCells frame calleeCells ≤ 18 := by
+  exact GroupMath.all_operations_space frame calleeCells hc
 
 end Proofs.Cpp.Group

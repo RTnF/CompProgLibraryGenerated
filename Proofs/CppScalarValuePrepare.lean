@@ -1,4 +1,4 @@
-import Proofs.GroupCall
+import Proofs.LegacyScalarCallCore
 
 namespace Proofs.CppScalarValuePrepare
 open Proofs

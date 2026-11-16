@@ -503,8 +503,6 @@ theorem op_correct (second : Bool) (caller : NState) (s1 s2 s3 s4 : Nat)
     omega
   · rw [mem]; exact take_P caller _
 
-theorem add_new_correct_program : OriginalMixedAddSum.RangeAdd_new0 = Proofs.GroupInstance.GroupSum_long_long_new0 := rfl
-
 theorem add_new_correct (caller : NState) (e : NExpr) (v : Int)
     (hs : e.scalarOnly = true) (hty : e.resultType = s64) (value : e.denote (envOf caller) = some v)
     (hv : s64.valid v = true) (valid : caller.frame.state.wellFormed = true)
@@ -514,9 +512,7 @@ theorem add_new_correct (caller : NState) (e : NExpr) (v : Int)
     ∃ Sinit fuel res, prepare caller OriginalMixedAddSum.RangeAdd_new0.parameters [.value e] = some Sinit ∧
       OriginalMixedAddSum.RangeAdd_new0.callFuel fuel caller [.value e] = .finished (res,.scalar v) ∧
       ScalarPost2 caller Sinit res e.nodes 70 caller.scalars.memory := by
-  simpa only [add_new_correct_program] using Proofs.GroupCall.groupsum_new_correct caller e v hs hty value hv valid lengths strict base
-
-theorem add_id_correct_program : OriginalMixedAddSum.RangeAdd_id = Proofs.GroupInstance.GroupSum_long_long_e := rfl
+  exact Proofs.MonoidCallCore.ctor_correct _ rfl rfl rfl caller e v hs hty value hv valid lengths strict base
 
 theorem add_id_correct (caller : NState) (valid : caller.frame.state.wellFormed = true)
     (lengths : caller.frame.rootWritable.length = caller.frame.state.forest.objects.length)
@@ -525,7 +521,10 @@ theorem add_id_correct (caller : NState) (valid : caller.frame.state.wellFormed 
     ∃ Sinit fuel res, prepare caller OriginalMixedAddSum.RangeAdd_id.parameters [] = some Sinit ∧
       OriginalMixedAddSum.RangeAdd_id.callFuel fuel caller [] = .finished (res,.scalar 0) ∧
       ScalarPost2 caller Sinit res 0 70 caller.scalars.memory := by
-  simpa only [add_id_correct_program] using Proofs.GroupCall.groupsum_e_correct caller valid lengths strict base
+  exact Proofs.MonoidCallCore.e_correct _ _ _ rfl rfl rfl
+    (by intro env; simp [NExpr.denote, Ty.valid, Ty.convert])
+    (by simp [NExpr.scalarOnly]) (by simp [NExpr.nodes]) (by simp [Ty.valid])
+    caller valid lengths strict base
 
 theorem compose_correct (caller : NState) (e1 e2 : NExpr) (x y : Int)
     (hs1 : e1.scalarOnly = true) (hs2 : e2.scalarOnly = true)

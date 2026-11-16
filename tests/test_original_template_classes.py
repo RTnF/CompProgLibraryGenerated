@@ -35,16 +35,17 @@ class OriginalTemplateTests(unittest.TestCase):
         self.assertFalse(coverage['full_cpp_object_lifetime_verified'])
         roots = []
         proof = 'import Proofs.MonoidCall\nimport Proofs.CppTargetCast\n'+emit_lean(ir, 'Original_'+case)
+        proof += (ROOT/'tests/lean/scalar_reference_programs.lean').read_text()
         namespace = 'OriginalEquivalence_'+case
         proof += '\nnamespace '+namespace+'\nopen Proofs.CppNestedProgram Proofs.CppNestedCall\n'
         if case == 'sum':
             pairs = [(op, 'Original_sum.GroupSum_long_long_'+op,
-                      'Proofs.GroupInstance.GroupSum_long_long_'+op) for op in ('new0','new1','e','op')]
+                      'ScalarReferencePrograms.GroupSum_long_long_'+op) for op in ('new0','new1','e','op')]
         else:
             ops = ('ide','inv','new0','new1','compose') if case == 'mapping' else ('e','inv','new0','new1','op')
             cls = 'Affine' if case == 'mapping' else 'GroupAffine'
             pairs = [(op+'_'+field, 'Original_'+case+'.'+cls+'_long_long_'+op+'_'+field,
-                      'Proofs.GroupInstance.GroupAffine_long_long_'+
+                      'ScalarReferencePrograms.GroupAffine_long_long_'+
                       {'ide':'e','compose':'op_friend','op':'op_friend'}.get(op,op)+'__'+field)
                      for op in ops for field in ('a','b')]
         for theorem, original, modern in pairs:

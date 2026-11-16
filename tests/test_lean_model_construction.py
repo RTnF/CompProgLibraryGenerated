@@ -140,8 +140,8 @@ public:
         with self.assertRaises(lean_translate.Unsupported):
             self.model('namespace cp { struct Base {}; struct Derived : Base {}; }')
 
-    def test_group_candidate_preserves_three_classes_and_qualified_operations(self):
-        header = (ROOT / 'experiments/verification/algebraic_structure/group.hpp').read_text()
+    def test_public_group_preserves_three_classes_and_qualified_operations(self):
+        header = (ROOT / 'library/algebraic_structure/group.hpp').read_text()
         cases = '''new GroupSum.init_T 7
 new GroupSum.init_0
 do GroupSum.x 0
@@ -202,12 +202,12 @@ template<class T> T remainder(T a, T b) { return a % b; }
 ''', '\n'.join(cases) + '\n', expected)
 
     def test_fresh_group_translation_satisfies_pure_model_contracts(self):
-        base = ROOT / 'experiments/verification/algebraic_structure'
-        texts = [lean_translate.translate_file(base / 'group.hpp', []),
-                 (base / 'GroupMath.lean').read_text(),
-                 (base / 'GroupContracts.lean').read_text()]
+        texts = [lean_translate.translate_file(ROOT / 'library/algebraic_structure/group.hpp', []),
+                 (ROOT / 'Proofs/Cpp/Lib/GroupMath.lean').read_text(),
+                 (ROOT / 'Proofs/Cpp/Group.lean').read_text()]
         imports = list(dict.fromkeys(line for text in texts for line in text.splitlines()
-                                    if line.startswith('import ')))
+                                    if line.startswith('import ') and line not in
+                                    ('import Proofs.Cpp.Gen.Group', 'import Proofs.Cpp.Lib.GroupMath')))
         body = '\n'.join('\n'.join(line for line in text.splitlines()
                                    if not line.startswith('import ')) for text in texts)
         with tempfile.TemporaryDirectory() as directory:

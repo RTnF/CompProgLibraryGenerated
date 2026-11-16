@@ -94,7 +94,7 @@ import Proofs.Cpp.VectorSum
 import Proofs.VectorMaxCall
 import Proofs.VectorMinCall
 import Proofs.MonoidCall
-import Proofs.GroupCall
+import Proofs.LegacyScalarCallCore
 import Proofs.FillWriteStmt
 import Proofs.InvPermMath
 import Proofs.InvPermFrame
@@ -613,3 +613,6 @@ import Proofs.Cpp.Lib.RatioSpace
 import Proofs.Cpp.Lib.RatioArithmeticSpace
 
 import Proofs.Cpp.Lib.UnsignedMagnitude
+
+import Proofs.Cpp.Lib.GroupMath
+import Proofs.Cpp.Group
