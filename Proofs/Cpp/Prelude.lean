@@ -24,6 +24,17 @@ The `@[spec]` lemmas let `mvcgen` reason about ticks, assertions and `while` loo
 
 namespace Proofs.Cpp
 
+/-- A proof of a translated compile-time template constraint. No instances are
+guessed: concrete differential bindings prove the proposition by decision. -/
+class TemplateConstraint (p : Prop) : Prop where
+  holds : p
+
+/-- Compile-time C++ type properties, tagged by the source template parameter.
+`isCvInt128` means equality to signed `__int128` after removing cv qualifiers. -/
+class TypeTraits (tag : String) (α : Type) where
+  isSigned : Bool
+  isCvInt128 : Bool
+
 open Std.Do
 
 abbrev M := StateT Nat Option
@@ -256,6 +267,30 @@ class Conv (β α : Type) where
 
 instance {α : Type} [LT α] [DecidableLT α] : HLt α α := ⟨fun a b => decide (a < b)⟩
 instance {α : Type} : Conv α α := ⟨id⟩
+instance : Conv Int UInt32 := ⟨UInt32.ofInt⟩
+instance : Conv Int UInt64 := ⟨UInt64.ofInt⟩
+
+/-- Integral template conversions to the fixed unsigned carriers wrap modulo
+the destination width, just like the concrete C++ casts below. -/
+instance : NatCast UInt32 := ⟨UInt32.ofNat⟩
+instance : NatCast UInt64 := ⟨UInt64.ofNat⟩
+
+/-- The C++ expression `static_cast<uint32_t>(x % m)`, with the
+usual arithmetic conversions performed before `%`. The source parameter tag
+keeps distinct C++ types apart when they share the mathematical Int carrier.
+Generic user types supply their own operation; no integer law is assumed. -/
+class ModToUInt32 (tag : String) (α : Type) where
+  apply : α → UInt32 → UInt32
+
+instance (tag : String) : ModToUInt32 tag UInt32 := ⟨fun x m => x % m⟩
+instance (tag : String) : ModToUInt32 tag UInt64 := ⟨fun x m => (x % m.toUInt64).toUInt32⟩
+instance (tag : String) : ModToUInt32 tag Bool := ⟨fun x m => (if x then 1 else 0) % m⟩
+
+/-- Integral bindings with the Int carrier: narrow integers first promote to
+int and then to unsigned int because `m` is unsigned int. Wide integer
+operands retain their mathematical value, under their source range premise. -/
+@[instance_reducible] def intModToUInt32 (tag : String) (promoteToUnsigned : Bool) : ModToUInt32 tag Int :=
+  ⟨fun x m => UInt32.ofInt ((if promoteToUnsigned then ((UInt32.ofInt x).toNat : Int) else x).tmod m.toNat)⟩
 
 /-- Conversion of an unsigned value `v` to a signed `w`-bit type: the value modulo `2^w` in two's complement
 (C++20 [conv.integral]; GCC defines the same for earlier standards). -/
@@ -307,6 +342,15 @@ class StreamRead (α : Type) [Streams] where
 
 /-- A standard formatted insertion, including formatting state, errors and cost. -/
 class StreamWrite (α : Type) [Streams] where
+  write : OStream → α → M OStream
+
+/-- A concrete C++ extraction overload. The tag distinguishes e.g. `long` and
+`long long` even when both use the mathematical integer carrier. -/
+class SourceStreamRead (source : String) (α : Type) [Streams] where
+  read : IStream → α → M (α × IStream)
+
+/-- A concrete C++ insertion overload, retaining formatting, locale and cost. -/
+class SourceStreamWrite (source : String) (α : Type) [Streams] where
   write : OStream → α → M OStream
 
 /-- Character insertion is distinct from insertion of its integer code. -/

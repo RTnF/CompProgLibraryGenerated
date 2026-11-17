@@ -294,9 +294,6 @@ import Proofs.ElementCountExec
 import Proofs.ElementCountCall
 import Proofs.VecPrepare
 import Proofs.PexecKit
-import Proofs.ModIntExec
-import Proofs.ModIntPow
-import Proofs.ModIntCall
 import Proofs.ExtremaRef
 import Proofs.ExtremaCall
 import Proofs.RollingHashMath
@@ -307,8 +304,7 @@ import Proofs.RollingHashGet
 import Proofs.RollingHashCall
 import Proofs.SortUtilCall
 import Proofs.SearchUtilCall
-import Proofs.ModIntOps
-import Proofs.ModIntComponent
+import Proofs.Cpp.Modint
 import Proofs.NestedReadOnly
 import Proofs.VecStmtX
 import Proofs.MultiVecN
@@ -618,3 +614,7 @@ import Proofs.Cpp.Lib.GroupMath
 import Proofs.Cpp.Group
 import Proofs.Cpp.Lib.MonoidMath
 import Proofs.LegacyMonoidCallCore
+import Proofs.Cpp.Lib.ModIntMath
+import Proofs.Cpp.Lib.PrimeCertificate
+import Proofs.Cpp.Lib.ModIntFactorial
+import Proofs.LegacyScalarPrepare

@@ -10,6 +10,7 @@ Anything outside the subset raises `Unsupported`; the translator never guesses.
 from __future__ import annotations
 
 import argparse
+import hashlib
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
@@ -55,13 +56,15 @@ VOID = Ty("void")
 SIGNED_WIDTHS = {
     "int": 32, "short": 32, "signed char": 32, "char": 32, "short int": 32, "std::int32_t": 32, "int32_t": 32,
     "long": 64, "long long": 64, "long int": 64, "long long int": 64, "difference_type": 64, "std::int64_t": 64,
-    "int64_t": 64, "ll": 64, "size_type": 64, "__int128": 128, "__int128_t": 128,
-    # 128 bit unsigned values are used only below 2^127 (precondition), so they are integers as well.
+    "int64_t": 64, "ll": 64, "size_type": 64, "wchar_t": 32, "__int128": 128, "__int128_t": 128,
+    # Unsigned 128-bit values use mathematical integers without intermediate
+    # wrapping. The fused mixed-remainder contract accepts their full range.
     "unsigned __int128": 128, "__uint128_t": 128,
 }
 INTEGER_NAMES = set(SIGNED_WIDTHS)
 UNSIGNED_NAMES = {
     "unsigned": U32, "unsigned int": U32, "std::uint32_t": U32, "uint32_t": U32,
+    "char32_t": U32,
     "unsigned long": U64, "unsigned long long": U64, "long unsigned int": U64, "long long unsigned int": U64,
     "size_t": U64, "std::size_t": U64, "std::uint64_t": U64, "uint64_t": U64, "ull": U64,
 }
@@ -84,12 +87,15 @@ def split_args(text: str) -> list[str]:
     return parts
 
 
-def parse_type(text: str, tparams: set[str], classes: set[str]) -> Ty:
+def parse_type(text: str, tparams: set[str], classes, value_params=None, aliases=None) -> Ty:
+    value_params = value_params or {}
     s = text.strip()
     s = re.sub(r"\bconst\b|\bvolatile\b|\btypename\b|\bstruct\b|\bclass\b", " ", s)
     s = s.replace("&", " ").strip()
     s = re.sub(r"\s+", " ", s)
     s = re.sub(r"^cp::", "", s)
+    if s not in tparams and aliases and s in aliases:
+        return aliases[s]
     if s in SIGNED_WIDTHS:
         return Ty("int", width=SIGNED_WIDTHS[s])
     if s in UNSIGNED_NAMES:
@@ -111,16 +117,97 @@ def parse_type(text: str, tparams: set[str], classes: set[str]) -> Ty:
     m = re.fullmatch(r"(?:std::)?vector<(.*)>", s)
     if m:
         args = split_args(m.group(1))
-        return Ty("vec", args=(parse_type(args[0], tparams, classes),))
+        return Ty("vec", args=(parse_type(args[0], tparams, classes, value_params, aliases),))
     m = re.fullmatch(r"(?:std::)?pair<(.*)>", s)
     if m:
         a, b = split_args(m.group(1))
-        return Ty("pair", args=(parse_type(a, tparams, classes), parse_type(b, tparams, classes)))
+        return Ty("pair", args=(parse_type(a, tparams, classes, value_params, aliases), parse_type(b, tparams, classes, value_params, aliases)))
     m = re.fullmatch(r"([A-Za-z_][A-Za-z_0-9]*)(?:<(.*)>)?", s)
     if m and m.group(1) in classes:
-        args = tuple(parse_type(a, tparams, classes) for a in split_args(m.group(2))) if m.group(2) else ()
-        return Ty("cls", m.group(1), args)
+        raw_args = split_args(m.group(2)) if m.group(2) else []
+        info = classes.get(m.group(1)) if isinstance(classes, dict) else None
+        if info is not None:
+            extra = raw_args[len(info.tparams):]
+            if (len(raw_args) < len(info.tparams) or len(extra) > len(info.constraints)
+                    or any(a not in ("nullptr", f"value-parameter-0-{len(info.tparams) + i}")
+                           for i, a in enumerate(extra))):
+                raise Unsupported(f"template argument count or constraint argument of {s}")
+            raw_args = raw_args[:len(info.tparams)]
+        args = []
+        for i, arg in enumerate(raw_args):
+            expected = info.value_params.get(info.tparams[i]) if info is not None else None
+            if expected is None:
+                args.append(parse_type(arg, tparams, classes, value_params, aliases))
+            else:
+                args.append(parse_value_arg(arg, expected, value_params))
+        return Ty("cls", m.group(1), tuple(args))
     raise Unsupported(f"type {text!r}")
+
+
+def parse_value_arg(text, expected, values):
+    if text in values:
+        if values[text] != expected or values[text].width != expected.width:
+            raise Unsupported(f"non-type template argument conversion {text}")
+        return Ty("vparam", text, (expected,))
+    if expected.kind == "bool" and text in ("true", "false", "0", "1"):
+        return Ty("vlit", "true" if text in ("true", "1") else "false", (BOOL,))
+    match = re.fullmatch(r"(-?\d+)([uUlL]*)", text)
+    if match and expected.kind in ("int", "u32", "u64"):
+        n = int(match.group(1))
+        width = 32 if expected.kind == "u32" else 64 if expected.kind == "u64" else expected.width
+        lower, upper = (0, 2**width) if expected.kind != "int" else (-2**(width-1), 2**(width-1))
+        if lower <= n < upper:
+            return Ty("vlit", str(n), (expected,))
+    raise Unsupported(f"non-type template argument {text!r}")
+
+
+def known_type_traits(cpp):
+    canonical = " ".join(re.sub(r"\bconst\b|\bvolatile\b", "", cpp).split())
+    if canonical in ("__int128", "__int128_t"):
+        return False, True
+    if canonical in ("unsigned __int128", "__uint128_t"):
+        return False, False
+    if canonical in ("bool", "unsigned char", "unsigned short", "unsigned short int", "char16_t") or canonical in UNSIGNED_NAMES:
+        return False, False
+    if canonical in SIGNED_WIDTHS:
+        return True, False
+    raise Unsupported(f"type traits require a known integral C++ type: {cpp}")
+
+
+def constraint_binder(requirement):
+    return "cppConstraint_" + hashlib.sha256(requirement.encode()).hexdigest()[:16]
+
+
+def mod_to_uint32_binding(cpp, tag):
+    canonical = " ".join(re.sub(r"\bconst\b|\bvolatile\b", "", cpp).split())
+    known_type_traits(canonical)
+    if canonical in ("unsigned char", "unsigned short", "unsigned short int", "char16_t"):
+        return f'(Cpp.intModToUInt32 "{tag}" true)'
+    ty = parse_type(canonical, set(), set())
+    if ty.kind in ("bool", "u32", "u64"):
+        return f'(inferInstance : Cpp.ModToUInt32 "{tag}" {lean_type(ty)})'
+    if ty.kind == "int":
+        return f'(Cpp.intModToUInt32 "{tag}" {str(ty.width <= 32).lower()})'
+    raise Unsupported(f"integral remainder binding {cpp}")
+
+
+SOURCE_STREAM_TYPES = {
+    'int': ('int', INT32), 'long': ('long', INT), 'long int': ('long', INT),
+    'long long': ('long_long', INT), 'long long int': ('long_long', INT),
+    'unsigned int': ('unsigned_int', U32), 'unsigned': ('unsigned_int', U32),
+    'unsigned long': ('unsigned_long', U64), 'long unsigned int': ('unsigned_long', U64),
+    'unsigned long long': ('unsigned_long_long', U64),
+    'long long unsigned int': ('unsigned_long_long', U64),
+}
+
+
+def source_stream_type(node):
+    source = strip(node).get('type', {})
+    spelling = source.get('desugaredQualType', source.get('qualType', ''))
+    spelling = ' '.join(re.sub(r'\bconst\b|\bvolatile\b', '', spelling).split())
+    if spelling not in SOURCE_STREAM_TYPES:
+        raise Unsupported(f'concrete stream source-type contract: {spelling}')
+    return SOURCE_STREAM_TYPES[spelling]
 
 
 def container_text(text: str, containers) -> str:
@@ -150,6 +237,10 @@ def lean_type(ty: Ty) -> str:
         return "Cpp.OStream"
     if ty.kind == "tparam":
         return ty.name
+    if ty.kind == "vparam":
+        return lean_name(ty.name)
+    if ty.kind == "vlit":
+        return f"({ty.name} : {lean_type(ty.args[0])})"
     if ty.kind == "vec":
         return f"(Array {lean_type(ty.args[0])})"
     if ty.kind == "pair":
@@ -162,7 +253,7 @@ def lean_type(ty: Ty) -> str:
 
 
 def tparams_of(ty: Ty) -> set[str]:
-    if ty.kind == "tparam":
+    if ty.kind in ("tparam", "vparam"):
         return {ty.name}
     out = set()
     for a in ty.args:
@@ -284,6 +375,10 @@ class Sig:
     public: bool = True
     containers: list = field(default_factory=list)
     policies: dict = field(default_factory=dict)   # tparam -> [static member names] (policy classes)
+    value_params: dict = field(default_factory=dict)
+    constraints: list[str] = field(default_factory=list)
+    uses_globals: bool = False
+    initializes_globals: bool = False
 
     @property
     def mut_refs(self):
@@ -298,6 +393,8 @@ class Sig:
         out += [p[0] for p in self.mut_refs]
         if self.owner and not self.is_const and not self.is_static:
             out.append("self")
+        if self.uses_globals:
+            out.append("@globals")
         return out
 
 
@@ -308,6 +405,30 @@ class ClassInfo:
     fields: list              # [(name, Ty, init_node or None)]
     methods: list             # [Sig]
     public_fields: set[str] = field(default_factory=set)
+    value_params: dict = field(default_factory=dict)
+    constraints: list[str] = field(default_factory=list)
+
+
+def class_ty(info):
+    args = tuple(Ty("vparam", t, (info.value_params[t],)) if t in info.value_params
+                 else Ty("tparam", t) for t in info.tparams)
+    return Ty("cls", info.name, args)
+
+
+def substitute_constraint(condition, bindings):
+    return re.sub(r'\b[A-Za-z_][A-Za-z_0-9]*\b',
+                  lambda m: lean_type(bindings[m[0]]) if m[0] in bindings else m[0], condition)
+
+
+def class_requirements(ty, classes):
+    requirements = []
+    if ty.kind == "cls":
+        info = classes[ty.name]
+        bindings = dict(zip(info.tparams, ty.args))
+        requirements.extend("Cpp.TemplateConstraint " + substitute_constraint(c, bindings) for c in info.constraints)
+    for arg in ty.args:
+        requirements.extend(class_requirements(arg, classes))
+    return requirements
 
 
 class Requirements:
@@ -319,19 +440,33 @@ class Requirements:
             self.items.append(item)
 
 
-ORDER = ["Cpp.Streams", "Inhabited", "Zero", "One", "NatCast", "IntCast", "Add", "Sub", "Mul", "Neg", "Div", "Mod", "LT", "LE",
+ORDER = ["Cpp.Streams", "Cpp.TypeTraits", "Inhabited", "Zero", "One", "NatCast", "IntCast", "Add", "Sub", "Mul", "Neg", "Div", "Mod", "LT", "LE",
          "DecidableLT", "DecidableLE", "DecidableEq", "Min", "Max"]
 
 
-def binders(tparams, reqs: list[str]) -> str:
+def binders(tparams, reqs: list[str], value_params=None) -> str:
+    value_params = value_params or {}
     out = []
     for t in tparams:
-        out.append(f"{{{t} : Type}}")
+        out.append(f"{{{lean_name(t) if t in value_params else t} : {lean_type(value_params[t]) if t in value_params else 'Type'}}}")
     def key(r):
         cls = r.split()[0]
         return (ORDER.index(cls) if cls in ORDER else len(ORDER), r)
     for r in sorted(reqs, key=key):
-        out.append(f"[{r}]")
+        if r.startswith('Cpp.TypeTraits "'):
+            parameter = re.fullmatch(r'Cpp.TypeTraits "(\w+)" \w+', r)
+            if parameter is None:
+                raise Unsupported(f"non-generic type trait requirement {r}")
+            out.append(f"[cppTypeTraits_{parameter[1]} : {r}]")
+        elif r.startswith('Cpp.ModToUInt32 "'):
+            parameter = re.fullmatch(r'Cpp.ModToUInt32 "(\w+)" \w+', r)
+            if parameter is None:
+                raise Unsupported(f"remainder contract binder {r}")
+            out.append(f"[cppModToUInt32_{parameter[1]} : {r}]")
+        elif r.startswith("Cpp.TemplateConstraint ") and "Cpp.TypeTraits." in r:
+            out.append(f"[{constraint_binder(r)} : {r}]")
+        else:
+            out.append(f"[{r}]")
     return " ".join(out)
 
 
@@ -350,13 +485,32 @@ class Fn:
         self.field_names = {}
         self.continue_prefix: list[list[str]] = []
         self.callees: list[Sig] = []
+        self.member_call_bindings: dict[int, list[tuple[dict, set]]] = {}
+        self.type_trait_bindings: set[tuple[str, bool, bool]] = set()
         self.used_names: set[str] = set()
         self.floating_constexpr_types: set[str] = set()
+        occupied = local_names(sig.node) | {p[0] for p in sig.params} | set(sig.tparams)
+        self.global_names = {}
+        for key, (name, _, _) in tr.globals.items():
+            candidate = "cppGlobal_" + name
+            while candidate in occupied:
+                candidate += "_"
+            occupied.add(candidate)
+            self.global_names[key] = candidate
+        self.global_input = "cppGlobals"
+        while self.global_input in occupied:
+            self.global_input += "_"
+
+    def global_value(self):
+        return "({ " + ", ".join(f"{lean_name(name)} := {self.global_names[key]}"
+                                   for key, (name, _, _) in self.tr.globals.items()) + " } : cp.GlobalState)"
 
     # scopes
     def declare(self, name, ty):
         """Declare a C++ variable; a name already used in the function gets a fresh Lean name, since Lean's
         `do` notation does not let a mutable variable be shadowed (even by a later sibling block)."""
+        for requirement in class_requirements(ty, self.tr.classes):
+            self.reqs.add(requirement)
         visible = self.lookup(name) is not None
         lean = lean_name(name)
         if visible or lean in self.used_names or lean in self.visible_lean_names():
@@ -400,6 +554,23 @@ class Fn:
     # ------------------------------------------------------------------ expressions
     def expr(self, node, pre: list[str], expected: Ty | None = None):
         """Translate an rvalue; calls are hoisted into `pre` as `let t ← ...` lines. Returns (text, Ty)."""
+        if self.sig.uses_globals:
+            references, effectful_calls = set(), 0
+            def scan(n):
+                nonlocal effectful_calls
+                reference = n.get("referencedDecl", {})
+                if reference.get("id") in self.tr.globals:
+                    references.add(reference["id"])
+                if (n.get("kind") == "DeclRefExpr" and reference.get("kind") == "FunctionDecl"
+                        and reference.get("name") in self.tr.global_functions):
+                    effectful_calls += 1
+                if n.get("kind") == "UnresolvedLookupExpr" and n.get("name") in self.tr.global_functions:
+                    effectful_calls += 1
+                for child in inner(n):
+                    scan(child)
+            scan(node)
+            if effectful_calls > 1 or references and effectful_calls:
+                raise Unsupported("global reads and stateful calls require separate full expressions")
         if expected is not None and expected.kind == "cls":
             raw = strip(node)
             if raw.get("kind") not in ("CXXConstructExpr", "CXXTemporaryObjectExpr", "CXXUnresolvedConstructExpr"):
@@ -409,6 +580,14 @@ class Fn:
                     actual = None
                 if actual is not None and actual != expected:
                     info = self.tr.classes[expected.name]
+                    conversions = [sig for sig in info.methods if sig.is_ctor and len(sig.params) == 1
+                                   and not re.search(r"\bexplicit\b", self.tr.span(sig.node))]
+                    eligible = [sig for sig in conversions if self.trait_eligibility(sig, [node]) is True]
+                    if eligible:
+                        competing = [sig for sig in conversions if self.trait_eligibility(sig, [node]) is not False]
+                        if len(competing) != 1:
+                            raise Unsupported("cannot rank competing implicit conversion constructors")
+                        return self.call_sig(eligible[0], None, [node], pre, expected)
                     candidates = [sig for sig in info.methods if sig.is_ctor and len(sig.params) == 1
                                   and subst(sig.params[0][1], info.tparams, expected.args) == actual
                                   and not re.search(r"\bexplicit\b", self.tr.span(sig.node))]
@@ -416,6 +595,22 @@ class Fn:
                         # Recurse with the scalar constructor's parameter type so the
                         # argument is evaluated only once, including any nested call.
                         return self.call_sig(candidates[0], None, [node], pre, expected)
+        raw = strip(node)
+        if expected == U32 and ((raw.get("kind") == "BinaryOperator" and raw.get("opcode") == "%")
+                or (raw.get("kind") == "CXXOperatorCallExpr" and self.operator_name(raw) == "%")):
+            operands = inner(raw) if raw.get("kind") == "BinaryOperator" else inner(raw)[1:]
+            if len(operands) == 2:
+                left, right = operands
+                try:
+                    aty = self.tr.ty(strip(left)["type"]["qualType"], self)
+                    bty = self.tr.ty(strip(right)["type"]["qualType"], self)
+                except Unsupported:
+                    aty = bty = None
+                if aty is not None and bty is not None and aty.kind == "tparam" and bty.kind == "u32":
+                    at, _ = self.expr(left, pre)
+                    bt, _ = self.expr(right, pre)
+                    self.reqs.add(f'Cpp.ModToUInt32 "{aty.name}" {aty.name}')
+                    return f'(Cpp.ModToUInt32.apply (tag := "{aty.name}") {at} {bt})', U32
         text, ty = self._expr(node, pre, expected)
         if expected is not None and expected.kind == "cls" and ty != expected:
             info = self.tr.classes[expected.name]
@@ -529,6 +724,12 @@ class Fn:
             return self.convert(t, ty, target, sub)
         if kind == "DeclRefExpr":
             name = n["referencedDecl"]["name"]
+            key = n["referencedDecl"].get("id")
+            if key in self.tr.globals:
+                return self.global_names[key], self.tr.globals[key][1]
+            constant = self.tr.constants.get(n["referencedDecl"].get("id"))
+            if constant is not None:
+                return f"cp.{lean_name(name)}", constant[1]
             ty = self.lookup(name)
             if ty is None:
                 raise Unsupported(f"unknown variable {name}")
@@ -577,7 +778,7 @@ class Fn:
                 t = neg_inf.group(1)
                 return self.numeric_trait(t, "negativeInfinity", Ty("tparam", t))
             if op == "*" and strip(sub).get("kind") == "CXXThisExpr":
-                return self.self_value(), Ty("cls", self.cls.name, tuple(Ty("tparam", t) for t in self.cls.tparams))
+                return self.self_value(), class_ty(self.cls)
             if op in ("++", "--"):
                 raise Unsupported("increment inside an expression")
             t, ty = self.expr(sub, pre)
@@ -601,12 +802,19 @@ class Fn:
             raise Unsupported(f"unary {op}")
         if kind == "CompoundAssignOperator":
             lhs, rhs = inner(n)
+            if self.tr.functions.get("operator" + n["opcode"]):
+                raise Unsupported("unresolved compound operator has free overload candidates")
             return self.method_call(lhs, "operator" + n["opcode"], [rhs], pre)
         if kind == "BinaryOperator":
             return self.binary(n, pre)
         if kind == "CXXOperatorCallExpr":
             op = self.operator_name(n)
             args = inner(n)[1:]
+            if op in ("+=", "-=", "*=", "/=", "%=") and len(args) == 2:
+                callee = strip(inner(n)[0])
+                if callee.get("referencedDecl", {}).get("kind") != "CXXMethodDecl":
+                    raise Unsupported("compound operator other than a resolved member")
+                return self.method_call(args[0], "operator" + op, args[1:], pre)
             if op in ("++", "--") and args:
                 base = strip(args[0])
                 if base.get("kind") == "UnaryOperator" and base.get("opcode") == "*" and \
@@ -614,9 +822,29 @@ class Fn:
                     return self.self_call("operator" + op, args[1:], pre)
                 return self.method_call(args[0], "operator" + op, args[1:], pre)
             if op in ("+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=", "<=>", "<<", ">>", "&&", "||") and len(args) == 2:
-                return self.binary_parts(op, args[0], args[1], pre)
-            if op == "-" and len(args) == 1:
+                return self.binary_parts(op, args[0], args[1], pre, callee=strip(inner(n)[0]))
+            if op in ("+", "-", "!", "~") and len(args) == 1:
                 t, ty = self.expr(args[0], pre)
+                if ty.kind == "cls":
+                    reference = strip(inner(n)[0]).get("referencedDecl")
+                    if reference is None:
+                        raise Unsupported("unresolved class unary operator")
+                    sig = self.tr.resolve_function(reference["id"])
+                    if sig.cpp_name != "operator" + op or sig.mut_refs:
+                        raise Unsupported("unary operator declaration or mutable operand")
+                    if "&" in type_of_decl(sig.node).split("(")[0]:
+                        raise Unsupported("unary operator returning a reference")
+                    info = self.tr.classes[ty.name]
+                    if (set(info.tparams) - info.value_params.keys()
+                            or set(sig.tparams) - sig.value_params.keys()):
+                        raise Unsupported("class unary operator with type template parameters")
+                    if sig.owner:
+                        if sig.owner != ty.name or not sig.is_const or sig.params:
+                            raise Unsupported("unary member operator needs a const receiver")
+                        return self.call_sig(sig, t, [], pre, owner_ty=ty)
+                    return self.call_sig(sig, None, args, pre, evaluated_args=[(t, ty)])
+                if op != "-":
+                    raise Unsupported("non-class overloaded unary operator")
                 if ty.kind == "tparam":
                     self.need("Neg", ty)
                 return f"(-{t})", ty
@@ -666,7 +894,7 @@ class Fn:
             raise Unsupported(f"assignment {op} inside an expression")
         return self.binary_parts(op, a, b, pre)
 
-    def binary_parts(self, op, a, b, pre):
+    def binary_parts(self, op, a, b, pre, callee=None):
         if op in ("&&", "||"):
             at, _ = self.expr(a, pre, BOOL)
             rpre = []
@@ -678,7 +906,47 @@ class Fn:
         if aty.kind in ("istream", "ostream"):
             return self.stream_shift(op, a, at, aty, b, pre)
         bt, bty = self.expr(b, pre)
+        if aty.kind == "cls" or bty.kind == "cls":
+            return self.class_binary(op, a, at, aty, b, bt, bty, pre, callee)
         return self.arith(op, at, aty, a, bt, bty, b)
+
+    def class_binary(self, op, a, at, aty, b, bt, bty, pre, callee):
+        name = "operator" + op
+        reference = callee.get("referencedDecl") if callee else None
+        if reference is not None:
+            sig = self.tr.resolve_function(reference["id"])
+            if sig.cpp_name != name:
+                raise Unsupported("binary operator declaration mismatch")
+        else:
+            # With only value parameters, the associated types cannot introduce
+            # an unknown namespace through a type template argument. Still reject
+            # every competing member/free declaration rather than rank it here.
+            if aty.kind != "cls" or bty.kind != "cls" or aty.name != bty.name:
+                raise Unsupported("unresolved binary operator needs the same class operands")
+            info = self.tr.classes[aty.name]
+            if set(info.tparams) - info.value_params.keys():
+                raise Unsupported("unresolved binary operator with type parameters")
+            if any(s.cpp_name == name for s in info.methods):
+                raise Unsupported("unresolved binary operator has member candidates")
+            candidates = self.tr.functions.get(name, [])
+            if len(candidates) != 1:
+                raise Unsupported("unresolved binary operator has competing free candidates")
+            sig = candidates[0]
+            if (not sig.node.get("lean_hidden_friend") or len(sig.params) != 2
+                    or any(t.kind != "cls" or t.name != aty.name for _, t, _ in sig.params)):
+                raise Unsupported("unresolved binary operator is not the class hidden friend")
+        if set(sig.tparams) - sig.value_params.keys():
+            raise Unsupported("binary operator with type template parameters")
+        if sig.mut_refs:
+            raise Unsupported("binary operator with mutable reference operands")
+        if sig.owner:
+            if aty.kind != "cls" or sig.owner != aty.name or not sig.is_const:
+                raise Unsupported("binary member operator needs a const receiver")
+            owner = self.tr.classes[sig.owner]
+            if set(owner.tparams) - owner.value_params.keys():
+                raise Unsupported("binary member operator with type template parameters")
+            return self.call_sig(sig, at, [b], pre, owner_ty=aty, evaluated_args=[(bt, bty)])
+        return self.call_sig(sig, None, [a, b], pre, evaluated_args=[(at, aty), (bt, bty)])
 
     def stream_base(self, node):
         n = strip(node)
@@ -694,26 +962,44 @@ class Fn:
         if sty.kind == "istream" and op == ">>":
             target = self.lvalue(right)
             ty = target[3]
-            if ty.kind != "tparam":
-                raise Unsupported("stream extraction of a concrete type needs its source-type contract")
-            self.reqs.add(f"Cpp.StreamRead {lean_type(ty)}")
+            operation = "Cpp.StreamRead.read"
+            source_arg = ""
+            if ty.kind == "tparam":
+                self.reqs.add(f"Cpp.StreamRead {lean_type(ty)}")
+            else:
+                source, carrier = source_stream_type(right)
+                if carrier != ty:
+                    raise Unsupported("stream source type and carrier disagree")
+                self.reqs.add(f'Cpp.SourceStreamRead "{source}" {lean_type(ty)}')
+                operation = "Cpp.SourceStreamRead.read"
+                source_arg = f' (source := "{source}")'
             tmp = self.fresh()
-            pre.append(f"let {tmp} ← Cpp.StreamRead.read {stream} {self.read_lvalue(target)}")
+            pre.append(f"let {tmp} ← {operation}{source_arg} {stream} {self.read_lvalue(target)}")
             pre.extend(self.assign_lines(target, f"{tmp}.1"))
             pre.extend(self.assign_lines(receiver, f"{tmp}.2"))
         elif sty.kind == "ostream" and op == "<<":
             value, ty = self.expr(right, pre)
+            operation = "Cpp.StreamWrite.write"
+            source_arg = ""
             if strip(right).get("kind") == "CharacterLiteral" and \
                     strip(right).get("type", {}).get("qualType") == "char":
                 value = f"(⟨{value}⟩ : Cpp.StreamChar)"
                 self.reqs.add("Cpp.StreamWrite Cpp.StreamChar")
             else:
-                if ty.kind != "tparam" or strip(right).get("kind") not in (
+                if strip(right).get("kind") not in (
                         "DeclRefExpr", "MemberExpr", "CXXDependentScopeMemberExpr", "ArraySubscriptExpr"):
                     raise Unsupported("stream insertion needs a typed template value or a character literal")
-                self.reqs.add(f"Cpp.StreamWrite {lean_type(ty)}")
+                if ty.kind == "tparam":
+                    self.reqs.add(f"Cpp.StreamWrite {lean_type(ty)}")
+                else:
+                    source, carrier = source_stream_type(right)
+                    if carrier != ty:
+                        raise Unsupported("stream source type and carrier disagree")
+                    self.reqs.add(f'Cpp.SourceStreamWrite "{source}" {lean_type(ty)}')
+                    operation = "Cpp.SourceStreamWrite.write"
+                    source_arg = f' (source := "{source}")'
             tmp = self.fresh()
-            pre.append(f"let {tmp} ← Cpp.StreamWrite.write {stream} {value}")
+            pre.append(f"let {tmp} ← {operation}{source_arg} {stream} {value}")
             pre.extend(self.assign_lines(receiver, tmp))
         else:
             raise Unsupported(f"stream operation {op} on {sty}")
@@ -827,7 +1113,7 @@ class Fn:
         return "(⟨" + ", ".join(self.field_names[f] for f, _, _ in self.cls.fields) + "⟩ : " + self.cls_type() + ")"
 
     def cls_type(self):
-        return lean_type(Ty("cls", self.cls.name, tuple(Ty("tparam", t) for t in self.cls.tparams)))
+        return lean_type(class_ty(self.cls))
 
     # ------------------------------------------------------------------ construction
     def construct(self, ty: Ty, n, pre):
@@ -898,6 +1184,13 @@ class Fn:
                 spelling = strip(args[0]).get("type", {}).get("qualType", "")
                 argty = None if spelling in ("<dependent type>", "NULL TYPE") else self.tr.ty(spelling, self)
                 if argty == ty:
+                    if any(s.is_ctor and s.tparams
+                           and any(p.get("kind") == "ParmVarDecl" and "&" in type_of_decl(p)
+                                   for p in inner(s.node))
+                           for s in self.tr.classes[ty.name].methods):
+                        # A forwarding/non-const reference template can beat the
+                        # implicit copy constructor. Do not erase that selection.
+                        raise Unsupported("record copy competing with a reference template constructor")
                     copies = [s for s in self.tr.classes[ty.name].methods if s.is_ctor and len(s.params) == 1
                               and s.params[0][1] == ty]
                     if copies:
@@ -930,11 +1223,44 @@ class Fn:
         raise Unsupported(f"default value of {ty}")
 
     # ------------------------------------------------------------------ calls
+    def trait_packets(self, sig, args):
+        parameters = {p for c in sig.constraints
+                      for p in re.findall(r'Cpp\.TypeTraits\.\w+ \(tag := "(\w+)"\)', c)}
+        packets = {}
+        for (_, formal, _), arg in zip(sig.params, args):
+            if formal.kind == "tparam" and formal.name in parameters:
+                cpp = strip(arg).get("type", {}).get("qualType", "")
+                flags = known_type_traits(cpp)
+                packet = (cpp, *flags)
+                if formal.name in packets and packets[formal.name][1:] != packet[1:]:
+                    raise Unsupported("conflicting type trait deductions")
+                packets[formal.name] = packet
+        if parameters - packets.keys():
+            raise Unsupported("cannot deduce type traits for this constrained call")
+        return packets
+
+    def trait_eligibility(self, sig, args):
+        if not sig.constraints or any("Cpp.TypeTraits." not in c for c in sig.constraints):
+            return None
+        try:
+            packets = self.trait_packets(sig, args)
+        except Unsupported:
+            return None
+        for condition in sig.constraints:
+            parameter = re.search(r'\(tag := "(\w+)"\)', condition)[1]
+            _, signed, int128 = packets[parameter]
+            value = signed or ("Cpp.TypeTraits.isCvInt128" in condition and int128)
+            if value != condition.endswith("= true)"):
+                return False
+        return True
+
     def pick(self, sigs, args, what):
-        cands = [s for s in sigs if len(s.params) == len(args)]
+        cands = [s for s in sigs if len(s.params) == len(args)
+                 and self.trait_eligibility(s, args) is not False]
         if len(cands) != 1:
             cands2 = [s for s in sigs if len(s.params) >= len(args)
-                      and all(self.has_default(s, i) for i in range(len(args), len(s.params)))]
+                      and all(self.has_default(s, i) for i in range(len(args), len(s.params)))
+                      and self.trait_eligibility(s, args) is not False]
             if len(cands2) == 1:
                 return cands2[0]
             raise Unsupported(f"cannot resolve {what} with {len(args)} argument(s)")
@@ -951,16 +1277,24 @@ class Fn:
         # method calls: obj.f(args) / this->f(args)
         if ck in ("MemberExpr", "CXXDependentScopeMemberExpr"):
             name = callee.get("name") or callee.get("member")
+            if not name.startswith("operator") and self.tr.span(callee).rstrip().endswith(">"):
+                raise Unsupported("explicit member template arguments")
             base = strip(inner(callee)[0]) if inner(callee) else None
             if base is None or base.get("kind") == "CXXThisExpr":
                 return self.self_call(name, args, pre)
             return self.method_call(base, name, args, pre)
-        if ck in ("DeclRefExpr", "UnresolvedLookupExpr", "UnresolvedMemberExpr"):
+        if ck == "UnresolvedMemberExpr":
+            if self.tr.span(callee).rstrip().endswith(">"):
+                raise Unsupported("explicit member template arguments")
+            name = callee.get("name") or self.tr.member_token(callee)
+            base = strip(inner(callee)[0]) if inner(callee) else None
+            if base is None or base.get("kind") == "CXXThisExpr":
+                return self.self_call(name, args, pre)
+            return self.method_call(base, name, args, pre)
+        if ck in ("DeclRefExpr", "UnresolvedLookupExpr"):
             name = callee.get("referencedDecl", {}).get("name") if ck == "DeclRefExpr" else callee.get("name")
             if not name:
                 name = self.tr.token(callee)
-            if ck == "UnresolvedMemberExpr":
-                return self.self_call(name, args, pre)
             if ck == "DeclRefExpr" and callee.get("referencedDecl", {}).get("kind") == "CXXMethodDecl":
                 # Resolve the actual declaration, not just its spelling: a global
                 # function or another class can have the same name.
@@ -1034,6 +1368,10 @@ class Fn:
         raise Unsupported(f"non-const member {name} from a const member")
 
     def method_call(self, base, name, args, pre):
+        raw = strip(base)
+        if (raw.get("kind") == "UnaryOperator" and raw.get("opcode") == "*"
+                and strip(inner(raw)[0]).get("kind") == "CXXThisExpr"):
+            return self.self_call(name, args, pre)
         bt, bty = self.expr(base, pre)
         if bty.kind == "vec":
             return self.vector_call(base, bt, bty, name, args, pre)
@@ -1042,13 +1380,13 @@ class Fn:
             sigs = [s for s in info.methods if s.cpp_name == name and not s.is_ctor]
             sig = self.pick(sigs, args, f"{bty.name}::{name}")
             if sig.is_const:
-                return self.call_sig(sig, bt, args, pre)
+                return self.call_sig(sig, bt, args, pre, owner_ty=bty)
             if strip(base).get("kind") in ("CXXConstructExpr", "CXXTemporaryObjectExpr", "CXXUnresolvedConstructExpr"):
                 # A temporary receiver is consumed here. Its updated state is not
                 # written to another object; the returned value is still retained.
-                return self.call_sig(sig, bt, args, pre)
+                return self.call_sig(sig, bt, args, pre, owner_ty=bty)
             target = self.lvalue(base)
-            return self.call_sig(sig, ("obj", target, bt), args, pre)
+            return self.call_sig(sig, ("obj", target, bt), args, pre, owner_ty=bty)
         raise Unsupported(f"method {name} on {bty}")
 
     def vector_call(self, base, bt, bty, name, args, pre):
@@ -1120,22 +1458,101 @@ class Fn:
         if not sigs:
             raise Unsupported(f"unknown function {name}")
         sig = self.pick(sigs, args, name)
-        return self.call_sig(sig, None, args, pre)
+        value_args = {}
+        if sig.value_params:
+            explicit = re.fullmatch(rf"(?:cp::)?{re.escape(name)}<(.*)>", call_text)
+            if explicit:
+                raw = split_args(explicit.group(1))
+                if len(raw) != len(sig.tparams):
+                    raise Unsupported(f"template argument count of {name}")
+                own_values = {**(self.cls.value_params if self.cls else {}), **self.sig.value_params}
+                for parameter, text in zip(sig.tparams, raw):
+                    if parameter in sig.value_params:
+                        value_args[parameter] = parse_value_arg(text, sig.value_params[parameter], own_values)
+                    else:
+                        raise Unsupported("explicit mixed type and non-type function arguments")
+        return self.call_sig(sig, None, args, pre, value_args=value_args)
 
-    def call_sig(self, sig: Sig, receiver, args, pre, expected=None):
+    def call_sig(self, sig: Sig, receiver, args, pre, expected=None, owner_ty=None, value_args=None, evaluated_args=None):
         """Emit `let t ← f receiver args` into pre and write back mutable outputs. Returns (value, Ty)."""
         texts = []
         writes = []
-        for (pname, pty, is_ref), arg in zip(sig.params, args):
+        bindings = dict(value_args or {})
+        info = self.tr.classes.get(sig.owner)
+        if info is not None and (info.value_params or sig.tparams):
+            actual = expected if sig.is_ctor else owner_ty
+            if actual is None and self.cls is not None and self.cls.name == info.name:
+                actual = class_ty(self.cls)
+            if actual is not None:
+                bindings.update(zip(info.tparams, actual.args))
+        def infer(formal, actual):
+            if (sig.owner or sig.constraints) and formal.kind == "tparam" and formal.name in sig.tparams:
+                if formal.name in bindings and bindings[formal.name] != actual:
+                    raise Unsupported("conflicting member template type arguments")
+                bindings[formal.name] = actual
+            elif formal.kind == "vparam" and formal.name in sig.value_params:
+                if (actual.kind not in ("vparam", "vlit") or actual.args != formal.args
+                        or actual.args[0].width != formal.args[0].width):
+                    raise Unsupported("non-type template argument deduction conversion")
+                if formal.name in bindings and bindings[formal.name] != actual:
+                    raise Unsupported("conflicting non-type template arguments")
+                bindings[formal.name] = actual
+            elif formal.kind == actual.kind and formal.name == actual.name:
+                for f, a in zip(formal.args, actual.args):
+                    infer(f, a)
+        if (sig.owner or sig.constraints) and sig.tparams:
+            for (_, formal, _), arg in zip(sig.params, args):
+                infer(formal, self.tr.ty(strip(arg)["type"]["qualType"], self))
+            if set(sig.tparams) - bindings.keys():
+                raise Unsupported(f"cannot infer member template arguments of {sig.cpp_name}")
+        if sig.value_params:
+            for index, ((_, formal, _), arg) in enumerate(zip(sig.params, args)):
+                if formal.kind == "cls":
+                    actual = evaluated_args[index][1] if evaluated_args is not None else self.tr.ty(strip(arg)["type"]["qualType"], self)
+                    infer(formal, actual)
+            if set(sig.value_params) - bindings.keys():
+                raise Unsupported(f"cannot infer non-type template arguments of {sig.cpp_name}")
+        for index, ((pname, pty, is_ref), arg) in enumerate(zip(sig.params, args)):
             if is_ref:
                 target = self.lvalue(arg)
                 texts.append(self.read_lvalue(target))
                 writes.append(target)
             else:
-                t, _ = self.expr(arg, pre, self.instantiate_param(pty, sig))
+                pty = subst(pty, list(bindings), list(bindings.values())) if bindings else self.instantiate_param(pty, sig)
+                if evaluated_args is None:
+                    t, _ = self.expr(arg, pre, pty)
+                else:
+                    t, ty = evaluated_args[index]
+                    t, _ = self.convert(t, ty, pty, arg)
                 texts.append(t)
         self.callees.append(sig)
+        packets = self.trait_packets(sig, args)
+        discharged = set()
+        if packets:
+            if self.trait_eligibility(sig, args) is not True:
+                raise Unsupported("constrained call eligibility is not established")
+            discharged.update(f'Cpp.TypeTraits "{p}" {p}' for p in packets)
+            discharged.update(f'Cpp.ModToUInt32 "{p}" {p}' for p in packets)
+            discharged.update("Cpp.TemplateConstraint " + c for c in sig.constraints)
+            self.type_trait_bindings.update(packets.values())
+            for parameter, (cpp, _, _) in packets.items():
+                pre.append(f'let _ : Cpp.ModToUInt32 "{parameter}" {lean_type(bindings[parameter])} := '
+                           + mod_to_uint32_binding(cpp, parameter))
+        if (sig.owner and (sig.tparams or info.constraints)) or packets or sig.value_params:
+            self.member_call_bindings.setdefault(id(sig), []).append((dict(bindings), discharged))
         parts = [sig.lean_name]
+        parameters = {**(info.value_params if info else {}), **sig.value_params}
+        if sig.owner or sig.constraints:
+            parameters = {**dict.fromkeys(sig.tparams), **parameters}
+        for parameter in parameters:
+            if parameter in bindings:
+                parts.append(f"({lean_name(parameter)} := {lean_type(bindings[parameter])})")
+        for parameter, (_, signed, int128) in packets.items():
+            parts.append(f"(cppTypeTraits_{parameter} := ⟨{str(signed).lower()}, {str(int128).lower()}⟩)")
+        for condition in sig.constraints:
+            r = "Cpp.TemplateConstraint " + condition
+            if r in discharged:
+                parts.append(f"({constraint_binder(r)} := ⟨by decide⟩)")
         if receiver == "self":
             parts.append(self.self_value())
         elif isinstance(receiver, tuple):
@@ -1143,6 +1560,10 @@ class Fn:
         elif receiver is not None:
             parts.append(receiver)
         parts += texts
+        if sig.uses_globals:
+            if not self.sig.uses_globals:
+                raise Unsupported("global call dependency was not propagated")
+            parts.append(self.global_value())
         tmp = self.fresh()
         pre.append(f"let {tmp} ← {' '.join(parts)}")
         outputs = sig.outputs()
@@ -1157,6 +1578,9 @@ class Fn:
                 values[o] = tmp + "".join([".2"] * i) + (".1" if i < len(outputs) - 1 else "")
         for target, (pname, _, _) in zip(writes, sig.mut_refs):
             pre.extend(self.assign_lines(target, values[pname]))
+        if sig.uses_globals:
+            for key, (name, _, _) in self.tr.globals.items():
+                pre.append(f"{self.global_names[key]} := {values['@globals']}.{lean_name(name)}")
         if receiver == "self":
             for f, _, _ in self.cls.fields:
                 pre.append(f"{self.field_names[f]} := {values['self']}.{lean_name(f)}")
@@ -1164,7 +1588,7 @@ class Fn:
             pre.extend(self.assign_lines(receiver[1], values["self"]))
         if sig.ret.kind == "void":
             return "()", VOID
-        return values["ret"], self.instantiate_param(sig.ret, sig)
+        return values["ret"], (subst(sig.ret, list(bindings), list(bindings.values())) if bindings else self.instantiate_param(sig.ret, sig))
 
     def instantiate_param(self, ty, sig):
         return ty
@@ -1176,6 +1600,10 @@ class Fn:
         kind = n.get("kind")
         if kind == "DeclRefExpr":
             name = n["referencedDecl"]["name"]
+            key = n["referencedDecl"].get("id")
+            if key in self.tr.globals:
+                ty = self.tr.globals[key][1]
+                return (self.global_names[key], [], ty, ty)
             ty = self.lookup(name)
             if ty is None:
                 raise Unsupported(f"unknown variable {name}")
@@ -1323,6 +1751,8 @@ class Fn:
                 outs.append(value)
             elif o == "self":
                 outs.append(self.self_value())
+            elif o == "@globals":
+                outs.append(self.global_value())
             else:
                 outs.append(lean_name(o))
         if not outs:
@@ -1339,6 +1769,8 @@ class Fn:
             return
         if d.get("kind") != "VarDecl":
             raise Unsupported(f"declaration {d.get('kind')}")
+        if d.get("storageClass") in ("static", "extern") or d.get("tls"):
+            raise Unsupported("local static, external, or thread-local storage")
         name = d["name"]
         qual = type_of_decl(d)
         init = inner(d)
@@ -1422,6 +1854,22 @@ class Fn:
         n = strip(node)
         kind = n.get("kind")
         pre = []
+        if kind == "CXXOperatorCallExpr" and self.operator_name(n) == "=":
+            callee, lhs, rhs = inner(n)
+            declaration = self.tr.raw_declarations.get(strip(callee).get("referencedDecl", {}).get("id"), {})
+            target = self.lvalue(lhs)
+            if (not declaration.get("isImplicit") or declaration.get("name") != "operator="
+                    or target[3].kind != "cls"
+                    or any(ty.kind not in ("int", "u32", "u64", "bool")
+                           for _, ty, _ in self.tr.classes[target[3].name].fields)):
+                raise Unsupported("record assignment requires an implicit scalar-field assignment")
+            value, ty = self.expr(rhs, pre, target[3])
+            if ty != target[3]:
+                raise Unsupported("record assignment type mismatch")
+            self.flush(pre)
+            for line in self.assign_lines(target, value):
+                self.emit(line)
+            return
         if kind == "BinaryOperator" and n["opcode"] == "=":
             lhs, rhs = inner(n)
             target = self.lvalue(lhs)
@@ -1440,6 +1888,19 @@ class Fn:
             else:
                 op = self.operator_name(n)[:-1]
                 lhs, rhs = inner(n)[1], inner(n)[2]
+            try:
+                lhs_type = self.tr.ty(strip(lhs)["type"]["qualType"], self)
+            except Unsupported:
+                lhs_type = None  # Vector reference aliases are resolved by lvalue below.
+            if lhs_type is not None and lhs_type.kind == "cls":
+                if kind == "CXXOperatorCallExpr":
+                    self.expr(n, pre)
+                else:
+                    if self.tr.functions.get("operator" + n["opcode"]):
+                        raise Unsupported("unresolved compound operator has free overload candidates")
+                    self.method_call(lhs, "operator" + n["opcode"], [rhs], pre)
+                self.flush(pre)
+                return
             target = self.lvalue(lhs)
             current = self.read_lvalue(target)
             value, _ = self.binary_parts_text(op, current, target[3], rhs, pre)
@@ -1739,8 +2200,10 @@ class Fn:
             out.add(root(inner(node)[1]))
         if kind in ("CallExpr", "CXXMemberCallExpr"):
             callee = strip(inner(node)[0])
-            if callee.get("kind") in ("MemberExpr", "CXXDependentScopeMemberExpr") and inner(callee):
+            if callee.get("kind") in ("MemberExpr", "CXXDependentScopeMemberExpr", "UnresolvedMemberExpr") and inner(callee):
                 name = callee.get("name") or callee.get("member")
+                if name is None and callee.get("kind") == "UnresolvedMemberExpr":
+                    name = self.tr.member_token(callee)
                 if name not in ("size", "empty", "back", "front"):
                     out.add(root(inner(callee)[0]))
                     if strip(inner(callee)[0]).get("kind") == "CXXThisExpr":
@@ -1948,7 +2411,7 @@ class Fn:
 
 
 def subst(ty: Ty, names, args):
-    if ty.kind == "tparam" and ty.name in names:
+    if ty.kind in ("tparam", "vparam") and ty.name in names:
         i = names.index(ty.name)
         return args[i] if i < len(args) else ty
     if ty.args:
@@ -1964,6 +2427,10 @@ class Translator:
         self.source_bytes = source_bytes
         self.external = list(external)   # (decls, source bytes) of the dependencies: callable, not emitted          # list of top-level AST nodes in source order
         self.classes: dict[str, ClassInfo] = {}
+        self.aliases: dict[str, Ty] = {}
+        self.constants: dict[str, tuple[str, Ty, str]] = {}
+        self.globals: dict[str, tuple[str, Ty, int | None]] = {}
+        self.global_initializers: dict[str, dict] = {}
         self.functions: dict[str, list[Sig]] = {}
         self.order: list = []       # ("class", ClassInfo) / ("fn", Sig)
         self.tparams_stack: list[set] = []
@@ -1975,6 +2442,15 @@ class Translator:
         if "offset" not in begin or "tokLen" not in begin:
             raise Unsupported(f"no source location for {node.get('kind')}")
         return self.source_bytes[begin["offset"]:begin["offset"] + begin["tokLen"]].decode()
+
+    def member_token(self, node):
+        end = node.get("range", {}).get("end", {})
+        if "spellingLoc" in end or "offset" not in end or "tokLen" not in end:
+            raise Unsupported("unresolved member name requires a direct source token")
+        name = self.source_bytes[end["offset"]:end["offset"] + end["tokLen"]].decode()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name):
+            raise Unsupported("unresolved member name token")
+        return name
 
     def span(self, node):
         """The source text of a node."""
@@ -1989,10 +2465,149 @@ class Translator:
 
     def ty(self, text, fn: Fn | None = None):
         tps = set()
+        values = {}
         if fn is not None:
             tps = set(fn.sig.tparams) | (set(fn.cls.tparams) if fn.cls else set())
+            values = {**(fn.cls.value_params if fn.cls else {}), **fn.sig.value_params}
             text = container_text(text, fn.sig.containers)
-        return parse_type(text, tps, set(self.classes))
+        return parse_type(text, tps - values.keys(), self.classes, values, self.aliases)
+
+    def type_constraint(self, expression, names, values):
+        def unwrap(text):
+            while text.startswith("(") and text.endswith(")"):
+                depth = 0
+                for i, ch in enumerate(text):
+                    depth += (ch == "(") - (ch == ")")
+                    if depth == 0:
+                        break
+                if i != len(text) - 1:
+                    break
+                text = text[1:-1]
+            return text
+        expression = unwrap(re.sub(r"\s+", "", expression))
+        negated = expression.startswith("!")
+        if negated:
+            rest = expression[1:]
+            if "||" in rest and not rest.startswith("("):
+                raise Unsupported("unparenthesized negated type constraint")
+            expression = unwrap(rest)
+        match = re.fullmatch(r"std::is_signed_v<(\w+)>(.*)", expression)
+        if not match:
+            raise Unsupported("unsupported type constraint")
+        parameter, tail = match.groups()
+        if parameter not in names or parameter in values:
+            raise Unsupported("type constraint requires a type parameter")
+        predicate = f'(Cpp.TypeTraits.isSigned (tag := "{parameter}") (α := {parameter}))'
+        if tail:
+            expected = f"||std::is_same_v<std::remove_cv_t<{parameter}>,__int128>"
+            if tail != expected:
+                raise Unsupported("unsupported compound type constraint")
+            predicate = f'({predicate} || (Cpp.TypeTraits.isCvInt128 (tag := "{parameter}") (α := {parameter})))'
+        return f"({predicate} = {'false' if negated else 'true'})"
+
+    def template_params(self, node, allow_constraints=False, allow_type_constraints=False):
+        names, values, constraints = [], {}, []
+        for param in inner(node):
+            kind = param.get("kind")
+            if kind not in ("TemplateTypeParmDecl", "NonTypeTemplateParmDecl", "TemplateTemplateParmDecl"):
+                continue
+            name = param.get("name")
+            if (allow_constraints and not name and kind == "NonTypeTemplateParmDecl"
+                    and not param.get("isParameterPack")):
+                spelling = type_of_decl(param)
+                match = re.fullmatch(r"std::enable_if_t<(.*)>\s*\*", spelling)
+                defaults = inner(param)
+                if (not match or len(defaults) != 1 or len(inner(defaults[0])) != 1
+                        or inner(defaults[0])[0].get("kind") != "CXXNullPtrLiteralExpr"):
+                    raise Unsupported("template constraint requires std::enable_if_t and nullptr default")
+                if allow_type_constraints and "is_signed_v" in match.group(1):
+                    constraints.append(self.type_constraint(match.group(1), names, values))
+                    continue
+                expression = match.group(1).replace("(", "").replace(")", "")
+                comparison = re.fullmatch(r"\s*(\w+)\s*(<=|>=|==|!=|<|>)\s*(\w+)\s*", expression)
+                if not comparison:
+                    raise Unsupported("class constraint comparison")
+                left, op, right = comparison.groups()
+                variable = left if left in values else right
+                literal = right if left in values else left
+                if (variable not in values or values[variable].kind not in ("int", "u32", "u64")
+                        or not re.fullmatch(r"0|[1-9][0-9]*", literal) or int(literal) >= 2**31):
+                    raise Unsupported("class constraint needs one integral parameter and a nonnegative int literal")
+                ty = values[variable]
+                rendered = {variable: lean_name(variable), literal: f"({int(literal)} : {lean_type(ty)})"}
+                op = {"<=": "≤", ">=": "≥", "==": "=", "!=": "≠"}.get(op, op)
+                constraints.append(f"({rendered[left]} {op} {rendered[right]})")
+                continue
+            if not name or param.get("isParameterPack") or kind == "TemplateTemplateParmDecl":
+                raise Unsupported(f"template parameter {kind}: named non-pack parameters required")
+            if constraints:
+                raise Unsupported("class constraint parameters must be trailing")
+            names.append(name)
+            if kind == "NonTypeTemplateParmDecl":
+                ty = parse_type(type_of_decl(param), set(), self.classes, aliases=self.aliases)
+                if ty.kind not in ("int", "u32", "u64", "bool") or ty.width > 64:
+                    raise Unsupported(f"non-type template parameter {name}")
+                values[name] = ty
+        return names, values, constraints
+
+    def collect_constant(self, node):
+        """Only direct scalar literals: no dynamic initialization or discarded effects."""
+        spelling = type_of_decl(node)
+        if not re.search(r"\bconst\b", spelling) or re.search(r"\bvolatile\b", spelling):
+            raise Unsupported("global variable requires a nonvolatile scalar constant")
+        ty = self.ty(spelling)
+        children = inner(node)
+        if len(children) != 1 or ty.kind not in ("int", "u32", "u64", "bool"):
+            raise Unsupported("global constant requires one scalar literal")
+        value = children[0]
+        # Implicit conversions are deliberately excluded here. Their source
+        # widths and signedness require a separate conversion rule.
+        sign = 1
+        if value.get("kind") == "UnaryOperator" and value.get("opcode") == "-":
+            sign = -1
+            value = inner(value)[0]
+        if ty.kind == "bool" and value.get("kind") == "CXXBoolLiteralExpr" and sign == 1:
+            literal = "true" if value["value"] else "false"
+        elif ty.kind != "bool" and value.get("kind") == "IntegerLiteral":
+            source_ty = self.ty(type_of_decl(value))
+            number = sign * int(value["value"])
+            width = 32 if ty.kind == "u32" else 64 if ty.kind == "u64" else ty.width
+            lower, upper = (-(2**(width-1)), 2**(width-1)) if ty.kind == "int" else (0, 2**width)
+            if source_ty.kind != ty.kind or source_ty.width != ty.width or not lower <= number < upper:
+                raise Unsupported("global constant literal conversion or range")
+            literal = str(number)
+        else:
+            raise Unsupported("global constant initializer is not a direct scalar literal")
+        self.constants[node["id"]] = (node["name"], ty, literal)
+
+    def collect_global(self, node):
+        spelling = type_of_decl(node)
+        if node.get("tls"):
+            raise Unsupported("thread-local global state")
+        if re.search(r"\b(?:const|volatile)\b|[&*]", spelling):
+            raise Unsupported("global state requires a mutable nonvolatile value")
+        array = re.fullmatch(r"(.+)\[(\d+)\]", spelling)
+        size = int(array[2]) if array else None
+        ty = self.ty(array[1].strip() if array else spelling)
+        if ty.kind not in ("int", "u32", "u64", "bool", "cls"):
+            raise Unsupported("global state value type")
+        if size is not None:
+            if size == 0:
+                raise Unsupported("zero-length global array")
+            ty = Ty("vec", args=(ty,))
+        element = ty.args[0] if size is not None else ty
+        initializers = inner(node)
+        if element.kind == "cls":
+            if (len(initializers) != 1 or initializers[0].get("kind") != "CXXConstructExpr"
+                    or inner(initializers[0]) or initializers[0].get("ctorType", {}).get("qualType") != "void ()"
+                    or initializers[0].get("range", {}).get("begin", {}).get("offset") != node.get("loc", {}).get("offset")):
+                raise Unsupported("global class requires implicit default construction")
+            self.global_initializers[node["id"]] = initializers[0]
+        elif initializers:
+            raise Unsupported("global state initialization requires static zero initialization")
+        if node.get("storageClass") == "extern":
+            raise Unsupported("external global state declaration")
+        self.globals[node["id"]] = (node["name"], ty, size)
 
     def collect(self):
         for decls, data in self.external:
@@ -2008,22 +2623,36 @@ class Translator:
         for node in self.decls:
             kind = node.get("kind")
             if kind == "ClassTemplateDecl":
-                tps = [c["name"] for c in inner(node) if c.get("kind") == "TemplateTypeParmDecl"]
+                tps, values, constraints = self.template_params(node, allow_constraints=True)
                 rec = next((c for c in inner(node) if c.get("kind") == "CXXRecordDecl" and c.get("completeDefinition")), None)
                 if rec is not None:
-                    self.collect_class(rec, tps)
+                    self.collect_class(rec, tps, values, constraints)
             elif kind == "CXXRecordDecl" and node.get("completeDefinition"):
                 self.collect_class(node, [])
             elif kind == "FunctionTemplateDecl":
-                tps = [c["name"] for c in inner(node) if c.get("kind") == "TemplateTypeParmDecl"]
+                tps, values, constraints = self.template_params(node, allow_constraints=True, allow_type_constraints=True)
                 fn = next((c for c in inner(node) if c.get("kind") == "FunctionDecl"
                            and any(x.get("kind") == "CompoundStmt" for x in inner(c))), None)
                 if fn is not None:
-                    self.collect_function(fn, tps)
+                    self.collect_function(fn, tps, values, constraints)
             elif kind == "FunctionDecl":
                 if any(x.get("kind") == "CompoundStmt" for x in inner(node)):
                     self.collect_function(node, [])
-            elif kind in ("ClassTemplateSpecializationDecl", "TypeAliasTemplateDecl", "TypeAliasDecl", "FullComment"):
+            elif kind == "VarDecl":
+                if re.search(r"\bconst\b", type_of_decl(node)):
+                    self.collect_constant(node)
+                else:
+                    self.collect_global(node)
+            elif kind == "ClassTemplateSpecializationDecl":
+                spelling = " ".join(self.span(node).split())
+                if not re.fullmatch(r"(?:extern )?template (?:struct|class) (?:cp::)?\w+<.*>", spelling):
+                    raise Unsupported("explicit class template specialization")
+            elif kind == "TypeAliasDecl":
+                spelling = type_of_decl(node)
+                if re.search(r"[&*]|\b(?:const|volatile)\b", spelling):
+                    raise Unsupported("namespace type alias must be an unqualified value type")
+                self.aliases[node["name"]] = self.ty(spelling)
+            elif kind in ("TypeAliasTemplateDecl", "FullComment"):
                 pass
             else:
                 raise Unsupported(f"top-level {kind}")
@@ -2047,44 +2676,70 @@ class Translator:
                         raise Unsupported(f"overloads of {name} with the same parameter kinds")
                     tags.add(tag)
                     sig.lean_name = f"cp.{lean_name(name)}_{tag}"
+        if self.globals:
+            name = "initializeGlobals"
+            occupied = {node.get("name") for node in self.decls}
+            while name in occupied:
+                name += "_"
+            self.initializer_name = name
+            node = {"kind": "FunctionDecl", "id": "lean_global_initializer", "name": name,
+                    "lean_global_initializer": True, "inner": []}
+            self.order.append(("fn", Sig(name, "cp." + name, [], VOID, node=node,
+                                         uses_globals=True, initializes_globals=True, public=False)))
 
-    def param_list(self, node, tps, containers=()):
+    def param_list(self, node, tps, containers=(), values=None):
         params = []
         for p in inner(node):
             if p.get("kind") == "ParmVarDecl":
                 qual = container_text(type_of_decl(p), containers)
                 is_ref = "&" in qual and not re.search(r"\bconst\b", qual)
-                params.append((p.get("name") or f"arg{len(params)}", parse_type(qual, set(tps), set(self.classes)), is_ref))
+                params.append((p.get("name") or f"arg{len(params)}", parse_type(qual, set(tps) - (values or {}).keys(), self.classes, values, self.aliases), is_ref))
         return params
 
-    def collect_function(self, node, tps):
+    def collect_function(self, node, tps, values=None, constraints=None):
+        values = values or {}
         name = node["name"]
         # A template parameter used as `T::value_type` is a random-access container (modelled by std::vector)
         text = json.dumps(node)
         containers = [t for t in tps if f"{t}::value_type" in text]
         tps = [f"{t}_value_type" if t in containers else t for t in tps]
         ret_text = container_text(node["type"]["qualType"].split("(")[0].strip(), containers)
-        ret = parse_type(ret_text, set(tps), set(self.classes))
-        sig = Sig(name, f"cp.{lean_name(name)}", self.param_list(node, tps, containers), ret, node=node, tparams=tps)
+        ret = parse_type(ret_text, set(tps) - values.keys(), self.classes, values, self.aliases)
+        sig = Sig(name, f"cp.{lean_name(name)}", self.param_list(node, tps, containers, values), ret, node=node, tparams=tps, value_params=values, constraints=constraints or [])
         sig.containers = containers
         self.functions.setdefault(name, []).append(sig)
         self.order.append(("fn", sig))
 
-    def collect_class(self, rec, tps):
+    def collect_class(self, rec, tps, values=None, constraints=None):
+        values = values or {}
         name = rec["name"]
         if rec.get("bases"):
             raise Unsupported("class inheritance")
-        info = ClassInfo(name, tps, [], [])
+        info = ClassInfo(name, tps, [], [], value_params=values, constraints=constraints or [])
         self.classes[name] = info
-        tset = set(tps)
+        tset = set(tps) - values.keys()
         access = "public" if rec.get("tagUsed") == "struct" else "private"
         for c in inner(rec):
             kind = c.get("kind")
+            member_tps, member_values, member_constraints = [], {}, []
+            if kind == "FunctionTemplateDecl":
+                member_tps, member_values, member_constraints = self.template_params(c, allow_constraints=True, allow_type_constraints=True)
+                if set(member_tps) & set(tps):
+                    raise Unsupported("member template parameter shadows a class parameter")
+                declarations = [x for x in inner(c)
+                                if x.get("kind") in ("CXXMethodDecl", "CXXConstructorDecl")
+                                and any(y.get("kind") == "CompoundStmt" for y in inner(x))]
+                if not declarations:
+                    raise Unsupported("member template without a body")
+                # Clang also lists concrete instantiations here. Emit the generic
+                # declaration once; the same definition covers those instances.
+                c = declarations[0]
+                kind = c["kind"]
             if kind == "AccessSpecDecl":
                 access = c.get("access", access)
             if kind == "FieldDecl":
                 init = inner(c)[0] if inner(c) else None
-                fty = parse_type(type_of_decl(c), tset, set(self.classes))
+                fty = parse_type(type_of_decl(c), tset, self.classes, values, self.aliases)
                 if fty.kind in ("istream", "ostream"):
                     raise Unsupported("stream state stored in a class field")
                 info.fields.append((c["name"], fty, init))
@@ -2102,10 +2757,13 @@ class Translator:
                         raise Unsupported(f"member without a body: {c['name']}")
                 is_ctor = kind == "CXXConstructorDecl"
                 qual = c["type"]["qualType"]
-                ret = VOID if is_ctor else parse_type(qual.split("(")[0].strip(), tset, set(self.classes))
-                sig = Sig(c["name"].split("<")[0] if is_ctor else c["name"], "", self.param_list(c, tps), ret, owner=name,
+                all_values = {**values, **member_values}
+                all_tps = list(tps) + member_tps
+                ret = VOID if is_ctor else parse_type(qual.split("(")[0].strip(), set(all_tps) - all_values.keys(), self.classes, all_values, self.aliases)
+                sig = Sig(c["name"].split("<")[0] if is_ctor else c["name"], "", self.param_list(c, all_tps, values=all_values), ret, owner=name,
                           is_const=qual.rstrip().endswith("const") or is_ctor, is_static=c.get("storageClass") == "static",
-                          is_ctor=is_ctor, node=c, tparams=[], public=access == "public")
+                          is_ctor=is_ctor, node=c, tparams=member_tps, value_params=member_values,
+                          constraints=member_constraints, public=access == "public")
                 if is_ctor and len(sig.params) == 1 and sig.params[0][1].kind == "cls" and sig.params[0][1].name == name:
                     raise Unsupported("user-defined record copy constructor")
                 info.methods.append(sig)
@@ -2123,7 +2781,7 @@ class Translator:
                     raise Unsupported("friend other than a function")
                 if any(x.get("kind") == "CompoundStmt" for x in inner(fn)):
                     fn["lean_hidden_friend"] = True
-                    self.collect_function(fn, list(tps))
+                    self.collect_function(fn, list(tps), values)
             else:
                 raise Unsupported(f"class member {kind}")
         # names
@@ -2139,6 +2797,23 @@ class Translator:
         self.order.append(("class", info))
 
     # --------------------------------------------------------------- emission
+    @staticmethod
+    def body_key(node):
+        body = next((c for c in inner(node) if c.get("kind") == "CompoundStmt"), None)
+        if body is None:
+            return None
+        def offset(location):
+            return location.get("spellingLoc", location).get("offset")
+        bounds = body.get("range", {})
+        begin, end = offset(bounds.get("begin", {})), offset(bounds.get("end", {}))
+        return (node.get("name"), begin, end) if begin is not None and end is not None else None
+
+    def resolve_function(self, declaration_id):
+        matches = self.function_declarations.get(declaration_id, [])
+        if len(matches) != 1:
+            raise Unsupported("cannot identify the resolved operator definition")
+        return matches[0]
+
     def translate(self) -> str:
         self.collect()
         sigs = []
@@ -2147,6 +2822,54 @@ class Translator:
                 sigs += [(sig, item) for sig in item.methods]
             else:
                 sigs.append((item, None))
+        if self.globals:
+            def dependencies(node):
+                direct, calls = False, set()
+                def walk(n):
+                    nonlocal direct
+                    reference = n.get("referencedDecl", {})
+                    if reference.get("id") in self.globals:
+                        direct = True
+                    if reference.get("kind") in ("FunctionDecl", "CXXMethodDecl"):
+                        calls.add(reference.get("name"))
+                    if n.get("kind") in ("UnresolvedLookupExpr", "MemberExpr", "CXXDependentScopeMemberExpr"):
+                        calls.add(n.get("name"))
+                    for child in inner(n):
+                        walk(child)
+                walk(node)
+                return direct, calls
+            graph = {id(sig): dependencies(sig.node) for sig, _ in sigs}
+            changed = True
+            while changed:
+                changed = False
+                affected = {sig.cpp_name for sig, _ in sigs if sig.uses_globals}
+                for sig, info in sigs:
+                    direct, calls = graph[id(sig)]
+                    if not sig.uses_globals and (direct or calls & affected):
+                        if info or any("&" in type_of_decl(p) for p in inner(sig.node) if p.get("kind") == "ParmVarDecl"):
+                            raise Unsupported("global state in methods or reference-parameter functions")
+                        sig.uses_globals = True
+                        changed = True
+            self.global_functions = {sig.cpp_name for sig, _ in sigs if sig.uses_globals}
+        by_body = {}
+        self.function_declarations = {}
+        self.raw_declarations = {}
+        for sig, _ in sigs:
+            key = self.body_key(sig.node)
+            if key is not None:
+                by_body.setdefault(key, []).append(sig)
+            self.function_declarations[sig.node["id"]] = [sig]
+        def index_declarations(node):
+            if "id" in node:
+                self.raw_declarations[node["id"]] = node
+            if node.get("kind") in ("FunctionDecl", "CXXMethodDecl"):
+                key = self.body_key(node)
+                if key in by_body:
+                    self.function_declarations[node["id"]] = by_body[key]
+            for child in inner(node):
+                index_declarations(child)
+        for node in self.decls:
+            index_declarations(node)
         built = {}
         for sig, info in sigs:
             built[id(sig)] = self.build_function(sig, info)
@@ -2161,13 +2884,24 @@ class Translator:
                     if cfn is None:
                         continue
                     own = set(info.tparams if info else []) | set(sig.tparams)
-                    for r in cfn.reqs.items:
-                        type_names = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", " ".join(r.split()[1:])))
-                        if not type_names <= own | {"Int", "UInt32", "UInt64", "Bool", "Unit", "Ordering", "Array"}:
-                            raise Unsupported(f"requirement {r} of {callee.cpp_name} over another type parameter")
-                        if r not in fn.reqs.items:
-                            fn.reqs.add(r)
-                            changed = True
+                    for bindings, discharged in fn.member_call_bindings.get(id(callee), [({}, set())]):
+                        for requirement in cfn.reqs.items:
+                            if requirement in discharged:
+                                continue
+                            # Preserve quoted NumericTraits tags while substituting
+                            # the carrier types at this particular call site.
+                            r = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"|\b[A-Za-z_][A-Za-z_0-9]*\b',
+                                       lambda m: lean_type(bindings[m[0]]) if m[0] in bindings else m[0],
+                                       requirement) if bindings else requirement
+                            type_text = " ".join(r.split()[1:])
+                            if bindings or r.startswith(("Cpp.SourceStream", "Cpp.ModToUInt32")):
+                                type_text = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', '', type_text)
+                            type_names = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", type_text))
+                            if not type_names <= own | {"Int", "UInt32", "UInt64", "Bool", "Unit", "Ordering", "Array"}:
+                                raise Unsupported(f"requirement {r} of {callee.cpp_name} over another type parameter")
+                            if r not in fn.reqs.items:
+                                fn.reqs.add(r)
+                                changed = True
         # definitions after their callees
         order, state = [], {}
         index = {id(sig): (sig, info) for sig, info in sigs}
@@ -2184,17 +2918,34 @@ class Translator:
             order.append(key)
         for sig, info in sigs:
             visit(id(sig))
-        out = []
+        out = [f"def cp.{lean_name(name)} : {lean_type(ty)} := {literal}\n"
+               for name, ty, literal in self.constants.values()]
         for kind, item in self.order:
             if kind == "class":
                 out.append(self.emit_structure(item))
+        for name, ty in self.aliases.items():
+            requirements = class_requirements(ty, self.classes)
+            head = " ".join(f"[{r}]" for r in requirements)
+            out.append(f"abbrev cp.{lean_name(name)} {head} := {lean_type(ty)}\n")
+        if self.globals:
+            if any(node.get("name") == "GlobalState" for node in self.decls):
+                raise Unsupported("global state model name conflicts with a source declaration")
+            requirements = sorted({r for _, ty, _ in self.globals.values()
+                                   for r in class_requirements(ty, self.classes)})
+            lines = ["structure cp.GlobalState " + " ".join(f"[{r}]" for r in requirements) + " where"]
+            for name, ty, _ in self.globals.values():
+                lines.append(f"  {lean_name(name)} : {lean_type(ty)}")
+            lines.append("  deriving Inhabited")
+            out.append("\n".join(lines) + "\n")
         for key in order:
             sig, info = index[key]
             out.append(self.emit_header(sig, info, built[key]))
+        self.built_functions = built
         return "\n".join(out)
 
     def emit_structure(self, info: ClassInfo) -> str:
-        head = " ".join(f"({t} : Type)" for t in info.tparams)
+        head = " ".join(f"({lean_name(t)} : {lean_type(info.value_params[t])})" if t in info.value_params else f"({t} : Type)" for t in info.tparams)
+        head += "".join(f" [Cpp.TemplateConstraint {c}]" for c in info.constraints)
         lines = [re.sub(r"  +", " ", f"structure cp.{info.name} {head} where")]
         for fname, fty, _ in info.fields:
             lines.append(f"  {lean_name(fname)} : {lean_type(fty)}")
@@ -2203,15 +2954,55 @@ class Translator:
 
     def build_function(self, sig: Sig, info: ClassInfo | None) -> Fn:
         fn = Fn(self, sig, info)
+        for condition in sig.constraints:
+            for parameter in re.findall(r'Cpp\.TypeTraits\.\w+ \(tag := "(\w+)"\)', condition):
+                fn.reqs.add(f'Cpp.TypeTraits "{parameter}" {parameter}')
+            fn.reqs.add("Cpp.TemplateConstraint " + condition)
+        for ty in [sig.ret, *([class_ty(info)] if info else [])]:
+            for requirement in class_requirements(ty, self.classes):
+                fn.reqs.add(requirement)
         if any(ty.kind in ("istream", "ostream") for ty in [sig.ret, *[p[1] for p in sig.params]]):
             fn.reqs.add("Cpp.Streams")
+        if sig.uses_globals:
+            for _, ty, _ in self.globals.values():
+                for requirement in class_requirements(ty, self.classes):
+                    fn.reqs.add(requirement)
         node = sig.node
+        if sig.initializes_globals:
+            fn.emit("Cpp.tick")
+            for key, (_, ty, size) in self.globals.items():
+                element = ty.args[0] if size is not None else ty
+                name = fn.global_names[key]
+                if element.kind == "cls":
+                    pre = []
+                    value = fn.construct(element, self.global_initializers[key], pre)
+                    if size is not None:
+                        fn.emit(f"let mut {name} : {lean_type(ty)} := Array.empty")
+                        fn.emit(f"for _ in [:({size} : Nat)] do")
+                        fn.indent += 1
+                        fn.emit("Cpp.tick")
+                        fn.flush(pre)
+                        fn.emit(f"{name} := {name}.push {value}")
+                        fn.indent -= 1
+                    else:
+                        fn.flush(pre)
+                        fn.emit(f"let {name} := {value}")
+                else:
+                    value = "false" if element.kind == "bool" else "0"
+                    if size is not None:
+                        fn.emit(f"Cpp.tickN {size}")
+                        value = f"Array.replicate {size} ({value} : {lean_type(element)})"
+                    fn.emit(f"let {name} : {lean_type(ty)} := {value}")
+            fn.emit("return " + fn.global_value())
+            return fn
         params = []
+        for name, ty in {**(info.value_params if info else {}), **sig.value_params}.items():
+            fn.declare(name, ty)
         for pname, pty, is_ref in sig.params:
             fn.declare(pname, pty)
         cls_ty = None
         if info is not None:
-            cls_ty = lean_type(Ty("cls", info.name, tuple(Ty("tparam", t) for t in info.tparams)))
+            cls_ty = lean_type(class_ty(info))
             names = {p[0] for p in sig.params} | local_names(node)
             for fname, fty, _ in info.fields:
                 fn.field_names[fname] = ("this_" + fname) if fname in names else lean_name(fname)
@@ -2220,7 +3011,7 @@ class Translator:
             if info is None or sig.cpp_name != "operator==" or not sig.is_const or len(sig.params) != 1:
                 raise Unsupported("defaulted member other than const equality")
             pname, pty, is_ref = sig.params[0]
-            expected = Ty("cls", info.name, tuple(Ty("tparam", t) for t in info.tparams))
+            expected = class_ty(info)
             if pty != expected or is_ref or sig.ret != BOOL:
                 raise Unsupported("defaulted equality signature")
             comparisons = []
@@ -2235,6 +3026,11 @@ class Translator:
         body = next(x for x in inner(node) if x.get("kind") == "CompoundStmt")
         assigned = fn.assigned_names(body)
         fn.emit("Cpp.tick")
+        if sig.uses_globals:
+            for key, (name, _, size) in self.globals.items():
+                if size is not None:
+                    fn.emit(f"Cpp.check (decide ({fn.global_input}.{lean_name(name)}.size = {size}))")
+                fn.emit(f"let mut {fn.global_names[key]} := {fn.global_input}.{lean_name(name)}")
         if info is not None and not sig.is_static:
             if sig.is_ctor:
                 fn.scopes[0]["__fields__"] = INT
@@ -2250,7 +3046,7 @@ class Translator:
                                 raise Unsupported("delegation requires an empty default constructor")
                             if len([x for x in inner(node) if x.get("kind") == "CXXCtorInitializer"]) != 1:
                                 raise Unsupported("mixed delegating initializers")
-                            expected_ty = Ty("cls", info.name, tuple(Ty("tparam", t) for t in info.tparams))
+                            expected_ty = class_ty(info)
                             target = c.get("delegatingInit", c.get("baseInit", {})).get("qualType", "")
                             if self.ty(target, fn) != expected_ty:
                                 raise Unsupported("base initializer")
@@ -2314,7 +3110,7 @@ class Translator:
     def emit_header(self, sig: Sig, info: ClassInfo | None, fn: Fn) -> str:
         cls_ty = None
         if info is not None:
-            cls_ty = lean_type(Ty("cls", info.name, tuple(Ty("tparam", t) for t in info.tparams)))
+            cls_ty = lean_type(class_ty(info))
         # header
         tps = list(info.tparams if info else []) + list(sig.tparams)
         reqs = list(fn.reqs.items)
@@ -2345,12 +3141,16 @@ class Translator:
             args.append(f"(self : {cls_ty})")
         for pname, pty, _ in sig.params:
             args.append(f"({lean_name(pname)} : {lean_type(pty)})")
+        if sig.uses_globals and not sig.initializes_globals:
+            args.append(f"({fn.global_input} : cp.GlobalState)")
         outs = []
         for o in sig.outputs():
             if o == "ret":
                 outs.append(lean_type(sig.ret))
             elif o == "self":
                 outs.append(cls_ty)
+            elif o == "@globals":
+                outs.append("cp.GlobalState")
             else:
                 outs.append(lean_type(next(p[1] for p in sig.params if p[0] == o)))
         if sig.is_ctor:
@@ -2362,7 +3162,7 @@ class Translator:
             if len(outs) > 1:
                 rtype = f"({rtype})"
         name = sig.lean_name
-        header = f"def {name} {binders(tps, reqs)} {' '.join(args)} : Cpp.M {rtype} := do"
+        header = f"def {name} {binders(tps, reqs, {**(info.value_params if info else {}), **sig.value_params})} {' '.join(args)} : Cpp.M {rtype} := do"
         header = re.sub(r"  +", " ", header)
         return "".join(x + "\n" for x in structs) + "\n".join([header] + fn.lines) + "\n"
 

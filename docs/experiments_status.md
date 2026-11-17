@@ -30,7 +30,7 @@
 | interval/interval.hpp | 済 | `interval`。2026-11-09に元の既定 `operator<=>` と同じ順序の `==`/`!=`/`<`/`>`/`<=`/`>=` を追加（C++17、単一return式）。生成モデル13関数と一般定理 `interval_{eq,ne,lt,gt,le,ge}_correct`、全件gate（実7336秒、独立kernel49269宣言）成功。入出力演算子は方針（2026-10-12）により対象外 |
 | interval/interval_union.hpp | 一部 | `interval_union`（組を 2 本の vector に分け、結果は呼び出し側の 2 本の vector に書く。挿入ソート `O(n²)`） |
 | modint/dynamic_modint.hpp | 一部 | `dynamic_modint`（演算は関数、法は各値のフィールド） |
-| modint/modint.hpp | 一部 | `modint`, `mod61`, `pow_mod` |
+| modint/modint.hpp | 移植済（新方式、未push） | `modint`へ元のクラス全API、型template、負指数、IO、mint/mint17、fac/C/initとMAX_FAC=20000003を復元。新方式の生成と一般証明、公開C++/include・差分検査が成功。全件gate・独立kernel成功。push後のCIと配布更新は未確認 |
 | number/ratio.hpp | 移植済（新方式、未push） | 作業ツリーで `Ratio<T>` 全APIへ復元。全28入口の対応点検、全件gate・公開全体監査成功。push/release更新は未了 |
 | number/square_matrix.hpp | 一部 | `square_matrix`（`mat_mul`・`mat_add_assign`・`mat_sub_assign`・`mat_zero`・`mat_negate`・`mat_identity`・`mat_equal`（`==`、`!=` 相当）・`mat_pow`（冪。作業用 vector を引数に取る）。値を返す演算子は未）。原本の比較・不要な最終二乗は2026-11-02に修正してC++回帰済み。原本クラス全体の変換・Lean証明は未完了 |
 | number_theory/enumerate_quotients.hpp | 済 | `enumerate_quotients`。2026-11-10に「元のソースからの変更」を文書化し、元の関数の逐語コピーとの差分テスト（n≤3000全件・n<2^44の乱択）を追加 |
@@ -68,7 +68,7 @@
 | Graph/WarshallFloyd.hpp | `library/graph/floyd_warshall.hpp` | 一部（非負の辺、親なし。平らな形と `vector<vector<T>>` の形） |
 | Graph/UnionFind.hpp | `library/union_find/union_find.hpp` | 一部（対応先を共有。元`DisjointSet::getNum()`の選択生成・元field条件からの実call/復元・仕事量/3peakと原本C++ UBSanを確認。元constructor/残りAPIと任意caller ASTは未検証。経路圧縮・別カウンタ・元の入力範囲の公開版復元も未完了） |
 | Graph/GraphL.hpp, GraphM.hpp, Lowlink.hpp, Prim.hpp | なし | 未（追記 47 の機能待ち） |
-| ModInt/ModInt.hpp | `library/modint/modint.hpp` | 一部（`+ - * /`、入出力なし） |
+| ModInt/ModInt.hpp | `library/modint/modint.hpp` | 新方式のlibrary側ではIOと型template構築も復元。library3原本との差分確認は別途必要 |
 | NumberTheory/Factorize.hpp, IsPrime.hpp | なし | 未（`__uint128_t`、ミラー–ラビン） |
 | SegmentTree/SegmentTree.hpp | `library/segment_tree/segtree_sum.hpp` | 一部（和のみ。任意のモノイドは構造体の要素が要る） |
 | Template/*（MMTemplate.cpp, Template.cpp, SmallTemplate.hpp） | 対象外 | テンプレート（マクロ・`using`）で、ライブラリではない。`tests/` はこの中の `small_template.hpp` を先に include する |
@@ -98,7 +98,7 @@
 - 旧`library3`の`Group`/`Mapping`のAPI・意味を縮小している: public field `x/a/b`、`ide/compose`、`template<class U> U apply(U)` の値渡しを現行公開版は保持していない。逆元の演算の定義も異なり、doubleの0の符号が変わる。上の旧版対応表と `docs/experiments_findings.md` に実比較を記録した。元APIを持つクラスとして全機能を検証するまで未解消。
 
 - 型 `T` を `long long` に固定: なし（`run_length`・`bellman_ford`・`dijkstra` も 2026-10-12 にテンプレート化済み。`monoid_lazy` もテンプレート化済み。入れ子の構造体の平らな形は下の「構造を変えている」に残る）。
-- 機能を落としている、または構造を変えている: `tree_root`/`tree_ancestor`（`Tree` の高さ・直径・全方位木 DP とコンストラクタ類を含めず、隣接リストを CSR、`stack<tuple>` を呼び出し側の `stk` に変えている。解消は残りの `Tree` の機能を同じ枠組みで足す）、`union_find`（`unite`/`same`/`size` が経路圧縮をしない。木の数を `ps` の末尾に持つ。入力assertは復元済み）、`interval`（`<=>` と入出力演算子なし）、`bellman_ford`（負閉路の印は元の `NEGATIVE_CYCLE` 値でなく `-inf`。負閉路から届く頂点が必ず `-inf` になることは未証明でテストのみ）、`dijkstra`（`priority_queue` でなく O(n²)）、`topological_sort`（辞書順最小版なし）、`floyd_warshall`（負の辺と親なし）、`dynamic_modint`（静的な法を各値のフィールドに変更）、`modint`（二項演算子は `+ - * /`。入出力、変換コンストラクタなし）、`mat_mul`（積のみ）、`segtree_sum`（和のみ）、`monoid_lazy`（平らなAPIは簡便APIとして残す。元の入れ子APIは公開済みで、`T` は変換器の整数4種のみ検証、`short`/`char`/浮動小数は未）。
+- 機能を落としている、または構造を変えている: `tree_root`/`tree_ancestor`（`Tree` の高さ・直径・全方位木 DP とコンストラクタ類を含めず、隣接リストを CSR、`stack<tuple>` を呼び出し側の `stk` に変えている。解消は残りの `Tree` の機能を同じ枠組みで足す）、`union_find`（`unite`/`same`/`size` が経路圧縮をしない。木の数を `ps` の末尾に持つ。入力assertは復元済み）、`interval`（`<=>` と入出力演算子なし）、`bellman_ford`（負閉路の印は元の `NEGATIVE_CYCLE` 値でなく `-inf`。負閉路から届く頂点が必ず `-inf` になることは未証明でテストのみ）、`dijkstra`（`priority_queue` でなく O(n²)）、`topological_sort`（辞書順最小版なし）、`floyd_warshall`（負の辺と親なし）、`dynamic_modint`（静的な法を各値のフィールドに変更）、`mat_mul`（積のみ）、`segtree_sum`（和のみ）、`monoid_lazy`（平らなAPIは簡便APIとして残す。元の入れ子APIは公開済みで、`T` は変換器の整数4種のみ検証、`short`/`char`/浮動小数は未）。
 - 機能を落としている（`lazy_segment_tree`）: 元の `LazySegmentTree<M, F>` は任意のモノイド `M` と作用 `F` のオブジェクトの木だが、公開版は値と作用の vector（`vector<value_type>`、`vector<action_type>`）の木で、方針 `P` の静的関数 `e`/`id`/`op`/`mapping`/`composition` で与える（1 つの整数だけの値と作用に限る）。既定構成子と `int` を取る構成子、`search_prod_right`/`search_prod_left`（述語を取る二分探索）、`assert` は含めない。検証した具体化は `long long` の最大値と chmin のみ。区間操作は `h_node <= 29`（`n <= 2^29`）に限る。解消は、構造体のオブジェクトのベクトルを扱う変換器の拡張、述語の扱い、区間加算などの具体化を足すこと。
 - 機能を落としている（`segment_tree`）: 元の `SegmentTree<M>` は任意のモノイド `M` のオブジェクトの木だが、公開版は値（`vector<value_type>`）の木で、モノイドは `value_type`・静的 `e()`・静的 `apply` を持つ方針として与える（1 つの値だけのモノイドに限る）。`search_prod_right`/`search_prod_left`（述語を取る二分探索）と `assert` は含めない。検証した具体化は `long long` の最大値と最小値のみ。解消は、構造体のオブジェクトのベクトルを扱う変換器の拡張、述語 `F` の扱い、`MonoidMin/Mul` などの具体化を足すこと。
 - 機能を落としている（`square_matrix`）: 元の `SquareMatrix<T, N>`（非型テンプレート引数 `N`、`operator*`/`+`/`-`/`==`、`pow`）を、`vector` と `int n` を取る関数 8 個（`mat_mul`・`mat_add_assign`・`mat_sub_assign`・`mat_zero`・`mat_negate`・`mat_identity`・`mat_equal`・`mat_pow`）にしている。値を返す演算子（`+`/`-`/`*`）、クラスとしての形は未（`!=` は `!mat_equal`、`pow` は `mat_pow` が相当し、`pow` の指数は非負の `unsigned long long` に限る）。解消はC配列・非型テンプレート・行参照・初期化状態の変換器対応を足し、公開mat配列と元の全クラスAPI・型traitを維持してクラス全体を検証すること。
@@ -566,3 +566,5 @@ BeatsReceiverCallsで返却inf/nを実scalar slotから読み、6操作の生成
 
 
 2026-11-08: 元MaxMin両系統の `apply<M>` も、明示具体化した元pattern/同一TUのrecord宣言IDとmember pointer型を照合し、全field object返却へ接続。Setの `noop ? x : v` は選ばれたimplicit copy/値構築だけを実行し、コピーを値構築子で作り直さない。新3testsで元Add/Set×Max/Minと2fieldのcopy対constructor・未選択overflow・const結果、native/UBSanと不正要求の拒否が成功。任意入力/caller一般定理、任意T/M・厳密identity/lifetime・公開API全体の復元と原本全体/全137は未完了。既存回帰と最新検査は[引き継ぎ](agent/handoff.md)参照。
+
+2026-11-17: `experiments/library/cpp/modint/modint.hpp` の全APIを公開ヘッダへ復元し、新方式へ登録を切り替えた。公開member/friendの27宣言は型・constexprを含め原本と一致する。全件gateと独立カーネル検査が成功した。push後のCIと配布更新は未確認。旧ModInt固有の6証明moduleは除去し、他の旧部品が使う汎用補題だけをLegacyScalarPrepareへ残した。

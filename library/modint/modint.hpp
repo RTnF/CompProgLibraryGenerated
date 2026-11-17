@@ -1,119 +1,143 @@
 #pragma once
 #include <cassert>
-#include <vector>  // the common nested generator audits the standard vector declarations of every source
+#include <cstdint>
+#include <istream>
+#include <ostream>
+#include <type_traits>
 
 namespace cp {
 
-// Integers modulo m (2 <= m < 2^32), always stored reduced in [0, m). The inverse and division need m prime.
-// Derived from experiments/library/cpp/modint/modint.hpp. Differences: the signed constructor reduces a negative
-// multiple of m to 0 (the original returned m), the constructor takes long long, pow takes an unsigned exponent
-// (negative exponents are pow(unsigned) followed by inv()), and the binary operators are member functions.
-// The class has one scalar field, so the generator treats a ModInt as its field `x` (see verifier/class_lowering.py).
-template <unsigned int m> class ModInt {
-  unsigned int x;
+/**
+ * @brief 剰余を取り[0, mod)に収めるint
+ * based on ACL
+ * @tparam mod 素数に限る
+ */
+template <std::uint32_t m, std::enable_if_t<(2 <= m)> * = nullptr> class ModInt {
+  std::uint32_t x;
+
+  static constexpr std::uint32_t pow_nonnegative(std::uint32_t base, std::uint64_t exponent) {
+    std::uint64_t result = (std::uint64_t)1 % m;
+    std::uint64_t b = (std::uint64_t)base % m;
+    std::uint64_t e = exponent;
+    while (e != 0) {
+      if ((e & 1) != 0) result = result * b % m;
+      b = b * b % m;
+      e = e >> 1;
+    }
+    return (std::uint32_t)result;
+  }
 
 public:
-  ModInt() : x(0) {}
-  ModInt(long long v) : x((v % (long long)m + (long long)m) % (long long)m) {}
-  unsigned int get() const { return x; }
+  constexpr ModInt() : x(0) {}
+  template <class T, std::enable_if_t<(std::is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>
+  constexpr ModInt(T x_) : x((x_ % (std::int64_t)m + (std::int64_t)m) % (std::int64_t)m) {}
+  template <class U, std::enable_if_t<!(std::is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>
+  constexpr ModInt(U x_) : x(x_ % m) {}
 
-  ModInt &operator++() {
-    if (x == m - 1) {
-      x = 0;
-    } else {
-      x = x + 1;
-    }
-    return *this;
+  std::uint32_t get() const { return x; }
+  static constexpr std::uint32_t mod() { return m; }
+  template <class T, std::enable_if_t<(std::is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>
+  constexpr void set(T x_) {
+    x = (x_ % (std::int64_t)m + (std::int64_t)m) % (std::int64_t)m;
   }
-  ModInt &operator--() {
-    if (x == 0) {
-      x = m - 1;
-    } else {
-      x = x - 1;
-    }
-    return *this;
+  template <class U, std::enable_if_t<!(std::is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>
+  constexpr void set(U x_) {
+    x = x_ % m;
   }
-  ModInt &operator+=(const ModInt &y) {
-    x = x + y.x;
-    if (x >= m) {
-      x = x - m;
-    }
-    return *this;
-  }
-  ModInt &operator-=(const ModInt &y) {
-    x = x - y.x;
-    if (x >= m) {
-      x = x + m;
-    }
-    return *this;
-  }
-  ModInt &operator*=(const ModInt &y) {
-    x = (unsigned long long)x * (unsigned long long)y.x % m;
-    return *this;
-  }
-  // Division for a prime m: *this * y.inv(). Requires y != 0 (checked by the assert of inv).
-  ModInt &operator/=(const ModInt &y) {
-    ModInt z = y.inv();
-    *this *= z;
-    return *this;
-  }
-  ModInt operator-() const {
-    ModInt r;
-    if (x != 0) {
-      r.x = m - x;
-    }
-    return r;
-  }
-  ModInt pow(unsigned long long n) const {
+
+  constexpr ModInt operator++(int) {
     ModInt y = *this;
-    ModInt r = 1;
-    while (n) {
-      if (n & 1) {
-        r *= y;
-      }
-      y *= y;
-      n >>= 1;
+    ++*this;
+    return y;
+  }
+  constexpr ModInt &operator++() {
+    x = x == m - 1 ? 0u : x + 1;
+    return *this;
+  }
+  constexpr ModInt operator--(int) {
+    ModInt y = *this;
+    --*this;
+    return y;
+  }
+  constexpr ModInt &operator--() {
+    x = x == 0u ? m - 1 : x - 1;
+    return *this;
+  }
+  constexpr ModInt &operator+=(const ModInt &y) {
+    std::uint64_t z = (std::uint64_t)x + y.x;
+    x = z >= m ? z - m : z;
+    return *this;
+  }
+  constexpr ModInt &operator-=(const ModInt &y) {
+    std::uint64_t z = (std::uint64_t)x + m - y.x;
+    x = z >= m ? z - m : z;
+    return *this;
+  }
+  constexpr ModInt &operator*=(const ModInt &y) {
+    x = (std::uint64_t)x * (std::uint64_t)y.x % m;
+    return *this;
+  }
+  constexpr ModInt &operator/=(const ModInt &y) { return *this *= y.inv(); }
+  constexpr ModInt operator+() const { return *this; }
+  constexpr ModInt operator-() const { return ModInt(m - x); }
+
+  constexpr ModInt pow(std::int64_t n) const {
+    if (n < 0) {
+      std::uint64_t magnitude = (std::uint64_t)(-(n + 1)) + 1;
+      return ModInt(pow_nonnegative(x, magnitude)).inv();
     }
-    return r;
+    return ModInt(pow_nonnegative(x, (std::uint64_t)n));
   }
-  // The inverse for a prime m: x^(m - 2). Requires x != 0 (checked by assert).
-  ModInt inv() const {
-    assert(x != 0);
-    return pow(m - 2);
+  constexpr ModInt inv() const {
+    assert(x);
+    return ModInt(pow_nonnegative(x, m - 2));
   }
-  bool operator==(const ModInt &y) const { return x == y.x; }
-  bool operator!=(const ModInt &y) const { return x != y.x; }
+
+  constexpr friend ModInt operator+(const ModInt &a, const ModInt &b) {
+    return ModInt(a) += b;
+  }
+  constexpr friend ModInt operator-(const ModInt &a, const ModInt &b) {
+    return ModInt(a) -= b;
+  }
+  constexpr friend ModInt operator*(const ModInt &a, const ModInt &b) {
+    return ModInt(a) *= b;
+  }
+  constexpr friend ModInt operator/(const ModInt &a, const ModInt &b) {
+    return ModInt(a) /= b;
+  }
+  constexpr friend bool operator==(const ModInt &a, const ModInt &b) {
+    return a.x == b.x;
+  }
+  constexpr friend bool operator!=(const ModInt &a, const ModInt &b) {
+    return a.x != b.x;
+  }
+
+  friend std::istream &operator>>(std::istream &is, ModInt &t) {
+    std::int64_t y = 0;
+    is >> y;
+    t.set(y);
+    return is;
+  }
+  friend std::ostream &operator<<(std::ostream &os, const ModInt &t) {
+    os << t.x;
+    return os;
+  }
 };
 
-template <unsigned int m> inline ModInt<m> operator+(ModInt<m> a, ModInt<m> b) {
-  ModInt<m> r = a;
-  r += b;
-  return r;
-}
-template <unsigned int m> inline ModInt<m> operator-(ModInt<m> a, ModInt<m> b) {
-  ModInt<m> r = a;
-  r -= b;
-  return r;
-}
-template <unsigned int m> inline ModInt<m> operator*(ModInt<m> a, ModInt<m> b) {
-  ModInt<m> r = a;
-  r *= b;
-  return r;
-}
-template <unsigned int m> inline ModInt<m> operator/(ModInt<m> a, const ModInt<m> &b) {
-  a /= b;
-  return a;
-}
+using mint = ModInt<998244353u>;
+using mint17 = ModInt<1000000007u>;
 
-template class ModInt<998244353u>;
-template class ModInt<1000000007u>;
-template ModInt<998244353u> operator+<998244353u>(ModInt<998244353u>, ModInt<998244353u>);
-template ModInt<998244353u> operator-<998244353u>(ModInt<998244353u>, ModInt<998244353u>);
-template ModInt<998244353u> operator*<998244353u>(ModInt<998244353u>, ModInt<998244353u>);
-template ModInt<1000000007u> operator+<1000000007u>(ModInt<1000000007u>, ModInt<1000000007u>);
-template ModInt<1000000007u> operator-<1000000007u>(ModInt<1000000007u>, ModInt<1000000007u>);
-template ModInt<1000000007u> operator*<1000000007u>(ModInt<1000000007u>, ModInt<1000000007u>);
-template ModInt<998244353u> operator/<998244353u>(ModInt<998244353u>, const ModInt<998244353u> &);
-template ModInt<1000000007u> operator/<1000000007u>(ModInt<1000000007u>, const ModInt<1000000007u> &);
+const int MAX_FAC = 20000003;
+mint fac[MAX_FAC];
+
+// combination
+constexpr mint C(int n, int k) { return fac[n] / (fac[k] * fac[n - k]); }
+
+constexpr void init() {
+  fac[0] = 1;
+  for (int i = 1; i < MAX_FAC; i++) {
+    fac[i] = fac[i - 1] * i;
+  }
+}
 
 } // namespace cp

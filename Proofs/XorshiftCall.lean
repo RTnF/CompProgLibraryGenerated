@@ -2,8 +2,7 @@ import Proofs.Generated.Xorshift
 import Proofs.ExtremaCall
 import Proofs.StraightLine
 import Proofs.ScalarStraight
-import Proofs.ModIntCall
-
+import Proofs.LegacyScalarPrepare
 namespace Proofs.XorshiftCall
 open Proofs.CppScalar Proofs.CppNestedProgram Proofs.CppNestedCall Proofs.StraightLine
 open Proofs.QuotientSearch Proofs.Mod61Body Proofs.DoublingNested

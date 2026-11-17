@@ -93,7 +93,7 @@ class RatioStreamModelTests(unittest.TestCase):
         # Int also models long/long long/char in other contexts. Their stream
         # overloads must not silently share one formatted-I/O contract.
         for body in [
-                'std::istream &f(std::istream &s, int &x) { s >> x; return s; }',
+                'std::istream &f(std::istream &s, char &x) { s >> x; return s; }',
                 "std::ostream &f(std::ostream &s) { return s << 'ab'; }"]:
             with self.subTest(body=body), tempfile.TemporaryDirectory() as directory:
                 source = Path(directory) / 'stream.hpp'

@@ -9411,7 +9411,7 @@
     },
     {
       "source": "experiments/library/cpp/modint/modint.hpp",
-      "source_sha256": "9a968ae0d930d64256aa6aec7d84f7bc3d2788f9ee04a7777548d959ac130036",
+      "source_sha256": "fc20445a45065b671347391131288ee70679271a09042c1cab5dedfcfbd5cbb9",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": "剰余を取り[0, mod)に収めるint",
@@ -9471,8 +9471,24 @@
           }
         },
         {
+          "kind": "CXXMethodDecl",
+          "line": 12,
+          "declaration": "referenced constexpr pow_nonnegative 'uint32_t (uint32_t, ull)' static implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
           "kind": "CXXConstructorDecl",
-          "line": 13,
+          "line": 25,
           "declaration": "constexpr ModInt<m, value-parameter-0-1> 'void ()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9488,7 +9504,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 14,
+          "line": 26,
           "declaration": "ModInt<m, value-parameter-0-1>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9504,7 +9520,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 15,
+          "line": 27,
           "declaration": "constexpr ModInt<m, value-parameter-0-1> 'void (T)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9520,7 +9536,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 16,
+          "line": 28,
           "declaration": "ModInt<m, value-parameter-0-1>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9536,7 +9552,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 17,
+          "line": 29,
           "declaration": "constexpr ModInt<m, value-parameter-0-1> 'void (U)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9552,7 +9568,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 19,
+          "line": 31,
           "declaration": "get 'uint32_t () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9568,7 +9584,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 20,
+          "line": 32,
           "declaration": "constexpr mod 'uint32_t ()' static implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9584,7 +9600,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 22,
+          "line": 34,
           "declaration": "set",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9600,7 +9616,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 22,
+          "line": 34,
           "declaration": "constexpr set 'void (T)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9616,7 +9632,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 26,
+          "line": 38,
           "declaration": "set",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9632,7 +9648,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 26,
+          "line": 38,
           "declaration": "constexpr set 'void (U)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9648,7 +9664,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 30,
+          "line": 42,
           "declaration": "constexpr operator++ 'ModInt<m, value-parameter-0-1> (int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9664,7 +9680,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 35,
+          "line": 47,
           "declaration": "constexpr operator++ 'ModInt<m, value-parameter-0-1> &()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9680,7 +9696,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 39,
+          "line": 51,
           "declaration": "constexpr operator-- 'ModInt<m, value-parameter-0-1> (int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9696,7 +9712,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 44,
+          "line": 56,
           "declaration": "constexpr operator-- 'ModInt<m, value-parameter-0-1> &()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9712,7 +9728,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 48,
+          "line": 60,
           "declaration": "constexpr operator+= 'ModInt<m, value-parameter-0-1> &(const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9728,7 +9744,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 55,
+          "line": 65,
           "declaration": "constexpr operator-= 'ModInt<m, value-parameter-0-1> &(const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9744,7 +9760,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 62,
+          "line": 70,
           "declaration": "constexpr operator*= 'ModInt<m, value-parameter-0-1> &(const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9760,7 +9776,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 66,
+          "line": 74,
           "declaration": "constexpr operator/= 'ModInt<m, value-parameter-0-1> &(const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9776,7 +9792,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 67,
+          "line": 75,
           "declaration": "constexpr operator+ 'ModInt<m, value-parameter-0-1> () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9792,7 +9808,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 68,
+          "line": 76,
           "declaration": "constexpr operator- 'ModInt<m, value-parameter-0-1> () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9808,8 +9824,8 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 70,
-          "declaration": "referenced constexpr pow 'ModInt<m, value-parameter-0-1> (ll) const' implicit-inline",
+          "line": 78,
+          "declaration": "constexpr pow 'ModInt<m, value-parameter-0-1> (ll) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
           "status": {
@@ -9820,14 +9836,11 @@
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          },
-          "review_notes": [
-            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/number_theory/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
-          ]
+          }
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 84,
+          "line": 85,
           "declaration": "referenced constexpr inv 'ModInt<m, value-parameter-0-1> () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9843,7 +9856,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 89,
+          "line": 90,
           "declaration": "constexpr friend_undeclared operator+ 'ModInt<m, value-parameter-0-1> (const ModInt<m, value-parameter-0-1> &, const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9859,7 +9872,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 92,
+          "line": 93,
           "declaration": "constexpr friend_undeclared operator- 'ModInt<m, value-parameter-0-1> (const ModInt<m, value-parameter-0-1> &, const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9875,7 +9888,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 95,
+          "line": 96,
           "declaration": "constexpr friend_undeclared operator* 'ModInt<m, value-parameter-0-1> (const ModInt<m, value-parameter-0-1> &, const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9891,7 +9904,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 98,
+          "line": 99,
           "declaration": "constexpr friend_undeclared operator/ 'ModInt<m, value-parameter-0-1> (const ModInt<m, value-parameter-0-1> &, const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9907,7 +9920,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 101,
+          "line": 102,
           "declaration": "constexpr friend_undeclared operator== 'bool (const ModInt<m, value-parameter-0-1> &, const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9923,7 +9936,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 104,
+          "line": 105,
           "declaration": "constexpr friend_undeclared operator!= 'bool (const ModInt<m, value-parameter-0-1> &, const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9939,7 +9952,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 108,
+          "line": 109,
           "declaration": "friend_undeclared operator>> 'istream &(istream &, ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9955,7 +9968,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 114,
+          "line": 115,
           "declaration": "friend_undeclared operator<< 'ostream &(ostream &, const ModInt<m, value-parameter-0-1> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10002,8 +10015,24 @@
           }
         },
         {
+          "kind": "CXXMethodDecl",
+          "line": 12,
+          "declaration": "used constexpr pow_nonnegative 'uint32_t (uint32_t, ull)' implicit_instantiation static implicit-inline instantiated_from <ast-id>",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
           "kind": "CXXConstructorDecl",
-          "line": 13,
+          "line": 25,
           "declaration": "used constexpr ModInt 'void ()' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10019,7 +10048,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 14,
+          "line": 26,
           "declaration": "ModInt",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10035,7 +10064,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 15,
+          "line": 27,
           "declaration": "constexpr ModInt 'void (T)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10051,7 +10080,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 15,
+          "line": 27,
           "declaration": "used constexpr ModInt 'void (int)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10067,7 +10096,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 16,
+          "line": 28,
           "declaration": "ModInt",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10083,7 +10112,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 17,
+          "line": 29,
           "declaration": "constexpr ModInt 'void (U)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10099,7 +10128,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 17,
+          "line": 29,
           "declaration": "constexpr ModInt 'void (ModInt<998244353>)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10114,8 +10143,24 @@
           }
         },
         {
+          "kind": "CXXConstructorDecl",
+          "line": 29,
+          "declaration": "used constexpr ModInt 'void (unsigned int)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
           "kind": "CXXMethodDecl",
-          "line": 19,
+          "line": 31,
           "declaration": "get 'uint32_t () const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10131,7 +10176,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 20,
+          "line": 32,
           "declaration": "constexpr mod 'uint32_t ()' implicit_instantiation static implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10147,7 +10192,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 22,
+          "line": 34,
           "declaration": "set",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10163,7 +10208,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 22,
+          "line": 34,
           "declaration": "constexpr set 'void (T)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10179,7 +10224,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 26,
+          "line": 38,
           "declaration": "set",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10195,7 +10240,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 26,
+          "line": 38,
           "declaration": "constexpr set 'void (U)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10211,7 +10256,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 30,
+          "line": 42,
           "declaration": "constexpr operator++ 'ModInt<998244353> (int)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10227,7 +10272,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 35,
+          "line": 47,
           "declaration": "constexpr operator++ 'ModInt<998244353> &()' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10243,7 +10288,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 39,
+          "line": 51,
           "declaration": "constexpr operator-- 'ModInt<998244353> (int)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10259,7 +10304,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 44,
+          "line": 56,
           "declaration": "constexpr operator-- 'ModInt<998244353> &()' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10275,7 +10320,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 48,
+          "line": 60,
           "declaration": "constexpr operator+= 'ModInt<998244353> &(const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10291,7 +10336,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 55,
+          "line": 65,
           "declaration": "constexpr operator-= 'ModInt<998244353> &(const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10307,7 +10352,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 62,
+          "line": 70,
           "declaration": "used constexpr operator*= 'ModInt<998244353> &(const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10323,7 +10368,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 66,
+          "line": 74,
           "declaration": "used constexpr operator/= 'ModInt<998244353> &(const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10339,7 +10384,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 67,
+          "line": 75,
           "declaration": "constexpr operator+ 'ModInt<998244353> () const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10355,7 +10400,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 68,
+          "line": 76,
           "declaration": "constexpr operator- 'ModInt<998244353> () const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10371,8 +10416,8 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 70,
-          "declaration": "used constexpr pow 'ModInt<998244353> (ll) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
+          "line": 78,
+          "declaration": "constexpr pow 'ModInt<998244353> (ll) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
           "status": {
@@ -10383,14 +10428,11 @@
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          },
-          "review_notes": [
-            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/number_theory/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
-          ]
+          }
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 84,
+          "line": 85,
           "declaration": "used constexpr inv 'ModInt<998244353> () const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10406,7 +10448,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 89,
+          "line": 90,
           "declaration": "constexpr friend_undeclared operator+ 'ModInt<998244353> (const ModInt<998244353> &, const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10422,7 +10464,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 92,
+          "line": 93,
           "declaration": "constexpr friend_undeclared operator- 'ModInt<998244353> (const ModInt<998244353> &, const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10438,7 +10480,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 95,
+          "line": 96,
           "declaration": "used constexpr friend_undeclared operator* 'ModInt<998244353> (const ModInt<998244353> &, const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10454,7 +10496,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 98,
+          "line": 99,
           "declaration": "used constexpr friend_undeclared operator/ 'ModInt<998244353> (const ModInt<998244353> &, const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10470,7 +10512,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 101,
+          "line": 102,
           "declaration": "constexpr friend_undeclared operator== 'bool (const ModInt<998244353> &, const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10486,7 +10528,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 104,
+          "line": 105,
           "declaration": "constexpr friend_undeclared operator!= 'bool (const ModInt<998244353> &, const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10502,7 +10544,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 108,
+          "line": 109,
           "declaration": "friend_undeclared operator>> 'istream &(istream &, ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10518,7 +10560,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 114,
+          "line": 115,
           "declaration": "friend_undeclared operator<< 'ostream &(ostream &, const ModInt<998244353> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10550,7 +10592,7 @@
         },
         {
           "kind": "TypeAliasDecl",
-          "line": 120,
+          "line": 121,
           "declaration": "referenced mint 'ModInt<998244353U>':'ModInt<998244353>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10582,7 +10624,7 @@
         },
         {
           "kind": "TypeAliasDecl",
-          "line": 121,
+          "line": 122,
           "declaration": "mint17 'ModInt<1000000007U>':'ModInt<1000000007>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10614,7 +10656,7 @@
         },
         {
           "kind": "VarDecl",
-          "line": 123,
+          "line": 124,
           "declaration": "referenced MAX_FAC 'const int' cinit",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10630,7 +10672,7 @@
         },
         {
           "kind": "VarDecl",
-          "line": 124,
+          "line": 125,
           "declaration": "used fac 'mint[20000003]' callinit",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10646,7 +10688,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 127,
+          "line": 128,
           "declaration": "constexpr C 'mint (int, int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10662,7 +10704,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 129,
+          "line": 130,
           "declaration": "constexpr init 'void ()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -10684,19 +10726,19 @@
       "compile": {
         "status": "passed",
         "exit_code": 0,
-        "diagnostics": "",
+        "diagnostics": "In file included from <scratch>/include.cpp:2:\nexperiments/library/cpp/modint/modint.hpp:26:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   26 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:28:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   28 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:33:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   33 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:37:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   37 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\n",
         "mode": "syntax-only"
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": null,
+      "verification_target": "library/modint/modint.toml",
       "status": {
-        "review": "pending",
-        "bug": "unknown",
-        "cpp_tested": false,
-        "common_translator": false,
-        "lean_proved": false,
-        "include_verified": false,
+        "review": "reviewed",
+        "bug": "fixed",
+        "cpp_tested": true,
+        "common_translator": true,
+        "lean_proved": true,
+        "include_verified": true,
         "published": false
       },
       "including_drivers": [
@@ -10721,7 +10763,16 @@
         "experiments/library3/cpp/Graph/GraphM.hpp",
         "experiments/library3/cpp/ModInt/ModInt.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "review_notes": "2026-11-17: full original ModInt class API (27 public member/friend declarations), aliases, MAX_FAC=20000003, fac/C/init restored in public lean_model component. Five original bug categories fixed in original and public source. Fresh full-source proofs, public sanitizer/template-first C++ check, and 65-output native/model differential passed. Full 56-component gate, 328 tasks, and independent kernel verification passed. Push, CI timing, and release refresh are pending.",
+      "evidence": [
+        "library/modint/modint.toml",
+        "Proofs/Cpp/Modint.lean",
+        "tests/modint.cpp",
+        "tests/diff/modint.py",
+        "docs/modint.md",
+        "docs/agent/fixes.md"
+      ]
     },
     {
       "source": "experiments/library/cpp/number/ratio.hpp",

@@ -13,7 +13,7 @@ import lean_translate
 
 
 class FriendTranslationTests(unittest.TestCase):
-    def compare(self, header, cases, expected_values, standard="c++17", instance=None):
+    def compare(self, header, cases, expected_values, standard="c++17", instance=None, calls=None):
         with tempfile.TemporaryDirectory(dir=ROOT / 'tests/diff', prefix='.friend-') as directory:
             scratch = Path(directory)
             source = scratch / 'friend.hpp'
@@ -22,7 +22,7 @@ class FriendTranslationTests(unittest.TestCase):
                 with self.assertRaises(subprocess.CalledProcessError):
                     lean_translate.translate_file(source, [])
             model = lean_translate.translate_file(source, [], standard=standard)
-            h = diff_harness.Harness(source, instance or {'T': 'long long'}, 'Unused', standard=standard)
+            h = diff_harness.Harness(source, instance or {'T': 'long long'}, 'Unused', standard=standard, calls=calls)
             cpp = scratch / 'driver.cpp'
             cpp.write_text(h.cpp_driver())
             binary = scratch / 'driver'

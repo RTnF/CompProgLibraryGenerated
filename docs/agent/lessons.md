@@ -250,3 +250,57 @@
 
 - 生成関数の `[Div T]` / `[Mod T]` をT=Intとして既定instanceで呼ぶと、C++の切捨てとLeanのEuclid演算が異なる。GroupAffine(2,3).inv()の第2fieldはC++で-1だが、既定Int除算では-2になる。Ratioのような正確な約分だけではこの境界を見落とす。
 - 差分driverでInt carrierのtemplate演算をInt.tdiv/tmodへ明示的に束縛する。非テンプレートIntの既存Cpp.tdiv/tmod経路と、UInt32/64 carrierを維持する。符号全組の商・剰余60呼出しと、非単位元のGroupAffine逆演算をC++ sanitizers/Lean/独立期待値で確認する。元のC++のバグではないのでfixes.mdへは記録しない。
+
+## 2026-11-17: 制約の値はClangの型表記で正規化される
+
+- std::enable_if_tの依存条件は、NonTypeTemplateParmDeclの子に通常の式ASTがなく、qualTypeへ表示されることがある。例えば8進010はその表記では10ではなく8へ正規化される。元の字面を十進数として解釈しない。受理する比較・整数型・定数範囲を限定し、正規化された値がC++と一致する回帰を置く。
+- SFINAE条件をモデルから消さず、命題の証明を持つPropの引数として構造体と各関数へ伝える。具体化の検査は条件を証明する側と、不成立の条件をC++/Leanがともに拒否する側を確認する。
+
+## 2026-11-17: SFINAEの型特性はcarrierから復元しない
+
+- long longとunsigned short、signed/unsigned128が同じLean Intに対応しても、std::is_signedやsigned128同型判定は同じではない。元の型引数のタグ付き情報を渡し、差分driverのC++ static_assertで具体化の対応を確認する。型名を具体化するときも、引用符内のタグは置換しない。
+- 反対のSFINAE条件を持つ関数を同じheaderに置いて個別検証するとき、未選択の関数の偽の条件を証明させない。選択した公開関数の要求と、使用するクラス型そのものの要求だけを具体化する。
+
+## 2026-11-17: 依存した複合代入でmemberを決め打ちしない
+
+- Box<N>のmember operator+=(const Box&)とfriend operator+=(Box&, Box&)が共存すると、nonconst右辺ではfriendが選ばれる場合がある。未解決CompoundAssignOperatorをmemberへ固定すると、C++100/Lean1の不一致になる。source内のfree候補を検出して拒否し、解決済みCXXOperatorCallExprでは実calleeがCXXMethodDeclであることを確かめる。式と文を別々に回帰へ含める。
+
+## 2026-11-17: クラス二項演算のオペランドを再評価しない
+
+- classの二項演算を関数呼出しへ翻訳するとき、型を調べるために評価したオペランドをcall_sigで再評価しない。既評価の値と型を渡し、make等の呼出しが各1回であることをnative/Leanのcounter付きケースで確認する。
+- 具体化されたfriend/memberの宣言IDは元のgeneric定義と異なることがある。元の本体位置と名前で対応を確認し、解決済みのcalleeと異なる演算子を選ばない。明示的特殊化を主テンプレートの代わりに検証せず、通常の明示実体化とは区別する。
+
+## 2026-11-17: 入力失敗時は抽出先が書かれるとは限らない
+
+- 標準抽出のsentryが失敗すると一時変数へ書かずに戻る。ll y; is >> y; set(y)は、空入力/既存エラーで未初期化値を読む。ASan/UBSanだけで検出できるとせず、標準実装のguardと-ftrivial-auto-var-init=zero/patternの差を確認する。初期値を与えても、num_getが解析失敗/範囲超過で書く値や、例外でsetへ進まない動作を変えない回帰を置く。
+- longとlong longは同じ幅/Lean Intでも、異なるlocale facetのoverloadへ進み得る。具体stream契約はdesugaredQualTypeから元の型を識別してtagを渡し、一般のInt用契約に合流させない。
+
+## 2026-11-17: generic定義のコンパイルだけで具体化を確認しない
+
+- unsigned templateの生成関数が[NatCast U]を要求するとき、U=UInt32/UInt64で必要なinstanceが無ければgeneric定義は通っても実際の呼出しはコンパイルできない。原本class全体の生成と、公開entryをC++/Lean/独立整数oracleで実行する検査を両方置く。
+- 同じclassに対する5法の検証は、別driverを5回構築する代わりに5つの薄いwrapperを1driverへまとめ、入力境界と型別実行のcoverageを維持して重複したコンパイルを減らす。
+
+## 2026-11-17: 混合剰余の法をテンプレート入力型へ狭めない
+
+- 原本ModIntのU版ctor/setでBoolを実体化すると、従来モデルはNatCast Boolを要求して実行できなかった。x % mは先にC++の算術昇格を行う。結果のuint32_t変換までを一つの型付き契約にし、Boolへmを変換する経路を除いた。
+- 依存する演算子がClangではBinaryOperatorとは限らずCXXOperatorCallExprにもなる。原本のfresh ASTで両方の入口を確認する。タグ付き契約を用い、同じInt carrierでもintとlong longの負数を区別する。
+- 型束縛だけでなく内部call packetにも数学的Intが現れる。差分driverの切捨てMod設定をdiff.instancesだけから決めない。128 bit入力の全幅は64 bitのhigh/lowから無桁あふれで組み立て、汎用rdのlong long一時変数で切り落とさない。
+- 同じ原本クラスの多くの型実体化を検査するときは、canonical headerの内容とパスを固定確認し、Clang ASTをその範囲で再利用して、各型のC++/Lean driverはそれぞれ検査する。型の種類や範囲を減らして時間を短縮しない。
+
+## 2026-11-17: クラス単項演算子を型クラス算術で代用しない
+
+- Clangが選んだunary member/freeの宣言を使う。class operandをNeg(Class)へ落とすと、ModIntの正常な-C++がLeanで未接続だった。free unary operator-が加算を返す例でも、その実宣言の意味を保持する。
+- receiverを展開してからcalleeへ渡すときは一度だけ評価する。make(int& count)を受け手にする差分検査でcallee writebackと評価回数も確認する。未対応のnonconst/ref返却/型parameterは既定算術で成功させず拒否する。
+- UInt32とtoNatの比較は、同じ値を表していてもdecideの計算がrflで同じとは限らない。値等値のiffを使い、否定も場合分けして接続する。Word算術は範囲を先にNatへ移し、桁あふれなしを示してから既存の還元補題へつなぐ。
+
+## 2026-11-17: 大きな固定長配列は端点を変数にした更新モデルで証明する
+
+- MAX_FAC=20000003を含む生成関数へ直接mvcgenすると、閉じたrangeの展開で再帰が深くなる。元と定義的に一致する純粋な配列更新モデルを作り、端点を変数にした不変条件を証明してから元の定数へ適用する。入力範囲や配列長を縮めず、資源上限も増やさない。
+- exact tickの大きな算術式をomegaで十進定数へ正規化する証明でも、kernel深度に当たり得る。実行結果の時計は `start + 2 + 4 * 20000002` のまま等式で移し、O(N)の上界は変数Nについて示す。
+- 998244353の素数性は深さ14の平衡木で奇数の候補を検査し、平方根以下の約16000候補で十分なことを別に証明した。約10億回の試行や線形深度の証明項を作らない。通常のdecideとkernelで検査し、native_decideや新たな公理で代用しない。
+- source監査は `#` を禁止しているため、生成Leanの空配列にも `Array.empty` を使う。監査を緩和して配列リテラルを通さず、公開前にfreshなモデルと全契約を監査へ通す。
+
+## 2026-11-17: 自動生成のequation補題は最初の利用moduleに属することがある
+
+- bitWidth.eq_1のような遅延生成されたequation補題は、定義のmoduleとは異なる利用moduleの所有になる。新たなproofのimport順で所有が変わった場合、台帳のmodule hashだけが変わる。旧環境dumpと新dumpでkind/type/levels/body/unsafeが全一致することを確認してからその差だけを承認し、仕様そのものの変更と混同しない。
+- 大きな環境dumpの台帳確認は1行ずつdigestと必要な依存名だけを保持して行う。全definition body文字列を二重にメモリへ置かない。検査の意味を変えず、資源上限を増やさない。

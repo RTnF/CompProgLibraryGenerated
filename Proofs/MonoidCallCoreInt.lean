@@ -1,5 +1,4 @@
-import Proofs.ModIntCall
-
+import Proofs.LegacyScalarPrepare
 namespace Proofs.MonoidCallCoreInt
 open Proofs.CppScalar Proofs.CppVector Proofs.CppVectorStore Proofs.CppVectorOwnership
 open Proofs.CppNestedVectorStore Proofs.CppNestedVectorBindings Proofs.CppNestedProgram

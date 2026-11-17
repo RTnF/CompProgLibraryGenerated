@@ -45,7 +45,7 @@ def cpp_value_type(qual: str, instance: dict) -> str:
 # no-narrowing-overflow premise. Their C++ expressions promote to int, rather
 # than computing in UInt8/UInt16 at every operator. Explicit concrete source
 # declarations/casts still go through lean_translate.parse_type and are rejected.
-SMALL_UNSIGNED_BINDINGS = {"unsigned char": 8, "unsigned short": 16, "unsigned short int": 16}
+SMALL_UNSIGNED_BINDINGS = {"unsigned char": 8, "unsigned short": 16, "unsigned short int": 16, "char16_t": 16}
 
 
 def instance_type(cpp: str):
@@ -58,8 +58,13 @@ def lean_instance_type(cpp: str) -> str:
     return lt.lean_type(instance_type(cpp))
 
 
+def type_traits_binding(cpp):
+    return lt.known_type_traits(cpp)
+
+
 CPP_PRELUDE = r"""
 #include <iostream>
+#include <limits>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -353,6 +358,23 @@ class Harness:
         translated = tr.translate()
         self.numeric_trait_parameters = sorted(set(re.findall(r'Cpp\.NumericTraits "(\w+)"', translated)))
         self.tr = tr
+        selected_requirements = ' '.join(r for info, sig in self.callables()
+            if sig.public and not (info is not None and sig.is_static)
+            for r in tr.built_functions[id(sig)].reqs.items)
+        self.source_stream_contracts = sorted(set(re.findall(
+            r'Cpp\.SourceStream(Read|Write) "(\w+)" (\w+)', selected_requirements)))
+        self.source_stream_only = bool(self.source_stream_contracts) and not re.search(
+            r'Cpp\.Stream(?:Read|Write) (?!Cpp\.StreamChar)\w+', selected_requirements)
+        self.type_trait_parameters = sorted(set(re.findall(r'Cpp\.TypeTraits "(\w+)"', selected_requirements)))
+        self.mod_to_u32_parameters = sorted(set(re.findall(r'Cpp\.ModToUInt32 "(\w+)"', selected_requirements)))
+        self.value_parameters = {}
+        for values in [*(c.value_params for c in tr.classes.values()),
+                       *(sig.value_params for _, sig in self.callables(unfiltered=True))]:
+            for name, ty in values.items():
+                if name in self.value_parameters and (self.value_parameters[name] != ty
+                        or self.value_parameters[name].width != ty.width):
+                    raise lt.Unsupported(f"different non-type parameter types sharing binding {name}")
+                self.value_parameters[name] = ty
         if self.selected_calls is not None:
             known = {sig.lean_name.removeprefix("cp.") for info, sig in self.callables(unfiltered=True)
                      if sig.public and not (info is not None and sig.is_static)}
@@ -361,9 +383,11 @@ class Harness:
                 raise lt.Unsupported(f"unknown or non-public differential calls: {sorted(unknown)}")
         policies = {pol for _, sig in self.callables() for pol in sig.policies}
         self.policy_class = {k: re.sub(r"<.*", "", v).removeprefix("cp::") for k, v in instance.items() if k in policies}
-        self.lean_instance = {k: lean_instance_type(v) for k, v in instance.items() if k not in policies}
+        self.lean_instance = {k: (lt.lean_type(lt.parse_value_arg(v, self.value_parameters[k], {}))
+                                  if k in self.value_parameters else lean_instance_type(v))
+                              for k, v in instance.items() if k not in policies}
         for k, v in instance.items():
-            if k in policies:
+            if k in policies or k in self.value_parameters:
                 continue
             ty = instance_type(v)
             if ty.kind == "vec":   # a container parameter T: its element type is T_value_type
@@ -377,7 +401,8 @@ class Harness:
             signed_bits = {"short": 16, "short int": 16, "int": 32, "std::int32_t": 32, "int32_t": 32,
                            "long": 64, "long int": 64, "long long": 64, "long long int": 64,
                            "ll": 64, "std::int64_t": 64, "int64_t": 64}
-            values = [v for k, v in instance.items() if k not in policies]
+            values = [] if self.source_stream_only else [v for k, v in instance.items()
+                if k not in policies and k not in self.value_parameters]
             models = []
             message = "stream differential protocol needs one uniform numeric or character model"
             for value in values:
@@ -430,6 +455,23 @@ class Harness:
                        .replace("@@CHAR_SIGNED@@", "false" if self.stream_unsigned else "true")
                      if self.stream_character else "") if self.has_streams else ""), "int main() {", "  std::string cmd, name;"]
         classes = [item for kind, item in self.tr.order if kind == "class"]
+        checked_traits = {packet for fn in self.tr.built_functions.values()
+                          for packet in fn.type_trait_bindings}
+        checked_traits.update((self.instance[p], *type_traits_binding(self.instance[p]))
+                              for p in set(self.type_trait_parameters) | set(self.mod_to_u32_parameters))
+        if self.mod_to_u32_parameters or checked_traits:
+            lines.append('  static_assert(std::numeric_limits<unsigned int>::digits == 32);')
+            lines.append('  static_assert(std::numeric_limits<long>::digits == 63);')
+            lines.append('  static_assert(std::numeric_limits<long long>::digits == 63);')
+        for cpp, signed, int128 in sorted(checked_traits):
+            if cpp == "wchar_t":
+                lines.append('  static_assert(std::numeric_limits<wchar_t>::digits == 31);')
+            elif cpp in ("char16_t", "char32_t"):
+                lines.append(f'  static_assert(std::numeric_limits<{cpp}>::digits == {16 if cpp == "char16_t" else 32});')
+            lines.append(f'  static_assert(std::is_signed_v<{cpp}> == {str(signed).lower()});')
+            lines.append(f'  static_assert(std::is_same_v<std::remove_cv_t<{cpp}>, __int128> == {str(int128).lower()});')
+        if self.source_stream_contracts:
+            lines.append('  static_assert(sizeof(int) == 4 && sizeof(long) == 8 && sizeof(long long) == 8);')
         for info in classes:
             lines.append(f"  std::vector<{self.cpp_class(info)}> objects_{info.name};")
         lines.append("  while (std::cin >> cmd >> name) {")
@@ -547,12 +589,31 @@ class Harness:
             streams = streams.replace("@@TYPE@@", "Int" if self.stream_unsigned and self.stream_bits < 32
                                       else "UInt" + str(self.stream_bits))
             streams = streams.replace("@@CHAR_SIGNED@@", "false" if self.stream_unsigned else "true")
+            concrete_ops = []
+            for direction, source, carrier in self.source_stream_contracts:
+                bits = 32 if source in ('int', 'unsigned_int') else 64
+                unsigned = source.startswith('unsigned_')
+                template = LEAN_UNSIGNED_STREAM_OPS if unsigned else LEAN_SIGNED_STREAM_OPS
+                read, write = template.split('instance : @StreamWrite', 1)
+                if direction == 'Read':
+                    operation = read.replace('instance : @StreamRead', f'instance : @SourceStreamRead "{source}"')
+                else:
+                    operation = f'instance : @SourceStreamWrite "{source}"' + write
+                operation = operation.replace('@@TYPE@@', carrier)
+                operation = operation.replace('@@MIN@@', str(-(2**(bits-1))))
+                operation = operation.replace('@@MAX@@', str(2**(bits if unsigned else bits-1)-1))
+                operation = operation.replace('@@CAPACITY@@', str(2**bits))
+                concrete_ops.append(operation)
+            streams += '\nnamespace DiffTest\nopen Proofs.Cpp\n' + '\n'.join(concrete_ops) + '\nend DiffTest\n'
         # A template's Div/Mod instances are chosen at the concrete call site.
         # Lean's default integer operators use Euclidean division, whereas C++
         # signed arithmetic truncates toward zero. Concrete non-template Int
         # operations are already emitted as Cpp.tdiv/tmod by the translator.
         integer_ops = ""
-        if "Int" in self.lean_instance.values():
+        packet_integers = any(instance_type(cpp).kind == "int"
+                              for fn in self.tr.built_functions.values()
+                              for cpp, _, _ in fn.type_trait_bindings)
+        if "Int" in self.lean_instance.values() or packet_integers:
             integer_ops = ("local instance cppTemplateDiv : Div Int := ⟨Int.tdiv⟩\n"
                            "local instance cppTemplateMod : Mod Int := ⟨Int.tmod⟩\n")
         numeric_traits = []
@@ -572,14 +633,59 @@ class Harness:
             else:
                 raise lt.Unsupported(f"numeric traits differential binding {cpp}")
             numeric_traits.append(f'local instance cppTraits_{parameter} : Proofs.Cpp.NumericTraits "{parameter}" {carrier} := {value}')
-        lines = [f"import {self.lean_module}", LEAN_PRELUDE, streams, integer_ops, *numeric_traits, "open Proofs.Cpp.Gen", "",
+        constraints = set()
+        type_traits = []
+        for parameter in self.type_trait_parameters:
+            signed, int128 = type_traits_binding(self.instance[parameter])
+            carrier = self.lean_instance[parameter]
+            type_traits.append(f'local instance cppTypeTraits_{parameter} : Proofs.Cpp.TypeTraits "{parameter}" {carrier} := '
+                               f'⟨{str(signed).lower()}, {str(int128).lower()}⟩')
+        requirements = [r for info in classes
+                        for r in lt.class_requirements(lt.class_ty(info), self.tr.classes)]
+        requirements += [r for info, sig in self.callables()
+                         if sig.public and not (info is not None and sig.is_static)
+                         for r in self.tr.built_functions[id(sig)].reqs.items]
+        requirements += [r for kind, sig in self.tr.order if kind == "fn" and sig.initializes_globals
+                         for r in self.tr.built_functions[id(sig)].reqs.items]
+        for requirement in requirements:
+            if requirement.startswith("Cpp.TemplateConstraint "):
+                condition = requirement.removeprefix("Cpp.TemplateConstraint ")
+                condition = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"|\b[A-Za-z_][A-Za-z_0-9]*\b',
+                                   lambda m: self.lean_instance.get(m[0], m[0]), condition)
+                condition = condition.replace("Cpp.TypeTraits.", "Proofs.Cpp.TypeTraits.")
+                constraints.add(condition)
+        facts = [f"local instance cppConstraint_{i} : Proofs.Cpp.TemplateConstraint {c} := ⟨by decide⟩"
+                 for i, c in enumerate(sorted(constraints))]
+        remainder_bindings = []
+        for parameter in self.mod_to_u32_parameters:
+            if parameter not in self.instance:
+                raise lt.Unsupported(f"missing integral remainder binding {parameter}")
+            value = lt.mod_to_uint32_binding(self.instance[parameter], parameter).replace("Cpp.", "Proofs.Cpp.")
+            remainder_bindings.append(f'local instance cppModToUInt32_{parameter} : '
+                                      f'Proofs.Cpp.ModToUInt32 "{parameter}" {self.lean_instance[parameter]} := {value}')
+        lines = [f"import {self.lean_module}", LEAN_PRELUDE, streams, integer_ops, *numeric_traits, *type_traits, *remainder_bindings, "open Proofs.Cpp.Gen", *facts, "",
                  "structure Objects where"]
         for info in classes:
             cty = self.lean_type_inst(lt.Ty("cls", info.name, tuple(lt.Ty("tparam", t) for t in info.tparams)))
             lines.append(f"  o_{info.name} : Array {cty} := #[]")
+        if self.tr.globals:
+            lines.append("  globalState : Option cp.GlobalState := none")
         if not classes:
             lines.append("  unused : Unit := ()")
         lines.append("")
+        if self.tr.globals:
+            # Class-only commands do not observe globals. Materialize their
+            # model state when first used, retaining every previously created
+            # object. Native C++ still performs its normal startup; separate
+            # startup/global tests check the initialization itself.
+            lines.append("def initializeObjects (objs : Objects) : IO Objects := do")
+            lines.append("  match objs.globalState with")
+            lines.append("  | some _ => pure objs")
+            lines.append("  | none =>")
+            lines.append(f"    match (cp.{self.tr.initializer_name} : Proofs.Cpp.M cp.GlobalState) 0 with")
+            lines.append('    | none => throw (IO.userError "global initialization failed")')
+            lines.append("    | some (state, _) => pure { objs with globalState := some state }")
+            lines.append("")
         lines.append("partial def run (ts : List String) (objs : Objects) (out : Array String) : IO (Array String) := do")
         lines.append("  match ts with")
         lines.append("  | [] => pure out")
@@ -601,6 +707,8 @@ class Harness:
             else:
                 head = f'  | "do" :: "{label}" :: ts => do'
             lines.append(head)
+            if sig.uses_globals:
+                lines.append("    let objs ← initializeObjects objs")
             if info is not None and not sig.is_ctor:
                 lines.append("    let (k, ts) ← DiffTest.arg (α := Int) ts")
                 lines.append(f"    let obj := objs.o_{info.name}[k.toNat]!")
@@ -617,7 +725,14 @@ class Harness:
                 cls = self.policy_class[pol]
                 fields = ", ".join(f"{lt.lean_name(m)} := cp.{cls}.{lt.lean_name(m)}" for m in methods)
                 pols.append(f"{{ {fields} }}")
-            call = " ".join([sig.lean_name] + pols + (["obj"] if info is not None and not sig.is_ctor else []) + names)
+            value_names = list(dict.fromkeys([*(info.value_params if info else {}), *sig.value_params]))
+            value_args = [f"({lt.lean_name(name)} := {self.lean_instance[name]})" for name in value_names]
+            if sig.constraints:
+                value_args += [f"({name} := {self.lean_instance[name]})"
+                               for name in sig.tparams if name not in sig.value_params]
+            call = " ".join([sig.lean_name] + value_args + pols + (["obj"] if info is not None and not sig.is_ctor else []) + names)
+            if sig.uses_globals:
+                call += " objs.globalState.get!"
             lines.append(f"    match ({call}).run 0 with")
             lines.append('    | none => run ts objs (out.push "fail")')
             lines.append("    | some (r, _) => do")
@@ -629,6 +744,8 @@ class Harness:
             for j, o in enumerate(outputs):
                 sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
                 if o == "self":
+                    continue
+                if o == "@globals":
                     continue
                 if o == "ret" and sig.ret.kind == "cls":
                     parts.append('" obj"')
@@ -651,6 +768,10 @@ class Harness:
                 j = outputs.index("self")
                 sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
                 lines.append(f"      let objs := {{ objs with o_{info.name} := objs.o_{info.name}.set! k.toNat {sel} }}")
+            if "@globals" in outputs:
+                j = outputs.index("@globals")
+                sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
+                lines.append(f"      let objs := {{ objs with globalState := some {sel} }}")
             lines.append(f"      run ts {objs} (out.push ({text}))")
         lines.append("  | t :: _ => throw (IO.userError s!\"unknown command {t}\")")
         lines.append("")

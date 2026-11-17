@@ -2,8 +2,7 @@ import Proofs.VecPrepare
 import Proofs.Generated.VectorSum
 import Proofs.DoublingCall
 import Proofs.IntSim
-import Proofs.ModIntExec
-
+import Proofs.LegacyScalarPrepare
 namespace Proofs.VectorSumCall
 open Proofs.CppScalar Proofs.CppVector Proofs.CppVectorStore Proofs.CppVectorOwnership
 open Proofs.CppNestedVectorStore Proofs.CppNestedVectorBindings Proofs.CppNestedProgram
