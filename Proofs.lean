@@ -254,7 +254,6 @@ import Proofs.RunLengthCall
 import Proofs.ScalarRefs
 import Proofs.ScalarRefsV
 import Proofs.MonoidLazyCall
-import Proofs.DynamicModIntCall
 import Proofs.PrefixSumsCall
 import Proofs.FenwickMath
 import Proofs.FenwickBuildMath
@@ -617,4 +616,6 @@ import Proofs.LegacyMonoidCallCore
 import Proofs.Cpp.Lib.ModIntMath
 import Proofs.Cpp.Lib.PrimeCertificate
 import Proofs.Cpp.Lib.ModIntFactorial
+import Proofs.Cpp.Lib.DynamicModIntFactorial
 import Proofs.LegacyScalarPrepare
+import Proofs.Cpp.DynamicModint

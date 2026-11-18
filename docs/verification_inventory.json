@@ -8694,7 +8694,7 @@
     },
     {
       "source": "experiments/library/cpp/modint/dynamic_modint.hpp",
-      "source_sha256": "232d72a024dd926af8b13fbafc27902ad9645ef7e3d98a272ce6ec86df0286f1",
+      "source_sha256": "fdcd1f7a77f8b41ad4f8f3b6c0b8d5458e65b8ef6c5cdb81f81e0fb14a9415a1",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": "剰余を取り[0, mod)に収めるint",
@@ -8706,8 +8706,24 @@
       ],
       "declarations": [
         {
+          "kind": "FunctionDecl",
+          "line": 4,
+          "declaration": "used dynamic_modint_pow_word 'uint32_t (uint32_t, ull, uint32_t)' static",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
           "kind": "CXXRecordDecl",
-          "line": 9,
+          "line": 21,
           "declaration": "referenced struct DynamicModInt definition",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8723,7 +8739,7 @@
         },
         {
           "kind": "VarDecl",
-          "line": 10,
+          "line": 22,
           "declaration": "used m 'uint32_t':'unsigned int' static",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8739,7 +8755,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 11,
+          "line": 23,
           "declaration": "referenced x 'uint32_t':'unsigned int'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8754,8 +8770,24 @@
           }
         },
         {
+          "kind": "CXXMethodDecl",
+          "line": 26,
+          "declaration": "used pow_nonnegative 'uint32_t (uint32_t, ull)' static implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
           "kind": "CXXConstructorDecl",
-          "line": 13,
+          "line": 31,
           "declaration": "used DynamicModInt 'void ()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8771,7 +8803,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 14,
+          "line": 32,
           "declaration": "DynamicModInt",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8787,7 +8819,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 15,
+          "line": 33,
           "declaration": "DynamicModInt 'void (T)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8802,24 +8834,8 @@
           }
         },
         {
-          "kind": "CXXConstructorDecl",
-          "line": 15,
-          "declaration": "used DynamicModInt 'void (int)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
-        },
-        {
           "kind": "FunctionTemplateDecl",
-          "line": 16,
+          "line": 34,
           "declaration": "DynamicModInt",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8835,7 +8851,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 17,
+          "line": 35,
           "declaration": "DynamicModInt 'void (U)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8851,7 +8867,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 17,
+          "line": 35,
           "declaration": "DynamicModInt 'void (DynamicModInt)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8867,7 +8883,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 17,
+          "line": 35,
           "declaration": "used DynamicModInt 'void (unsigned int)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8882,8 +8898,40 @@
           }
         },
         {
+          "kind": "CXXConstructorDecl",
+          "line": 35,
+          "declaration": "DynamicModInt 'void (__gnu_cxx::__normal_iterator<DynamicModInt *, std::vector<DynamicModInt>>)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
+          "kind": "CXXConstructorDecl",
+          "line": 35,
+          "declaration": "DynamicModInt 'void (std::move_iterator<DynamicModInt *>)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
           "kind": "CXXMethodDecl",
-          "line": 19,
+          "line": 37,
           "declaration": "get 'uint32_t () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8899,7 +8947,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 20,
+          "line": 38,
           "declaration": "set",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8915,7 +8963,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 20,
+          "line": 38,
           "declaration": "set 'void (T)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8931,7 +8979,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 20,
+          "line": 38,
           "declaration": "used set 'void (long)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8947,7 +8995,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 23,
+          "line": 41,
           "declaration": "set",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8963,7 +9011,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 23,
+          "line": 41,
           "declaration": "set 'void (U)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8979,7 +9027,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 27,
+          "line": 45,
           "declaration": "operator++ 'DynamicModInt (int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -8995,7 +9043,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 32,
+          "line": 50,
           "declaration": "used operator++ 'DynamicModInt &()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9011,7 +9059,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 36,
+          "line": 54,
           "declaration": "operator-- 'DynamicModInt (int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9027,7 +9075,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 41,
+          "line": 59,
           "declaration": "used operator-- 'DynamicModInt &()' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9043,7 +9091,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 45,
+          "line": 63,
           "declaration": "used operator+= 'DynamicModInt &(const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9059,7 +9107,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 52,
+          "line": 68,
           "declaration": "used operator-= 'DynamicModInt &(const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9075,7 +9123,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 59,
+          "line": 73,
           "declaration": "used operator*= 'DynamicModInt &(const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9091,7 +9139,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 63,
+          "line": 77,
           "declaration": "used operator/= 'DynamicModInt &(const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9107,7 +9155,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 64,
+          "line": 81,
           "declaration": "operator+ 'DynamicModInt () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9123,7 +9171,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 65,
+          "line": 82,
           "declaration": "operator- 'DynamicModInt () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9139,8 +9187,8 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 67,
-          "declaration": "used pow 'DynamicModInt (ll) const' implicit-inline",
+          "line": 87,
+          "declaration": "pow 'DynamicModInt (ll) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
           "status": {
@@ -9151,14 +9199,11 @@
             "lean_proved": false,
             "include_verified": false,
             "published": false
-          },
-          "review_notes": [
-            "2026-10-08: the binary exponentiation core of pow is published as cp::pow_mod (library/number_theory/pow_mod.hpp, Proofs.PowModCall.pow_mod_correct) for 1 <= m <= 2^32; this class method itself, with its negative exponent branch and inv, is not yet translated."
-          ]
+          }
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 81,
+          "line": 97,
           "declaration": "used inv 'DynamicModInt () const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9174,7 +9219,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 86,
+          "line": 104,
           "declaration": "friend_undeclared operator+ 'DynamicModInt (const DynamicModInt &, const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9190,7 +9235,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 90,
+          "line": 110,
           "declaration": "friend_undeclared operator- 'DynamicModInt (const DynamicModInt &, const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9206,7 +9251,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 94,
+          "line": 116,
           "declaration": "used friend_undeclared operator* 'DynamicModInt (const DynamicModInt &, const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9222,8 +9267,8 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 98,
-          "declaration": "used friend_undeclared operator/ 'DynamicModInt (const DynamicModInt &, const DynamicModInt &)' implicit-inline",
+          "line": 122,
+          "declaration": "friend_undeclared operator/ 'DynamicModInt (const DynamicModInt &, const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
           "status": {
@@ -9238,7 +9283,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 102,
+          "line": 128,
           "declaration": "friend_undeclared operator== 'bool (const DynamicModInt &, const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9254,7 +9299,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 105,
+          "line": 131,
           "declaration": "friend_undeclared operator!= 'bool (const DynamicModInt &, const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9270,7 +9315,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 109,
+          "line": 135,
           "declaration": "friend_undeclared operator>> 'istream &(istream &, DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9286,7 +9331,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 115,
+          "line": 141,
           "declaration": "friend_undeclared operator<< 'ostream &(ostream &, const DynamicModInt &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9302,7 +9347,7 @@
         },
         {
           "kind": "VarDecl",
-          "line": 120,
+          "line": 146,
           "declaration": "used m 'uint32_t':'unsigned int' cinit",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9318,7 +9363,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 122,
+          "line": 148,
           "declaration": "used factorial 'DynamicModInt (int)'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9334,7 +9379,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 138,
+          "line": 177,
           "declaration": "used factorial_inv 'DynamicModInt (int)'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9350,7 +9395,7 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 155,
+          "line": 209,
           "declaration": "C 'DynamicModInt (int, int)'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -9372,7 +9417,7 @@
       "compile": {
         "status": "passed",
         "exit_code": 0,
-        "diagnostics": "",
+        "diagnostics": "In file included from <scratch>/include.cpp:2:\nexperiments/library/cpp/modint/dynamic_modint.hpp:32:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   32 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/dynamic_modint.hpp:34:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   34 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\nexperiments/library/cpp/modint/dynamic_modint.hpp:38:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   38 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr> void set(T x_) {\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/dynamic_modint.hpp:41:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   41 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr> void set(U x_) {\n      |                                                                                          ^~~~~~~~\n",
         "mode": "syntax-only"
       },
       "problem_url": null,
@@ -9380,8 +9425,8 @@
       "verification_target": null,
       "status": {
         "review": "pending",
-        "bug": "unknown",
-        "cpp_tested": false,
+        "bug": "fixed",
+        "cpp_tested": true,
         "common_translator": false,
         "lean_proved": false,
         "include_verified": false,
@@ -9407,7 +9452,13 @@
         "experiments/library3/cpp/Graph/GraphM.hpp",
         "experiments/library3/cpp/ModInt/ModInt.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "tests/imports/original_dynamic_modint.cpp",
+        "tests/test_original_dynamic_modint.py",
+        "docs/agent/fixes.md"
+      ],
+      "review_notes": "2026-11-18: original arithmetic, stream input, and factorial cache defects fixed and checked under sanitizers. Full translation, Lean verification, and public API restoration remain pending."
     },
     {
       "source": "experiments/library/cpp/modint/modint.hpp",

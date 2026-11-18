@@ -387,7 +387,7 @@ class Sig:
     def outputs(self):
         out = []
         if self.is_ctor:
-            return out
+            return ["ret", "@globals"] if self.uses_globals else out
         if self.ret.kind != "void":
             out.append("ret")
         out += [p[0] for p in self.mut_refs]
@@ -503,7 +503,7 @@ class Fn:
 
     def global_value(self):
         return "({ " + ", ".join(f"{lean_name(name)} := {self.global_names[key]}"
-                                   for key, (name, _, _) in self.tr.globals.items()) + " } : cp.GlobalState)"
+                                   for key, (name, _, _) in self.tr.globals.items()) + f" }} : {self.tr.global_state_name})"
 
     # scopes
     def declare(self, name, ty):
@@ -561,16 +561,34 @@ class Fn:
                 reference = n.get("referencedDecl", {})
                 if reference.get("id") in self.tr.globals:
                     references.add(reference["id"])
-                if (n.get("kind") == "DeclRefExpr" and reference.get("kind") == "FunctionDecl"
-                        and reference.get("name") in self.tr.global_functions):
+                callable_kinds = ("FunctionDecl", "CXXMethodDecl") if self.tr.static_members else ("FunctionDecl",)
+                name = self.tr.qualified_functions.get(reference.get("id"), reference.get("name"))
+                if (n.get("kind") == "DeclRefExpr" and reference.get("kind") in callable_kinds
+                        and name in self.tr.global_functions):
                     effectful_calls += 1
                 if n.get("kind") == "UnresolvedLookupExpr" and n.get("name") in self.tr.global_functions:
-                    effectful_calls += 1
+                    name = n["name"]
+                    if not self.tr.static_members or not name.startswith("operator"):
+                        effectful_calls += 1
+                    else:
+                        ids = {candidate.get("id") for candidate in n.get("lookups", [])}
+                        if any(sig.uses_globals and sig.node.get("id") in ids
+                               for sig in self.tr.functions.get(name, [])):
+                            effectful_calls += 1
+                if self.tr.static_members:
+                    if self.tr.constructor_name(n) in self.tr.global_constructors:
+                        effectful_calls += 1
+                    if n.get("kind") in ("MemberExpr", "CXXDependentScopeMemberExpr", "UnresolvedMemberExpr"):
+                        member = n.get("name") or n.get("member")
+                        if member is None and n.get("kind") == "UnresolvedMemberExpr":
+                            member = self.tr.member_token(n)
+                        if member in self.tr.global_methods:
+                            effectful_calls += 1
                 for child in inner(n):
                     scan(child)
             scan(node)
             if effectful_calls > 1 or references and effectful_calls:
-                raise Unsupported("global reads and stateful calls require separate full expressions")
+                raise Unsupported(f"global reads and stateful calls require separate full expressions in {self.sig.lean_name}")
         if expected is not None and expected.kind == "cls":
             raw = strip(node)
             if raw.get("kind") not in ("CXXConstructExpr", "CXXTemporaryObjectExpr", "CXXUnresolvedConstructExpr"):
@@ -1181,8 +1199,17 @@ class Fn:
                 return f"({a}, {b})"
         if ty.kind == "cls":
             if len(args) == 1:
-                spelling = strip(args[0]).get("type", {}).get("qualType", "")
-                argty = None if spelling in ("<dependent type>", "NULL TYPE") else self.tr.ty(spelling, self)
+                type_info = strip(args[0]).get("type", {})
+                spelling = type_info.get("qualType", "")
+                canonical = type_info.get("desugaredQualType")
+                if spelling in ("value_type", "const value_type") and canonical:
+                    # Clang spells a std::vector element as value_type at
+                    # the copy site. The canonical type must match exactly.
+                    if self.tr.ty(canonical, self) != ty:
+                        raise Unsupported("record copy has a different canonical type")
+                    argty = ty
+                else:
+                    argty = None if spelling in ("<dependent type>", "NULL TYPE") else self.tr.ty(spelling, self)
                 if argty == ty:
                     if any(s.is_ctor and s.tparams
                            and any(p.get("kind") == "ParmVarDecl" and "&" in type_of_decl(p)
@@ -1401,7 +1428,14 @@ class Fn:
         raise Unsupported(f"vector::{name} in an expression")
 
     def free_call(self, name, args, pre, callee):
+        declaration = callee.get("referencedDecl", {})
+        qualified = self.tr.qualified_functions.get(declaration.get("id"))
+        if qualified is not None:
+            return self.call_sig(self.tr.functions[qualified][0], None, args, pre)
         call_text = re.sub(r"\s+", "", self.tr.span(callee))
+        if any(call_text in (qualified, f"cp::{qualified}", f"::cp::{qualified}")
+               for qualified in self.tr.qualified_functions.values()):
+            raise Unsupported(f"unresolved child namespace function {call_text}")
         if name in ("min", "max") and call_text.startswith(f"std::{name}<"):
             raise Unsupported("explicit template arguments of a standard extrema function")
         if name in ("min", "max") and not args and "numeric_limits<" in call_text:
@@ -1568,7 +1602,7 @@ class Fn:
         pre.append(f"let {tmp} ← {' '.join(parts)}")
         outputs = sig.outputs()
         ret_ty = sig.ret if not sig.is_ctor else expected
-        if sig.is_ctor:
+        if sig.is_ctor and not sig.uses_globals:
             return tmp, expected
         values = {}
         if len(outputs) == 1:
@@ -1581,6 +1615,8 @@ class Fn:
         if sig.uses_globals:
             for key, (name, _, _) in self.tr.globals.items():
                 pre.append(f"{self.global_names[key]} := {values['@globals']}.{lean_name(name)}")
+        if sig.is_ctor:
+            return values["ret"], expected
         if receiver == "self":
             for f, _, _ in self.cls.fields:
                 pre.append(f"{self.field_names[f]} := {values['self']}.{lean_name(f)}")
@@ -1714,11 +1750,14 @@ class Fn:
             return
         if kind == "ReturnStmt":
             pre = []
-            value = None
+            value = self.self_value() if self.sig.is_ctor else None
             if inner(node):
                 value, _ = self.expr(inner(node)[0], pre, self.sig.ret)
             self.flush(pre)
-            self.emit("return " + self.result(value))
+            if self.sig.is_ctor and not self.sig.uses_globals:
+                self.emit("return " + value)
+            else:
+                self.emit("return " + self.result(value))
             return
         if kind == "IfStmt":
             self.if_stmt(node)
@@ -1769,6 +1808,8 @@ class Fn:
             return
         if d.get("kind") != "VarDecl":
             raise Unsupported(f"declaration {d.get('kind')}")
+        if d.get("id") in self.tr.local_statics:
+            return
         if d.get("storageClass") in ("static", "extern") or d.get("tls"):
             raise Unsupported("local static, external, or thread-local storage")
         name = d["name"]
@@ -2431,7 +2472,13 @@ class Translator:
         self.constants: dict[str, tuple[str, Ty, str]] = {}
         self.globals: dict[str, tuple[str, Ty, int | None]] = {}
         self.global_initializers: dict[str, dict] = {}
+        self.local_statics: set[str] = set()
+        self.static_members: dict[str, str] = {}
+        self.static_member_literals: dict[str, str] = {}
+        self.static_member_definitions: dict[str, str] = {}
+        self.global_state_name = "cp.GlobalState"
         self.functions: dict[str, list[Sig]] = {}
+        self.qualified_functions: dict[str, str] = {}
         self.order: list = []       # ("class", ClassInfo) / ("fn", Sig)
         self.tparams_stack: list[set] = []
 
@@ -2609,9 +2656,93 @@ class Translator:
             raise Unsupported("external global state declaration")
         self.globals[node["id"]] = (node["name"], ty, size)
 
+    def collect_static_member_definition(self, node):
+        declaration = node.get("previousDecl")
+        if declaration not in self.static_members:
+            raise Unsupported("unrecognized static data definition")
+        if node.get("tls") or node.get("storageClass") == "extern":
+            raise Unsupported("thread-local or external static data definition")
+        ty = self.ty(type_of_decl(node))
+        children = inner(node)
+        literal = strip(children[0]) if len(children) == 1 else {}
+        if (ty.kind != "u32" or literal.get("kind") != "IntegerLiteral"
+                or not 0 <= int(literal["value"]) < 2**32):
+            raise Unsupported("static data needs an in-range UInt32 literal initializer")
+        name = self.static_members[declaration]
+        if declaration in self.globals or any(lean_name(n) == lean_name(name) for n, _, _ in self.globals.values()):
+            raise Unsupported("ambiguous static data model name")
+        self.static_member_definitions[node["id"]] = declaration
+        self.static_member_literals[declaration] = literal["value"]
+        self.globals[declaration] = (name, ty, None)
+
+    def resolve_static_member_references(self):
+        if not self.static_members:
+            return
+        if self.static_members.keys() != self.static_member_literals.keys():
+            raise Unsupported("static data declaration needs an out-of-line definition")
+
+        def visit(node):
+            ref = node.get("referencedDecl", {})
+            canonical = self.static_member_definitions.get(ref.get("id"))
+            if canonical is not None:
+                ref["id"] = canonical
+            member = node.get("referencedMemberDecl")
+            if member in self.static_members or member in self.static_member_definitions:
+                raise Unsupported("object-qualified static data access may evaluate the receiver")
+            for child in inner(node):
+                visit(child)
+
+        for declaration in self.decls:
+            visit(declaration)
+
+    def collect_local_statics(self):
+        """Lift zero and empty-vector local statics from non-template free functions."""
+        def visit(node, owner):
+            kind = node.get("kind")
+            if kind in ("LambdaExpr", "CXXRecordDecl", "FunctionDecl"):
+                return
+            if kind == "VarDecl" and node.get("storageClass") == "static":
+                spelling = type_of_decl(node)
+                canonical = node["type"].get("desugaredQualType", spelling)
+                if node.get("tls") or re.search(r"\b(?:const|volatile)\b|[&*]", canonical):
+                    raise Unsupported("local static must be a mutable nonvolatile value")
+                ty = self.ty(spelling)
+                children = inner(node)
+                initializer = strip(children[0]) if len(children) == 1 else {}
+                is_zero = (ty.kind == "u32" and initializer.get("kind") == "IntegerLiteral"
+                           and initializer.get("value") == "0")
+                vector = re.fullmatch(r"std::vector<(.*)>", canonical)
+                is_empty_vector = (ty.kind == "vec" and vector and len(split_args(vector[1])) == 1
+                                   and initializer.get("kind") == "CXXConstructExpr" and not inner(initializer)
+                                   and initializer.get("ctorType", {}).get("qualType") == "void () noexcept")
+                if not (is_zero or is_empty_vector):
+                    raise Unsupported("local static needs zero or empty vector initialization")
+                name = f"{owner.replace('::', '_')}_{node['name']}"
+                if any(lean_name(existing) == lean_name(name) for existing, _, _ in self.globals.values()):
+                    raise Unsupported("ambiguous local static model name")
+                self.local_statics.add(node["id"])
+                self.globals[node["id"]] = (name, ty, None)
+            for child in inner(node):
+                visit(child, owner)
+
+        for name, signatures in self.functions.items():
+            if len(signatures) != 1:
+                continue
+            sig = signatures[0]
+            if sig.tparams or sig.node.get("lean_hidden_friend") or sig.node not in self.decls:
+                continue
+            result_spelling = type_of_decl(sig.node).split("(")[0]
+            if "&" in result_spelling or "*" in result_spelling:
+                continue
+            for body in inner(sig.node):
+                if body.get("kind") == "CompoundStmt":
+                    visit(body, name)
+
     def collect(self):
         for decls, data in self.external:
             for node in decls:
+                if node.get("lean_cpp_name"):
+                    raise Unsupported("dependency functions in child namespaces")
                 kind = node.get("kind")
                 if kind == "FunctionDecl" and any(x.get("kind") == "CompoundStmt" for x in inner(node)):
                     name = node["name"]
@@ -2639,7 +2770,9 @@ class Translator:
                 if any(x.get("kind") == "CompoundStmt" for x in inner(node)):
                     self.collect_function(node, [])
             elif kind == "VarDecl":
-                if re.search(r"\bconst\b", type_of_decl(node)):
+                if node.get("previousDecl") in self.static_members:
+                    self.collect_static_member_definition(node)
+                elif re.search(r"\bconst\b", type_of_decl(node)):
                     self.collect_constant(node)
                 else:
                     self.collect_global(node)
@@ -2676,8 +2809,17 @@ class Translator:
                         raise Unsupported(f"overloads of {name} with the same parameter kinds")
                     tags.add(tag)
                     sig.lean_name = f"cp.{lean_name(name)}_{tag}"
+        self.resolve_static_member_references()
+        self.collect_local_statics()
         if self.globals:
             name = "initializeGlobals"
+            if self.local_statics or self.static_members:
+                # Local static names contain their source function. A distinct
+                # state/initializer lets clients import several such models.
+                keys = tuple(name for name, _, _ in self.globals.values())
+                suffix = hashlib.sha256(repr(keys).encode()).hexdigest()[:16]
+                self.global_state_name += "_" + suffix
+                name += "_" + suffix
             occupied = {node.get("name") for node in self.decls}
             while name in occupied:
                 name += "_"
@@ -2698,14 +2840,19 @@ class Translator:
 
     def collect_function(self, node, tps, values=None, constraints=None):
         values = values or {}
-        name = node["name"]
+        name = node.get("lean_cpp_name", node["name"])
+        if name != node["name"]:
+            if name in self.functions:
+                raise Unsupported(f"overloaded child namespace function {name}")
+            self.qualified_functions[node["id"]] = name
+        model_name = ".".join(lean_name(part) for part in name.split("::"))
         # A template parameter used as `T::value_type` is a random-access container (modelled by std::vector)
         text = json.dumps(node)
         containers = [t for t in tps if f"{t}::value_type" in text]
         tps = [f"{t}_value_type" if t in containers else t for t in tps]
         ret_text = container_text(node["type"]["qualType"].split("(")[0].strip(), containers)
         ret = parse_type(ret_text, set(tps) - values.keys(), self.classes, values, self.aliases)
-        sig = Sig(name, f"cp.{lean_name(name)}", self.param_list(node, tps, containers, values), ret, node=node, tparams=tps, value_params=values, constraints=constraints or [])
+        sig = Sig(name, f"cp.{model_name}", self.param_list(node, tps, containers, values), ret, node=node, tparams=tps, value_params=values, constraints=constraints or [])
         sig.containers = containers
         self.functions.setdefault(name, []).append(sig)
         self.order.append(("fn", sig))
@@ -2737,6 +2884,14 @@ class Translator:
                 kind = c["kind"]
             if kind == "AccessSpecDecl":
                 access = c.get("access", access)
+            if kind == "VarDecl":
+                spelling = type_of_decl(c)
+                if (c.get("storageClass") != "static" or c.get("tls") or tps or inner(c)
+                        or re.search(r"\b(?:const|volatile)\b|[&*]", spelling)
+                        or self.ty(spelling).kind != "u32"):
+                    raise Unsupported("static member needs a mutable UInt32 out-of-line definition")
+                self.static_members[c["id"]] = name + "_" + c["name"]
+                continue
             if kind == "FieldDecl":
                 init = inner(c)[0] if inner(c) else None
                 fty = parse_type(type_of_decl(c), tset, self.classes, values, self.aliases)
@@ -2814,6 +2969,21 @@ class Translator:
             raise Unsupported("cannot identify the resolved operator definition")
         return matches[0]
 
+    def constructor_name(self, node):
+        if node.get("kind") not in ("CXXConstructExpr", "CXXTemporaryObjectExpr", "CXXUnresolvedConstructExpr"):
+            return None
+        spelling = type_of_decl(node)
+        match = re.fullmatch(r"(?:cp::)?(\w+)(?:<.*>)?", spelling)
+        if not match or match[1] not in self.classes:
+            return None
+        # An implicit copy/move of a supported scalar record is a value
+        # transfer. Conversion constructors can read/update the state.
+        signature = node.get("ctorType", {}).get("qualType", "")
+        if (len(inner(node)) == 1 and re.fullmatch(
+                rf"void \((?:const )?(?:cp::)?{re.escape(match[1])} &&?\)(?: noexcept)?", signature)):
+            return None
+        return match[1]
+
     def translate(self) -> str:
         self.collect()
         sigs = []
@@ -2823,6 +2993,9 @@ class Translator:
             else:
                 sigs.append((item, None))
         if self.globals:
+            if self.static_members and set(self.globals) - self.static_members.keys() - self.local_statics:
+                raise Unsupported("class static data cannot share state with namespace globals")
+
             def dependencies(node):
                 direct, calls = False, set()
                 def walk(n):
@@ -2830,10 +3003,16 @@ class Translator:
                     reference = n.get("referencedDecl", {})
                     if reference.get("id") in self.globals:
                         direct = True
+                    if self.static_members:
+                        constructor = self.constructor_name(n)
+                        if constructor is not None:
+                            calls.add(constructor)
                     if reference.get("kind") in ("FunctionDecl", "CXXMethodDecl"):
-                        calls.add(reference.get("name"))
+                        calls.add(self.qualified_functions.get(reference.get("id"), reference.get("name")))
                     if n.get("kind") in ("UnresolvedLookupExpr", "MemberExpr", "CXXDependentScopeMemberExpr"):
-                        calls.add(n.get("name"))
+                        calls.add(n.get("name") or n.get("member"))
+                    if self.static_members and n.get("kind") == "UnresolvedMemberExpr":
+                        calls.add(n.get("name") or self.member_token(n))
                     for child in inner(n):
                         walk(child)
                 walk(node)
@@ -2846,11 +3025,23 @@ class Translator:
                 for sig, info in sigs:
                     direct, calls = graph[id(sig)]
                     if not sig.uses_globals and (direct or calls & affected):
-                        if info or any("&" in type_of_decl(p) for p in inner(sig.node) if p.get("kind") == "ParmVarDecl"):
-                            raise Unsupported("global state in methods or reference-parameter functions")
+                        params = [p for p in inner(sig.node) if p.get("kind") == "ParmVarDecl"]
+                        if not self.static_members:
+                            if info or any("&" in type_of_decl(p) for p in params):
+                                raise Unsupported("global state in methods or reference-parameter functions")
+                        else:
+                            # Addressable scalar statics could alias scalar
+                            # reference inputs. Class records and streams
+                            # are distinct objects. Local caches only escape
+                            # by value in the supported subset.
+                            for param, (_, ty, _) in zip(params, sig.params, strict=True):
+                                if "&" in type_of_decl(param) and ty.kind not in ("cls", "istream", "ostream"):
+                                    raise Unsupported("reference parameter may alias class static data")
                         sig.uses_globals = True
                         changed = True
             self.global_functions = {sig.cpp_name for sig, _ in sigs if sig.uses_globals}
+            self.global_constructors = {sig.owner for sig, _ in sigs if sig.uses_globals and sig.is_ctor}
+            self.global_methods = {sig.cpp_name for sig, _ in sigs if sig.uses_globals and sig.owner and not sig.is_ctor}
         by_body = {}
         self.function_declarations = {}
         self.raw_declarations = {}
@@ -2928,11 +3119,11 @@ class Translator:
             head = " ".join(f"[{r}]" for r in requirements)
             out.append(f"abbrev cp.{lean_name(name)} {head} := {lean_type(ty)}\n")
         if self.globals:
-            if any(node.get("name") == "GlobalState" for node in self.decls):
+            if any(node.get("name") == self.global_state_name.removeprefix("cp.") for node in self.decls):
                 raise Unsupported("global state model name conflicts with a source declaration")
             requirements = sorted({r for _, ty, _ in self.globals.values()
                                    for r in class_requirements(ty, self.classes)})
-            lines = ["structure cp.GlobalState " + " ".join(f"[{r}]" for r in requirements) + " where"]
+            lines = [f"structure {self.global_state_name} " + " ".join(f"[{r}]" for r in requirements) + " where"]
             for name, ty, _ in self.globals.values():
                 lines.append(f"  {lean_name(name)} : {lean_type(ty)}")
             lines.append("  deriving Inhabited")
@@ -2988,7 +3179,12 @@ class Translator:
                         fn.flush(pre)
                         fn.emit(f"let {name} := {value}")
                 else:
-                    value = "false" if element.kind == "bool" else "0"
+                    if key in self.static_member_literals:
+                        value = self.static_member_literals[key]
+                    elif key in self.local_statics and ty.kind == "vec":
+                        value = "Array.empty"
+                    else:
+                        value = "false" if element.kind == "bool" else "0"
                     if size is not None:
                         fn.emit(f"Cpp.tickN {size}")
                         value = f"Array.replicate {size} ({value} : {lean_type(element)})"
@@ -3100,7 +3296,8 @@ class Translator:
         for s in inner(body):
             fn.stmt(s)
         if sig.is_ctor:
-            fn.emit("return " + fn.self_value())
+            value = fn.self_value()
+            fn.emit("return " + (fn.result(value) if sig.uses_globals else value))
         elif sig.ret.kind == "void":
             fn.emit("return " + fn.result(None))
         elif not always_returns(body):
@@ -3142,18 +3339,18 @@ class Translator:
         for pname, pty, _ in sig.params:
             args.append(f"({lean_name(pname)} : {lean_type(pty)})")
         if sig.uses_globals and not sig.initializes_globals:
-            args.append(f"({fn.global_input} : cp.GlobalState)")
+            args.append(f"({fn.global_input} : {self.global_state_name})")
         outs = []
         for o in sig.outputs():
             if o == "ret":
-                outs.append(lean_type(sig.ret))
+                outs.append(cls_ty if sig.is_ctor else lean_type(sig.ret))
             elif o == "self":
                 outs.append(cls_ty)
             elif o == "@globals":
-                outs.append("cp.GlobalState")
+                outs.append(self.global_state_name)
             else:
                 outs.append(lean_type(next(p[1] for p in sig.params if p[0] == o)))
-        if sig.is_ctor:
+        if sig.is_ctor and not sig.uses_globals:
             rtype = cls_ty
         elif not outs:
             rtype = "Unit"
@@ -3191,7 +3388,7 @@ def local_names(node, out=None):
 # ------------------------------------------------------------------------------------------ driver
 
 def source_decls(source: Path, standard="c++17"):
-    """The top-level declarations of namespace cp written in `source`, in source order (template definitions).
+    """Declarations written in `source` directly in cp or a supported child namespace.
 
     Clang's JSON prints a location's file only when it differs from the previously printed location, so the
     file of a node is tracked by walking the whole dump in order."""
@@ -3210,7 +3407,7 @@ def source_decls(source: Path, standard="c++17"):
         if "file" in loc:
             state["file"] = loc["file"]
 
-    def walk(node, collect):
+    def walk(node, namespace=None, namespace_depth=0):
         if not isinstance(node, dict):
             return
         visit_loc(node.get("loc"))
@@ -3218,13 +3415,25 @@ def source_decls(source: Path, standard="c++17"):
         rng = node.get("range", {})
         visit_loc(rng.get("begin"))
         visit_loc(rng.get("end"))
-        if collect and here is not None and Path(here).resolve() == resolved:
-            decls.append(node)
-        is_cp = node.get("kind") == "NamespaceDecl" and node.get("name") == "cp"
+        kind, name = node.get("kind"), node.get("name")
+        child_namespace = None
+        if kind == "NamespaceDecl":
+            if namespace_depth == 0 and name == "cp":
+                child_namespace = ()
+            elif namespace == () and name and not node.get("isInline"):
+                child_namespace = (name,)
+        if namespace is not None and here is not None and Path(here).resolve() == resolved:
+            if child_namespace is None:
+                if namespace:
+                    if kind != "FunctionDecl" or name.startswith("operator") or not any(
+                            c.get("kind") == "CompoundStmt" for c in inner(node)):
+                        raise Unsupported("child namespaces require ordinary free function definitions")
+                    node["lean_cpp_name"] = "::".join((*namespace, name))
+                decls.append(node)
         for c in node.get("inner", []):
-            walk(c, is_cp)
+            walk(c, child_namespace, namespace_depth + (kind == "NamespaceDecl"))
 
-    walk(ast, False)
+    walk(ast)
     return decls
 
 

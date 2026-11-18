@@ -111,7 +111,11 @@ def load_component(metadata: Path) -> dict:
         raise ValueError(f"invalid C++ source digest for {name}")
     declarations = data.get("public_declarations")
     if not isinstance(declarations, list) or not declarations or not all(
-        isinstance(item, str) and re.fullmatch(r"[A-Za-z]+Decl:(?:[A-Za-z_][A-Za-z_0-9]*|operator[-+*/%<>=!&|^~]+)(?:<[0-9A-Za-z_, <>:]+>)?", item)
+        isinstance(item, str) and (
+            re.fullmatch(r"[A-Za-z]+Decl:(?:[A-Za-z_][A-Za-z_0-9]*|operator[-+*/%<>=!&|^~]+)(?:<[0-9A-Za-z_, <>:]+>)?", item)
+            or (translation == "lean_model"
+                and re.fullmatch(r"FunctionDecl:[A-Za-z_][A-Za-z_0-9]*::[A-Za-z_][A-Za-z_0-9]*", item))
+        )
         for item in declarations
     ) or len(declarations) != len(set(declarations)):
         raise ValueError(f"invalid public declarations for {name}")

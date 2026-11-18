@@ -15,11 +15,11 @@ def kind : ConstantInfo → String
 def namesJson (names : Array Name) : Json :=
   toJson (names.map Name.toString)
 
-partial def dumpClosure (env : Environment) (pending : List Name) (seen : NameSet) : IO Unit := do
+partial def dumpClosure (env : Environment) (pending : List Name) (seen : NameSet) (details : Option (Std.HashSet String)) : IO Unit := do
   match pending with
   | [] => pure ()
   | name :: rest =>
-    if seen.contains name then dumpClosure env rest seen
+    if seen.contains name then dumpClosure env rest seen details
     else
       let some ci := env.find? name | throw (IO.userError s!"missing declaration {name}")
       let typeDeps := ci.type.getUsedConstants
@@ -31,14 +31,16 @@ partial def dumpClosure (env : Environment) (pending : List Name) (seen : NameSe
       let owner := (env.getModuleIdxFor? name).map
         (fun idx => env.header.moduleNames[idx.toNat]!) |>.getD .anonymous
       let fields := [("name", toJson name.toString), ("internal", toJson name.isInternalOrNum), ("kind", toJson (kind ci)),
-        ("module", toJson owner.toString), ("type", toJson (reprStr ci.type)),
-        ("levels", toJson (reprStr ci.levelParams)), ("unsafe", toJson ci.isUnsafe),
+        ("module", toJson owner.toString), ("unsafe", toJson ci.isUnsafe),
         ("type_dependencies", namesJson typeDeps),
-        ("dependencies", namesJson (typeDeps ++ bodyDeps ++ ctorDeps)),
-        ("body", toJson (if kind ci == "theorem" then "" else body.map reprStr |>.getD ""))]
+        ("dependencies", namesJson (typeDeps ++ bodyDeps ++ ctorDeps))]
+      let fields := if details.all (·.contains name.toString) then
+        fields ++ [("type", toJson (reprStr ci.type)), ("levels", toJson (reprStr ci.levelParams)),
+          ("body", toJson (if kind ci == "theorem" then "" else body.map reprStr |>.getD ""))]
+        else fields
       IO.println (Json.mkObj fields).compress
       -- depth-first: prepending the new work keeps each step linear (appending to `rest` copied the whole worklist)
-      dumpClosure env ((typeDeps ++ bodyDeps ++ ctorDeps).toList ++ rest) (seen.insert name)
+      dumpClosure env ((typeDeps ++ bodyDeps ++ ctorDeps).toList ++ rest) (seen.insert name) details
 
 def main (args : List String) : IO Unit := do
   initSearchPath (← findSysroot)
@@ -49,4 +51,9 @@ def main (args : List String) : IO Unit := do
       let owner := (env.getModuleIdxFor? name).map
         (fun idx => env.header.moduleNames[idx.toNat]!) |>.getD .anonymous
       if (`Proofs).isPrefixOf owner then some name else none
-  dumpClosure env (roots ++ (args.drop 1).map String.toName) {}
+  let (details, extras) ← match args.drop 1 with
+    | "--details-from" :: path :: extras => do
+      let details ← IO.FS.lines path
+      pure (some (details.foldl (fun set name => set.insert name) ({} : Std.HashSet String)), extras)
+    | extras => pure (none, extras)
+  dumpClosure env (roots ++ extras.map String.toName) {} details

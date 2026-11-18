@@ -135,7 +135,10 @@ def statement_contract(rows, roots):
         row = rows[name]
         # Proof bodies may change. The proposition and every computational
         # definition used to express it must match the reviewed contract.
-        record = {key: row[key] for key in ("kind", "module", "type", "levels", "body", "unsafe")}
+        try:
+            record = {key: row[key] for key in ("kind", "module", "type", "levels", "body", "unsafe")}
+        except KeyError as error:
+            raise ValueError(f"missing reviewed expression details for {name}") from error
         visited[name] = digest(record)
         pending.extend(row["type_dependencies"] if row["kind"] == "theorem" else row["dependencies"])
     return {"schema_version": 1, "roots": sorted(roots), "declarations": dict(sorted(visited.items()))}

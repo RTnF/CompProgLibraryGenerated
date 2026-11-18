@@ -86,23 +86,30 @@ def public_declarations(source: Path, standard="c++17"):
     output = subprocess.check_output(command, text=True, cwd=ROOT)
     decoder = json.JSONDecoder()
     position = 0
-    declarations = []
+    entries = []
     while position < len(output):
         ast, position = decoder.raw_decode(output, position)
+        if ast.get("kind") == "NamespaceDecl":
+            name = ast.get("name")
+            if not name or ast.get("isInline"):
+                raise RuntimeError("unsupported child namespace in public declarations")
+            entries.extend((child, f"{name}::") for child in ast.get("inner", []))
+        else:
+            entries.append((ast, ""))
+        while position < len(output) and output[position].isspace():
+            position += 1
+    declarations = []
+    for ast, namespace in entries:
         kind, name = ast.get("kind"), ast.get("name")
         if kind not in PUBLIC_KINDS or not name:
             raise RuntimeError(f"unsupported public declaration: {kind} {name}")
         if kind == "ClassTemplateDecl" and not any(c.get("kind") == "CXXRecordDecl" and c.get("completeDefinition")
                                                    for c in ast.get("inner", [])):
             # A forward declaration of a class template is not a second public declaration.
-            while position < len(output) and output[position].isspace():
-                position += 1
             continue
         if kind == "FunctionTemplateDecl" and not any(
                 c.get("kind") == "FunctionDecl" and any(x.get("kind") == "CompoundStmt" for x in c.get("inner", []))
                 for c in ast.get("inner", [])):
-            while position < len(output) and output[position].isspace():
-                position += 1
             continue
         if kind == "ClassTemplateSpecializationDecl":
             arguments = [str(c.get("value", c.get("type", {}).get("qualType", ""))) for c in ast.get("inner", [])
@@ -117,14 +124,11 @@ def public_declarations(source: Path, standard="c++17"):
                 spelling = re.sub(r"\bconst\b|&|\*|<.*>", "", parameters[0]["type"]["qualType"]).strip()
                 spelling = re.sub(r"^.*::", "", spelling)
                 name = f"{name}<{spelling}>"
-        if kind in ("ClassTemplateDecl", "FunctionTemplateDecl") and f"{kind}:{name}" in declarations:
+        declaration = f"{kind}:{namespace}{name}"
+        if kind in ("ClassTemplateDecl", "FunctionTemplateDecl") and declaration in declarations:
             # a redeclaration of a template (forward declaration before the definition)
-            while position < len(output) and output[position].isspace():
-                position += 1
             continue
-        declarations.append(f"{kind}:{name}")
-        while position < len(output) and output[position].isspace():
-            position += 1
+        declarations.append(declaration)
     if len(declarations) != len(set(declarations)):
         raise RuntimeError(f"duplicate or overloaded public declarations: {declarations}")
     return sorted(declarations)

@@ -25,6 +25,12 @@
 | 2026-11-17 | 同原本のctor/`set`のSFINAE分類 | GCC/C++17で`__int128(-1)`が4294967295になり、法7の剰余6にならない | strict C++17の`is_signed_v<__int128>`がfalseとなり、負の128 bit値をunsigned側の式へ渡していた | cv除去後の符号付き__int128もsigned側へ分類し、unsigned側をその補集合にする。テンプレートの入力型集合は狭めない | 同専用回帰でsigned/unsigned 128 bitの両端、負値、explicit const/volatile template引数をPython剰余と比較。修正前のctor/setの不一致をASan/UBSan付きで確認済み |
 | 2026-11-17 | 同原本の入力operator>> | 空入力や既存fail/eof状態で未初期化のllをsetへ渡す。空入力の結果が自動変数初期化patternでは1、zeroでは0（法7） | istreamのsentryが失敗すると抽出先へ書かず戻るが、一時変数yに初期値がなかった | yを0で初期化し、既存の抽出・setの順序を保持。正常入力、解析失敗や範囲超過で標準抽出が書いた値、例外時のreceiver非更新を維持 | tests/test_modint_original_stream.pyで生成ケースをASan/UBSanとzero/pattern両設定で照合。失敗/EOF/例外、signed64両端/範囲超過、unsigned出力の書式・参照返却を確認する。移植全体の証明は未完了 |
 
+| 2026-11-18 | `experiments/library/cpp/modint/dynamic_modint.hpp` のctor/set | 法7で負倍数が7になり、符号付き128 bitの-1が4294967295になった | 負倍数にも法を足していた。GCC/C++17では`is_signed_v<__int128>`がfalse | 負倍数も0へ正規化し、cvを除いた符号付き128 bitをsigned側へ分類 | `tests/imports/original_dynamic_modint.cpp`のctor/set境界 |
+| 2026-11-18 | 同原本の加減算 | 素数法4294967291で(m-1)+10が4、0-(m-1)が6になった | UInt32の折り返し後に剰余を補正していた | UInt64の中間値で補正する | 同テストで結果9、1を確認 |
+| 2026-11-18 | 同原本の`pow(ll)` | 最小指数でUBSan停止 | `-n`が符号付き64 bitの範囲外 | 非負累乗を別関数にし、絶対値をUInt64で表す | 同テストで法7の`2^INT64_MIN`が2 |
+| 2026-11-18 | 同原本の入力operator>> | 空入力で抽出先が更新されず、不定値をsetする | 一時変数が未初期化 | 0で初期化してから標準抽出を呼ぶ | 同テストの空入力、ASan/UBSanと自動変数pattern初期化 |
+| 2026-11-18 | 同原本の階乗と逆階乗cache | 法変更後に以前の剰余が返る。法7で逆階乗0を求めても先行計算で停止 | cacheが法を記録せず、逆階乗を法以上の添字まで作っていた | 両cacheを法ごとに初期化し、逆階乗の先行構築を法未満に制限する | 同テストで法の変更、100000境界、Pascal表との比較を確認 |
+
 ## 付記（直したのではなく、前提に含めたもの）
 
 次は元のコードが持つ性質で、直さずに前提として明記した（`docs/experiments_findings.md`）: `GroupMul::inv()` は整数で `±1` 以外だと 0、`MonoidMul::op` と `CumulativeSum` は符号付きの桁あふれが未定義動作。

@@ -422,15 +422,32 @@ class SecurityTests(unittest.TestCase):
             scratch=Path(directory)
             (scratch/'lean-toolchain').write_text((ROOT/'lean-toolchain').read_text())
             source=scratch/'Fixture.lean'
-            def inspect(text):
+            def inspect(text, details=None):
                 source.write_text(text)
                 subprocess.run([lake,'env','lean','-o','Fixture.olean','Fixture.lean'],cwd=scratch,env=env,check=True)
                 inspect_env=env.copy();inspect_env['LEAN_PATH']=str(scratch)
+                detail_args = []
+                if details is not None:
+                    detail_path = scratch / 'details.txt'
+                    detail_path.write_text('\n'.join(sorted(details)) + '\n')
+                    detail_args = ['--details-from', str(detail_path)]
                 result=subprocess.run([lake,'env','lean','--run',str(ROOT/'verification/InspectEnvironment.lean'),
-                    'Fixture','tested'],cwd=ROOT,env=inspect_env,check=True,capture_output=True,text=True)
+                    'Fixture',*detail_args,'tested'],cwd=ROOT,env=inspect_env,check=True,capture_output=True,text=True)
                 return {r['name']:r for r in map(json.loads,result.stdout.splitlines())}
-            rows=inspect('def n : Nat := 1\ntheorem tested : n = n := rfl\n')
+            original = 'def n : Nat := 1\ntheorem tested : n = n := rfl\n'
+            rows=inspect(original)
             contract=statement_contract(rows,['tested'])
+            details = contract['declarations']
+            compact = inspect(original, details)
+            expected = {
+                name: {key: value for key, value in row.items()
+                       if name in details or key not in ('type', 'levels', 'body')}
+                for name, row in rows.items()
+            }
+            self.assertEqual(compact, expected)
+            audit_contract(contract, compact)
+            with self.assertRaisesRegex(ValueError, 'missing reviewed expression details'):
+                audit_contract(contract, inspect(original, set(details) - {'n'}))
             weakened=inspect('def n : Nat := 1\ntheorem tested : True := True.intro\n')
             with self.assertRaisesRegex(ValueError,'statement or its definition'):
                 audit_contract(contract,weakened)
@@ -438,6 +455,54 @@ class SecurityTests(unittest.TestCase):
             self.assertEqual(rows['tested']['type'],changed['tested']['type'])
             with self.assertRaisesRegex(ValueError,'statement or its definition'):
                 audit_contract(contract,changed)
+
+    def test_project_replay_checks_proofs_and_reviewed_imports(self):
+        lake, env = lean_environment()
+        with tempfile.TemporaryDirectory(prefix='project-replay-') as directory:
+            scratch = Path(directory)
+            source = scratch / 'Proofs' / 'ReplayFixture.lean'
+            source.parent.mkdir()
+            module = 'Proofs.ReplayFixture'
+            lean_path = subprocess.check_output(
+                [lake, 'env', 'printenv', 'LEAN_PATH'], cwd=ROOT, env=env, text=True).strip()
+            command = [lake, 'env', 'env', f'LEAN_PATH={scratch}{os.pathsep}{lean_path}', 'lean']
+            reviewed = scratch / 'modules.txt'
+
+            def compile_fixture(body):
+                source.write_text('import Lean\n' + body)
+                subprocess.run(command + [f'--root={scratch}', '-o', str(source.with_suffix('.olean')),
+                                          str(source)], cwd=ROOT, env=env, check=True, timeout=30)
+
+            def replay():
+                return subprocess.run(command + ['--run', str(ROOT / 'verification/ReplayProject.lean'),
+                                                 module, str(reviewed)], cwd=ROOT, env=env,
+                                      capture_output=True, text=True, timeout=30)
+
+            compile_fixture('theorem replayFixture : True := True.intro\n')
+            listing = subprocess.check_output(
+                command + ['--run', str(ROOT / 'verification/ListModules.lean'), module],
+                cwd=ROOT, env=env, text=True, timeout=30)
+            reviewed.write_text(listing)
+            good = replay()
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            reviewed.write_text('')
+            missing = replay()
+            self.assertNotEqual(missing.returncode, 0)
+            self.assertIn('outside the reviewed module list', missing.stderr)
+            reviewed.write_text(listing)
+
+            compile_fixture('''set_option debug.skipKernelTC true
+run_cmd Lean.Elab.Command.liftCoreM <| Lean.addDecl <| .thmDecl {
+  name := `Proofs.ReplayFixture.broken
+  levelParams := []
+  type := .const `False []
+  value := .const `True.intro []
+}
+''')
+            bad = replay()
+            self.assertNotEqual(bad.returncode, 0)
+            self.assertIn("while replaying declaration 'Proofs.ReplayFixture.broken'", bad.stderr)
+            self.assertIn('declaration type mismatch', bad.stderr)
 
 
 if __name__=='__main__':

@@ -1,42 +1,72 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/modint/dynamic_modint.hpp"
-#include <random>
+#include "../library/modint/modint.hpp"
+#include <cassert>
+#include <limits>
+#include <sstream>
+#include <type_traits>
+
+using cp::DynamicModInt;
+
+static_assert(std::is_same_v<decltype(&DynamicModInt::pow), DynamicModInt (DynamicModInt::*)(std::int64_t) const>);
+static_assert(std::is_same_v<decltype(DynamicModInt::m), std::uint32_t>);
 
 int main() {
-    using cp::DModInt;
-    std::mt19937_64 random(20261025);
-    const unsigned moduli[] = {1u, 2u, 3u, 7u, 998244353u, 1000000007u, 2147483647u, 2147483648u, 4294967291u, 4294967295u};
-    for (unsigned m : moduli) {
-        for (int round = 0; round < 3000; ++round) {
-            unsigned long long x = round < 6 ? (round % 3 == 0 ? 0 : m - 1 - round % 3) % m : random() % m;
-            unsigned long long y = round < 6 ? (round % 2 == 0 ? m - 1 : 0) : random() % m;
-            DModInt a(m, (unsigned)x), b(m, (unsigned)y);
-            assert(a.m == m && a.x == x);
-            assert(add(a, b).m == m && add(a, b).x == (x + y) % m);
-            assert(sub(a, b).m == m && sub(a, b).x == (x + m - y) % m);
-            assert(mul(a, b).m == m && mul(a, b).x == (unsigned)(((unsigned __int128)x * y) % m));
-            assert(neg(a).m == m && neg(a).x == (m - x) % m);
-            assert(equal(a, b) == (x == y));
-            // the constructor reduces: any 32 bit value maps to its residue
-            unsigned big = (unsigned)random();
-            assert(DModInt(m, big).x == big % m);
-            // power / inverse / division (prime modulus for the last two)
-            unsigned long long ee = random() % 1000;
-            unsigned long long ref = 1 % m, bs = x % m;
-            for (unsigned long long k = 0; k < ee; ++k) ref = (unsigned long long)(((unsigned __int128)ref * bs) % m);
-            assert(power(a, ee).m == m && power(a, ee).x == ref);
-            assert(power(a, 0).x == 1 % m);
-            if (m == 2 || m == 3 || m == 7 || m == 998244353u || m == 1000000007u || m == 2147483647u || m == 4294967291u) {
-                if (x != 0) {
-                    DModInt ia = inv(a);
-                    assert(ia.m == m && mul(a, ia).x == 1 % m);
-                    if (y != 0) assert(mul(div(a, b), b).x == x && div(a, b).x == mul(a, inv(b)).x);
-                }
-            }
-            // laws
-            assert(add(a, neg(a)).x == 0);
-            assert(sub(a, b).x == add(a, neg(b)).x);
-        }
-    }
-    return 0;
+  cp::init();
+  DynamicModInt::m = 7;
+  assert(cp::C(7, 2).get() == 21);
+  assert(cp::dynamic_modint::C(7, 2).get() == 0);
+  assert(cp::factorial(4).get() == 3);
+  assert(cp::factorial_inv(2).get() == 4);
+  DynamicModInt::m = 11;
+  assert(cp::dynamic_modint::C(7, 2).get() == 10);
+  assert(cp::factorial(4).get() == 2);
+  assert(cp::factorial_inv(2).get() == 6);
+
+  for (std::uint32_t m : {2u, 3u, 7u, 11u, 101u, 998244353u, 4294967291u}) {
+    DynamicModInt::m = m;
+    const DynamicModInt a(m - 1), b(1);
+    DynamicModInt t;
+    assert(t.get() == 0);
+    t.set(-static_cast<std::int64_t>(m));
+    assert(t.get() == 0);
+    const auto unsigned_max = std::numeric_limits<std::uint64_t>::max();
+    t.set(unsigned_max);
+    assert(t.get() == unsigned_max % m);
+    assert(t == DynamicModInt(unsigned_max));
+    const __int128 signed_wide = -(static_cast<__int128>(1) << 96);
+    const auto remainder = (signed_wide % m + m) % m;
+    assert(DynamicModInt(signed_wide).get() == remainder);
+    assert(DynamicModInt(-1) == a);
+    assert((a + b).get() == 0);
+    assert((b - a).get() == 2 % m);
+    assert((a * a) == b);
+    assert((b / a) == a);
+    assert((a.inv()) == a);
+    assert((+a) == a && (-a) == b);
+    assert(a.pow(std::numeric_limits<std::int64_t>::min()) == b);
+    assert(a.pow(-3) == a && a.pow(0) == b && a.pow(3) == a);
+
+    t = a;
+    assert(t++ == a && t.get() == 0);
+    assert(&++t == &t && t == b);
+    assert(t-- == b && t.get() == 0);
+    assert(&--t == &t && t == a);
+    assert(&(t += b) == &t && t.get() == 0);
+    assert(&(t -= b) == &t && t == a);
+    assert(&(t *= a) == &t && t == b);
+    assert(&(t /= a) == &t && t == a);
+
+    std::istringstream input("-1");
+    std::ostringstream output;
+    assert(&(input >> t) == &input && t == a);
+    assert(&(output << t) == &output && output.str() == std::to_string(m - 1));
+    std::istringstream empty;
+    assert(&(empty >> t) == &empty && empty.fail() && t.get() == 0);
+  }
+
+  DynamicModInt::m = 8;
+  assert((DynamicModInt(7) + DynamicModInt(5)).get() == 4);
+  assert(DynamicModInt(2).pow(3).get() == 0);
+  assert(cp::factorial(4).get() == 0);
 }

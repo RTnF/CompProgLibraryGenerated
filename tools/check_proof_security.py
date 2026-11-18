@@ -14,7 +14,7 @@ import tempfile
 import time
 
 from offline import disable_network
-from proof_security import (ROOT, audit_axiom_definitions, audit_contract, audit_mathlib_coverage,
+from proof_security import (MATHLIB_FAMILY, ROOT, audit_axiom_definitions, audit_contract, audit_mathlib_coverage,
     audit_dependencies, audit_source, changed_axiom_entries, contract_dependents, load_contracts, load_policy)
 from public import registry
 
@@ -352,9 +352,14 @@ def main():
         # Preserve the expensive inspection on failures and avoid retaining
         # its full text in memory alongside the parsed declaration table.
         environment_dump = scratch / 'environment.jsonl'
+        # Dependency and export audits use the graph for every declaration.
+        # Only the reviewed contract and allowed axioms compare expressions.
+        details_path = scratch / 'environment-details.txt'
+        detail_names = set(contract['declarations']) | {entry['name'] for entry in permitted}
+        details_path.write_text('\n'.join(sorted(detail_names)) + '\n')
         with environment_dump.open('w') as output:
             run([lake, 'env', 'lean', '--run', str(ROOT / 'verification/InspectEnvironment.lean'),
-                 'Proofs', *[entry['name'] for entry in permitted]],
+                 'Proofs', '--details-from', str(details_path), *[entry['name'] for entry in permitted]],
                 scratch, env, stdout=output, text=True)
         stage('environment inspected', started)
         rows = {}
@@ -403,9 +408,9 @@ def main():
         del rows
         gc.collect()
         stage('environment audits finished', started)
-        # Kernel replay. Imported libraries (Mathlib, reviewed once per version) are replayed in full only when the
-        # toolchain, the Mathlib pin or the audited module list changes. Otherwise replay prefixes covering
-        # the changed proof modules; the aggregate Proofs prefix also includes unchanged project modules.
+        # A CI runner without a module cache replays every project declaration
+        # into the pinned, reviewed dependency environment. The independent
+        # kernel below still receives the entire expression closure.
         modules = project_modules()
         base_key = mathlib_base_key()
         try:
@@ -413,9 +418,14 @@ def main():
         except (OSError, ValueError):
             module_cache = {}
         if module_cache.get('base') != base_key:
-            stage('full kernel replay started', started)
-            run([lake, 'env', 'leanchecker', '--verbose', '--fresh', 'Proofs'], scratch, env)
-            stage('full kernel replay finished', started)
+            dependency_families = {'Init', 'Lean', 'Std', *MATHLIB_FAMILY}
+            reviewed = [module for module in listing if module.partition('.')[0] in dependency_families]
+            reviewed_path = scratch / 'reviewed-replay-modules.txt'
+            reviewed_path.write_text('\n'.join(sorted(reviewed)) + '\n')
+            stage('project kernel replay started', started)
+            run([lake, 'env', 'lean', '--run', str(ROOT / 'verification/ReplayProject.lean'),
+                 'Proofs', str(reviewed_path)], scratch, env)
+            stage('project kernel replay finished', started)
         else:
             recorded = module_cache.get('modules', {})
             to_replay = sorted(name for name, digest in modules.items() if recorded.get(name) != digest)

@@ -53,11 +53,104 @@ unsigned read() { return unused[0]; }
 }
 ''', 'call successor 41\ncall successor -1\n', ['ok 42', 'ok 0'])
 
+    def test_same_named_child_namespace_function_keeps_its_state(self):
+        import clang_ast
+        import test_lean_model_friend as friends
+        header = """namespace cp {
+int choose(int x) { return x + 1; }
+namespace runtime {
+int choose(int x) {
+  static unsigned calls = 0;
+  ++calls;
+  return x + (int)calls;
+}
+}
+int through(int x) { return runtime::choose(x); }
+}
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'Source.hpp'
+            source.write_text(header)
+            self.assertEqual(clang_ast.public_declarations(source),
+                             ['FunctionDecl:choose', 'FunctionDecl:runtime::choose', 'FunctionDecl:through'])
+        friends.FriendTranslationTests().compare(
+            header, 'call choose 41\ncall runtime.choose 1\ncall through 10\ncall choose 8\n',
+            ['ok 42', 'ok 2', 'ok 12', 'ok 9'])
+
     def model(self, source, imports=()):
         with tempfile.TemporaryDirectory() as directory:
             header = Path(directory) / 'Source.hpp'
             header.write_text(source)
             return lean_translate.translate_file(header, list(imports))
+
+    def test_local_static_vectors_and_markers_persist_independently(self):
+        import test_lean_model_friend as friends
+        friends.FriendTranslationTests().compare("""#include <vector>
+namespace cp {
+int first(int value) {
+  static unsigned calls = 0;
+  static std::vector<int> values;
+  ++calls;
+  values.push_back(value);
+  return values[0] + (int)calls;
+}
+int second(int value) {
+  static unsigned calls = 0;
+  static std::vector<int> values;
+  ++calls;
+  values.push_back(value);
+  return values[0] + (int)calls;
+}
+int through(int value) { return first(value); }
+}
+""", 'call first 10\ncall second 20\ncall through 40\ncall second -7\n',
+            ['ok 11', 'ok 21', 'ok 12', 'ok 22'])
+
+    def test_local_static_rejects_lazy_initializers_and_reference_returns(self):
+        for definition in (
+            'unsigned f(unsigned x) { static unsigned counter = x; return counter; }',
+            'unsigned f() { static volatile unsigned counter = 0; return counter; }',
+            'unsigned &f() { static unsigned counter = 0; return counter; }',
+            'int f() { static std::vector<int> values(1, 7); return values[0]; }',
+        ):
+            with self.subTest(definition=definition):
+                with self.assertRaisesRegex(lean_translate.Unsupported, 'local static'):
+                    self.model('#include <vector>\nnamespace cp {' + definition + '}')
+
+    def test_class_static_scalar_is_shared_by_constructors_methods_and_callers(self):
+        import test_lean_model_friend as friends
+        friends.FriendTranslationTests().compare("""namespace cp {
+struct Number {
+  static unsigned modulus;
+  unsigned value;
+  Number(unsigned input) : value(input % modulus) {}
+  void add(unsigned input) { value = (value + input) % modulus; }
+  unsigned get() const { return value; }
+};
+unsigned Number::modulus = 7;
+void change(unsigned input) { Number::modulus = input; }
+unsigned wrapped(unsigned input) { return Number(input).get(); }
+}
+""", 'new Number.init 16\ndo Number.get_ 0\ncall change 11\n'
+            'do Number.add 0 16\ndo Number.get_ 0\ncall wrapped 16\n',
+            ['new', 'ok 2', 'ok', 'ok', 'ok 7', 'ok 5'])
+
+    def test_class_static_rejects_alias_and_unsequenced_reads(self):
+        declarations = """namespace cp {
+struct Number {
+  static unsigned modulus;
+  unsigned set(unsigned value) { modulus = value; return modulus; }
+};
+unsigned Number::modulus = 7;
+"""
+        for function, error in (
+            ('unsigned f(unsigned &ref) { return ref + Number::modulus; }', 'may alias'),
+            ('unsigned f(Number x) { return Number::modulus + x.set(9); }', 'separate full expressions'),
+            ('unsigned f(Number x) { return x.modulus; }', 'evaluate the receiver'),
+        ):
+            with self.subTest(function=function):
+                with self.assertRaisesRegex(lean_translate.Unsupported, error):
+                    self.model(declarations + function + '}')
 
     def test_canonical_modint_with_original_global_api(self):
         from test_modint_power_model import ModIntPowerModelTests

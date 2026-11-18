@@ -1,14 +1,18 @@
 name = "dynamic_modint"
 source = "modint/dynamic_modint.hpp"
 dependencies = []
-translation = "nested_ir"
-lean_namespace = "Proofs.DynamicModIntInstance"
-proof = "Proofs/DynamicModIntCall.lean"
-model = "Proofs/Generated/DynamicModInt.lean"
-bridge = "verifier/nested_bridge.py"
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.DynamicModint"
+proof = "Proofs/Cpp/DynamicModint.lean"
+model = "Proofs/Cpp/Gen/DynamicModint.lean"
+bridge = "verifier/model_bridge.py"
 tests = ["tests/dynamic_modint.cpp"]
 sanitizers = true
 spec = "docs/dynamic_modint.md"
 standard = "c++17"
-source_sha256 = "4cf449d9e80da5c768b320d90b215cf3efea96d588db715b89220d1a0c003b92"
-public_declarations = ["CXXRecordDecl:DModInt"]
+source_sha256 = "67c088605cda62bc0d79f1815756bd1a13824d8aa53f9ef17052c05f34df95af"
+public_declarations = ["CXXRecordDecl:DynamicModInt", "FunctionDecl:dynamic_modint::C", "FunctionDecl:dynamic_modint_pow_word", "FunctionDecl:factorial", "FunctionDecl:factorial_inv", "VarDecl:m"]
+
+[diff]
+instances = [{ T = "long long", U = "unsigned long long" }]
+cases = "tests/diff/dynamic_modint.py"

@@ -669,7 +669,7 @@ class Harness:
             cty = self.lean_type_inst(lt.Ty("cls", info.name, tuple(lt.Ty("tparam", t) for t in info.tparams)))
             lines.append(f"  o_{info.name} : Array {cty} := #[]")
         if self.tr.globals:
-            lines.append("  globalState : Option cp.GlobalState := none")
+            lines.append(f"  globalState : Option {self.tr.global_state_name} := none")
         if not classes:
             lines.append("  unused : Unit := ()")
         lines.append("")
@@ -682,7 +682,7 @@ class Harness:
             lines.append("  match objs.globalState with")
             lines.append("  | some _ => pure objs")
             lines.append("  | none =>")
-            lines.append(f"    match (cp.{self.tr.initializer_name} : Proofs.Cpp.M cp.GlobalState) 0 with")
+            lines.append(f"    match (cp.{self.tr.initializer_name} : Proofs.Cpp.M {self.tr.global_state_name}) 0 with")
             lines.append('    | none => throw (IO.userError "global initialization failed")')
             lines.append("    | some (state, _) => pure { objs with globalState := some state }")
             lines.append("")
@@ -737,7 +737,9 @@ class Harness:
             lines.append('    | none => run ts objs (out.push "fail")')
             lines.append("    | some (r, _) => do")
             if sig.is_ctor:
-                lines.append(f"      run ts {{ objs with o_{info.name} := objs.o_{info.name}.push r }} (out.push \"new\")")
+                value = "r.1" if sig.uses_globals else "r"
+                state = ", globalState := some r.2" if sig.uses_globals else ""
+                lines.append(f"      run ts {{ objs with o_{info.name} := objs.o_{info.name}.push {value}{state} }} (out.push \"new\")")
                 continue
             outputs = sig.outputs()
             parts = []
