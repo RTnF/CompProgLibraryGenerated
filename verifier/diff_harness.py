@@ -10,7 +10,7 @@ Command language (whitespace separated tokens, one command per line):
   new <constructor> <args...>        constructs object number k (0, 1, ... in order of creation)
   do <k> <method> <args...>          calls a member function of object k; prints its outputs
   field <Class.field> <k>           reads a public field of object k
-Values: an integer; a bool as 0/1; a vector as its length and its elements; a pair as its two values.
+Values: an integer; a bool as 0/1; a vector or string as its length and its elements; a pair as its two values.
 Input streams: a token count followed by canonical decimal tokens or `x` (invalid input).
 Character streams also accept `bytes <count> <0..255>...` with canonical byte codes.
 Output streams: no argument tokens (a fresh default-formatted empty output stream).
@@ -81,6 +81,12 @@ template <class A, class B> void pr(const std::pair<A, B> &p);
 template <class X> void rd(X &x) {
   if constexpr (std::is_unsigned_v<X>) { unsigned long long v; std::cin >> v; x = (X)v; }
   else { long long v; std::cin >> v; x = (X)v; }
+}
+inline void rd(std::string &s) {
+  std::size_t n;
+  std::cin >> n;
+  s.resize(n);
+  for (auto &ch : s) rd(ch);
 }
 inline void rd(bool &x) { int v; std::cin >> v; x = v != 0; }
 template <class X> void rd(std::vector<X> &v) {

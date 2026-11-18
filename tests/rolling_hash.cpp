@@ -1,6 +1,8 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/string/rolling_hash.hpp"
+#include <climits>
 #include <random>
+#include <type_traits>
 #include <vector>
 
 namespace {
@@ -45,5 +47,36 @@ int main() {
     // the element type is a template parameter
     cp::RollingHash<int> empty(std::vector<int>{});
     assert(empty.hash(0, 0) == 0);
+    const std::vector<int> signed_source{1, -1};
+    assert(cp::rolling_hash::RollingHash(signed_source).ends_with(std::vector<int>{-1}));
+    assert(cp::SimpleRollingHash(signed_source).ends_with(std::vector<int>{-1}));
+
+    // The original full API and the existing single-base API can be used together.
+    const cp::RollingHash deduced(t);
+    assert(deduced.hash(0, 3) == rt.hash(0, 3));
+    static_assert(std::is_same_v<decltype(rt.hash(0, 3)), unsigned long long>);
+    static_assert(cp::rh_in::SZ_BASE == 16 && cp::rh_in::base[15] == 211);
+    const std::vector<int> source{1, -1, 0, 1, -1, 0, INT_MAX, INT_MIN};
+    const std::vector<int> query{-1, 0};
+    for (int strength = 0; strength <= 16; ++strength) {
+        const cp::rolling_hash::RollingHash multi(source, strength);
+        assert(multi.hash(0).size() == static_cast<std::size_t>(strength));
+        assert(multi.hash(1, 3) == multi.hash(4, 6));
+        assert(multi.match(query) == (strength == 0 ? 0 : 1));
+        assert(multi.match_custom(query, {4, 1, -1}) == 4);
+        assert(multi.match(std::vector<int>(source.size() + 1)) == std::string::npos);
+    }
+    const cp::SimpleRollingHash simple(source);
+    assert(simple.match(query) == 1);
+    assert(simple.match_custom(query, {4, 1, -1}) == 4);
+    assert(!simple.starts_with(query));
+    assert(simple.ends_with(std::vector<int>{INT_MAX, INT_MIN}));
+
+    const std::string bytes("x\0\xff", 3);
+    const std::string suffix("\0\xff", 2);
+    const cp::rolling_hash::RollingHash multi_bytes(bytes);
+    const cp::SimpleRollingHash simple_bytes(bytes);
+    assert(multi_bytes.match(suffix) == 1 && multi_bytes.ends_with(suffix));
+    assert(simple_bytes.match(suffix) == 1 && simple_bytes.ends_with(suffix));
     return 0;
 }

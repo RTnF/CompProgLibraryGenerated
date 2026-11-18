@@ -30,6 +30,7 @@
 | 2026-11-18 | 同原本の`pow(ll)` | 最小指数でUBSan停止 | `-n`が符号付き64 bitの範囲外 | 非負累乗を別関数にし、絶対値をUInt64で表す | 同テストで法7の`2^INT64_MIN`が2 |
 | 2026-11-18 | 同原本の入力operator>> | 空入力で抽出先が更新されず、不定値をsetする | 一時変数が未初期化 | 0で初期化してから標準抽出を呼ぶ | 同テストの空入力、ASan/UBSanと自動変数pattern初期化 |
 | 2026-11-18 | 同原本の階乗と逆階乗cache | 法変更後に以前の剰余が返る。法7で逆階乗0を求めても先行計算で停止 | cacheが法を記録せず、逆階乗を法以上の添字まで作っていた | 両cacheを法ごとに初期化し、逆階乗の先行構築を法未満に制限する | 同テストで法の変更、100000境界、Pascal表との比較を確認 |
+| 2026-11-18 | `experiments/library/cpp/string/rolling_hash.hpp` の `RollingHash`（[`build`](../../experiments/library/cpp/string/rolling_hash.hpp#L58)・[`hash_all`](../../experiments/library/cpp/string/rolling_hash.hpp#L67)）と `SimpleRollingHash`（[`build`](../../experiments/library/cpp/string/rolling_hash.hpp#L201)・[`hash_all`](../../experiments/library/cpp/string/rolling_hash.hpp#L210)）で、要素をハッシュに足す箇所 | `{1, -1}` の末尾が `{-1}` かを `ends_with` で調べると、両クラスが不一致を返す | `-1` を符号なしの数として扱うと大きな正の数になる。足し算が型の上限を超えて一周する場合があり、列の一部から取り出したハッシュと、その部分だけを直接計算したハッシュが異なる | 負の要素には、ハッシュを計算する前に `2^61 - 1` を足す。たとえば `-1` は、同じ余りを表す `2^61 - 2` に置き換えてからハッシュに足す | [両クラスでの再現テスト](../../tests/rolling_hash.cpp#L50)と[負の要素を変換する Lean 証明](../../Proofs/Cpp/RollingHash.lean#L61) |
 
 ## 付記（直したのではなく、前提に含めたもの）
 

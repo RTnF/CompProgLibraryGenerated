@@ -15982,7 +15982,7 @@
     },
     {
       "source": "experiments/library/cpp/string/rolling_hash.hpp",
-      "source_sha256": "961162e6869965b3ee2ae090762c60a73ac2e3d7bf5fe50f368767004b0ca99f",
+      "source_sha256": "b17d1426a761a22a9eafd5a57225fb294ed7a6b1bd11e4c221f8889809b300ac",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": null,
@@ -16058,8 +16058,56 @@
           }
         },
         {
-          "kind": "VarDecl",
+          "kind": "FunctionTemplateDecl",
           "line": 9,
+          "declaration": "reduce_symbol",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
+          "kind": "FunctionDecl",
+          "line": 9,
+          "declaration": "reduce_symbol 'ull (T)'",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
+          "kind": "FunctionDecl",
+          "line": 9,
+          "declaration": "used reduce_symbol 'ull (char)' implicit_instantiation instantiated_from <ast-id>",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
+          "kind": "VarDecl",
+          "line": 14,
           "declaration": "referenced base 'const ull[16]' constexpr cinit",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16075,77 +16123,39 @@
         },
         {
           "kind": "FunctionDecl",
-          "line": 11,
+          "line": 16,
           "declaration": "used constexpr mul 'ull (ull, ull)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/modint/mod61.hpp",
+          "verification_target": null,
           "status": {
-            "review": "partial",
+            "review": "pending",
             "bug": "unknown",
-            "cpp_tested": true,
-            "common_translator": true,
-            "lean_proved": true,
-            "include_verified": true,
-            "published": true
-          },
-          "evidence": [
-            "library/modint/mod61.hpp",
-            "library/modint/mod61.toml",
-            "tests/mod61.cpp",
-            "tests/test_bitwise_ir.py",
-            "docs/mod61.md",
-            "verifier/scalar_ir.py",
-            "verifier/nested_ir.py",
-            "verifier/nested_bridge.py",
-            "Proofs/Generated/Mod61.lean",
-            "Proofs/Mod61Math.lean",
-            "Proofs/Mod61Body.lean",
-            "Proofs/Mul61Body.lean",
-            "Proofs/ScalarCall.lean",
-            "Proofs/Mod61Call.lean"
-          ],
-          "review_notes": [
-            "2026-10-08: rh_in::mod and rh_in::mul are published as cp::mod61 and cp::mul61 (library/modint/mod61.hpp) after rewriting them into the generator's subset (locals instead of namespace constants, no compound assignment). Proofs.Mod61Call proves mod61(x) = x mod (2^61-1) for every uint64 x, and for a, b < 2^61 that mul61 does not wrap and is congruent to a*b mod (2^61-1) (mul61_correct, mul61_spec), with constant work and space. Bitwise operators are modelled for unsigned 32/64 bit types with literal shift counts. The contents of unrelated caller objects are not stated unchanged. Only the standard axioms are used."
-          ]
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
         },
         {
           "kind": "FunctionDecl",
-          "line": 21,
+          "line": 26,
           "declaration": "used constexpr mod 'ull (ull)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": "library/modint/mod61.hpp",
+          "verification_target": null,
           "status": {
-            "review": "partial",
+            "review": "pending",
             "bug": "unknown",
-            "cpp_tested": true,
-            "common_translator": true,
-            "lean_proved": true,
-            "include_verified": true,
-            "published": true
-          },
-          "evidence": [
-            "library/modint/mod61.hpp",
-            "library/modint/mod61.toml",
-            "tests/mod61.cpp",
-            "tests/test_bitwise_ir.py",
-            "docs/mod61.md",
-            "verifier/scalar_ir.py",
-            "verifier/nested_ir.py",
-            "verifier/nested_bridge.py",
-            "Proofs/Generated/Mod61.lean",
-            "Proofs/Mod61Math.lean",
-            "Proofs/Mod61Body.lean",
-            "Proofs/Mul61Body.lean",
-            "Proofs/ScalarCall.lean",
-            "Proofs/Mod61Call.lean"
-          ],
-          "review_notes": [
-            "2026-10-08: rh_in::mod and rh_in::mul are published as cp::mod61 and cp::mul61 (library/modint/mod61.hpp) after rewriting them into the generator's subset (locals instead of namespace constants, no compound assignment). Proofs.Mod61Call proves mod61(x) = x mod (2^61-1) for every uint64 x, and for a, b < 2^61 that mul61 does not wrap and is congruent to a*b mod (2^61-1) (mul61_correct, mul61_spec), with constant work and space. Bitwise operators are modelled for unsigned 32/64 bit types with literal shift counts. The contents of unrelated caller objects are not stated unchanged. Only the standard axioms are used."
-          ]
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
         },
         {
           "kind": "FunctionDecl",
-          "line": 30,
+          "line": 35,
           "declaration": "used to_vec_char 'vector<char> (const string &)'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16161,7 +16171,7 @@
         },
         {
           "kind": "CXXRecordDecl",
-          "line": 40,
+          "line": 45,
           "declaration": "class RollingHash definition",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16177,7 +16187,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 41,
+          "line": 46,
           "declaration": "referenced hash_sum_ 'vector<ull>[16]'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16193,7 +16203,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 42,
+          "line": 47,
           "declaration": "referenced pows 'vector<ull>[16]'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16209,7 +16219,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 43,
+          "line": 48,
           "declaration": "referenced n_ 'int'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16225,7 +16235,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 44,
+          "line": 49,
           "declaration": "referenced strength_ 'int'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16241,7 +16251,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 46,
+          "line": 51,
           "declaration": "build",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16257,7 +16267,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 46,
+          "line": 51,
           "declaration": "build 'void (const vector<T> &, int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16273,7 +16283,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 46,
+          "line": 51,
           "declaration": "used build 'void (const vector<char> &, int)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16289,7 +16299,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 58,
+          "line": 63,
           "declaration": "hash_all",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16305,7 +16315,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 58,
+          "line": 63,
           "declaration": "hash_all 'ull (const vector<T> &, int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16321,7 +16331,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 58,
+          "line": 63,
           "declaration": "used hash_all 'ull (const vector<char> &, int) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16337,7 +16347,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 66,
+          "line": 71,
           "declaration": "hash_all",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16353,7 +16363,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 66,
+          "line": 71,
           "declaration": "hash_all 'vector<ull> (const vector<T> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16369,7 +16379,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 66,
+          "line": 71,
           "declaration": "used hash_all 'vector<ull> (const vector<char> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16385,7 +16395,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 74,
+          "line": 79,
           "declaration": "used hash 'ull (int, int, int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16401,7 +16411,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 79,
+          "line": 84,
           "declaration": "used match 'bool (int, int, const vector<ull> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16417,7 +16427,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 89,
+          "line": 94,
           "declaration": "RollingHash 'void (const string &, int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16433,7 +16443,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 98,
+          "line": 103,
           "declaration": "RollingHash",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16449,7 +16459,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 98,
+          "line": 103,
           "declaration": "RollingHash 'void (const vector<T> &, int)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16465,7 +16475,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 107,
+          "line": 112,
           "declaration": "used hash 'vector<ull> (int, int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16481,7 +16491,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 118,
+          "line": 123,
           "declaration": "hash 'vector<ull> (int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16497,7 +16507,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 121,
+          "line": 126,
           "declaration": "match 'size_t (const string &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16513,7 +16523,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 123,
+          "line": 128,
           "declaration": "match",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16529,7 +16539,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 123,
+          "line": 128,
           "declaration": "match 'size_t (const vector<T> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16545,7 +16555,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 123,
+          "line": 128,
           "declaration": "used match 'size_t (const vector<char> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16561,7 +16571,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 138,
+          "line": 143,
           "declaration": "match_custom 'size_t (const string &, const vector<int> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16577,7 +16587,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 143,
+          "line": 148,
           "declaration": "match_custom",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16593,7 +16603,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 143,
+          "line": 148,
           "declaration": "match_custom 'size_t (const vector<T> &, const vector<int> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16609,7 +16619,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 143,
+          "line": 148,
           "declaration": "used match_custom 'size_t (const vector<char> &, const vector<int> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16625,7 +16635,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 159,
+          "line": 164,
           "declaration": "starts_with 'bool (const string &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16641,7 +16651,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 162,
+          "line": 167,
           "declaration": "starts_with",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16657,7 +16667,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 162,
+          "line": 167,
           "declaration": "starts_with 'bool (const vector<T> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16673,7 +16683,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 162,
+          "line": 167,
           "declaration": "used starts_with 'bool (const vector<char> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16689,7 +16699,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 171,
+          "line": 176,
           "declaration": "ends_with 'bool (const string &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16705,7 +16715,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 174,
+          "line": 179,
           "declaration": "ends_with",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16721,7 +16731,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 174,
+          "line": 179,
           "declaration": "ends_with 'bool (const vector<T> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16737,7 +16747,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 174,
+          "line": 179,
           "declaration": "used ends_with 'bool (const vector<char> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16753,7 +16763,7 @@
         },
         {
           "kind": "CXXRecordDecl",
-          "line": 185,
+          "line": 190,
           "declaration": "class SimpleRollingHash definition",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16769,7 +16779,7 @@
         },
         {
           "kind": "VarDecl",
-          "line": 186,
+          "line": 191,
           "declaration": "referenced base 'const ull':'const unsigned long' static inline constexpr cinit",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16785,7 +16795,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 187,
+          "line": 192,
           "declaration": "referenced hash_sum_ 'vector<ull>':'std::vector<unsigned long>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16801,7 +16811,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 188,
+          "line": 193,
           "declaration": "referenced pows 'vector<ull>':'std::vector<unsigned long>'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16817,7 +16827,7 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 189,
+          "line": 194,
           "declaration": "referenced n_ 'int'",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16833,7 +16843,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 191,
+          "line": 196,
           "declaration": "build",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16849,7 +16859,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 191,
+          "line": 196,
           "declaration": "build 'void (const vector<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16865,7 +16875,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 191,
+          "line": 196,
           "declaration": "used build 'void (const vector<char> &)' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16881,7 +16891,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 201,
+          "line": 206,
           "declaration": "hash_all",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16897,7 +16907,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 201,
+          "line": 206,
           "declaration": "hash_all 'ull (const vector<T> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16913,7 +16923,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 201,
+          "line": 206,
           "declaration": "used hash_all 'ull (const vector<char> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16929,7 +16939,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 211,
+          "line": 216,
           "declaration": "SimpleRollingHash 'void (const string &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16945,7 +16955,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 215,
+          "line": 220,
           "declaration": "SimpleRollingHash",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16961,7 +16971,7 @@
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 215,
+          "line": 220,
           "declaration": "SimpleRollingHash 'void (const vector<T> &)' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16977,7 +16987,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 220,
+          "line": 225,
           "declaration": "used hash 'ull (int, int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -16993,7 +17003,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 225,
+          "line": 230,
           "declaration": "hash 'ull (int) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17009,7 +17019,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 228,
+          "line": 233,
           "declaration": "match 'size_t (const string &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17025,7 +17035,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 230,
+          "line": 235,
           "declaration": "match",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17041,7 +17051,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 230,
+          "line": 235,
           "declaration": "match 'size_t (const vector<T> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17057,7 +17067,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 230,
+          "line": 235,
           "declaration": "used match 'size_t (const vector<char> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17073,7 +17083,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 245,
+          "line": 250,
           "declaration": "match_custom 'size_t (const string &, const vector<int> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17089,7 +17099,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 250,
+          "line": 255,
           "declaration": "match_custom",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17105,7 +17115,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 250,
+          "line": 255,
           "declaration": "match_custom 'size_t (const vector<T> &, const vector<int> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17121,7 +17131,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 250,
+          "line": 255,
           "declaration": "used match_custom 'size_t (const vector<char> &, const vector<int> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17137,7 +17147,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 266,
+          "line": 271,
           "declaration": "starts_with 'bool (const string &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17153,7 +17163,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 269,
+          "line": 274,
           "declaration": "starts_with",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17169,7 +17179,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 269,
+          "line": 274,
           "declaration": "starts_with 'bool (const vector<T> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17185,7 +17195,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 269,
+          "line": 274,
           "declaration": "used starts_with 'bool (const vector<char> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17201,7 +17211,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 278,
+          "line": 283,
           "declaration": "ends_with 'bool (const string &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17217,7 +17227,7 @@
         },
         {
           "kind": "FunctionTemplateDecl",
-          "line": 281,
+          "line": 286,
           "declaration": "ends_with",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17233,7 +17243,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 281,
+          "line": 286,
           "declaration": "ends_with 'bool (const vector<T> &) const' implicit-inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17249,7 +17259,7 @@
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 281,
+          "line": 286,
           "declaration": "used ends_with 'bool (const vector<char> &) const' implicit_instantiation implicit-inline instantiated_from <ast-id>",
           "template_instantiation_review": "pending",
           "verification_target": null,
@@ -17279,8 +17289,8 @@
       "verification_target": null,
       "status": {
         "review": "pending",
-        "bug": "unknown",
-        "cpp_tested": false,
+        "bug": "fixed",
+        "cpp_tested": true,
         "common_translator": false,
         "lean_proved": false,
         "include_verified": false,
@@ -17291,7 +17301,13 @@
         "experiments/library/cpp/verify/ac/rolling_hash_2.test_ac.cpp"
       ],
       "duplicate_candidates": [],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "tests/rolling_hash.cpp",
+        "Proofs/Cpp/RollingHash.lean",
+        "docs/agent/fixes.md"
+      ],
+      "review_notes": "Signed inputs are normalized before addition. The public port restores both classes, their character and integer overloads, and the fixed bases. The generated public model and its proof are linked here; the original source itself is not an input to that translation."
     },
     {
       "source": "experiments/library/cpp/template/marathon_template.cpp",

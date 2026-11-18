@@ -108,6 +108,8 @@ def parse_type(text: str, tparams: set[str], classes, value_params=None, aliases
         return ORDERING
     if s == "void":
         return VOID
+    if s in ("std::string", "std::basic_string<char>", "std::__cxx11::basic_string<char>"):
+        return Ty("string", args=(INT32,))
     if s in ("std::istream", "istream"):
         return ISTREAM
     if s in ("std::ostream", "ostream"):
@@ -241,7 +243,7 @@ def lean_type(ty: Ty) -> str:
         return lean_name(ty.name)
     if ty.kind == "vlit":
         return f"({ty.name} : {lean_type(ty.args[0])})"
-    if ty.kind == "vec":
+    if ty.kind in ("vec", "string", "constant_array"):
         return f"(Array {lean_type(ty.args[0])})"
     if ty.kind == "pair":
         return f"({lean_type(ty.args[0])} × {lean_type(ty.args[1])})"
@@ -303,6 +305,10 @@ def unsigned_type(node) -> bool:
     qual = node.get("type", {}).get("qualType", "")
     qual = re.sub(r"\bconst\b", "", qual).strip()
     return qual in UNSIGNED_NAMES
+
+
+def scoped_lean_name(name: str) -> str:
+    return ".".join(lean_name(part) for part in name.split("::"))
 
 
 def strip(node):
@@ -747,7 +753,7 @@ class Fn:
                 return self.global_names[key], self.tr.globals[key][1]
             constant = self.tr.constants.get(n["referencedDecl"].get("id"))
             if constant is not None:
-                return f"cp.{lean_name(name)}", constant[1]
+                return f"cp.{scoped_lean_name(constant[0])}", constant[1]
             ty = self.lookup(name)
             if ty is None:
                 raise Unsupported(f"unknown variable {name}")
@@ -782,7 +788,7 @@ class Fn:
             base, index = self.subscript_parts(n)
             bt, bty = self.expr(base, pre)
             it, _ = self.expr(index, pre, INT)
-            if bty.kind != "vec":
+            if bty.kind not in ("vec", "string", "constant_array"):
                 raise Unsupported(f"subscript of {bty}")
             elem = bty.args[0]
             self.need("Inhabited", elem)
@@ -1284,6 +1290,17 @@ class Fn:
     def pick(self, sigs, args, what):
         cands = [s for s in sigs if len(s.params) == len(args)
                  and self.trait_eligibility(s, args) is not False]
+        if len(cands) > 1:
+            collection_kinds = {"vec", "string"}
+            for i, arg in enumerate(args):
+                formal_kinds = {sig.params[i][1].kind for sig in cands}
+                if formal_kinds != collection_kinds:
+                    continue
+                actual = self.tr.ty(strip(arg)["type"]["qualType"], self)
+                if actual.kind in collection_kinds:
+                    cands = [sig for sig in cands if sig.params[i][1].kind == actual.kind]
+                    if len(cands) == 1:
+                        break
         if len(cands) != 1:
             cands2 = [s for s in sigs if len(s.params) >= len(args)
                       and all(self.has_default(s, i) for i in range(len(args), len(s.params)))
@@ -1402,6 +1419,10 @@ class Fn:
         bt, bty = self.expr(base, pre)
         if bty.kind == "vec":
             return self.vector_call(base, bt, bty, name, args, pre)
+        if bty.kind == "string":
+            if name == "size" and not args:
+                return f"(UInt64.ofInt (Cpp.size {bt}))", U64
+            raise Unsupported(f"string::{name}")
         if bty.kind == "cls":
             info = self.tr.classes[bty.name]
             sigs = [s for s in info.methods if s.cpp_name == name and not s.is_ctor]
@@ -2598,15 +2619,32 @@ class Translator:
         return names, values, constraints
 
     def collect_constant(self, node):
-        """Only direct scalar literals: no dynamic initialization or discarded effects."""
+        """Direct literals and fully initialized fixed arrays of direct literals."""
         spelling = type_of_decl(node)
         if not re.search(r"\bconst\b", spelling) or re.search(r"\bvolatile\b", spelling):
-            raise Unsupported("global variable requires a nonvolatile scalar constant")
-        ty = self.ty(spelling)
+            raise Unsupported("global variable requires a nonvolatile constant")
         children = inner(node)
-        if len(children) != 1 or ty.kind not in ("int", "u32", "u64", "bool"):
-            raise Unsupported("global constant requires one scalar literal")
+        if len(children) != 1:
+            raise Unsupported("global constant requires one initializer")
         value = children[0]
+        fixed = re.fullmatch(r"(.+)\[(\d+)\]", spelling)
+        if fixed:
+            ty = self.ty(fixed[1])
+            elements = inner(value)
+            if (not node.get("constexpr") or value.get("kind") != "InitListExpr"
+                    or not elements or len(elements) != int(fixed[2])):
+                raise Unsupported("constant array requires a full literal initializer")
+            items = ", ".join(self.constant_literal(ty, e) for e in elements)
+            literal = f"([{items}] : List {lean_type(ty)}).toArray"
+            ty = Ty("constant_array", args=(ty,))
+        else:
+            ty = self.ty(spelling)
+            literal = self.constant_literal(ty, value)
+        self.constants[node["id"]] = (node.get("lean_cpp_name", node["name"]), ty, literal)
+
+    def constant_literal(self, ty, value):
+        if ty.kind not in ("int", "u32", "u64", "bool"):
+            raise Unsupported("global constant requires a scalar literal")
         # Implicit conversions are deliberately excluded here. Their source
         # widths and signedness require a separate conversion rule.
         sign = 1
@@ -2625,7 +2663,7 @@ class Translator:
             literal = str(number)
         else:
             raise Unsupported("global constant initializer is not a direct scalar literal")
-        self.constants[node["id"]] = (node["name"], ty, literal)
+        return literal
 
     def collect_global(self, node):
         spelling = type_of_decl(node)
@@ -2784,7 +2822,7 @@ class Translator:
                 spelling = type_of_decl(node)
                 if re.search(r"[&*]|\b(?:const|volatile)\b", spelling):
                     raise Unsupported("namespace type alias must be an unqualified value type")
-                self.aliases[node["name"]] = self.ty(spelling)
+                self.aliases[node.get("lean_cpp_name", node["name"])] = self.ty(spelling)
             elif kind in ("TypeAliasTemplateDecl", "FullComment"):
                 pass
             else:
@@ -2845,7 +2883,7 @@ class Translator:
             if name in self.functions:
                 raise Unsupported(f"overloaded child namespace function {name}")
             self.qualified_functions[node["id"]] = name
-        model_name = ".".join(lean_name(part) for part in name.split("::"))
+        model_name = scoped_lean_name(name)
         # A template parameter used as `T::value_type` is a random-access container (modelled by std::vector)
         text = json.dumps(node)
         containers = [t for t in tps if f"{t}::value_type" in text]
@@ -3109,7 +3147,7 @@ class Translator:
             order.append(key)
         for sig, info in sigs:
             visit(id(sig))
-        out = [f"def cp.{lean_name(name)} : {lean_type(ty)} := {literal}\n"
+        out = [f"def cp.{scoped_lean_name(name)} : {lean_type(ty)} := {literal}\n"
                for name, ty, literal in self.constants.values()]
         for kind, item in self.order:
             if kind == "class":
@@ -3117,7 +3155,8 @@ class Translator:
         for name, ty in self.aliases.items():
             requirements = class_requirements(ty, self.classes)
             head = " ".join(f"[{r}]" for r in requirements)
-            out.append(f"abbrev cp.{lean_name(name)} {head} := {lean_type(ty)}\n")
+            model_name = scoped_lean_name(name)
+            out.append(f"abbrev cp.{model_name} {head} := {lean_type(ty)}\n")
         if self.globals:
             if any(node.get("name") == self.global_state_name.removeprefix("cp.") for node in self.decls):
                 raise Unsupported("global state model name conflicts with a source declaration")
@@ -3425,9 +3464,11 @@ def source_decls(source: Path, standard="c++17"):
         if namespace is not None and here is not None and Path(here).resolve() == resolved:
             if child_namespace is None:
                 if namespace:
-                    if kind != "FunctionDecl" or name.startswith("operator") or not any(
-                            c.get("kind") == "CompoundStmt" for c in inner(node)):
-                        raise Unsupported("child namespaces require ordinary free function definitions")
+                    is_function = kind == "FunctionDecl" and not name.startswith("operator") and any(
+                        c.get("kind") == "CompoundStmt" for c in inner(node))
+                    is_constant = kind == "VarDecl" and re.search(r"\bconst\b", type_of_decl(node))
+                    if not (is_function or is_constant or kind == "TypeAliasDecl"):
+                        raise Unsupported("child namespaces require free functions, constants or type aliases")
                     node["lean_cpp_name"] = "::".join((*namespace, name))
                 decls.append(node)
         for c in node.get("inner", []):

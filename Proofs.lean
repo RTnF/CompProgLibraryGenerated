@@ -295,12 +295,6 @@ import Proofs.VecPrepare
 import Proofs.PexecKit
 import Proofs.ExtremaRef
 import Proofs.ExtremaCall
-import Proofs.RollingHashMath
-import Proofs.RollingHashCore
-import Proofs.RollingHashBuild
-import Proofs.RollingHashExec
-import Proofs.RollingHashGet
-import Proofs.RollingHashCall
 import Proofs.SortUtilCall
 import Proofs.SearchUtilCall
 import Proofs.Cpp.Modint
@@ -619,3 +613,4 @@ import Proofs.Cpp.Lib.ModIntFactorial
 import Proofs.Cpp.Lib.DynamicModIntFactorial
 import Proofs.LegacyScalarPrepare
 import Proofs.Cpp.DynamicModint
+import Proofs.Cpp.RollingHash

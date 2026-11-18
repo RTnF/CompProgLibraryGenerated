@@ -114,7 +114,7 @@ def load_component(metadata: Path) -> dict:
         isinstance(item, str) and (
             re.fullmatch(r"[A-Za-z]+Decl:(?:[A-Za-z_][A-Za-z_0-9]*|operator[-+*/%<>=!&|^~]+)(?:<[0-9A-Za-z_, <>:]+>)?", item)
             or (translation == "lean_model"
-                and re.fullmatch(r"FunctionDecl:[A-Za-z_][A-Za-z_0-9]*::[A-Za-z_][A-Za-z_0-9]*", item))
+                and re.fullmatch(r"(?:FunctionDecl|TypeAliasDecl|VarDecl):[A-Za-z_][A-Za-z_0-9]*::[A-Za-z_][A-Za-z_0-9]*", item))
         )
         for item in declarations
     ) or len(declarations) != len(set(declarations)):

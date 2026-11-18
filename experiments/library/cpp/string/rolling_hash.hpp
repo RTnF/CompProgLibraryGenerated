@@ -6,6 +6,11 @@ constexpr ull M30 = (1ul << 30) - 1;
 constexpr ull M31 = (1ul << 31) - 1;
 constexpr ull M61 = (1ul << 61) - 1;
 constexpr int SZ_BASE = 16;
+template <class T> ull reduce_symbol(T value) {
+  const ll signed_value = (ll)value;
+  return signed_value < 0 ? (ull)(signed_value + (ll)M61) : (ull)signed_value;
+}
+
 constexpr ull base[SZ_BASE] = {131, 137, 139, 149, 151, 157, 163, 167,
                                173, 179, 181, 191, 193, 197, 199, 211};
 constexpr ull mul(ull a, ull b) {
@@ -50,7 +55,7 @@ class RollingHash {
     pows[i_base][0] = 1;
     for (int i = 0; i < n_; i++) {
       hash_sum_[i_base][i + 1] =
-          rh_in::mod(rh_in::mul(hash_sum_[i_base][i], b) + s[i]);
+          rh_in::mod(rh_in::mul(hash_sum_[i_base][i], b) + rh_in::reduce_symbol(s[i]));
       pows[i_base][i + 1] = rh_in::mod(rh_in::mul(pows[i_base][i], b));
     }
   }
@@ -59,7 +64,7 @@ class RollingHash {
     int n_t = t.size();
     ull hash_t = 0;
     for (int i = 0; i < n_t; i++) {
-      hash_t = rh_in::mod(rh_in::mul(hash_t, rh_in::base[i_base]) + t[i]);
+      hash_t = rh_in::mod(rh_in::mul(hash_t, rh_in::base[i_base]) + rh_in::reduce_symbol(t[i]));
     }
     return hash_t;
   }
@@ -193,7 +198,7 @@ class SimpleRollingHash {
     pows.resize(n_ + 1);
     pows[0] = 1;
     for (int i = 0; i < n_; i++) {
-      hash_sum_[i + 1] = rh_in::mod(rh_in::mul(hash_sum_[i], base) + s[i]);
+      hash_sum_[i + 1] = rh_in::mod(rh_in::mul(hash_sum_[i], base) + rh_in::reduce_symbol(s[i]));
       pows[i + 1] = rh_in::mod(rh_in::mul(pows[i], base));
     }
   }
@@ -202,7 +207,7 @@ class SimpleRollingHash {
     int n_t = t.size();
     ull hash_t = 0;
     for (int i = 0; i < n_t; i++) {
-      hash_t = rh_in::mod(rh_in::mul(hash_t, base) + t[i]);
+      hash_t = rh_in::mod(rh_in::mul(hash_t, base) + rh_in::reduce_symbol(t[i]));
     }
     return hash_t;
   }

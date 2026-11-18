@@ -44,7 +44,7 @@
 | segment_tree/segment_tree_beats*.hpp | 検証待ち | 2026-11-11 に公開版（`library/segment_tree/segment_tree_beats.hpp`）と旧方式の証明（`Proofs/*Beats*` 228モジュール、全体の約50%）を外した。C++ の文ごとの記号実行による証明が全件CIの30分予算を超えるため。新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。`_sum`版は未検証 |
 | set/set.hpp, multiset.hpp | 未 | `std::set`/`map`/`multiset`（STL の契約が未登録） |
 | string/char_count.hpp | 一部 | `run_length`（文字列ではなく `long long` の vector） |
-| string/rolling_hash.hpp | 一部 | `rolling_hash`（`RollingHash<int>`。構成子と `hash(l, r)`/`hash(a)`。文字列版、`match` 系、`starts_with`/`ends_with` は `std::string`/`npos` が未対応で未） |
+| string/rolling_hash.hpp | 済 | `rolling_hash` に両クラス、全基数、文字列・整数列の公開操作を復元。旧公開 `cp::RollingHash<T>` を維持。ローカル全件検証済み。push後のCIは未確認 |
 | tree/tree.hpp | 一部 | `library/tree/tree_arcs.hpp`（辺リスト版コンストラクタの辺（両方向）の並べ方。辺の費用の写しは `library/tree/tree_arc_costs.hpp`、`Cost = long long`）と `library/tree/tree_find_root.hpp`（根なし親配列版コンストラクタの根の決定）と `library/tree/tree_edges.hpp`（`Tree(root, parent)` の隣接リスト構築のうち、親配列から辺（両方向）を並べる部分。`csr_build` と合成して CSR にする）と `library/tree/tree_height.hpp`（`Tree::height` の最後のループ `h[i] = max(cd0[i], cd1[i])`。直径の両端を求める部分は未）と `library/tree/tree_distance.hpp`（`Tree::distance`。`lca` を引数に取る）と `library/tree/tree_lca_same_depth.hpp`（`Tree::lowest_common_ancestor` の深さを揃えたあとの部分。深さを揃える前半は `tree_ancestor` で別関数に分けている）と `library/tree/tree_ancestor.hpp`（`Tree::ancestor`。ダブリング表を引数に取り、ビット判定を `(i / j) % 2 == 1` に変えている。`i` 個先の祖先を返すことまで証明）と `library/tree/tree_path.hpp`（`Tree::path`。`tree_root` の親配列を `to` から `from` までたどって `out` に書き、長さを返す。元の経路と同じ頂点列）と `library/tree/tree_root.hpp`（`Tree::build_depth` の `parent_`/`depth_`/`cost_depth_` を CSR 配列と手動スタックで求める。`Cost` はテンプレートのまま、検証した具体化は `long long`。到達性・辺と深さと費用の関係・`O(n+m)` の仕事量まで証明。違反一覧: `diameter`・`height` を 1 関数としての形（直径の両端を求める合成）・`height`・`path` の 1 関数としての形（深さ優先探索で復元する元の形。到達不能な `to` に空の経路を返す部分）・`build_ancestor`/`lowest_common_ancestor`/`distance` の 1 関数としての形・`full_tree_dp` の一般の関数オブジェクト `P`（反復版 `library/tree/tree_full_dp.hpp` は `DpHeight<long long>` で追加済み。`ord` は `library/tree/tree_order.hpp` が幅優先の並びとして作る）・辺リスト/親配列のコンストラクタ・`ListGraph`/`Edge` の形・根ごとの `vector<vector<int>>` は未） |
 | union_find/disjoint_set_union.hpp, union_find.hpp | 一部 | `union_find`（クラス。構成子 2 種、`unite`、`same`、`root`、`size`、`num_groups`。木の数は `ps` の最後の要素に持つ。`unite`/`same`/`size` は経路圧縮をしない） |
 
@@ -90,7 +90,7 @@
 | 元のクラス | 現在の公開部品 | 目標 |
 | --- | --- | --- |
 | `ModInt` / `DynamicModInt` 周辺 | `modint`, `mod61`, `pow_mod`, `dynamic_modint` | 元のヘッダーごとに 1 つ（`mod61`・`mul61` は `string/rolling_hash.hpp` の `rh_in`、`pow_mod` の元を確認する） |
-| `RollingHash` | `rolling_hash`（`SimpleRollingHash` 相当。文字列版・`match` 系は未） | `string`、`npos`、`vector<ull> hash_sum_[16]` の対応後に元の形へ広げる |
+| `RollingHash` | `rolling_hash`（両クラスと文字列・整数列API） | 元の基数表とヘルパーを `cp::rh_in` へ配置。複数基数の表は連続領域を使用 |
 | `SortUtil` 周辺 | `sort_util`（`inv_perm`・`compress`・`sort_vector`・`dedup_vector` を統合済み）、`search_util`（`count`・`lower_bound_index` を統合済み）、`element_count`（2026-11-11 に元の形で公開） | 元のヘッダー（`array/sort_util.hpp`、`search_util.hpp`）ごとに 1 つ |
 
 ### 2. 元の汎用性を狭めている変更
