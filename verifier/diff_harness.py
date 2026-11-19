@@ -355,7 +355,15 @@ end DiffTest
 
 
 class Harness:
-    def __init__(self, source: Path, instance: dict, lean_module: str, deps=(), standard="c++17", calls=None):
+    def __init__(self, source: Path, instance: dict, lean_module: str, deps=(), standard="c++17", calls=None,
+                 bindings=()):
+        # bindings: (header, Lean model module) of components whose classes may be bound to template parameters
+        self.bindings = list(bindings)
+        self.binding_trs = []
+        for header, _module in self.bindings:
+            btr = lt.Translator(lt.source_decls(Path(header), standard), Path(header).read_bytes(), [])
+            btr.translate()
+            self.binding_trs.append(btr)
         self.selected_calls = None if calls is None else frozenset(calls)
         self.source = source
         self.instance = instance             # template parameter -> C++ type
@@ -390,11 +398,31 @@ class Harness:
                 raise lt.Unsupported(f"unknown or non-public differential calls: {sorted(unknown)}")
         policies = {pol for _, sig in self.callables() for pol in sig.policies}
         self.policy_class = {k: re.sub(r"<.*", "", v).removeprefix("cp::") for k, v in instance.items() if k in policies}
+        # A template parameter bound to a translated record class (e.g. M = "cp::MonoidMax<long long>"): its values
+        # are read and printed through the public scalar fields, and its static members and argument-dependent
+        # functions give the Cpp.StaticCall / Cpp.AdlCall2 instances (docs/translation.md).
+        self.record_bindings = {}
+        for k, v in instance.items():
+            m = re.fullmatch(r"cp::(\w+)(?:<(.*)>)?", v.strip())
+            owners = [b for b in self.binding_trs if m and m.group(1) in b.classes]
+            if k not in policies and m and len(owners) == 1:
+                info = owners[0].classes[m.group(1)]
+                args = tuple(instance_type(a) for a in lt.split_args(m.group(2))) if m.group(2) else ()
+                if len(args) != len(info.tparams):
+                    raise lt.Unsupported(f"record binding {v} needs every class template argument")
+                ty = lt.Ty("cls", info.name, args)
+                fields = [(f, lt.subst(fty, info.tparams, args)) for f, fty, _ in info.fields]
+                if not fields or any(f not in info.public_fields or fty.kind not in ("int", "u32", "u64", "bool")
+                                     for f, fty in fields):
+                    raise lt.Unsupported(f"record binding {v} needs public scalar fields")
+                self.record_bindings[k] = (info, v.strip(), ty, fields, owners[0])
         self.lean_instance = {k: (lt.lean_type(lt.parse_value_arg(v, self.value_parameters[k], {}))
-                                  if k in self.value_parameters else lean_instance_type(v))
+                                  if k in self.value_parameters else
+                                  lt.lean_type(self.record_bindings[k][2]) if k in self.record_bindings
+                                  else lean_instance_type(v))
                               for k, v in instance.items() if k not in policies}
         for k, v in instance.items():
-            if k in policies or k in self.value_parameters:
+            if k in policies or k in self.value_parameters or k in self.record_bindings:
                 continue
             ty = instance_type(v)
             if ty.kind == "vec":   # a container parameter T: its element type is T_value_type
@@ -447,6 +475,68 @@ class Harness:
         return [p.get("type", {}).get("qualType", "") for p in lt.inner(sig.node) if p.get("kind") == "ParmVarDecl"]
 
     # ------------------------------------------------------------------ C++
+    def cpp_record_io(self):
+        """Readers and printers of the record bindings, found by argument-dependent lookup from difftest."""
+        out = []
+        for info, cpp, _, fields, _owner in self.record_bindings.values():
+            reads = " ".join(f"difftest::rd(m.{f});" for f, _ in fields)
+            prints = " ".join(f"difftest::pr(m.{f});" for f, _ in fields)
+            # difftest:: for the qualified calls of the driver, cp:: for the dependent calls inside the vector
+            # readers and printers (argument-dependent lookup).
+            for ns in ("difftest", "cp"):
+                out.append(f"namespace {ns} {{ inline void rd({cpp} &m) {{ {reads} }} "
+                           f"inline void pr(const {cpp} &m) {{ {prints} }} }}")
+        return out
+
+    def lean_record_instances(self, requirements):
+        out = []
+        for param, (info, cpp, ty, fields, _owner) in self.record_bindings.items():
+            lty = lt.lean_type(ty)
+            names = [f"f{i}" for i in range(len(fields))]
+            body = "".join(f"    let ({n}, ts) ← (Rd.rd ts : Option ({lt.lean_type(fty)} × List String))\n"
+                           for n, (_, fty) in zip(names, fields))
+            out.append(f"instance : DiffTest.Rd {lty} where\n  rd ts := do\n{body}"
+                       f"    some (⟨{', '.join(names)}⟩, ts)")
+            out.append(f"instance : DiffTest.Pr {lty} where\n  pr m := " +
+                       " ++ ".join(f"DiffTest.Pr.pr m.{lt.lean_name(f)}" for f, _ in fields))
+        signed_bits = {"int": 32, "long": 64, "long long": 64, "std::int64_t": 64, "int64_t": 64, "std::int32_t": 32}
+        for param, (info, cpp, ty, fields, owner) in self.record_bindings.items():
+            raw = re.fullmatch(r"cp::\w+(?:<(.*)>)?", cpp).group(1)
+            for tp, arg in zip(info.tparams, lt.split_args(raw) if raw else []):
+                uses = any(f'Cpp.NumericTraits "{tp}"' in req for fn in owner.built_functions.values()
+                           for req in fn.reqs.items)
+                if uses:
+                    if arg.strip() not in signed_bits:
+                        raise lt.Unsupported(f"numeric traits of the record binding argument {arg}")
+                    out.append(f'instance : Proofs.Cpp.NumericTraits "{tp}" Int := '
+                               f'Proofs.Cpp.intNumericTraits "{tp}" {signed_bits[arg.strip()]} true')
+        done = set()
+        for r in requirements:
+            m = re.fullmatch(r'Cpp\.StaticCall "(\w+)" (\w+) (\w+)', r)
+            if m and m.group(2) in self.record_bindings and m.group(3) == m.group(2) and r not in done:
+                done.add(r)
+                info = self.record_bindings[m.group(2)][0]
+                sigs = [g for g in info.methods if g.cpp_name == m.group(1) and g.is_static and not g.params]
+                if len(sigs) != 1:
+                    raise lt.Unsupported(f"static member {m.group(1)} of {info.name}")
+                lty = self.lean_instance[m.group(2)]
+                out.append(f'instance : Proofs.Cpp.StaticCall "{m.group(1)}" {lty} {lty} := ⟨{sigs[0].lean_name}⟩')
+            m = re.fullmatch(r'Cpp\.AdlCall2 "(\w+)" (\w+) (\w+) (\w+)', r)
+            if m and m.group(2) in self.record_bindings and len(set(m.groups()[1:])) == 1 and r not in done:
+                done.add(r)
+                info = self.record_bindings[m.group(2)][0]
+                owner = self.record_bindings[m.group(2)][4]
+                cands = [g for g in owner.functions.get(m.group(1), [])
+                         if len(g.params) == 2 and all(pt.kind == "cls" and pt.name == info.name for _, pt, _ in g.params)]
+                # Overload resolution prefers the non-template hidden friend to a namespace function template.
+                friends = [g for g in cands if g.node.get("lean_hidden_friend")]
+                chosen = friends if friends else cands
+                if len(chosen) != 1:
+                    raise lt.Unsupported(f"argument-dependent function {m.group(1)} of {info.name}")
+                lty = self.lean_instance[m.group(2)]
+                out.append(f'instance : Proofs.Cpp.AdlCall2 "{m.group(1)}" {lty} {lty} {lty} := ⟨{chosen[0].lean_name}⟩')
+        return out
+
     def cpp_class(self, info):
         args = [self.instance[t] for t in info.tparams]
         if info.name in self.tr.nested_record_names:
@@ -456,14 +546,17 @@ class Harness:
 
     def cpp_driver(self) -> str:
         include = os.path.relpath(self.source.resolve(), (ROOT / "tests/diff").resolve())
+        binding_includes = [f'#include "{os.path.relpath(Path(h).resolve(), (ROOT / "tests/diff").resolve())}"'
+                            for h, _ in self.bindings]
         lines = [f'#include "../../experiments/library/cpp/template/small_template.hpp"',
-                 f'#include "{include}"', CPP_PRELUDE,
+                 *binding_includes, f'#include "{include}"', CPP_PRELUDE,
                  (CPP_STREAM_PRELUDE.replace("@@BYTE_INPUT@@",
                      CPP_CHARACTER_BYTE_INPUT.replace("@@CHAR_TYPE@@",
                        "unsigned char" if self.stream_unsigned else (
                          "char" if "char" in self.instance.values() else "signed char"))
                        .replace("@@CHAR_SIGNED@@", "false" if self.stream_unsigned else "true")
-                     if self.stream_character else "") if self.has_streams else ""), "int main() {", "  std::string cmd, name;"]
+                     if self.stream_character else "") if self.has_streams else ""),
+                 *self.cpp_record_io(), "int main() {", "  std::string cmd, name;"]
         classes = [item for kind, item in self.tr.order if kind == "class"]
         checked_traits = {packet for fn in self.tr.built_functions.values()
                           for packet in fn.type_trait_bindings}
@@ -673,7 +766,8 @@ class Harness:
             value = lt.mod_to_uint32_binding(self.instance[parameter], parameter).replace("Cpp.", "Proofs.Cpp.")
             remainder_bindings.append(f'local instance cppModToUInt32_{parameter} : '
                                       f'Proofs.Cpp.ModToUInt32 "{parameter}" {self.lean_instance[parameter]} := {value}')
-        lines = [f"import {self.lean_module}", LEAN_PRELUDE, streams, integer_ops, *numeric_traits, *type_traits, *remainder_bindings, "open Proofs.Cpp.Gen", *facts, "",
+        lines = [f"import {self.lean_module}", *(f"import {mod}" for _, mod in self.bindings), LEAN_PRELUDE, streams, integer_ops, *numeric_traits, *type_traits, *remainder_bindings, "open Proofs.Cpp.Gen", *facts,
+                 "namespace DiffTest", *self.lean_record_instances(requirements), "end DiffTest", "",
                  "structure Objects where"]
         for info in classes:
             cty = self.lean_type_inst(lt.Ty("cls", info.name, tuple(lt.Ty("tparam", t) for t in info.tparams)))
@@ -809,9 +903,9 @@ def lean_environment():
 
 
 def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None,
-             deps=(), standard="c++17", calls=None):
+             deps=(), standard="c++17", calls=None, bindings=()):
     """Run both interpreters on `cases` (command text) and require identical output."""
-    h = Harness(source, instance, lean_module, deps, standard, calls)
+    h = Harness(source, instance, lean_module, deps, standard, calls, bindings)
     lake, env = lean_environment()
     env.pop("LEAN_PATH", None)
     with tempfile.TemporaryDirectory(prefix="diff-") as directory:

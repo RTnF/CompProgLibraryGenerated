@@ -27,4 +27,19 @@ class ConditionalResult (Left Right : Type) where
   left : Left → Value
   right : Right → Value
 
+/-- `T::name()`: a static member function of a class template parameter `T`, called without arguments. The
+instance is the translated static member of the actual argument (docs/translation.md). -/
+class StaticCall (name : String) (T R : Type) where
+  call : Cpp.M R
+
+/-- An unqualified call `name(a, b)` whose arguments depend on a template parameter: the function is found by
+argument-dependent lookup on the actual argument types, so the instance is that function's translation. -/
+class AdlCall2 (name : String) (A B R : Type) where
+  call : A → B → Cpp.M R
+
+/-- `f(x)` for a value `f` of a template parameter type `F` (a function object): the translation of its call
+operator on the argument type `A`. -/
+class Invoke1 (F A R : Type) where
+  call : F → A → Cpp.M R
+
 end Proofs.Cpp

@@ -1,0 +1,20 @@
+name = "segment_tree"
+source = "segment_tree/segment_tree.hpp"
+dependencies = []
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.SegmentTree"
+proof = "Proofs/Cpp/SegmentTree.lean"
+model = "Proofs/Cpp/Gen/SegmentTree.lean"
+bridge = "verifier/model_bridge.py"
+tests = ["tests/segment_tree.cpp"]
+sanitizers = true
+spec = "docs/segment_tree.md"
+standard = "c++17"
+source_sha256 = "7e3d44e3e47eff87a6baae9b311b2a45aa6cb3c85ba65ecd08aeb092c2d5893f"
+public_declarations = ["ClassTemplateDecl:SegmentTree"]
+
+[diff]
+instances = [{ M = "cp::MonoidMax<long long>" }, { M = "cp::MonoidMin<long long>" }, { M = "cp::MonoidMul<long long>" }]
+cases = "tests/diff/segment_tree.py"
+bindings = ["monoid"]
+calls = ["SegmentTree.init_0", "SegmentTree.init_int", "SegmentTree.init_vec", "SegmentTree.set_", "SegmentTree.get_", "SegmentTree.product", "SegmentTree.product_all"]

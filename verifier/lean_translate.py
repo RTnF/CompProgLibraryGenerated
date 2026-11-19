@@ -818,7 +818,23 @@ class Fn:
             if op == "*" and strip(sub).get("kind") == "CXXThisExpr":
                 return self.self_value(), class_ty(self.cls)
             if op in ("++", "--"):
-                raise Unsupported("increment inside an expression")
+                # `i++` / `--i` of a local integer inside a larger expression. `stmt` rejects a full expression that
+                # also reads or changes `i` elsewhere (their order would be unsequenced or unspecified).
+                base = strip(sub)
+                if base.get("kind") != "DeclRefExpr" or \
+                        base.get("referencedDecl", {}).get("kind") not in ("VarDecl", "ParmVarDecl"):
+                    raise Unsupported("increment inside an expression")
+                target = self.lvalue(sub)
+                if target[3].kind not in ("int", "u32", "u64"):
+                    raise Unsupported("increment of a non-integer")
+                current = self.read_lvalue(target)
+                sym = "+" if op == "++" else "-"
+                result = current
+                if n.get("isPostfix"):
+                    result = self.fresh()
+                    pre.append(f"let {result} := {current}")
+                pre.extend(self.assign_lines(target, f"({current} {sym} 1)"))
+                return (result if n.get("isPostfix") else self.read_lvalue(target)), target[3]
             t, ty = self.expr(sub, pre)
             if op == "-":
                 if ty.kind == "tparam":
@@ -1338,6 +1354,25 @@ class Fn:
                     cands = [sig for sig in cands if sig.params[i][1].kind == actual.kind]
                     if len(cands) == 1:
                         break
+        if len(cands) > 1:
+            # Discard candidates whose parameter is a collection or record when the argument is a known scalar
+            # (and the converse): no implicit conversion connects them.
+            aggregate = {"vec", "string", "cls", "pair"}
+            for i, arg in enumerate(args):
+                qual = strip(arg).get("type", {}).get("qualType", "")
+                if not qual or "dependent" in qual or qual == "NULL TYPE":
+                    continue
+                try:
+                    actual = self.tr.ty(qual, self)
+                except Unsupported:
+                    continue
+                if actual.kind in ("unknown", "tparam"):
+                    continue
+                kept = [sig for sig in cands if (sig.params[i][1].kind in aggregate) == (actual.kind in aggregate)]
+                if kept:
+                    cands = kept
+                if len(cands) == 1:
+                    break
         if len(cands) != 1:
             cands2 = [s for s in sigs if len(s.params) >= len(args)
                       and all(self.has_default(s, i) for i in range(len(args), len(s.params)))
@@ -1388,9 +1423,12 @@ class Fn:
                     raise Unsupported(f"static member declaration outside the current class: {name}")
                 # Established standard contracts (e.g. numeric_limits::max)
                 # still go through the explicitly checked free-call handler.
-            qualifier = ""
-            if ck == "UnresolvedLookupExpr":
-                pass
+            if ck == "UnresolvedLookupExpr" and callee.get("usesADL") and not callee.get("lookups"):
+                return self.adl_call(name, args, pre, expected)
+            if ck == "DeclRefExpr" and callee.get("referencedDecl", {}).get("kind") in ("ParmVarDecl", "VarDecl"):
+                fty = self.lookup(name)
+                if fty is not None and fty.kind == "tparam":
+                    return self.invoke_call(name, fty, args, pre, expected)
             return self.free_call(name, args, pre, callee)
         if ck == "DependentScopeDeclRefExpr":
             return self.policy_call(callee, args, pre, expected)
@@ -1413,6 +1451,8 @@ class Fn:
             return self.numeric_trait(parameter, {"min": "minimum", "max": "maximum"}.get(member, member),
                                       Ty("tparam", parameter))
         m = re.fullmatch(r"(?:typename)?(\w+)::(\w+)", text)
+        if m and self.cls is not None and m.group(1) in self.cls.tparams and not args:
+            return self.static_call(m.group(1), m.group(2), pre, expected)
         if not m or m.group(1) not in self.sig.tparams or self.cls is not None:
             raise Unsupported(f"call through a dependent scope {text}")
         pol, member = m.group(1), m.group(2)
@@ -1433,6 +1473,53 @@ class Fn:
         methods[member] = (tuple(tys), rty)
         tmp = self.fresh()
         pre.append(f"let {tmp} ← {' '.join([f'{pol}.{lean_name(member)}'] + texts)}")
+        return tmp, rty
+
+    def dependent_result(self, expected, default):
+        if expected is not None and expected.kind not in ("unknown", "void"):
+            return expected
+        return default
+
+    def static_call(self, parameter, member, pre, expected):
+        """`P::f()` for a class template parameter `P`: the static member of the actual argument, an instance of
+        `Cpp.StaticCall` (docs/translation.md)."""
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", member):
+            raise Unsupported(f"static member {member}")
+        rty = self.dependent_result(expected, Ty("tparam", parameter))
+        self.reqs.add(f'Cpp.StaticCall "{member}" {parameter} {lean_type(rty)}')
+        tmp = self.fresh()
+        pre.append(f'let {tmp} ← Cpp.StaticCall.call (name := "{member}") (T := {parameter}) (R := {lean_type(rty)})')
+        return tmp, rty
+
+    def adl_call(self, name, args, pre, expected):
+        """An unqualified call with dependent arguments and no declaration visible at the definition: the function
+        found by argument-dependent lookup at instantiation, an instance of `Cpp.AdlCall2`."""
+        if len(args) != 2 or not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name):
+            raise Unsupported(f"argument-dependent call {name} with {len(args)} arguments")
+        at, aty = self.expr(args[0], pre)
+        bt, bty = self.expr(args[1], pre)
+        if not (tparams_of(aty) or tparams_of(bty)):
+            raise Unsupported(f"argument-dependent call {name} without a dependent argument")
+        rty = self.dependent_result(expected, aty if aty == bty else None)
+        if rty is None:
+            raise Unsupported(f"result type of the argument-dependent call {name}")
+        a, b, r = lean_type(aty), lean_type(bty), lean_type(rty)
+        self.reqs.add(f'Cpp.AdlCall2 "{name}" {a} {b} {r}')
+        tmp = self.fresh()
+        pre.append(f'let {tmp} ← Cpp.AdlCall2.call (name := "{name}") (A := {a}) (B := {b}) (R := {r}) {at} {bt}')
+        return tmp, rty
+
+    def invoke_call(self, name, fty, args, pre, expected):
+        """`f(x)` for a value `f` of a template parameter type `F`: its call operator, an instance of
+        `Cpp.Invoke1`. Without an expected type the result is used as a condition (`bool`)."""
+        if len(args) != 1:
+            raise Unsupported(f"function object call {name} with {len(args)} arguments")
+        at, aty = self.expr(args[0], pre)
+        rty = self.dependent_result(expected, BOOL)
+        a, r = lean_type(aty), lean_type(rty)
+        self.reqs.add(f"Cpp.Invoke1 {fty.name} {a} {r}")
+        tmp = self.fresh()
+        pre.append(f"let {tmp} ← Cpp.Invoke1.call (A := {a}) (R := {r}) {self.var_name(name)} {at}")
         return tmp, rty
 
     def self_call(self, name, args, pre):
@@ -1797,8 +1884,44 @@ class Fn:
             self.stmt(node)
         self.scopes.pop()
 
+    def check_increment_sequencing(self, node):
+        """Reject a full expression that increments a variable inside a larger expression and also uses it
+        elsewhere: C++ leaves the order of those accesses unsequenced or unspecified."""
+        statements = ("CompoundStmt", "IfStmt", "WhileStmt", "ForStmt", "DoStmt", "SwitchStmt")
+        increments, uses = {}, {}
+        def walk(n, top):
+            if not isinstance(n, dict):
+                return
+            kind = n.get("kind")
+            if kind in statements and not top:
+                return
+            if kind == "UnaryOperator" and n.get("opcode") in ("++", "--") and not top:
+                base = strip(inner(n)[0]) if inner(n) else {}
+                if base.get("kind") == "DeclRefExpr":
+                    key = base.get("referencedDecl", {}).get("id")
+                    increments[key] = increments.get(key, 0) + 1
+                    uses[key] = uses.get(key, 0) - 1
+            if kind == "DeclRefExpr":
+                key = n.get("referencedDecl", {}).get("id")
+                uses[key] = uses.get(key, 0) + 1
+            for child in inner(n):
+                walk(child, False)
+        kind = node.get("kind")
+        if kind in ("ForStmt", "CompoundStmt", "NullStmt"):
+            return
+        if kind in ("IfStmt", "WhileStmt", "DoStmt", "SwitchStmt"):
+            conds = [c for c in inner(node) if c.get("kind") not in statements]
+            for c in conds:
+                walk(c, False)
+        else:
+            walk(node, True)
+        for key, count in increments.items():
+            if count + uses.get(key, 0) > 1:
+                raise Unsupported("a variable incremented inside an expression is used again in the same expression")
+
     def stmt(self, node):
         kind = node.get("kind")
+        self.check_increment_sequencing(node)
         if kind == "CompoundStmt":
             self.emit("do")
             self.indent += 1
@@ -1832,6 +1955,30 @@ class Fn:
         if kind == "WhileStmt":
             cond, body = inner(node)[-2], inner(node)[-1]
             self.while_loop(None, cond, body, [])
+            return
+        if kind == "DoStmt":
+            # do body while (cond): the body runs first; a `continue` would have to jump to the condition,
+            # which the translation does not express, so it is rejected.
+            body, cond = inner(node)[0], inner(node)[-1]
+            def has_continue(n):
+                if n.get("kind") == "ContinueStmt":
+                    return True
+                if n.get("kind") in ("WhileStmt", "ForStmt", "DoStmt", "CXXForRangeStmt"):
+                    return False
+                return any(has_continue(c) for c in inner(n))
+            if has_continue(body):
+                raise Unsupported("continue in a do-while loop")
+            self.emit("for _ in Cpp.forever do")
+            self.indent += 1
+            self.emit("Cpp.tick")
+            self.continue_prefix.append([])
+            self.block(body)
+            self.continue_prefix.pop()
+            pre = []
+            ct, _ = self.expr(cond, pre, BOOL)
+            self.flush(pre)
+            self.emit(f"if !{ct} then break")
+            self.indent -= 1
             return
         if kind == "CXXForRangeStmt":
             self.range_for(node)
@@ -3227,7 +3374,8 @@ class Translator:
                                        lambda m: lean_type(bindings[m[0]]) if m[0] in bindings else m[0],
                                        requirement) if bindings else requirement
                             type_text = " ".join(r.split()[1:])
-                            if bindings or r.startswith(("Cpp.SourceStream", "Cpp.ModToUInt32")):
+                            if bindings or r.startswith(("Cpp.SourceStream", "Cpp.ModToUInt32", "Cpp.StaticCall",
+                                                         "Cpp.AdlCall2")):
                                 type_text = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', '', type_text)
                             type_names = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", type_text))
                             if not type_names <= own | {"Int", "UInt32", "UInt64", "Bool", "Unit", "Ordering", "Array"}:
@@ -3379,6 +3527,24 @@ class Translator:
                     if c.get("kind") == "CXXCtorInitializer":
                         member = c.get("anyInit", {}).get("name")
                         if member is None:
+                            if len([x for x in inner(node) if x.get("kind") == "CXXCtorInitializer"]) != 1:
+                                raise Unsupported("mixed delegating initializers")
+                            expected_ty = class_ty(info)
+                            target = c.get("delegatingInit", c.get("baseInit", {})).get("qualType", "")
+                            if self.ty(target, fn) != expected_ty:
+                                raise Unsupported("base initializer")
+                            delegate = strip(inner(c)[0])
+                            factory_form = (not sig.params and not inner(body) and len(inner(delegate)) == 1
+                                            and strip(inner(delegate)[0]).get("kind") == "CallExpr"
+                                            and len(inner(strip(inner(delegate)[0]))) == 1)
+                            if not factory_form:
+                                # A delegating constructor `C(a) : C(b...) { body }`: the target constructor
+                                # chosen by overload resolution builds the fields, then the body runs on them.
+                                pre = []
+                                value = fn.construct(expected_ty, delegate, pre)
+                                fn.flush(pre)
+                                delegated = value
+                                continue
                             # Only the original Group default-constructor form:
                             # an implicit scalar-record copy of one static factory.
                             if sig.params or inner(body):
@@ -3595,7 +3761,8 @@ def translate_file(source: Path, imports: list[str], deps=(), standard="c++17") 
     decls = source_decls(source, standard)
     tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
     body = tr.translate()
-    dependent = {"Cpp.ReadField", "Cpp.AddResult", "Cpp.MulResult", "Cpp.AssignResult", "Cpp.ConditionalResult"}
+    dependent = {"Cpp.ReadField", "Cpp.AddResult", "Cpp.MulResult", "Cpp.AssignResult", "Cpp.ConditionalResult",
+                 "Cpp.StaticCall", "Cpp.AdlCall2", "Cpp.Invoke1"}
     if any(requirement.split()[0] in dependent
            for fn in tr.built_functions.values() for requirement in fn.reqs.items):
         imports = [*imports, "Proofs.Cpp.Lib.DependentOperations"]

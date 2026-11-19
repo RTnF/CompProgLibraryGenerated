@@ -9,6 +9,9 @@
 - segment_tree 再公開の作業中（未commit、`.cache/wip/segtree/`）: 変換器の試作 `v/lean_translate.py`（ADL の `op(a,b)`→`Cpp.AdlCall2`、`M::e()`→`Cpp.StaticCall`、関数オブジェクト `f(x)`→`Cpp.Invoke1`、一般の委譲コンストラクタ、式中の `i++`/`--i`（同じ完全式で再使用は拒否）、`do-while`、引数種別による多重定義解決）。Lean 側の型クラスは `dep_ops_add.lean`（`Proofs/Cpp/Lib/DependentOperations.lean` に追加する）。原本 `segment_tree.hpp`（namespace のみ追加）の翻訳は `/tmp/st.lean`（`python3 .cache/wip/segtree/v/lean_translate.py .cache/wip/segtree/segment_tree.hpp --output /tmp/st.lean` で再生成）。
 - 証明: `SegmentTreeMath.lean`（汎用 `Mon M`、区間積・更新・構築・左右の二分探索の不変条件）と `Spec1..7.lean` を `Base.lean` と連結した `All.lean` を `lake env lean` で検査。get/product_all/product/update/set/init_vec/init_int/init_0/search_prod_right は sorry なしで完成（結果と計算量）。search_prod_left は Spec7 で vc1・vc4 を修正中（右探索 Spec6 の各 case を対称に移す）。
 - 残り: 左探索の完成 → 変換器変更を verifier へ移す（diff_harness に StaticCall/AdlCall2 のインスタンス生成、F は専用差分テスト）→ library/segment_tree/segment_tree.hpp・TOML・テスト・docs → segtree_sum との関係整理 → gate → push。その後 lazy_segment_tree、segment_tree_beats、find_cycle（ListGraph）。
+- 2026-11-19 夜: segment_tree を新方式で再公開（原本 `segment_tree/segment_tree.hpp` 全体、57部品の全件gate成功）。変換器に `Cpp.StaticCall`/`Cpp.AdlCall2`/`Cpp.Invoke1`、委譲構築子、式中の `++`/`--`、do-while、多重定義の種別による絞り込みを追加。差分ハーネスに `[diff] bindings`（型引数にクラスを束縛）を追加。探索は `tests/test_segment_tree_search.py`。
+- lazy_segment_tree 作業中（`.cache/wip/lazy/`）: 変換器の追加 `Cpp.Method1`（`f.apply(x)`）は作業用コピー `.cache/wip/segtree/v/lean_translate.py` のみ（本体へ未反映）。原本の翻訳 `/tmp/lz.lean`。数学層 `LazyMath.lean`（`Act`、祖先のタグ合成 `P`、全押し下げ木 `virt` が `TInv` を満たす、push の保存、読み取り節点の祖先の補題 `read_left/right`、カーソル補題）。証明 `LSpec1.lean`（Ops、all_apply、push の関数仕様）、`LSpec2.lean`（LValid、`get_spec` 完成）。`Base.lean` は `mkbase.py` で再生成し `All.lean` を `lake env lean` で検査。
+- 次: lazy の set、product（push 後の読み取り節点が `virt` と一致することを `read_left/right` で示し、SegmentTreeMath の PInv を `virt` に適用）、update 2 種、search 2 種、構築子。その後 beats、find_cycle。
 
 ## 新方式への移行（2026-11-12〜、最優先）
 

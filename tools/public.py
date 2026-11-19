@@ -124,12 +124,15 @@ def check_lean_model(name: str, data: dict) -> None:
     if data.get("model") != f"Proofs/Cpp/Gen/{stem}.lean" or data.get("proof") != f"Proofs/Cpp/{stem}.lean":
         raise ValueError(f"lean_model components use Proofs/Cpp/Gen/{stem}.lean and Proofs/Cpp/{stem}.lean: {name}")
     diff = data.get("diff")
-    if not isinstance(diff, dict) or set(diff) - {"instances", "cases", "calls"} or not {"instances", "cases"} <= set(diff):
+    if not isinstance(diff, dict) or set(diff) - {"instances", "cases", "calls", "bindings"} or not {"instances", "cases"} <= set(diff):
         raise ValueError(f"missing differential test (diff.instances, diff.cases) for {name}")
     if "calls" in diff and (not isinstance(diff["calls"], list) or not diff["calls"]
             or not all(isinstance(call, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", call)
                        for call in diff["calls"]) or len(diff["calls"]) != len(set(diff["calls"]))):
         raise ValueError(f"invalid differential call selection for {name}")
+    if "bindings" in diff and (not isinstance(diff["bindings"], list) or not diff["bindings"] or not all(
+            isinstance(b, str) and re.fullmatch(r"[a-z_][a-z_0-9]*", b) for b in diff["bindings"])):
+        raise ValueError(f"invalid differential bindings for {name}")
     instances = diff["instances"]
     if not isinstance(instances, list) or not instances or not all(
             isinstance(item, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in item.items())
