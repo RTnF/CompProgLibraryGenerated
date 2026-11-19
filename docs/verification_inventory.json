@@ -568,9 +568,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
           ]
@@ -590,9 +588,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
           ]
@@ -612,9 +608,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
           ]
@@ -634,9 +628,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
           ]
@@ -656,9 +648,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
           ]
@@ -678,9 +668,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
           ]
@@ -700,9 +688,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeは未完了。"
           ]
@@ -723,8 +709,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -746,8 +731,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -769,8 +753,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -792,8 +775,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -815,8 +797,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -838,8 +819,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -861,8 +841,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -884,8 +863,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -907,8 +885,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -930,8 +907,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -953,8 +929,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -976,8 +951,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -999,8 +973,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -1022,8 +995,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_monoid_select.lean",
-            "docs/original_template_classes.md"
+            "tests/lean/original_monoid_select.lean"
           ],
           "review_notes": [
             "MonoidMax/Min<long long>の有限具体化に限る。fileのreview_notesを参照。任意T・完全object/lifetimeの検証済みとはしない。"
@@ -1064,8 +1036,6 @@
       "byte_identical_sources": [],
       "evidence": [
         "tests/lean/original_monoid_select.lean",
-        "docs/original_template_classes.md",
-        "docs/scalar_stl_contracts.md",
         "tests/imports/monoid_floating_identity.cpp"
       ],
       "review_notes": [
@@ -2167,8 +2137,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_delegating_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_delegating_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。"
@@ -2190,8 +2159,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_delegating_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_delegating_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。"
@@ -2213,8 +2181,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_delegating_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_delegating_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。"
@@ -2236,8 +2203,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_delegating_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_delegating_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/intの有限具体化でdefaultのfactory返却全fieldとtrivial move/copyを保持するobject stageを登録検査。任意型/一般callerの構築全体/厳密CPP lifetimeと総費用は未完了のためfull flagsを拡大しない。"
@@ -2260,7 +2226,6 @@
           },
           "evidence": [
             "tests/lean/original_delegating_object_layout.lean",
-            "docs/class_copy_audit.md",
             "tests/lean/original_delegating_constructor_general.lean"
           ],
           "review_notes": [
@@ -2316,8 +2281,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_template_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_template_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
@@ -2339,8 +2303,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_template_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_template_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
@@ -2362,8 +2325,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_template_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_template_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
@@ -2385,8 +2347,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_template_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_template_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
@@ -2408,8 +2369,7 @@
             "published": false
           },
           "evidence": [
-            "tests/lean/original_template_object_layout.lean",
-            "docs/class_copy_audit.md"
+            "tests/lean/original_template_object_layout.lean"
           ],
           "review_notes": [
             "2026-11-07: long long/boolの有限具体化で非投影のObjectRef構築/copy/権限/scopeを登録検査。任意Tとクラス全体のCPP意味・lifetime/総費用は未完了のためfull flagsはfalseを保つ。"
@@ -2505,7 +2465,6 @@
       "evidence": [
         "docs/monoid_lazy.md",
         "docs/experiments_findings.md",
-        "docs/original_template_classes.md",
         "tests/lean/original_nested_max.lean",
         "tests/lean/original_nested_sum.lean",
         "tests/lean/original_record_apply.lean",
@@ -2518,7 +2477,6 @@
         "tests/lean/original_mixed_set_sum_apply.lean",
         "tests/lean/original_mixed_set_extrema.lean",
         "tests/lean/original_template_object_layout.lean",
-        "docs/class_copy_audit.md",
         "tests/lean/original_delegating_object_layout.lean",
         "tests/lean/scalar_delegation_bodies.lean",
         "tests/lean/scalar_delegation_failure.lean",
@@ -11914,7 +11872,6 @@
             "published": true
           },
           "evidence": [
-            "docs/safe_mod_experiment.md",
             "library/number_theory/safe_mod.toml",
             "tests/safe_mod.cpp",
             "verifier/model_bridge.py",
@@ -11940,7 +11897,6 @@
             "published": true
           },
           "evidence": [
-            "docs/scalar_stl_contracts.md",
             "docs/floor_sum_experiment.md",
             "library/number_theory/floor_sum_unsigned.hpp",
             "library/number_theory/floor_sum_unsigned.toml",
@@ -11970,7 +11926,6 @@
             "tests/imports/floor_sum_signed.cpp",
             "tools/check_import_floor_sum_signed.py",
             "docs/floor_sum_experiment.md",
-            "docs/state_converter.md",
             "experiments/verification/number/floor_sum_signed_model.lean",
             "experiments/verification/number/floor_sum_signed_gcc_model.lean",
             "library/number_theory/floor_sum.hpp",
@@ -12016,12 +11971,10 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "docs/safe_mod_experiment.md",
         "library/number_theory/safe_mod.toml",
         "tests/safe_mod.cpp",
         "verifier/model_bridge.py",
         "tests/diff/floor_sum.py",
-        "docs/scalar_stl_contracts.md",
         "docs/floor_sum_experiment.md",
         "library/number_theory/floor_sum_unsigned.hpp",
         "tests/floor_sum_unsigned.cpp",
@@ -19531,9 +19484,7 @@
         "experiments/library3/cpp/Template/Template.cpp"
       ],
       "byte_identical_sources": [],
-      "evidence": [
-        "docs/state_converter.md"
-      ]
+      "evidence": []
     },
     {
       "source": "experiments/library/cpp/tree/tree.hpp",
@@ -22418,9 +22369,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22440,9 +22389,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22462,9 +22409,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22484,9 +22429,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22506,9 +22449,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22528,9 +22469,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22550,9 +22489,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22572,9 +22509,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22594,9 +22529,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22616,9 +22549,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22638,9 +22569,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22660,9 +22589,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22682,9 +22609,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22704,9 +22629,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22726,9 +22649,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22748,9 +22669,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22770,9 +22689,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22810,9 +22727,7 @@
         "experiments/library3/cpp/AlgebraicStructure/Monoid.hpp"
       ],
       "byte_identical_sources": [],
-      "evidence": [
-        "docs/original_template_classes.md"
-      ],
+      "evidence": [],
       "review_notes": [
         "2026-11-06: 原本のGroupSum<long long>/GroupAffine<long long>を共通変換器で15モデルへ生成。Sum invはe().x-xのまま任意typed callerの結果・停止・元memory保持・ScalarPost2 0 80を証明。他14モデルは既存モデルと全プログラム/callFuel一致をLean/固定nanodaで回帰検査。 有限具体化の部分検証であり、原本のAPIや型を変更していない。任意T/U・全caller AST・完全object/lifetime・公開統合は未完了。file/declarationのlean_provedとpublishedはfalseを維持する。"
       ]
@@ -22845,9 +22760,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22867,9 +22780,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22889,9 +22800,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22911,9 +22820,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22933,9 +22840,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22955,9 +22860,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22977,9 +22880,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -22999,9 +22900,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23021,9 +22920,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23043,9 +22940,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23065,9 +22960,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23099,9 +22992,7 @@
         "experiments/library/cpp/algebraic_structure/monoid_lazy.hpp"
       ],
       "byte_identical_sources": [],
-      "evidence": [
-        "docs/original_template_classes.md"
-      ],
+      "evidence": [],
       "review_notes": [
         "2026-11-06: 原本のAffine<long long>の12モデルを共通変換器から生成。apply<long long>/apply<int>の値渡しを保った任意typed callerの結果・停止・元memory保持・ScalarPost2 0 80をLean/固定nanodaで回帰検査。intの結果はGCC13.3 LP64 signedDecode32で、結果のint範囲制限は追加していない。doubleはnative回帰のみ。 有限具体化の部分検証であり、原本のAPIや型を変更していない。任意T/U・全caller AST・完全object/lifetime・公開統合は未完了。file/declarationのlean_provedとpublishedはfalseを維持する。"
       ]
@@ -23134,9 +23025,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23156,9 +23045,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23178,9 +23065,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23200,9 +23085,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23222,9 +23105,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23244,9 +23125,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23266,9 +23145,7 @@
             "include_verified": false,
             "published": false
           },
-          "evidence": [
-            "docs/original_template_classes.md"
-          ],
+          "evidence": [],
           "review_notes": [
             "MonoidMul<long long>の有限具体化に限る。fileのreview_notesを参照。任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
           ]
@@ -23304,7 +23181,6 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "docs/original_template_classes.md",
         "docs/experiments_findings.md"
       ],
       "review_notes": [
@@ -25922,9 +25798,7 @@
             "published": false
           },
           "evidence": [
-            "tests/imports/disjoint_set_getter.cpp",
-            "docs/disjoint_set_getter.md",
-            "docs/scalar_getter_call.md"
+            "tests/imports/disjoint_set_getter.cpp"
           ],
           "review_notes": [
             "2026-10-24: 元DisjointSet/getNumのみを同一TU FieldDecl監査から選択生成し、本体の任意有効counter値の返却・保持・仕事量2をLeanで証明。通常/空/moved-from Contextおよび元C++ UBSanを検査。元クラス全体、任意caller準備/復元・総資源の一般証明、recursive root等と公開版対応は未完了。",
@@ -25962,9 +25836,7 @@
       "duplicate_candidates": [],
       "byte_identical_sources": [],
       "evidence": [
-        "tests/imports/disjoint_set_getter.cpp",
-        "docs/disjoint_set_getter.md",
-        "docs/scalar_getter_call.md"
+        "tests/imports/disjoint_set_getter.cpp"
       ],
       "review_notes": [
         "2026-10-24: 元DisjointSet/getNumのみを同一TU FieldDecl監査から選択生成し、本体の任意有効counter値の返却・保持・仕事量2をLeanで証明。通常/空/moved-from Contextおよび元C++ UBSanを検査。元クラス全体、任意caller準備/復元・総資源の一般証明、recursive root等と公開版対応は未完了。",
@@ -29490,9 +29362,7 @@
         "experiments/library3/cpp/Template/SmallTemplate.hpp"
       ],
       "byte_identical_sources": [],
-      "evidence": [
-        "docs/state_converter.md"
-      ]
+      "evidence": []
     },
     {
       "source": "experiments/library3/cpp/Verify/APlusB.test.cpp",
