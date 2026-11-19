@@ -10,7 +10,7 @@
 
 `verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeOrder.lean` を生成し、`Proofs/Cpp/TreeOrder.lean` が前提を満たす全入力について次を証明する。
 
-- `tree_order_spec`: 外側のループの `L` 回目のあと `ord[0 .. cnt)` は純粋なモデル `Proofs/TreeOrderMath.lean` のキュー `qrun ... L` に等しく（`OInv`）、内側のループは頂点 `Q[L]` の先頭 `k` 本の弧から見つけた子を足した列に等しい（`IInv`、`inner_child`、`inner_skip`）。
+- `tree_order_spec`: 外側のループの `L` 回目のあと `ord[0 .. cnt)` は純粋なモデル `Proofs/Math/TreeOrderMath.lean` のキュー `qrun ... L` に等しく（`OInv`）、内側のループは頂点 `Q[L]` の先頭 `k` 本の弧から見つけた子を足した列に等しい（`IInv`、`inner_child`、`inner_skip`）。
 - `tree_order_correct`: 前提（`TO`、`head` の要素が非負で広義単調増加、`target` の要素が非負、`ord.size() == n`）のもとで、終了後の `ord` は `0 .. n - 1` の順列（範囲内で単射）、`ord[0] == root`、`j >= 1` の各 `ord[j]` の親は `j` より前の位置にある（親が子より先）。純粋なモデルの性質は `order_spec`。
 - tick 数は `n + 1 + W` 以下で、`W`（訪れた頂点の弧の数の和）は `head[n] = m` 以下（`W_le`）。全体で `O(n + m)`。
 - 定理に含めていないこと: 前提を破る入力（未定義動作）、`parent` を作る部分（`tree_root`）。

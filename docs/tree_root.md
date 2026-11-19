@@ -12,7 +12,7 @@
 
 前提: `n >= 1`、`head.size() == n + 1`、`head[0] == 0`、`head` は広義単調増加、`head[n] == target.size() == cost.size() < 2^31 - 1`、すべての `target[p]` が `[0, n)`、`0 <= root < n`、`parent.size() == depth.size() == cost_depth.size() == stk.size() == n`、`parent` の全要素が負（元は -1）、`n < 2^31 - 2`、`n * C < 2^63`（`C` は `|cost[p]|` の上界）。`depth`・`cost_depth`・`stk` の初期値は問わない（上書きする作業領域）。辺が対称な木であることは**要求しない**（任意の有向グラフで下の結果が成り立ち、対称な木ならそれが通常の根付き木になる）。
 
-結果（`Proofs/Cpp/TreeRoot.lean` の `tree_root_correct`、一般の入力について証明。`Proofs/TreeRootMath.lean` の `TreeSpec`、`FarSpec`）: 終了後の `parent'`・`depth'`・`cost_depth'` について
+結果（`Proofs/Cpp/TreeRoot.lean` の `tree_root_correct`、一般の入力について証明。`Proofs/Math/TreeRootMath.lean` の `TreeSpec`、`FarSpec`）: 終了後の `parent'`・`depth'`・`cost_depth'` について
 - `parent'[root] == root`、`depth'[root] == 0`、`cost_depth'[root] == 0`。
 - 各頂点 `v < n` について、`parent'[v] >= 0` と「`v` が `root` から辺をたどって到達できる」ことは同値（到達できない頂点の `parent` は負のまま）。
 - `root` 以外で到達できる頂点 `v` には、`u = parent'[v]` から `v` への辺 `p`（`head[u] <= p < head[u+1]`、`target[p] == v`）があり、`u` も到達済みで、`depth'[v] == depth'[u] + 1`、`cost_depth'[v] == cost_depth'[u] + cost[p]`。
@@ -22,7 +22,7 @@
 
 ## 検証（新方式、`docs/translation.md`）
 
-`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeRoot.lean` を生成する。`Proofs/Cpp/TreeRoot.lean` は、翻訳した関数の配列が旧来の純関数モデル（`Proofs/TreeRootMath.lean` の `runL`、取り出した頂点の列 `stepD`、最遠点 `stepF`）の状態に常に一致することを示す（`RelS`、内側のループは `innerSt`。1 本の辺を見る `relax_rel`、頂点の取り出し `pop_init`/`pop_done`、空のスタック `outer_skip`）。モデルの不変条件 `Inv`・`GInv2` から、上の結果（`TreeSpec`、`FarSpec`）が従う。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TreeRoot.lean` を生成する。`Proofs/Cpp/TreeRoot.lean` は、翻訳した関数の配列が旧来の純関数モデル（`Proofs/Math/TreeRootMath.lean` の `runL`、取り出した頂点の列 `stepD`、最遠点 `stepF`）の状態に常に一致することを示す（`RelS`、内側のループは `innerSt`。1 本の辺を見る `relax_rel`、頂点の取り出し `pop_init`/`pop_done`、空のスタック `outer_skip`）。モデルの不変条件 `Inv`・`GInv2` から、上の結果（`TreeSpec`、`FarSpec`）が従う。
 
 - 定理は `Cost = long long`（Lean では `Int`）について述べる。差分テストの具体化と同じ。テンプレート自体は任意の `Cost` で使える。
 - tick 数は `n + 1 + W` で、`W`（取り出した頂点の弧の数の和）は `head[n] = m` 以下（`sum_nodup_le`、`sum_outdeg`）。全体で `O(n + m)`。

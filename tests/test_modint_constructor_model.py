@@ -13,6 +13,8 @@ sys.path.insert(0, str(ROOT / 'verifier'))
 import test_lean_model_friend as friends
 import diff_harness
 import lean_translate
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 class ModIntConstructorModelTests(unittest.TestCase):
@@ -24,9 +26,9 @@ class ModIntConstructorModelTests(unittest.TestCase):
             model = lean_translate.translate_file(header, ['Proofs.Cpp.Lib.ModIntMath'])
             driver = Path(directory) / 'Contract.lean'
             driver.write_text(model + (ROOT / 'tests/lean/modint_constructor_contract.lean').read_text())
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(driver)],
+            result = subprocess.run([LAKE, 'env', 'lean', str(driver)],
                                     text=True, capture_output=True, cwd=ROOT, timeout=60,
-                                    env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')))
+                                    env=LAKE_ENV)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_full_signed_and_unsigned_128_bit_inputs(self):
@@ -77,7 +79,7 @@ class ModIntConstructorModelTests(unittest.TestCase):
                 self.assertEqual(standard, 'c++17')
                 self.assertEqual(header.read_text(), source)
                 return copy.deepcopy(declarations)
-            env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+            env = dict(LAKE_ENV,
                        ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
             # Each binding gets its own native and Lean driver. The same frozen
             # canonical class AST is parsed once for all these instantiations.
@@ -110,7 +112,7 @@ class ModIntConstructorModelTests(unittest.TestCase):
                                                     check=True, env=env, timeout=20)
                             driver = scratch / 'Driver.lean'
                             driver.write_text(h.lean_driver().replace('import Unused\n', model, 1))
-                            lean = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(driver)],
+                            lean = subprocess.run([LAKE, 'env', 'lean', '--run', str(driver)],
                                                   input=inputs, text=True, capture_output=True, cwd=ROOT,
                                                   env=env, timeout=60)
                             self.assertEqual(lean.returncode, 0, lean.stdout + lean.stderr)

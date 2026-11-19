@@ -11,7 +11,7 @@
 - `n ≥ 1`、`n < 2^31 - 1`、`dist.size() == n`、`from.size() == to.size() == cost.size() < 2^31 - 1`、すべての `from[e]`・`to[e]` が `[0, n)`。
 - 桁あふれしないこと: `dist` の全要素が `[lo, inf]`、`|cost[e]| ≤ C`、`0 ≤ C ≤ 2^61`、`inf ≤ 2^62`、`lo - (n - 1) * m * C ≥ -2^62`（`m` は辺の数）。このとき途中のどの和も `long long` に収まる。
 
-結果（`Proofs/Cpp/BellmanFord.lean`、一般の入力について証明）: 前半の `n - 1` 周のあとの `dist` は、辺を添字の順に 1 周ずつ緩和する操作を `n - 1` 回行った結果 `roundsL`（`Proofs/BellmanFordExec.lean`）に、`parent` は同じ緩和のうち更新した辺の始点を書いた結果 `roundsPL`（`Proofs/BellmanFordPExec.lean`）に等しい。後半の `n` 周は `markRounds`（`Proofs/BellmanFordPExec.lean`）で、辺ごとに `dist[from] == -inf` か、`dist[from] + cost < dist[to]` のとき `dist[to] = -inf; parent[to] = -1` とする（`dist[from] == inf` の辺は何もしない）。出力は `markRounds` の結果に等しい。その上で、`Proofs/BellmanFordMath.lean`、`Proofs/BellmanFordBridge.lean`、`Proofs/BellmanFordParent.lean` により次を証明している。
+結果（`Proofs/Cpp/BellmanFord.lean`、一般の入力について証明）: 前半の `n - 1` 周のあとの `dist` は、辺を添字の順に 1 周ずつ緩和する操作を `n - 1` 回行った結果 `roundsL`（`Proofs/Math/BellmanFordExec.lean`）に、`parent` は同じ緩和のうち更新した辺の始点を書いた結果 `roundsPL`（`Proofs/Math/BellmanFordPExec.lean`）に等しい。後半の `n` 周は `markRounds`（`Proofs/Math/BellmanFordPExec.lean`）で、辺ごとに `dist[from] == -inf` か、`dist[from] + cost < dist[to]` のとき `dist[to] = -inf; parent[to] = -1` とする（`dist[from] == inf` の辺は何もしない）。出力は `markRounds` の結果に等しい。その上で、`Proofs/Math/BellmanFordMath.lean`、`Proofs/BellmanFordBridge.lean`、`Proofs/Math/BellmanFordParent.lean` により次を証明している。
 - 健全性: 前半のあとの `dist[v] != inf` なら、最初に有限だった頂点 `w` から `v` へのウォーク（辺をたどる列）があり、`dist[v]` は `最初の dist[w]` にそのウォークのコストを足した値に等しい。
 - 完全性: `inf` が、長さ `n - 1` 辺以下のすべてのウォークの「最初の `dist[w]` ＋コスト」より大きいとき、長さ `k ≤ n - 1` 辺の任意のウォーク `w → v` について（前半のあとの）`dist[v] ≤ 最初の dist[w] + コスト`。
 - 親: 前半のあと、各頂点 `v` で `parent[v] = -1` か、`from[e] = parent[v]`、`to[e] = v` の辺 `e` があって `dist[parent[v]] < inf` かつ `dist[parent[v]] + cost[e] ≤ dist[v]`（`ParInvE`）。
@@ -29,6 +29,6 @@
 `verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/BellmanFord.lean` を生成する。`Proofs/Cpp/BellmanFord.lean` は `Cost = long long`（Lean では `Int`）について次を証明する。
 
 - `bellman_ford_spec`: `n ≥ 1`、`from`/`to` の要素が非負のとき、出力の `(dist, parent)` は純関数モデルの結果 `markRounds n (roundsL (n - 1) dist0, roundsPL (n - 1) dist0 parent0)` に等しい。1 回の緩和は `relax_step`（`relaxL`/`relaxPL`）、1 回の印付けは `mark_step`（`markEdge`）。
-- 上の結果（健全性・完全性・親・印付け）は、このモデルについての旧来の定理（`Proofs/BellmanFordBridge.lean` の `bf_spec`、`Proofs/BellmanFordParent.lean` の `rounds_par`・`markRounds_id`）である。`bellman_ford_stable` は、安定な場合に出力が前半の結果に等しいことを、C++ の呼び出しの定理としてまとめる。
+- 上の結果（健全性・完全性・親・印付け）は、このモデルについての旧来の定理（`Proofs/BellmanFordBridge.lean` の `bf_spec`、`Proofs/Math/BellmanFordParent.lean` の `rounds_par`・`markRounds_id`）である。`bellman_ford_stable` は、安定な場合に出力が前半の結果に等しいことを、C++ の呼び出しの定理としてまとめる。
 
 差分テスト（`tests/diff/bellman_ford.py`、非負の費用と負の費用）と C++ のテスト `tests/bellman_ford.cpp` で翻訳と実装を確かめる。

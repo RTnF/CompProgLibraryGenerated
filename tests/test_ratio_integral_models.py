@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import diff_harness
 import lean_translate
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 SOURCE = ROOT / 'library/number/ratio.hpp'
 
@@ -67,7 +69,7 @@ class RatioIntegralTests(unittest.TestCase):
                 diff_harness.Harness(SOURCE, {'T': 'int'}, 'Unused', standard='c++20', calls={name})
 
     def compare_binding(self, scalar, commands, expected, selected, model):
-        env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+        env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         with self.subTest(scalar=scalar), tempfile.TemporaryDirectory(dir=ROOT / 'tests/diff') as directory:
             scratch = Path(directory)
@@ -84,7 +86,7 @@ class RatioIntegralTests(unittest.TestCase):
             self.assertEqual(native.stdout.splitlines(), expected)
             lean = scratch / 'Driver.lean'
             lean.write_text(harness.lean_driver().replace('import Unused\n', model, 1))
-            actual = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(lean)],
+            actual = subprocess.run([LAKE, 'env', 'lean', '--run', str(lean)],
                                     input=commands, capture_output=True, text=True, env=env,
                                     cwd=ROOT, timeout=60)
             self.assertEqual(actual.returncode, 0, actual.stdout + actual.stderr)

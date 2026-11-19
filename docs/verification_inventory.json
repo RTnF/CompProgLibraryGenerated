@@ -569,8 +569,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -593,8 +591,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -617,8 +613,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -641,8 +635,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -665,8 +657,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -689,8 +679,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -713,8 +701,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -737,7 +723,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -761,7 +746,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -785,7 +769,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -809,7 +792,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -833,7 +815,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -857,7 +838,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -881,7 +861,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -905,7 +884,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -929,7 +907,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -953,7 +930,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -977,7 +953,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -1001,7 +976,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -1025,7 +999,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -1049,7 +1022,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
             "tests/lean/original_monoid_select.lean",
             "docs/original_template_classes.md"
           ],
@@ -1091,14 +1063,9 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "tests/test_original_template_classes.py",
-        "tests/imports/original_monoid_max.cpp",
-        "tests/imports/original_monoid_min.cpp",
         "tests/lean/original_monoid_select.lean",
         "docs/original_template_classes.md",
         "docs/scalar_stl_contracts.md",
-        "tests/imports/original_monoid_mul.cpp",
-        "tests/lean/original_monoid_mul.lean",
         "tests/imports/monoid_floating_identity.cpp"
       ],
       "review_notes": [
@@ -1175,9 +1142,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "FieldDecl",
@@ -1197,9 +1162,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXConstructorDecl",
@@ -1219,9 +1182,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXConstructorDecl",
@@ -1241,9 +1202,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXMethodDecl",
@@ -1263,9 +1222,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "FunctionDecl",
@@ -1285,9 +1242,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXRecordDecl",
@@ -1449,8 +1404,7 @@
             "published": false
           },
           "evidence": [
-            "docs/experiments_findings.md",
-            "tests/test_nested_templates.py"
+            "docs/experiments_findings.md"
           ],
           "review_notes": [
             "idのAPIとRangeSet composeのコピー観測の局所比較。fileのreview_notesを参照。全機能の証明済みとはしない。",
@@ -1475,9 +1429,7 @@
           "review_notes": [
             "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "FunctionTemplateDecl",
@@ -1497,9 +1449,7 @@
           "review_notes": [
             "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXMethodDecl",
@@ -1519,9 +1469,7 @@
           "review_notes": [
             "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "ClassTemplateDecl",
@@ -1589,9 +1537,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "FieldDecl",
@@ -1611,9 +1557,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXConstructorDecl",
@@ -1633,9 +1577,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXConstructorDecl",
@@ -1655,9 +1597,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXMethodDecl",
@@ -1677,9 +1617,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "FunctionDecl",
@@ -1699,9 +1637,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "CXXRecordDecl",
@@ -1721,9 +1657,7 @@
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
           ],
-          "evidence": [
-            "tests/test_nested_templates.py"
-          ]
+          "evidence": []
         },
         {
           "kind": "FieldDecl",
@@ -2233,7 +2167,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_delegating_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2257,7 +2190,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_delegating_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2281,7 +2213,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_delegating_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2305,7 +2236,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_delegating_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2329,7 +2259,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_delegating_object_layout.lean",
             "docs/class_copy_audit.md",
             "tests/lean/original_delegating_constructor_general.lean"
@@ -2387,7 +2316,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_template_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2411,7 +2339,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_template_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2435,7 +2362,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_template_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2459,7 +2385,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_template_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2483,7 +2408,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_template_class_layout.py",
             "tests/lean/original_template_object_layout.lean",
             "docs/class_copy_audit.md"
           ],
@@ -2582,11 +2506,9 @@
         "docs/monoid_lazy.md",
         "docs/experiments_findings.md",
         "docs/original_template_classes.md",
-        "tests/test_nested_templates.py",
         "tests/lean/original_nested_max.lean",
         "tests/lean/original_nested_sum.lean",
         "tests/lean/original_record_apply.lean",
-        "tests/imports/original_record_apply.cpp",
         "tests/lean/original_mixed_add_sum.lean",
         "tests/lean/original_mixed_set_sum_samples.lean",
         "tests/lean/scalar_record_copy_fields.lean",
@@ -2595,7 +2517,6 @@
         "tests/lean/original_mixed_set_sum_compose.lean",
         "tests/lean/original_mixed_set_sum_apply.lean",
         "tests/lean/original_mixed_set_extrema.lean",
-        "tests/test_template_class_layout.py",
         "tests/lean/original_template_object_layout.lean",
         "docs/class_copy_audit.md",
         "tests/lean/original_delegating_object_layout.lean",
@@ -2620,18 +2541,9 @@
         "tests/lean/original_set_member_call.lean",
         "tests/lean/original_template_member_result.lean",
         "tests/lean/member_constructor_choice.lean",
-        "tests/lean/original_extrema_add_member_general.lean",
-        "tests/lean/original_extrema_add_member_call.lean",
-        "tests/lean/original_extrema_set_member_general.lean",
-        "tests/lean/original_extrema_set_member_call.lean",
-        "tests/lean/original_extrema_member_prepare.lean",
         "experiments/verification/algebraic_structure/monoid_lazy.hpp",
         "tests/test_monoid_lazy_original_api.py",
         "tests/imports/monoid_lazy_api_events.cpp",
-        "tests/imports/candidate_mixed_add_sum.cpp",
-        "tests/imports/candidate_mixed_set_sum.cpp",
-        "tests/lean/original_scalar_record_constructor_general.lean",
-        "tests/lean/original_scalar_record_zero_factory_general.lean",
         "library/algebraic_structure/monoid_lazy.hpp",
         "Proofs/Cpp/MonoidLazy.lean",
         "tests/test_monoid_lazy_dependent.py"
@@ -2980,8 +2892,6 @@
           "evidence": [
             "tools/check_import_doubling.py",
             "tests/imports/doubling.cpp",
-            "tests/test_bit_width_u64.py",
-            "Proofs/BitWidthU64.lean",
             "docs/doubling_experiment.md",
             "docs/bit_width_u64.md",
             "library/array/doubling.hpp",
@@ -2990,16 +2900,7 @@
             "library/number_theory/bit_width_u64.toml",
             "tests/doubling.cpp",
             "tests/bit_width_u64.cpp",
-            "tests/test_nested_ir.py",
-            "tests/diff/doubling.py",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/DoublingNested.lean",
-            "Proofs/DoublingNested.lean",
-            "Proofs/DoublingPrologue.lean",
-            "Proofs/DoublingInvoke.lean",
-            "Proofs/DoublingConstruct.lean",
-            "Proofs/DoublingProgram.lean",
-            "Proofs/DoublingCall.lean"
+            "tests/diff/doubling.py"
           ]
         }
       ],
@@ -3039,8 +2940,6 @@
       "evidence": [
         "tools/check_import_doubling.py",
         "tests/imports/doubling.cpp",
-        "tests/test_bit_width_u64.py",
-        "Proofs/BitWidthU64.lean",
         "docs/doubling_experiment.md",
         "docs/bit_width_u64.md",
         "library/array/doubling.hpp",
@@ -3049,16 +2948,7 @@
         "library/number_theory/bit_width_u64.toml",
         "tests/doubling.cpp",
         "tests/bit_width_u64.cpp",
-        "tests/test_nested_ir.py",
-        "tests/diff/doubling.py",
-        "verifier/nested_ir.py",
-        "Proofs/Generated/DoublingNested.lean",
-        "Proofs/DoublingNested.lean",
-        "Proofs/DoublingPrologue.lean",
-        "Proofs/DoublingInvoke.lean",
-        "Proofs/DoublingConstruct.lean",
-        "Proofs/DoublingProgram.lean",
-        "Proofs/DoublingCall.lean"
+        "tests/diff/doubling.py"
       ],
       "review_notes": [
         "Original C++17 bit_width compilation failure reproduced. Candidate passes exhaustive small functional graph and sanitizer tests. Scalar helper is generated and universally Lean proved; full doubling vector translation and proofs remain pending.",
@@ -3096,7 +2986,6 @@
           "evidence": [
             "library/array/element_count.hpp",
             "tests/element_count.cpp",
-            "Proofs/ElementCountCall.lean",
             "docs/element_count.md",
             "tests/imports/element_count.repro.cpp"
           ],
@@ -3122,7 +3011,6 @@
           "evidence": [
             "library/array/element_count.hpp",
             "tests/element_count.cpp",
-            "Proofs/ElementCountCall.lean",
             "docs/element_count.md",
             "tests/imports/element_count.repro.cpp"
           ],
@@ -3195,12 +3083,7 @@
             "library/array/search_util.hpp",
             "library/array/search_util.toml",
             "tests/search_util.cpp",
-            "docs/search_util.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/SearchUtil.lean",
-            "Proofs/CountLoop.lean",
-            "Proofs/CountCall.lean",
-            "Proofs/SearchUtilCall.lean"
+            "docs/search_util.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation T = int with all four arguments explicit is published as cp::count (library/count.hpp); the generic template, default arguments and other element types remain unverified. Proofs.CountCall.count_correct proves, for v.size() < 2^31, idx_begin >= 0 and idx_end = -1 or 0 <= idx_end <= v.size() (an empty or reversed range reads nothing), termination, the exact count, the work and space bounds and that v is kept. idx_end < -1 and 'other caller objects unchanged' are not covered. Only the standard axioms are used.",
@@ -3226,12 +3109,7 @@
             "library/array/search_util.hpp",
             "library/array/search_util.toml",
             "tests/search_util.cpp",
-            "docs/search_util.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/SearchUtil.lean",
-            "Proofs/CountLoop.lean",
-            "Proofs/CountCall.lean",
-            "Proofs/SearchUtilCall.lean"
+            "docs/search_util.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation T = int with all four arguments explicit is published as cp::count (library/count.hpp); the generic template, default arguments and other element types remain unverified. Proofs.CountCall.count_correct proves, for v.size() < 2^31, idx_begin >= 0 and idx_end = -1 or 0 <= idx_end <= v.size() (an empty or reversed range reads nothing), termination, the exact count, the work and space bounds and that v is kept. idx_end < -1 and 'other caller objects unchanged' are not covered. Only the standard axioms are used.",
@@ -3332,17 +3210,7 @@
             "library/array/sort_util.hpp",
             "library/array/sort_util.toml",
             "tests/sort_util.cpp",
-            "tests/test_fill_vector_ir.py",
-            "docs/sort_util.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/SortUtil.lean",
-            "Proofs/FillWriteStmt.lean",
-            "Proofs/InvPermMath.lean",
-            "Proofs/InvPermFrame.lean",
-            "Proofs/InvPermEval.lean",
-            "Proofs/InvPermLoop.lean",
-            "Proofs/InvPermCall.lean",
-            "Proofs/SortUtilCall.lean"
+            "docs/sort_util.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation T = int is published as cp::inv_perm (library/inv_perm.hpp). Proofs.InvPermCall.inv_perm_correct proves, for v.size() < 2^31 with all entries in [0,size) and pairwise distinct, termination, the inverse array (inv[v[j]] = j, untouched targets stay -1, see inv_perm_spec), the work and space bounds, that v is kept and that the result root moves to the caller's scope. Assert failures on violated preconditions are not proved to stop the program, and other caller objects unchanged is not stated. Only the standard axioms are used.",
@@ -3368,17 +3236,7 @@
             "library/array/sort_util.hpp",
             "library/array/sort_util.toml",
             "tests/sort_util.cpp",
-            "tests/test_fill_vector_ir.py",
-            "docs/sort_util.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/SortUtil.lean",
-            "Proofs/FillWriteStmt.lean",
-            "Proofs/InvPermMath.lean",
-            "Proofs/InvPermFrame.lean",
-            "Proofs/InvPermEval.lean",
-            "Proofs/InvPermLoop.lean",
-            "Proofs/InvPermCall.lean",
-            "Proofs/SortUtilCall.lean"
+            "docs/sort_util.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation T = int is published as cp::inv_perm (library/inv_perm.hpp). Proofs.InvPermCall.inv_perm_correct proves, for v.size() < 2^31 with all entries in [0,size) and pairwise distinct, termination, the inverse array (inv[v[j]] = j, untouched targets stay -1, see inv_perm_spec), the work and space bounds, that v is kept and that the result root moves to the caller's scope. Assert failures on violated preconditions are not proved to stop the program, and other caller objects unchanged is not stated. Only the standard axioms are used.",
@@ -11791,15 +11649,7 @@
             "library/number_theory/enumerate_quotients.hpp",
             "library/number_theory/enumerate_quotients.toml",
             "tests/enumerate_quotients.cpp",
-            "docs/enumerate_quotients.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/EnumerateQuotients.lean",
-            "Proofs/FlatVectorStmt.lean",
-            "Proofs/EnumerateQuotientsMath.lean",
-            "Proofs/QuotientFrame.lean",
-            "Proofs/QuotientSearch.lean",
-            "Proofs/QuotientBuild.lean",
-            "Proofs/QuotientCall.lean"
+            "docs/enumerate_quotients.md"
           ]
         }
       ],
@@ -12064,12 +11914,7 @@
             "published": true
           },
           "evidence": [
-            "tests/test_state_ir.py",
             "docs/safe_mod_experiment.md",
-            "Proofs/Generated/SafeMod.lean",
-            "Proofs/SafeModProofs.lean",
-            "tools/check_safe_mod_proofs.py",
-            "tests/test_safe_mod_proofs.py",
             "library/number_theory/safe_mod.toml",
             "tests/safe_mod.cpp",
             "verifier/model_bridge.py",
@@ -12095,23 +11940,8 @@
             "published": true
           },
           "evidence": [
-            "tests/test_scalar_swap_ir.py",
-            "verifier/scalar_stl.py",
             "docs/scalar_stl_contracts.md",
-            "Proofs/CppState.lean",
-            "Proofs/CppLoop.lean",
-            "Proofs/Generated/FloorSumUnsigned.lean",
-            "Proofs/FloorSumArithmetic.lean",
-            "tools/check_floor_sum_model.py",
             "docs/floor_sum_experiment.md",
-            "Proofs/FloorSumReciprocity.lean",
-            "Proofs/FloorSumState.lean",
-            "tests/test_floor_sum_state.py",
-            "Proofs/FloorSumReduction.lean",
-            "Proofs/FloorSumNormalization.lean",
-            "Proofs/FloorSumANormalization.lean",
-            "Proofs/FloorSumRound.lean",
-            "Proofs/FloorSumCall.lean",
             "library/number_theory/floor_sum_unsigned.hpp",
             "library/number_theory/floor_sum_unsigned.toml",
             "tests/floor_sum_unsigned.cpp",
@@ -12139,29 +11969,15 @@
           "evidence": [
             "tests/imports/floor_sum_signed.cpp",
             "tools/check_import_floor_sum_signed.py",
-            "Proofs/FloorSumSignedArithmetic.lean",
             "docs/floor_sum_experiment.md",
-            "tests/test_scalar_assert_ir.py",
-            "verifier/scalar_assert.py",
             "docs/state_converter.md",
-            "verifier/ast_stream.py",
-            "tests/test_direct_file_ast.py",
             "experiments/verification/number/floor_sum_signed_model.lean",
-            "tests/test_scalar_call_ir.py",
-            "Proofs/CppTargetCast.lean",
-            "tests/test_target_cast_ir.py",
             "experiments/verification/number/floor_sum_signed_gcc_model.lean",
-            "Proofs/Generated/FloorSumSigned.lean",
-            "Proofs/FloorSumSignedReturn.lean",
-            "Proofs/FloorSumSignedCall.lean",
-            "Proofs/FloorSumSignedSpecification.lean",
-            "tests/test_signed_floor_sum_proofs.py",
             "library/number_theory/floor_sum.hpp",
             "library/number_theory/floor_sum.toml",
             "tests/floor_sum.cpp",
             "verifier/model_bridge.py",
             "tests/diff/floor_sum.py",
-            "tests/test_scalar_swap_ir.py",
             "verification/statements.json"
           ],
           "review_notes": [
@@ -12200,44 +12016,18 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "tests/test_state_ir.py",
         "docs/safe_mod_experiment.md",
-        "Proofs/Generated/SafeMod.lean",
-        "Proofs/SafeModProofs.lean",
-        "tools/check_safe_mod_proofs.py",
-        "tests/test_safe_mod_proofs.py",
         "library/number_theory/safe_mod.toml",
         "tests/safe_mod.cpp",
         "verifier/model_bridge.py",
         "tests/diff/floor_sum.py",
-        "tests/test_scalar_swap_ir.py",
-        "verifier/scalar_stl.py",
         "docs/scalar_stl_contracts.md",
-        "Proofs/CppState.lean",
-        "Proofs/CppLoop.lean",
-        "Proofs/Generated/FloorSumUnsigned.lean",
-        "Proofs/FloorSumArithmetic.lean",
-        "tools/check_floor_sum_model.py",
         "docs/floor_sum_experiment.md",
-        "Proofs/FloorSumReciprocity.lean",
-        "Proofs/FloorSumState.lean",
-        "tests/test_floor_sum_state.py",
-        "Proofs/FloorSumReduction.lean",
-        "Proofs/FloorSumNormalization.lean",
-        "Proofs/FloorSumANormalization.lean",
-        "Proofs/FloorSumRound.lean",
-        "Proofs/FloorSumCall.lean",
         "library/number_theory/floor_sum_unsigned.hpp",
         "tests/floor_sum_unsigned.cpp",
         "tests/imports/floor_sum_signed.cpp",
         "tools/check_import_floor_sum_signed.py",
-        "Proofs/FloorSumSignedArithmetic.lean",
-        "verifier/ast_stream.py",
-        "tests/test_direct_file_ast.py",
         "experiments/verification/number/floor_sum_signed_model.lean",
-        "tests/test_scalar_call_ir.py",
-        "Proofs/CppTargetCast.lean",
-        "tests/test_target_cast_ir.py",
         "experiments/verification/number/floor_sum_signed_gcc_model.lean"
       ],
       "review_notes": [
@@ -17732,12 +17522,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -17762,12 +17547,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -17792,12 +17572,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -17822,12 +17597,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -19248,12 +19018,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -19278,12 +19043,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -19308,12 +19068,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -19338,12 +19093,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -19782,7 +19532,6 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "tests/test_state_ir.py",
         "docs/state_converter.md"
       ]
     },
@@ -20405,9 +20154,6 @@
         "2026-11-08: 利用者によるlowest_common_ancestorの降順上限をancestor_.size()-1にする変更を確認。旧bit_width(du)は親[0,0,1,1]のLCA(2,3)で2行表の行2を読む。原本の全小木/境界木/乱数rootと全頂点対を素朴LCAへ照合し、旧上限だけ戻した負例を検査する。TreeLcaMathのlca_all_rows_spec/all_rows_lca_correct/all_rows_indicesを追加。これは全行降順の数学仕様の証明であり、元class全体のC++生成/寿命・公開移植完了ではない。"
       ],
       "evidence": [
-        "tests/test_original_tree_lca.py",
-        "tests/imports/tree_lca_source.cpp",
-        "Proofs/TreeLcaMath.lean",
         "docs/tree_lca_same_depth.md"
       ]
     },
@@ -22673,14 +22419,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22702,14 +22441,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22731,14 +22463,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22760,14 +22485,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22789,14 +22507,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22818,14 +22529,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22847,14 +22551,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22876,14 +22573,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22905,14 +22595,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22934,14 +22617,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22963,14 +22639,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -22992,14 +22661,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23021,14 +22683,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23050,14 +22705,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23079,14 +22727,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23108,14 +22749,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23137,14 +22771,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_sum.cpp",
-            "tests/imports/original_group_affine.cpp",
-            "tests/lean/original_sum.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23163,7 +22790,6 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": "tests/test_original_template_classes.py",
       "status": {
         "review": "partial",
         "bug": "unknown",
@@ -23185,14 +22811,7 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "verifier/class_templates.py",
-        "verifier/template_class_ir.py",
-        "tests/test_class_templates.py",
-        "tests/test_original_template_classes.py",
-        "docs/original_template_classes.md",
-        "tests/imports/original_sum.cpp",
-        "tests/imports/original_group_affine.cpp",
-        "tests/lean/original_sum.lean"
+        "docs/original_template_classes.md"
       ],
       "review_notes": [
         "2026-11-06: 原本のGroupSum<long long>/GroupAffine<long long>を共通変換器で15モデルへ生成。Sum invはe().x-xのまま任意typed callerの結果・停止・元memory保持・ScalarPost2 0 80を証明。他14モデルは既存モデルと全プログラム/callFuel一致をLean/固定nanodaで回帰検査。 有限具体化の部分検証であり、原本のAPIや型を変更していない。任意T/U・全caller AST・完全object/lifetime・公開統合は未完了。file/declarationのlean_provedとpublishedはfalseを維持する。"
@@ -23227,14 +22846,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23256,14 +22868,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23285,14 +22890,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23314,14 +22912,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23343,14 +22934,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23372,14 +22956,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23401,14 +22978,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23430,14 +23000,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23459,14 +23022,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23488,14 +23044,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23517,14 +23066,7 @@
             "published": false
           },
           "evidence": [
-            "verifier/class_templates.py",
-            "verifier/template_class_ir.py",
-            "tests/test_class_templates.py",
-            "tests/test_original_template_classes.py",
-            "docs/original_template_classes.md",
-            "tests/imports/original_mapping.cpp",
-            "tests/lean/original_mapping.lean",
-            "tests/lean/original_mapping_int.lean"
+            "docs/original_template_classes.md"
           ],
           "review_notes": [
             "有限の具体化だけの証拠はfileのreview_notesとdocs/original_template_classes.mdを参照。宣言全体の任意型・完全object/lifetimeの証明済み状態へ昇格しない。"
@@ -23543,7 +23085,6 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": "tests/test_original_template_classes.py",
       "status": {
         "review": "partial",
         "bug": "unknown",
@@ -23559,14 +23100,7 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "verifier/class_templates.py",
-        "verifier/template_class_ir.py",
-        "tests/test_class_templates.py",
-        "tests/test_original_template_classes.py",
-        "docs/original_template_classes.md",
-        "tests/imports/original_mapping.cpp",
-        "tests/lean/original_mapping.lean",
-        "tests/lean/original_mapping_int.lean"
+        "docs/original_template_classes.md"
       ],
       "review_notes": [
         "2026-11-06: 原本のAffine<long long>の12モデルを共通変換器から生成。apply<long long>/apply<int>の値渡しを保った任意typed callerの結果・停止・元memory保持・ScalarPost2 0 80をLean/固定nanodaで回帰検査。intの結果はGCC13.3 LP64 signedDecode32で、結果のint範囲制限は追加していない。doubleはnative回帰のみ。 有限具体化の部分検証であり、原本のAPIや型を変更していない。任意T/U・全caller AST・完全object/lifetime・公開統合は未完了。file/declarationのlean_provedとpublishedはfalseを維持する。"
@@ -23601,8 +23135,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -23625,8 +23157,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -23649,8 +23179,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -23673,8 +23201,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -23697,8 +23223,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -23721,8 +23245,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -23745,8 +23267,6 @@
             "published": false
           },
           "evidence": [
-            "tests/test_original_template_classes.py",
-            "tests/lean/original_monoid_mul.lean",
             "docs/original_template_classes.md"
           ],
           "review_notes": [
@@ -23766,7 +23286,6 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": "tests/test_original_template_classes.py",
       "status": {
         "review": "partial",
         "bug": "unknown",
@@ -23785,10 +23304,6 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "verifier/template_class_ir.py",
-        "tests/test_original_template_classes.py",
-        "tests/imports/original_monoid_mul.cpp",
-        "tests/lean/original_monoid_mul.lean",
         "docs/original_template_classes.md",
         "docs/experiments_findings.md"
       ],
@@ -26407,7 +25922,6 @@
             "published": false
           },
           "evidence": [
-            "verifier/context_method_ir.py",
             "tests/imports/disjoint_set_getter.cpp",
             "docs/disjoint_set_getter.md",
             "docs/scalar_getter_call.md"
@@ -26448,7 +25962,6 @@
       "duplicate_candidates": [],
       "byte_identical_sources": [],
       "evidence": [
-        "verifier/context_method_ir.py",
         "tests/imports/disjoint_set_getter.cpp",
         "docs/disjoint_set_getter.md",
         "docs/scalar_getter_call.md"
@@ -27980,12 +27493,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -28010,12 +27518,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -28040,12 +27543,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -28070,12 +27568,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -29468,12 +28961,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -29498,12 +28986,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -29528,12 +29011,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -29558,12 +29036,7 @@
             "library/number/extrema.hpp",
             "library/number/extrema.toml",
             "tests/extrema.cpp",
-            "docs/extrema.md",
-            "verifier/nested_ir.py",
-            "Proofs/Generated/Extrema.lean",
-            "Proofs/ExtremaRef.lean",
-            "Proofs/ExtremaCall.lean",
-            "Proofs/CppNestedCall.lean"
+            "docs/extrema.md"
           ],
           "review_notes": [
             "2026-10-08: Only the instantiation (long long, long long) is published as cp::chmax / cp::chmin (library/number/extrema.hpp); the generic template and other type pairs stay unpublished (see Proofs/IntegralExtrema*.lean for the per-type proofs of the original bodies). The published bodies keep one return at the end instead of returning inside the if. Proofs.ExtremaCall.chmax_correct / chmin_correct prove, for every pair of valid long long cells (including the same cell twice), the exact update and result, that only the destination cell changes, and work/space bounds. Scalar reference arguments are modelled by binding the caller's cell address. Only the standard axioms are used."
@@ -30018,7 +29491,6 @@
       ],
       "byte_identical_sources": [],
       "evidence": [
-        "tests/test_state_ir.py",
         "docs/state_converter.md"
       ]
     },

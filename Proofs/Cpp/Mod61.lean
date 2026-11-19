@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.Mod61
 import Proofs.Cpp.Lib.Basic
-import Proofs.Mod61Math
+import Proofs.Math.Mod61Math
 
 /-! # `mod61` (library/string/mod61.hpp)
 

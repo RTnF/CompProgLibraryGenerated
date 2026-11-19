@@ -354,13 +354,13 @@ class SupportTests(unittest.TestCase):
                               'class C(A):\n    def test_c(self): pass\n')
             with self.assertRaisesRegex(ValueError, 'derive directly'):
                 ci_shards.test_methods(source)
-        weights = {'default_seconds': {'': 10}, 'split_methods': ['tests/test_template_class_layout.py'],
-                   'seconds': {'check:tests/test_template_class_layout.py': 400}}
-        tasks = ci_shards.check_tasks(['tests/test_public_support.py', 'tests/test_template_class_layout.py'], weights)
-        methods = ci_shards.test_methods(ROOT / 'tests/test_template_class_layout.py')
+        weights = {'default_seconds': {'': 10}, 'split_methods': ['tests/test_lean_model_friend.py'],
+                   'seconds': {'check:tests/test_lean_model_friend.py': 400}}
+        tasks = ci_shards.check_tasks(['tests/test_public_support.py', 'tests/test_lean_model_friend.py'], weights)
+        methods = ci_shards.test_methods(ROOT / 'tests/test_lean_model_friend.py')
         self.assertEqual(tasks[0], ('check:tests/test_public_support.py', []))
-        self.assertEqual(tasks[1:], [(f'check:tests/test_template_class_layout.py::{m}', [m]) for m in methods])
-        siblings = {'check:tests/test_template_class_layout.py': len(methods)}
+        self.assertEqual(tasks[1:], [(f'check:tests/test_lean_model_friend.py::{m}', [m]) for m in methods])
+        siblings = {'check:tests/test_lean_model_friend.py': len(methods)}
         self.assertAlmostEqual(ci_shards.weight(tasks[1][0], weights, siblings), 400 / len(methods))
         with self.assertRaisesRegex(ValueError, 'unregistered'):
             ci_shards.check_split_registered(['tests/test_public_support.py'], weights)
@@ -425,34 +425,39 @@ class SupportTests(unittest.TestCase):
             destination = root / path
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(text)
-        write("verifier/support.toml", 'lean_modules = ["Proofs/Core.lean"]\n'
+        write("verifier/support.toml", 'lean_modules = ["Proofs/Cpp/Lib/Core.lean"]\n'
               'python_modules = ["verifier/core.py"]\nchecks = ["tests/core.py"]\n'
               'documents = ["docs/core.md"]\n')
-        for path in ["Proofs/Core.lean", "verifier/core.py", "tests/core.py", "docs/core.md",
-                     "verifier/nested_bridge.py", "docs/spec.md"]:
+        for path in ["Proofs/Cpp/Lib/Core.lean", "verifier/core.py", "tests/core.py", "docs/core.md",
+                     "verifier/model_bridge.py", "docs/spec.md"]:
             write(path)
         for name in ["a", "b"]:
             write(f"library/{name}.hpp")
-            write(f"Proofs/{name}.lean")
-            write(f"Proofs/Generated/{name}.lean")
+            write(f"Proofs/Cpp/{name.upper()}.lean")
+            write(f"Proofs/Cpp/Gen/{name.upper()}.lean")
+            write(f"tests/diff/{name}.py")
             write(f"tests/{name}.cpp")
             write(f"benchmarks/{name}.cpp")
             write(f"library/{name}.toml", f'''name = "{name}"
 source = "{name}.hpp"
 standard = "c++17"
-translation = "nested_ir"
-lean_namespace = "Proofs.Instance{name}"
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.{name.upper()}"
 spec = "docs/spec.md"
 source_sha256 = "{'1' * 64}"
 public_declarations = ["FunctionDecl:f"]
 dependencies = []
-proof = "Proofs/{name}.lean"
-model = "Proofs/Generated/{name}.lean"
-bridge = "verifier/nested_bridge.py"
+proof = "Proofs/Cpp/{name.upper()}.lean"
+model = "Proofs/Cpp/Gen/{name.upper()}.lean"
+bridge = "verifier/model_bridge.py"
 benchmark = "benchmarks/{name}.cpp"
 tests = ["tests/{name}.cpp"]
+
+[diff]
+instances = [{{ T = "long long" }}]
+cases = "tests/diff/{name}.py"
 ''')
-        write("Proofs.lean", "import Proofs.a\nimport Proofs.b\nimport Proofs.Core\n")
+        write("Proofs.lean", "import Proofs.Cpp.A\nimport Proofs.Cpp.B\nimport Proofs.Cpp.Lib.Core\n")
 
     def test_nested_components_keep_unique_names_and_ordered_includes(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -494,7 +499,7 @@ tests = ["tests/{name}.cpp"]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.fixture(root)
-            (root / "Proofs.lean").write_text("import Proofs.a\nimport Proofs.b\n")
+            (root / "Proofs.lean").write_text("import Proofs.Cpp.A\nimport Proofs.Cpp.B\n")
             with patch.object(public, "ROOT", root), patch.object(public, "PUBLIC", root / "library"):
                 with self.assertRaisesRegex(ValueError, "imports"):
                     public.registry()
@@ -503,18 +508,18 @@ tests = ["tests/{name}.cpp"]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.fixture(root)
-            model = root / "Proofs/Generated/Experiment.lean"
+            model = root / "Proofs/Cpp/Gen/Experiment.lean"
             model.write_text("")
             with patch.object(public, "ROOT", root), patch.object(public, "PUBLIC", root / "library"):
                 with self.assertRaisesRegex(ValueError, "proof/model files"):
                     public.registry()
                 manifest = root / "verifier/support.toml"
-                manifest.write_text(manifest.read_text().replace('"Proofs/Core.lean"]',
-                    '"Proofs/Core.lean", "Proofs/Generated/Experiment.lean"]'))
+                manifest.write_text(manifest.read_text().replace('"Proofs/Cpp/Lib/Core.lean"]',
+                    '"Proofs/Cpp/Lib/Core.lean", "Proofs/Cpp/Gen/Experiment.lean"]'))
                 with self.assertRaisesRegex(ValueError, "imports"):
                     public.registry()
                 imports = root / "Proofs.lean"
-                imports.write_text(imports.read_text() + "import Proofs.Generated.Experiment\n")
+                imports.write_text(imports.read_text() + "import Proofs.Cpp.Gen.Experiment\n")
                 self.assertEqual(set(public.registry()), {"a", "b"})
 
     def test_missing_support_checks_are_rejected(self):
@@ -530,52 +535,23 @@ tests = ["tests/{name}.cpp"]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.fixture(root)
-            (root / "verifier/nested_bridge.py").rename(root / "verifier/state_bridge.py")
             (root / "docs/spec.md").write_text("input conditions and contract")
-            for name in ["a", "b"]:
-                metadata = root / f"library/{name}.toml"
-                text = metadata.read_text().replace('verifier/nested_bridge.py', 'verifier/state_bridge.py')
-                metadata.write_text(text.replace('translation = "nested_ir"', 'translation = "state_ir"'))
             with patch.object(public, "ROOT", root), patch.object(public, "PUBLIC", root / "library"):
                 self.assertEqual(set(public.registry()), {"a", "b"})
                 metadata = root / "library/a.toml"
                 original = metadata.read_text()
-                for policy in ['checked', 'gcc13.3-lp64-twos-complement']:
-                    metadata.write_text(original + f'\nsigned_conversion = "{policy}"\n')
-                    self.assertEqual(set(public.registry()), {'a', 'b'})
-                metadata.write_text(original + '\nsigned_conversion = "unknown-target"\n')
-                with self.assertRaisesRegex(ValueError, 'signed conversion contract'):
-                    public.registry()
-                metadata.write_text(original + f'\nreviewed_ast_sha256 = "{"0" * 64}"\n')
-                with self.assertRaisesRegex(ValueError, "fingerprint"):
-                    public.registry()
-                metadata.write_text(original.replace('spec = "docs/spec.md"', 'spec = "docs/missing.md"'))
-                with self.assertRaisesRegex(ValueError, "missing or invalid"):
-                    public.registry()
-
-    def test_context_class_registration_requires_one_matching_class_and_common_bridge(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            self.fixture(root)
-            metadata = root / 'library/a.toml'
-            text = metadata.read_text().replace('translation = "nested_ir"',
-                'translation = "context_class_ir"').replace('FunctionDecl:f', 'CXXRecordDecl:C')
-            valid = text + '\nqualified_class = "cp::C"\n'
-            with patch.object(public, 'ROOT', root), patch.object(public, 'PUBLIC', root / 'library'):
-                metadata.write_text(valid)
-                self.assertEqual(set(public.registry()), {'a', 'b'})
-                for broken in [text, valid.replace('cp::C', 'other::C'),
-                        valid.replace('cp::C', 'cp::D'), valid.replace('cp::C', 'cp::outer::C'),
-                        valid.replace('["CXXRecordDecl:C"]', '["CXXRecordDecl:C", "FunctionDecl:f"]'),
-                        valid.replace('verifier/nested_bridge.py', 'verifier/core.py')]:
-                    with self.subTest(metadata=broken):
+                for broken, message in [
+                        (original.replace('[diff]', f'reviewed_ast_sha256 = "{"0" * 64}"\n[diff]'), "fingerprint"),
+                        (original.replace('spec = "docs/spec.md"', 'spec = "docs/missing.md"'), "missing or invalid"),
+                        (original.replace('translation = "lean_model"', 'translation = "nested_ir"'), "unsupported translation"),
+                        (original.replace('verifier/model_bridge.py', 'verifier/core.py'), "common state generator"),
+                        (original.replace('Proofs.Cpp.A', 'Proofs.Cpp.Other'), "namespace"),
+                        (original.replace('[diff]', 'qualified_class = "cp::C"\n[diff]'), "qualified_class"),
+                        (original.replace('cases = "tests/diff/a.py"', 'cases = "tests/a.py"'), "differential")]:
+                    with self.subTest(message=message):
                         metadata.write_text(broken)
-                        with self.assertRaises(ValueError):
+                        with self.assertRaisesRegex(ValueError, message):
                             public.registry()
-                metadata.write_text(valid.replace('translation = "context_class_ir"',
-                    'translation = "nested_ir"'))
-                with self.assertRaisesRegex(ValueError, 'qualified_class'):
-                    public.registry()
 
 
 if __name__ == "__main__":

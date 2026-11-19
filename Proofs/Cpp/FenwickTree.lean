@@ -1,7 +1,7 @@
 import Proofs.Cpp.Gen.FenwickTree
 import Proofs.Cpp.Lib.Basic
 import Proofs.Cpp.Lib.Lowbit
-import Proofs.FenwickBuildMath
+import Proofs.Math.FenwickBuildMath
 
 
 /-! # `FenwickTree<T>` (library/segment_tree/fenwick_tree.hpp)

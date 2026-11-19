@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.TreeFullDp
 import Proofs.Cpp.Lib.Basic
-import Proofs.TreeDpMath
+import Proofs.Math.TreeDpMath
 
 /-! # `tree_full_dp` (library/tree/tree_full_dp.hpp)
 

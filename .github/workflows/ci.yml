@@ -68,12 +68,6 @@ jobs:
       - uses: ./.github/actions/setup-proof-tools
         with:
           restore-build: ${{ !(github.event_name == 'workflow_dispatch' && inputs.cold_build) }}
-      - name: Check AST stream boundaries before the proof build
-        run: |
-          python3 tools/offline.py python3 tests/test_direct_file_ast.py \
-            DirectASTTests.test_stream_preserves_raw_roots_across_every_string_boundary \
-            DirectASTTests.test_stream_rejects_truncated_strings_and_extra_environments \
-            DirectASTTests.test_stream_chunk_boundaries_strings_and_trailer
       - name: Check that the CI shards match the shard planner
         run: python3 tools/offline.py python3 tools/ci_shards.py check-workflow .github/workflows/ci.yml
       - name: Restore checks while requiring the final proof audit

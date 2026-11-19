@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import lean_translate
 import test_lean_model_friend as friends
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 class ModIntPowerModelTests(unittest.TestCase):
@@ -38,9 +40,9 @@ class ModIntPowerModelTests(unittest.TestCase):
             lean = Path(directory) / 'Contract.lean'
             lean.write_text(model + (ROOT / 'tests/lean/modint_power_contract.lean').read_text()
                             + (ROOT / 'tests/lean/modint_stream_contract.lean').read_text())
-            subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+            subprocess.run([LAKE, 'env', 'lean', str(lean)],
                            check=True, cwd=ROOT, timeout=60,
-                           env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')))
+                           env=LAKE_ENV)
 
     def test_public_power_matches_cpp_and_integer_oracle(self):
         source = self.class_source().rsplit('}', 1)[0]

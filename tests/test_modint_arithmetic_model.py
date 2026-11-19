@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import lean_translate
 import test_lean_model_friend as friends
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 class ModIntArithmeticModelTests(unittest.TestCase):
@@ -83,8 +85,8 @@ class ModIntArithmeticModelTests(unittest.TestCase):
             model = lean_translate.translate_file(header, ['Proofs.Cpp.Lib.ModIntMath'])
             lean = Path(directory) / 'Contract.lean'
             lean.write_text(model + (ROOT / 'tests/lean/modint_arithmetic_contract.lean').read_text())
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
-                                    cwd=ROOT, env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')),
+            result = subprocess.run([LAKE, 'env', 'lean', str(lean)],
+                                    cwd=ROOT, env=LAKE_ENV,
                                     text=True, capture_output=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

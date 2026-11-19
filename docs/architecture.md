@@ -2,9 +2,9 @@
 
 ## 現在の段階
 
-公開部品は `library/` の `safe_mod.hpp`、`floor_sum_unsigned.hpp`、`floor_sum.hpp`、`bit_width_u64.hpp`、`doubling.hpp`、`enumerate_quotients.hpp`、`search_util.hpp`、`sort_util.hpp`、`mod61.hpp`、`extrema.hpp`。すべての部品が共通の型付き AST → IR → Lean 変換器（`doubling` は入れ子 vector 用の `verifier/nested_ir.py`）を使い、全入力の結果・停止・安全性・時間と追加領域の証明、C++ 比較と sanitizer、公開登録を備える。signed floor_sum は GCC 13.3 / x86_64 Linux / C++17 / LP64 の整数変換契約を明示する。共通変換器の [スカラー部分言語](scalar_converter.md)、[分岐・更新・参照](state_converter.md)、[ループの停止条件](loop_converter.md) は整備中であり、クラス・関数テンプレート・ラムダ・一般の STL は未完了。新しい部品は共通変換器での意味生成、証明、テスト、登録が揃うまで `experiments/` に置く。
+公開部品はすべて新方式（`docs/redesign_2026-11.md`）で検証する。`verifier/lean_translate.py` が制限構文の C++ ヘッダを Clang の構文木から Lean の関数（`Proofs/Cpp/Gen/*.lean`）へ機械的に翻訳し、`Proofs/Cpp/*.lean` が結果・停止・計算量のオーダーを証明する。翻訳規則と STL の表は `docs/translation.md`。部品に依存しない共通の補題は `Proofs/Cpp/Lib/`、アルゴリズムの純粋な数学（旧方式の証明から残した定義と定理）は `Proofs/Math/` に置く。C++ の文ごとの記号実行による旧方式の証明・変換器は 2026-11-19 に削除した。
 
-持ち込みライブラリの全件検証では、対応する C++ 部分言語に対する共通の AST → 中間表現 → Lean 生成器へ移行する。部品固有の AST ハッシュに手書きモデルを対応させる方式を新しい部品へ増やさない。既存の専用 bridge は移行中の回帰確認として保持する。仕様と証明は部品ごとに用意し、共通変換器が未対応の構文は拒否する。詳細は [全件検証計画](verification_plan.md) を参照する。
+翻訳と実装の対応は、生成モデルの再生成照合（`verifier/model_bridge.py`）と、C++ と生成 Lean を同じ入力で実行する差分テスト（`verifier/diff_harness.py`、`tests/diff/*.py`）で確かめる。部品固有の AST ハッシュに手書きモデルを対応させる方式は使わない。
 
 ## 領域
 
@@ -32,7 +32,7 @@
 
 `tools/public.py` は公開部品とメタデータ、依存グラフ、参照ファイル、Lean import、テスト・検証器の登録漏れを検査し、テンプレートと部品を順に include する C++ を生成する。共有の検証基盤は `verifier/support.toml` に登録し、Lean import とファイルを照合する。複数部品が同じ bridge を使う登録も許容する。`tools/check_public.py` は TOML に登録した全部品の C++ テスト、入出力ケース、include 結合結果、AST bridge を実行し、ローカル測定結果が Git に追跡されていないことも確認する。既定のローカル実行と CI は共有検査、新規ビルド、公理依存、定理文と定義の保持、`leanchecker --fresh` と独立カーネル nanoda の検査を行う。[検査方針と許可公理の管理](proof_security.md) を参照する。CI の C++ と AST bridge は同じ GCC 13.3.0 コンテナ内で実行する。
 
-共通状態変換を使う部品は `translation = "state_ir"`、生成モデルの名前空間、仕様文書と共通 bridge を登録する。部品別のレビュー済み AST 指紋は持たず、生成 Lean の全文を照合する。問題と制限が未定の固定幅スカラー部品に、架空の入力長上限や測定用ファイルを必須としない。`sanitizers = true` の C++ テストは通常実行に加えて ASan/UBSan でも実行する。ローカルの ptrace 制約により LeakSanitizer は無効にし、アドレスと未定義動作の検査は失敗時に停止させる。
+部品の TOML は `translation = "lean_model"`、名前空間 `Proofs.Cpp.<Stem>`、生成モデル `Proofs/Cpp/Gen/<Stem>.lean`、証明 `Proofs/Cpp/<Stem>.lean`、bridge `verifier/model_bridge.py`、差分テスト `[diff]`（具体化の型と `tests/diff/*.py`）を登録する。部品別のレビュー済み AST 指紋は持たず、生成 Lean の全文を照合する。
 
 テストケースの内容は生成スクリプトまたは専用テキストファイルに置く。TOML と YAML にはケース本文を含めず、必要なファイルへの参照先だけを置く。テストと CI の実行経路はコンテストサイトへ通信しない。問題データの取得や更新は別の明示的な作業として扱う。 入力は `in/*.txt`、期待出力は `out/*.txt` に統一する。
 

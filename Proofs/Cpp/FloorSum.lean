@@ -1,7 +1,7 @@
 import Proofs.Cpp.Gen.FloorSum
 import Proofs.Cpp.SafeMod
 import Proofs.Cpp.FloorSumUnsigned
-import Proofs.FloorSumSignedArithmetic
+import Proofs.Math.FloorSumSignedArithmetic
 
 /-! # `floor_sum` (library/number_theory/floor_sum.hpp)
 

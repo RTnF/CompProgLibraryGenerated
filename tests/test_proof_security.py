@@ -14,12 +14,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools'))
 from offline import disable_network
 from proof_security import (audit_axiom_definitions, audit_contract, audit_dependencies,
-    audit_source, changed_axiom_entries, contract_dependents, definition_digest, lean_code, load_contracts,
+    audit_source, changed_axiom_entries, definition_digest, lean_code,
     statement_contract)
 from check_proof_security import (BUILTINS, check_independent_kernel, compact_replay_targets, export_roots,
                                   exported_names, prune_stale_olean_parts, publish_test_imports)
 import check_proof_security
-from test_scalar_ir import lean_environment
+from lean_env import lean_environment
 
 
 def row(name, kind, type_, body='', dependencies=(), module='Proofs.Test'):
@@ -272,38 +272,12 @@ class SecurityTests(unittest.TestCase):
                              'Checked 2 declarations with no errors')
             self.assertEqual((scratch / 'nanoda.stderr.log').read_text(), '')
 
-    def test_stl_contracts_are_a_separate_reviewed_category(self):
-        contracts = load_contracts(ROOT / 'verification/stl_contracts.json')
-        self.assertTrue(contracts)
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'contracts.json'
-            entry = dict(contracts[0])
-            for broken in [dict(entry, definition_sha256='zz'), dict(entry, clause=''), dict(entry, name='NotProofs.x'),
-                           {k: v for k, v in entry.items() if k != 'reason'}]:
-                path.write_text(json.dumps({'schema_version': 1, 'contracts': [broken]}))
-                with self.assertRaises(ValueError):
-                    load_contracts(path)
-            path.write_text(json.dumps({'schema_version': 1, 'contracts': [entry, entry]}))
-            with self.assertRaises(ValueError):
-                load_contracts(path)
-        # an axiom outside the registered contract file is still forbidden
+    def test_axioms_are_forbidden_in_proof_sources(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / 'Other.lean'
             source.write_text('axiom bad : False\n')
             with self.assertRaises(ValueError):
                 audit_source(source)
-
-    def test_theorems_depending_on_a_contract_are_reported(self):
-        rows = {'Proofs.C.bound': row('Proofs.C.bound', 'axiom', 'Prop', module='Proofs.C'),
-                'Proofs.t.uses': row('Proofs.t.uses', 'theorem', 'True', dependencies=['Proofs.helper']),
-                'Proofs.helper': row('Proofs.helper', 'definition', 'Nat', dependencies=['Proofs.C.bound']),
-                'Proofs.t.pure': row('Proofs.t.pure', 'theorem', 'True')}
-        contracts = [dict(name='Proofs.C.bound', definition_sha256='0' * 64, clause='c', reason='r')]
-        self.assertEqual(contract_dependents(contracts, rows), ['Proofs.t.uses'])
-        # a contract is permitted by the dependency audit only when it is listed
-        with self.assertRaises(ValueError):
-            audit_dependencies([], rows)
-        audit_dependencies(contracts, rows)
 
     def test_definition_audit_runs_only_for_changed_axioms(self):
         rows = {'first': row('first', 'axiom', 'Prop'),

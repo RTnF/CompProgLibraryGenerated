@@ -39,49 +39,6 @@ def load_policy(path):
     return entries
 
 
-def load_contracts(path):
-    """Reviewed contracts of the C++ standard library: axioms of a separate category (see docs/trust_policy.md)."""
-    data = json.loads(path.read_text())
-    if set(data) != {"schema_version", "contracts"} or data["schema_version"] != 1:
-        raise ValueError("invalid STL contract schema")
-    names = set()
-    entries = []
-    for entry in data["contracts"]:
-        if (set(entry) != {"name", "definition_sha256", "clause", "reason"}
-                or not re.fullmatch(r"Proofs(?:\.[A-Za-z_][A-Za-z_0-9]*)+", entry["name"])
-                or not re.fullmatch(r"[a-f0-9]{64}", entry["definition_sha256"])
-                or not all(isinstance(entry[key], str) and entry[key].strip() for key in ("clause", "reason"))
-                or entry["name"] in names):
-            raise ValueError("invalid or duplicate STL contract entry")
-        names.add(entry["name"])
-        entries.append(entry)
-    return entries
-
-
-def contract_dependents(contracts, rows):
-    """The theorems of the project that depend on an STL contract: they are proved only under that contract."""
-    names = {entry["name"] for entry in contracts}
-    memo = {}
-
-    def depends(name, active=()):
-        if name in memo:
-            return memo[name]
-        if name in names:
-            return True
-        row = rows.get(name)
-        result = False
-        if row is not None and name not in active:
-            result = any(depends(dep, active + (name,)) for dep in row["dependencies"])
-        memo[name] = result
-        return result
-
-    import sys
-    sys.setrecursionlimit(max(sys.getrecursionlimit(), 100000))
-    return sorted(name for name, row in rows.items()
-                  if row["kind"] == "theorem" and row["module"].startswith("Proofs") and name not in names
-                  and depends(name))
-
-
 def audit_axiom_definitions(entries, rows):
     for entry in entries:
         row = rows.get(entry["name"])
@@ -188,13 +145,6 @@ def audit_source(path):
                  "implemented_by", "partial", "initialize", "builtin_initialize",
                  "run_elab", "run_tac", "run_meta", "run_cmd", "elab", "elab_rules",
                  "macro", "macro_rules", "syntax", "prelude"}
-    if Path(path).resolve() == (ROOT / "Proofs/StlContracts.lean").resolve():
-        # The only file that may declare axioms: each must be a registered STL contract (verification/stl_contracts.json).
-        registered = {entry["name"] for entry in load_contracts(ROOT / "verification/stl_contracts.json")}
-        declared = {"Proofs.StlContracts." + name for name in re.findall(r"\baxiom\s+([A-Za-z_][A-Za-z_0-9]*)", code)}
-        if declared != registered:
-            raise ValueError(f"axioms of {path} and registered STL contracts differ: {sorted(declared ^ registered)}")
-        forbidden = forbidden - {"axiom"}
     found = forbidden & set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", code))
     if found or "skipKernelTC" in code or "#" in code:
         raise ValueError(f"forbidden proof source construct in {path}: {sorted(found)}")

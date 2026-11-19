@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.BellmanFord
 import Proofs.Cpp.Lib.Basic
-import Proofs.BellmanFordParent
+import Proofs.Math.BellmanFordParent
 
 /-! # `bellman_ford` (library/graph/bellman_ford.hpp)
 

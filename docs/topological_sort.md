@@ -19,7 +19,7 @@
 
 ## 検証（新方式、`docs/translation.md`）
 
-`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TopologicalSort.lean` を生成する。`Proofs/Cpp/TopologicalSort.lean` は、翻訳した 3 つのループの配列が純関数モデル（`Proofs/TopoSortMath.lean` の `initSt`・`kahnL`・`decr`）の状態に常に一致することを示し（`Rel`。入次数の計数 `count_step`、入次数 0 の頂点の投入 `enq_step`、辺 1 本の処理 `decr_step`）、モデルの `kahn_final` から上の結果を導く。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/TopologicalSort.lean` を生成する。`Proofs/Cpp/TopologicalSort.lean` は、翻訳した 3 つのループの配列が純関数モデル（`Proofs/Math/TopoSortMath.lean` の `initSt`・`kahnL`・`decr`）の状態に常に一致することを示し（`Rel`。入次数の計数 `count_step`、入次数 0 の頂点の投入 `enq_step`、辺 1 本の処理 `decr_step`）、モデルの `kahn_final` から上の結果を導く。
 
 - tick 数は `1 + m + n + n + W` で、`W`（取り出した頂点の出辺の数の和）は `m` 以下（`W_le`）。全体で `1 + 2n + 2m` 以下、`O(n + m)`。
 - 定理に含めていないこと: 辞書順最小版、返り値が `n` であることと閉路が無いことの同値の Lean での定理（上の 3 点から従うが、証明はしていない。C++ のテストで確認している）、`indeg` が 0 でない入力（未定義の挙動ではなく単に結果が変わる）。

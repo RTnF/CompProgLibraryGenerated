@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.FloorSumUnsigned
 import Proofs.Cpp.Lib.Basic
-import Proofs.FloorSumReciprocity
+import Proofs.Math.FloorSumReciprocity
 
 /-! # `floor_sum_unsigned` (library/number_theory/floor_sum_unsigned.hpp)
 

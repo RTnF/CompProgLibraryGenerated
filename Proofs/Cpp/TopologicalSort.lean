@@ -1,7 +1,7 @@
 import Proofs.Cpp.Gen.TopologicalSort
 import Proofs.Cpp.Lib.Basic
-import Proofs.TopoSortMath
-import Proofs.TreeRootMath
+import Proofs.Math.TopoSortMath
+import Proofs.Math.TreeRootMath
 
 /-! # `topological_sort` (library/graph/topological_sort.hpp)
 

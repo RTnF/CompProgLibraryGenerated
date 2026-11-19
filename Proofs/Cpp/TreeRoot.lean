@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.TreeRoot
 import Proofs.Cpp.Lib.Basic
-import Proofs.TreeRootMath
+import Proofs.Math.TreeRootMath
 
 /-! # `tree_root` (library/tree/tree_root.hpp)
 

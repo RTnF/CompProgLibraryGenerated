@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.SegtreeSum
 import Proofs.Cpp.Lib.Basic
-import Proofs.SegTreeMath
+import Proofs.Math.SegTreeMath
 
 /-! # `segtree_sum` (library/segment_tree/segtree_sum.hpp)
 

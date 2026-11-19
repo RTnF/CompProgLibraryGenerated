@@ -9,7 +9,7 @@
 
 ## 検証（新方式、`docs/translation.md`）
 
-`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/InvGcd.lean` を生成する（`safe_mod` の呼び出しは依存部品のモデル `Proofs/Cpp/Gen/SafeMod.lean` を呼ぶ）。`Proofs/Cpp/InvGcd.lean` の `inv_gcd_spec` が、`1 <= b < 2^63` の全入力について、結果が上の `(g, x)` の条件を満たすこと、tick 数が `gcdCost b a' + 4`（`log2 (a' b) + 6` 以下）以下であることを証明する。ループ不変条件は `Proofs/InvGcdMath.lean` の `Inv`（元のコメントの契約 [1]〜[3] と `gcd` の保存）。`safe_mod` の呼び出しには `Proofs/Cpp/SafeMod.lean` の `safe_mod_wp` を使う。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/InvGcd.lean` を生成する（`safe_mod` の呼び出しは依存部品のモデル `Proofs/Cpp/Gen/SafeMod.lean` を呼ぶ）。`Proofs/Cpp/InvGcd.lean` の `inv_gcd_spec` が、`1 <= b < 2^63` の全入力について、結果が上の `(g, x)` の条件を満たすこと、tick 数が `gcdCost b a' + 4`（`log2 (a' b) + 6` 以下）以下であることを証明する。ループ不変条件は `Proofs/Math/InvGcdMath.lean` の `Inv`（元のコメントの契約 [1]〜[3] と `gcd` の保存）。`safe_mod` の呼び出しには `Proofs/Cpp/SafeMod.lean` の `safe_mod_wp` を使う。
 
 差分テスト（`tests/diff/inv_gcd.py`）と C++ のテスト（`tests/inv_gcd.cpp`、元のソースの逐語コピーとの比較、仕様の条件、Fibonacci 数の最悪例）で翻訳と実装を確かめる。
 

@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import lean_translate
 import test_lean_model_friend as friends
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 HEADER = '''#pragma once
 #include <iostream>
@@ -58,9 +60,9 @@ class SourceStreamTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT / 'tests/diff', prefix='.source-contract-') as directory:
             lean = Path(directory) / 'Contract.lean'
             lean.write_text(model + contract)
-            subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+            subprocess.run([LAKE, 'env', 'lean', str(lean)],
                            check=True, cwd=ROOT, timeout=60,
-                           env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')))
+                           env=LAKE_ENV)
 
     def test_numeric_boundaries_and_class_streams(self):
         commands = ['call read32 1 1099511627776 0',

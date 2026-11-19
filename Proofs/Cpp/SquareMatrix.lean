@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.SquareMatrix
 import Proofs.Cpp.Lib.Basic
-import Proofs.MatPowMath
+import Proofs.Math.MatPowMath
 
 /-! # `square_matrix` (library/number/square_matrix.hpp)
 

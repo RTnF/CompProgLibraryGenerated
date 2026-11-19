@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.InvGcd
 import Proofs.Cpp.Lib.Basic
-import Proofs.InvGcdMath
+import Proofs.Math.InvGcdMath
 import Proofs.Cpp.SafeMod
 
 /-! # `inv_gcd` (library/number_theory/inv_gcd.hpp)

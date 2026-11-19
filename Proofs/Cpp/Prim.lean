@@ -1,7 +1,7 @@
 import Proofs.Cpp.Gen.Prim
 import Proofs.Cpp.Lib.Basic
-import Proofs.PrimBridge
-import Proofs.PrimExec
+import Proofs.Math.PrimBridge
+import Proofs.Math.PrimExec
 
 /-! # `prim` (library/graph/prim.hpp)
 

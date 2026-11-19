@@ -52,8 +52,10 @@ def main():
         common.symlink_to(expected_common, target_is_directory=True)
     if not common.is_symlink() or common.resolve() != expected_common.resolve():
         raise ValueError('unexpected shared module view in audit scratch')
-    env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'))
-    env['PATH'] = str(ROOT / '.tools/elan/bin') + os.pathsep + env['PATH']
+    env = dict(os.environ)
+    if (ROOT / '.tools/elan/bin/lake').is_file():
+        env['ELAN_HOME'] = str(ROOT / '.tools/elan')
+        env['PATH'] = str(ROOT / '.tools/elan/bin') + os.pathsep + env['PATH']
 
     def run(command, **kwargs):
         return subprocess.run([str(x) for x in command], cwd=ROOT, env=env,

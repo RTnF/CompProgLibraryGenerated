@@ -9,11 +9,13 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 from offline import disable_network
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 class MonoidLazyDependentTests(unittest.TestCase):
     def test_dependent_operations(self):
-        env = {**os.environ, "ELAN_HOME": str(ROOT / ".tools/elan"),
+        env = {**LAKE_ENV,
                "ASAN_OPTIONS": "detect_leaks=0:halt_on_error=1"}
         with tempfile.TemporaryDirectory() as directory:
             binary = Path(directory) / "native"
@@ -23,7 +25,7 @@ class MonoidLazyDependentTests(unittest.TestCase):
                            cwd=ROOT, env=env, check=True, timeout=60)
             native = subprocess.check_output([binary], cwd=ROOT, env=env, text=True, timeout=30)
             lean = subprocess.check_output(
-                [ROOT / ".tools/elan/bin/lake", "env", "lean", "--run",
+                [LAKE, "env", "lean", "--run",
                  ROOT / "tests/lean/monoid_lazy_dependent.lean"],
                 cwd=ROOT, env=env, text=True, timeout=60)
         self.assertEqual(native.splitlines(), ["51", "9007199254740992", "7", "24", "22"])

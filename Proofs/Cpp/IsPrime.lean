@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.IsPrime
 import Proofs.Cpp.Lib.Basic
-import Proofs.IsPrimeMath
+import Proofs.Math.IsPrimeMath
 
 /-! # `is_prime` (library/number_theory/is_prime.hpp) -/
 

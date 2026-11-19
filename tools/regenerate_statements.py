@@ -9,13 +9,13 @@ import subprocess
 import sys
 
 from offline import disable_network
-from proof_security import ROOT, load_contracts, load_policy, statement_contract
+from proof_security import ROOT, load_policy, statement_contract
 from public import registry
 
 
 def main():
     disable_network()
-    entries = load_policy(ROOT / 'verification/allowed_axioms.json') + load_contracts(ROOT / 'verification/stl_contracts.json')
+    entries = load_policy(ROOT / 'verification/allowed_axioms.json')
     env = os.environ.copy()
     env['ELAN_HOME'] = str(ROOT / '.tools/elan')
     lake = str(ROOT / '.tools/elan/bin/lake')

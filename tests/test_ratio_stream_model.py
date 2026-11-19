@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import lean_translate
 import diff_harness
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 CONCRETE_STREAMS = r'''
@@ -116,8 +118,8 @@ class RatioStreamModelTests(unittest.TestCase):
             lean.write_text('import Proofs.Cpp.Prelude\n' + '\n'.join(
                 '\n'.join(line for line in model.splitlines() if not line.startswith('import '))
                 for model in models))
-            env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'))
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+            env = dict(LAKE_ENV)
+            result = subprocess.run([LAKE, 'env', 'lean', str(lean)],
                                     cwd=ROOT, capture_output=True, text=True, env=env, timeout=120)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -130,7 +132,7 @@ class RatioStreamModelTests(unittest.TestCase):
                     diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++20')
 
     def test_generic_harness_stream_arguments_and_object_writeback(self):
-        env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+        env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         for scalar, bits in [('short', 16), ('int', 32), ('long long', 64)]:
             with self.subTest(scalar=scalar), tempfile.TemporaryDirectory() as directory:
@@ -174,14 +176,14 @@ class RatioStreamModelTests(unittest.TestCase):
                 self.assertEqual(native.stdout.splitlines(), expected)
                 lean = scratch / 'Driver.lean'
                 lean.write_text(harness.lean_driver().replace('import Unused\n', model, 1))
-                actual = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(lean)],
+                actual = subprocess.run([LAKE, 'env', 'lean', '--run', str(lean)],
                                         input=command_text, text=True, capture_output=True, cwd=ROOT,
                                         env=env, timeout=120)
                 self.assertEqual(actual.returncode, 0, actual.stdout + actual.stderr)
                 self.assertEqual(actual.stdout, native.stdout)
 
     def test_unsigned_numeric_stream_boundaries(self):
-        env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+        env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         source = ROOT / 'library/number/ratio.hpp'
         model = lean_translate.translate_file(source, [], standard='c++20')
@@ -226,14 +228,14 @@ class RatioStreamModelTests(unittest.TestCase):
                 self.assertEqual(native.stdout.splitlines(), expected)
                 lean = scratch / 'Driver.lean'
                 lean.write_text(harness.lean_driver().replace('import Unused\n', model, 1))
-                actual = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(lean)],
+                actual = subprocess.run([LAKE, 'env', 'lean', '--run', str(lean)],
                                         input=command_text, text=True, capture_output=True, cwd=ROOT,
                                         env=env, timeout=120)
                 self.assertEqual(actual.returncode, 0, actual.stdout + actual.stderr)
                 self.assertEqual(actual.stdout, native.stdout)
 
     def test_character_stream_extraction_and_insertion(self):
-        env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+        env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         source = ROOT / 'library/number/ratio.hpp'
         model = lean_translate.translate_file(source, [], standard='c++20')
@@ -281,14 +283,14 @@ class RatioStreamModelTests(unittest.TestCase):
                 self.assertEqual(native.stdout.splitlines(), expected)
                 lean = scratch / 'Driver.lean'
                 lean.write_text(harness.lean_driver().replace('import Unused\n', model, 1))
-                actual = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(lean)],
+                actual = subprocess.run([LAKE, 'env', 'lean', '--run', str(lean)],
                                         input=command_text, text=True, capture_output=True, cwd=ROOT,
                                         env=env, timeout=120)
                 self.assertEqual(actual.returncode, 0, actual.stdout + actual.stderr)
                 self.assertEqual(actual.stdout, native.stdout)
 
     def test_character_stream_all_input_bytes(self):
-        env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+        env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         source = ROOT / 'library/number/ratio.hpp'
         model = lean_translate.translate_file(source, [], standard='c++20')
@@ -341,7 +343,7 @@ class RatioStreamModelTests(unittest.TestCase):
                 self.assertEqual(native.stdout.splitlines(), expected)
                 lean = scratch / 'Driver.lean'
                 lean.write_text(harness.lean_driver().replace('import Unused\n', model, 1))
-                actual = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(lean)],
+                actual = subprocess.run([LAKE, 'env', 'lean', '--run', str(lean)],
                                         input=command_text, text=True, capture_output=True, cwd=ROOT,
                                         env=env, timeout=120)
                 self.assertEqual(actual.returncode, 0, actual.stdout + actual.stderr)
@@ -381,11 +383,11 @@ class RatioStreamModelTests(unittest.TestCase):
             subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
                             '-fno-omit-frame-pointer', '-I', str(ROOT / 'experiments/library/cpp'),
                             str(cpp), '-o', str(binary)], check=True, timeout=60)
-            env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+            env = dict(LAKE_ENV,
                        ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
             expected = subprocess.run([str(binary)], input='\n'.join(cases) + '\n', text=True,
                                       capture_output=True, check=True, timeout=30, env=env).stdout
-            actual = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(lean)],
+            actual = subprocess.run([LAKE, 'env', 'lean', '--run', str(lean)],
                                     cwd=ROOT, capture_output=True, text=True, env=env, timeout=120)
             self.assertEqual(actual.returncode, 0, actual.stdout + actual.stderr)
             self.assertEqual(actual.stdout, expected)

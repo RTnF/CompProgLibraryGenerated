@@ -1,5 +1,5 @@
 import Proofs.Cpp.Prelude
-import Proofs.FenwickMath
+import Proofs.Math.FenwickMath
 
 /-! `i & -i` is the lowest set bit `lowb i` (Proofs.FenwickMath) for `i > 0`. -/
 

@@ -1,5 +1,11 @@
 # 作業引き継ぎ
 
+## 2026-11-19 の状態（最新。ここから読む）
+
+- 登録56部品はすべて新方式（`lean_model`）。monoid_lazy を 104cc0f で push。104cc0f の CI は失敗（23分）: `diff_harness.py` と新方式テストが `.tools/elan/bin/lake` を固定で使い、CI（PATH の lake）で FileNotFoundError。`lean_environment()`（`tests/lean_env.py`、`diff_harness.lean_environment`）で PATH の lake に落ちるよう修正済み（未push）。
+- 旧方式の削除（未commit→この節の直後にcommit）: 旧 `Proofs/*.lean`（約450）、`Proofs/Generated/`、旧変換器（`verifier/` の scalar_ir/state_ir/nested_ir など）、旧テスト約120本、旧文書95本、STL 契約公理（`verification/stl_contracts.json` と関連コード）を削除。新方式の証明が使う旧定義・定理は宣言単位で抽出して `Proofs/Math/`（41モジュール、名前空間は旧名のまま）に残した。抽出の道具は `.cache/wip/legacy_prune/`（`Used.lean` が新方式の証明から推移的に使う旧宣言を列挙、`prune.py` が未使用宣言を削除、`iterate.sh` が未定義名を足して再ビルド）。statements.json は再生成（差分はモジュール名と束縛変数の衛生名だけであることを確認して `--accept-changed`）。
+- 残り: 取り下げ4部品（segment_tree、lazy_segment_tree、segment_tree_beats、find_cycle）の新方式での再公開、push 後の CI 20分以内。segment_tree は `search_prod_right/left` の関数オブジェクト `F` の翻訳（純粋関数 `M → Bool` として扱う）が要る。find_cycle は原本 `graph/graph_list.hpp`（ListGraph）と `graph/edge.hpp` の移植が前提（試作 `.cache/wip/list_graph_lean_model/`、`.cache/wip/edge_lean_model/`）。
+
 ## 新方式への移行（2026-11-12〜、最優先）
 
 目標（利用者の指示）: 全証明を `docs/redesign_2026-11.md` の新方式へ移し、全部品（取り下げた segment_tree_beats・segment_tree・lazy_segment_tree・find_cycle を含む）を再公開し、push 後の CI を 20 分以内にする。

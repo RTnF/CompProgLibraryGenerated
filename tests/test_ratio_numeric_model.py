@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import diff_harness
 import lean_translate
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 SOURCE = ROOT / 'tests/fixtures/ratio_numeric.hpp'
 
@@ -23,8 +25,8 @@ class RatioNumericTests(unittest.TestCase):
             proof = Path(directory) / 'Proof.lean'
             proof.write_text('import Proofs.Cpp.Lib.Basic\nimport Proofs.Cpp.Lib.RatioMath\n' + model +
                              (ROOT / 'tests/lean/ratio_numeric_contract.lean').read_text())
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(proof)],
-                                    cwd=ROOT, env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')),
+            result = subprocess.run([LAKE, 'env', 'lean', str(proof)],
+                                    cwd=ROOT, env=LAKE_ENV,
                                     capture_output=True, text=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -40,7 +42,7 @@ class RatioNumericTests(unittest.TestCase):
             expected += [f'ok {math.gcd(a, b)}', f'ok {math.lcm(a, b)}', f'ok {math.gcd(a, b)}']
         commands = '\n'.join(commands) + '\n'
         model = lean_translate.translate_file(SOURCE, [])
-        env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+        env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         for scalar in ['short', 'int', 'long long']:
             with self.subTest(scalar=scalar), tempfile.TemporaryDirectory() as directory:
@@ -57,7 +59,7 @@ class RatioNumericTests(unittest.TestCase):
                 self.assertEqual(native.stdout.splitlines(), expected)
                 lean = scratch / 'Driver.lean'
                 lean.write_text(harness.lean_driver().replace('import Unused\n', model, 1))
-                actual = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(lean)],
+                actual = subprocess.run([LAKE, 'env', 'lean', '--run', str(lean)],
                                         input=commands, capture_output=True, text=True, env=env,
                                         cwd=ROOT, timeout=60)
                 self.assertEqual(actual.returncode, 0, actual.stdout + actual.stderr)

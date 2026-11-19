@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import lean_translate
 import test_lean_model_friend as friends
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 class ConstructionTranslationTests(unittest.TestCase):
@@ -22,8 +24,8 @@ class ConstructionTranslationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             proof = Path(directory) / 'Monoid.lean'
             proof.write_text(model + '\nnamespace Proofs.Cpp.Monoid' + contract)
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(proof)],
-                cwd=ROOT, env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')),
+            result = subprocess.run([LAKE, 'env', 'lean', str(proof)],
+                cwd=ROOT, env=LAKE_ENV,
                 text=True, capture_output=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout, '')
@@ -220,14 +222,14 @@ int main() {
             binary = scratch / 'traits'
             subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined',
                             str(cpp), '-o', str(binary)], check=True, timeout=60)
-            env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+            env = dict(LAKE_ENV,
                        ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
             native = subprocess.run([str(binary)], text=True, capture_output=True,
                                     check=True, timeout=60, env=env)
             self.assertEqual(native.stdout, '1 1 7 7\n')
             lean = scratch / 'Traits.lean'
             lean.write_text(model + proof)
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+            result = subprocess.run([LAKE, 'env', 'lean', str(lean)],
                                     cwd=ROOT, env=env, text=True, capture_output=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout, '')
@@ -315,8 +317,8 @@ public:
 #guard ((Proofs.Cpp.Gen.cp.Box.init_0 (T := Int)).run 0).map
   (fun r => (r.1.value, r.2)) == some (1, 4)
 ''')
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(proof)],
-                cwd=ROOT, env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')),
+            result = subprocess.run([LAKE, 'env', 'lean', str(proof)],
+                cwd=ROOT, env=LAKE_ENV,
                 text=True, capture_output=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -480,8 +482,8 @@ template<class T> T remainder(T a, T b) { return a % b; }
         with tempfile.TemporaryDirectory() as directory:
             proof = Path(directory) / 'Group.lean'
             proof.write_text('\n'.join(imports) + '\n' + body)
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(proof)],
-                cwd=ROOT, env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')),
+            result = subprocess.run([LAKE, 'env', 'lean', str(proof)],
+                cwd=ROOT, env=LAKE_ENV,
                 text=True, capture_output=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

@@ -1,7 +1,7 @@
 import Proofs.Cpp.Gen.Dijkstra
 import Proofs.Cpp.Lib.Basic
-import Proofs.DijkstraPMath
-import Proofs.TreeRootMath
+import Proofs.Math.DijkstraPMath
+import Proofs.Math.TreeRootMath
 
 /-! # `dijkstra` (library/graph/dijkstra.hpp)
 

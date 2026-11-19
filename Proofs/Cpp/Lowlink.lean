@@ -1,7 +1,7 @@
 import Proofs.Cpp.Gen.Lowlink
 import Proofs.Cpp.Lib.Basic
-import Proofs.LowlinkSpec
-import Proofs.LowlinkPhiMath
+import Proofs.Math.LowlinkSpec
+import Proofs.Math.LowlinkPhiMath
 
 /-! # `lowlink` (library/graph/lowlink.hpp)
 

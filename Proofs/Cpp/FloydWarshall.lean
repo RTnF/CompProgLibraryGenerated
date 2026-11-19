@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.FloydWarshall
 import Proofs.Cpp.Lib.Basic
-import Proofs.FloydWarshallCall
+import Proofs.Math.FloydWarshallCall
 
 /-! # `floyd_warshall` (library/graph/floyd_warshall.hpp)
 

@@ -21,7 +21,7 @@
 `verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/SquareMatrix.lean` を生成する。`Proofs/Cpp/SquareMatrix.lean` が次を証明する。
 
 - 任意の要素型 `T` について（代数的な仮定なし）: `mat_add_assign_spec`、`mat_sub_assign_spec`、`mat_zero_spec`、`mat_negate_spec`（先頭 `n * n` 要素が成分ごとの値、残りは変わらない: `EW`）、`mat_identity_spec`（`Idf`）、`mat_equal_spec`（返り値が `true` ⇔ 先頭 `n * n` 要素が等しい）、`mat_mul_spec`（`c[i n + j] = MM a b n i j n`、ループの順に足した積和）。tick 数はそれぞれ `1 + n^2`、`1 + n (1 + n)`、`1 + n (1 + n (1 + n))` ちょうど。
-- `T = unsigned long long`（`UInt64`）について `mat_pow_spec`: `r` の先頭 `n × n` 要素が `PW n A e`（`Proofs/MatPowMath.lean`。積は 2^64 を法とする）。ループの不変条件は `R · Y^e ≡ A^E`（1 回の反復は `pow_round`。結合則 `mulF_assoc`、二乗の冪 `PW_sq`）。`mat_mul` の呼び出しは、その結果を明示した仕様 `mat_mul_wp`（`mulRes`）で扱う。tick 数は `O(n^3 log e)`。
+- `T = unsigned long long`（`UInt64`）について `mat_pow_spec`: `r` の先頭 `n × n` 要素が `PW n A e`（`Proofs/Math/MatPowMath.lean`。積は 2^64 を法とする）。ループの不変条件は `R · Y^e ≡ A^E`（1 回の反復は `pow_round`。結合則 `mulF_assoc`、二乗の冪 `PW_sq`）。`mat_mul` の呼び出しは、その結果を明示した仕様 `mat_mul_wp`（`mulRes`）で扱う。tick 数は `O(n^3 log e)`。
 
 差分テスト（`tests/diff/square_matrix.py`、全関数）と C++ のテストは `tests/square_matrix.cpp`（大きさ 0〜14 のランダムな行列に対して、ループ順を変えた積の参照実装、成分ごとの和差、零行列、単位行列、`I * A == A * I == A`、フィボナッチ行列の冪を比較）。
 

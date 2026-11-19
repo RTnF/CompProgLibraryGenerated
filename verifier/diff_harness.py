@@ -24,6 +24,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -794,13 +795,24 @@ class Harness:
         return "\n".join(lines) + "\n"
 
 
+def lean_environment():
+    """The pinned local `lake` when installed under .tools/elan (development), else `lake` on PATH (CI)."""
+    env = os.environ.copy()
+    local = ROOT / ".tools/elan/bin/lake"
+    if local.is_file():
+        env["ELAN_HOME"] = str(ROOT / ".tools/elan")
+        return str(local), env
+    found = shutil.which("lake")
+    if found is None:
+        raise RuntimeError("lake is required for differential tests")
+    return found, env
+
+
 def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None,
              deps=(), standard="c++17", calls=None):
     """Run both interpreters on `cases` (command text) and require identical output."""
     h = Harness(source, instance, lean_module, deps, standard, calls)
-    lake = str(ROOT / ".tools/elan/bin/lake")
-    env = os.environ.copy()
-    env["ELAN_HOME"] = str(ROOT / ".tools/elan")
+    lake, env = lean_environment()
     env.pop("LEAN_PATH", None)
     with tempfile.TemporaryDirectory(prefix="diff-") as directory:
         scratch = Path(directory)

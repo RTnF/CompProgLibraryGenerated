@@ -11,6 +11,8 @@ import test_lean_model_friend as friends
 import diff_harness
 import lean_translate
 import unittest
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 CONDITION_T = '(std::is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)'
 CONDITION_U = CONDITION_T.replace('<T>', '<U>')
@@ -162,9 +164,9 @@ template<class V> unsigned unknown(V value) { Marker marker(value); return marke
             self.assertIn('signed_kind', checked_cpp.stderr)
             lean = Path(directory) / 'Invalid.lean'
             lean.write_text(harness.lean_driver().replace('import Unused\n', model, 1))
-            checked_lean = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+            checked_lean = subprocess.run([LAKE, 'env', 'lean', str(lean)],
                                          capture_output=True, text=True, cwd=ROOT, timeout=60,
-                                         env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')))
+                                         env=LAKE_ENV)
             self.assertNotEqual(checked_lean.returncode, 0)
             self.assertIn('decide', checked_lean.stdout + checked_lean.stderr)
 

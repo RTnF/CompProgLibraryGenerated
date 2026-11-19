@@ -12,6 +12,8 @@ sys.path.insert(0, str(ROOT / 'verifier'))
 import lean_translate
 import test_ratio_stream_model as reference
 import test_lean_model_friend as friend_tests
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 SOURCE = ROOT / 'library/number/ratio.hpp'
 
@@ -38,8 +40,8 @@ class RatioEuclidTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             proof = Path(directory) / 'Proof.lean'
             proof.write_text('\n'.join(imports) + '\n' + model + contracts)
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(proof)],
-                                    cwd=ROOT, env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')),
+            result = subprocess.run([LAKE, 'env', 'lean', str(proof)],
+                                    cwd=ROOT, env=LAKE_ENV,
                                     capture_output=True, text=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

@@ -15,7 +15,7 @@ import time
 
 from offline import disable_network
 from proof_security import (MATHLIB_FAMILY, ROOT, audit_axiom_definitions, audit_contract, audit_mathlib_coverage,
-    audit_dependencies, audit_source, changed_axiom_entries, contract_dependents, load_contracts, load_policy)
+    audit_dependencies, audit_source, changed_axiom_entries, load_policy)
 from public import registry
 
 BUILTINS = ['Nat', 'String', 'String.mk', 'Char', 'Quot', 'Quot.mk', 'Quot.lift', 'Quot.ind',
@@ -321,8 +321,7 @@ def main():
     started = time.monotonic()
     disable_network()
     entries = load_policy(ROOT / 'verification/allowed_axioms.json')
-    contracts = load_contracts(ROOT / 'verification/stl_contracts.json')
-    permitted = entries + [{**c, 'reason': c['reason']} for c in contracts]
+    permitted = entries
     contract = json.loads((ROOT / 'verification/statements.json').read_text())
     sources = [ROOT / 'Proofs.lean', *sorted((ROOT / 'Proofs').rglob('*.lean'))]
     for path in sources:
@@ -392,8 +391,6 @@ def main():
             print('allowed axiom definitions unchanged: definition audit skipped')
         stage('rows parsed, roots compared', started)
         count = audit_dependencies(permitted, rows)
-        dependents = contract_dependents(contracts, rows)
-        print(f'{len(dependents)} theorem(s) are proved under an STL contract' + (': ' + ', '.join(dependents[:5]) if dependents else ''))
         stage('dependency audit', started)
         audit_contract(contract, rows)
         print(f'raw axiom dependency and statement/definition checks passed: {count} declarations')

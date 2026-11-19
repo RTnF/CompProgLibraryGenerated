@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.TreeOrder
 import Proofs.Cpp.Lib.Basic
-import Proofs.TreeOrderMath
+import Proofs.Math.TreeOrderMath
 
 /-! # `tree_order` (library/tree/tree_order.hpp)
 

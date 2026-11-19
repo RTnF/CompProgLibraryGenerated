@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import diff_harness
 import lean_translate
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 class FriendTranslationTests(unittest.TestCase):
@@ -28,13 +30,13 @@ class FriendTranslationTests(unittest.TestCase):
             binary = scratch / 'driver'
             subprocess.run(['g++', f'-std={standard}', '-O1', '-fsanitize=address,undefined',
                             '-I', str(ROOT / 'tests/diff'), str(cpp), '-o', str(binary)], check=True, timeout=60)
-            env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+            env = dict(LAKE_ENV,
                        ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
             expected = subprocess.run([str(binary)], input=cases, text=True, capture_output=True,
                                       check=True, timeout=60, env=env).stdout
             lean = scratch / 'Driver.lean'
             lean.write_text(h.lean_driver().replace('import Unused\n', model, 1))
-            actual = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(lean)],
+            actual = subprocess.run([LAKE, 'env', 'lean', '--run', str(lean)],
                                     input=cases, text=True, capture_output=True, cwd=ROOT,
                                     env=env, timeout=120)
             self.assertEqual(actual.returncode, 0, actual.stdout + actual.stderr)

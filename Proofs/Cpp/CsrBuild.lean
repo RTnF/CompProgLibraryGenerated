@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.CsrBuild
 import Proofs.Cpp.Lib.Basic
-import Proofs.CsrBuildMath
+import Proofs.Math.CsrBuildMath
 
 /-! # `csr_build` (library/graph/csr_build.hpp)
 

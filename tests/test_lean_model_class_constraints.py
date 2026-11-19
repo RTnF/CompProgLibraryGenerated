@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import lean_translate
 import test_lean_model_friend as friends
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 HEADER = '''#pragma once
 #include <type_traits>
@@ -64,9 +66,9 @@ class ClassConstraintTests(unittest.TestCase):
             lean = Path(directory) / 'Invalid.lean'
             lean.write_text(model + '\nopen Proofs.Cpp.Gen\n'
                             'def invalid : cp.Box (1 : UInt32) := ⟨0⟩\n')
-            checked = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+            checked = subprocess.run([LAKE, 'env', 'lean', str(lean)],
                                      capture_output=True, text=True, cwd=ROOT, timeout=60,
-                                     env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')))
+                                     env=LAKE_ENV)
             self.assertNotEqual(checked.returncode, 0)
             self.assertIn('TemplateConstraint', checked.stdout + checked.stderr)
             self.assertIn('failed to synthesize', checked.stdout + checked.stderr)

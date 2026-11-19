@@ -18,7 +18,7 @@
 - `ord` は `[0, n)` への単射（値は `[0, n)`）、`par[v]` は `-1` または `v` に隣り合う頂点で `ord` が `v` より小さいもの。
 - 橋: `par[v] = p >= 0` のとき、`low[v] == ord[v]` ⇔ 辺 `{p, v}` を除いたグラフで `p` と `v` が連結でない。
 - 関節点: 上の条件（根でなければ `sep >= 1`、根なら `sep >= 2`）⇔ `v` に隣り合う 2 頂点 `a`, `b` で、`v` を除いたグラフで連結でないものがある（連結成分の数が増えることと同値）。
-- 証明: `verifier/lean_translate.py` が `Proofs/Cpp/Gen/Lowlink.lean` を生成する。数学側は旧来の `Proofs/LowlinkGraph.lean`（DFS 木の性質から橋と関節点の同値）、`Proofs/LowlinkInv.lean`/`LowlinkScan.lean`/`LowlinkPop.lean`/`LowlinkPush.lean`/`LowlinkRoot.lean`（反復 DFS の抽象機械 `St` と不変条件 `MInv` の保存）、`LowlinkFinal.lean`/`LowlinkSpec.lean`（最終状態から仕様）、`Proofs/LowlinkPhiMath.lean`（反復回数のポテンシャル `phi`）。`Proofs/Cpp/Lowlink.lean` は C++ の配列が `St` の各フィールドを `0 .. n-1` で持つこと（`Abs`、ゴーストの `Fi`/`Vis` は存在量化）を外側・内側ループの不変条件 `OI`/`II` に入れ、1 反復を `rootS`/`pushS`/`scanS`/`popS` に対応させる（`ii_root`、`ii_push`、`ii_scan`、`ii_pop`）。内側ループの停止の尺度は `phi` を C++ の状態から計算した `phiC`。差分テストは `tests/diff/lowlink.py`。
+- 証明: `verifier/lean_translate.py` が `Proofs/Cpp/Gen/Lowlink.lean` を生成する。数学側は旧来の `Proofs/Math/LowlinkGraph.lean`（DFS 木の性質から橋と関節点の同値）、`Proofs/Math/LowlinkInv.lean`/`LowlinkScan.lean`/`LowlinkPop.lean`/`LowlinkPush.lean`/`LowlinkRoot.lean`（反復 DFS の抽象機械 `St` と不変条件 `MInv` の保存）、`LowlinkFinal.lean`/`LowlinkSpec.lean`（最終状態から仕様）、`Proofs/Math/LowlinkPhiMath.lean`（反復回数のポテンシャル `phi`）。`Proofs/Cpp/Lowlink.lean` は C++ の配列が `St` の各フィールドを `0 .. n-1` で持つこと（`Abs`、ゴーストの `Fi`/`Vis` は存在量化）を外側・内側ループの不変条件 `OI`/`II` に入れ、1 反復を `rootS`/`pushS`/`scanS`/`popS` に対応させる（`ii_root`、`ii_push`、`ii_scan`、`ii_pop`）。内側ループの停止の尺度は `phi` を C++ の状態から計算した `phiC`。差分テストは `tests/diff/lowlink.py`。
 
 時間と領域: 仕事量は呼び出し側の引数評価を除いて高々 `2670 * n + 1750 * m + 250`（`m = target.size()`、粗い上限。実際の反復は `O(n + m)` 回で、各反復は定数時間）。追加領域は局所変数だけ。
 

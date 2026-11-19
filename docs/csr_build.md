@@ -10,7 +10,7 @@
 
 `verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/CsrBuild.lean` を生成する。`Proofs/Cpp/CsrBuild.lean` の `csr_build_spec` が、前提を満たす全入力について次を証明する。
 
-- `head[k]`（`k <= n`）は始点が `k` 未満の辺の数（`Proofs/CsrBuildMath.lean` の `ocnt`）。したがって `head[0] = 0`、`head` は非減少、`head[n] = m`。
+- `head[k]`（`k <= n`）は始点が `k` 未満の辺の数（`Proofs/Math/CsrBuildMath.lean` の `ocnt`）。したがって `head[0] = 0`、`head` は非減少、`head[n] = m`。
 - 辺 `i` の行き先 `to[i]` は `target[head[from[i]] + c]` に置かれる。`c` は `i` より前の、始点が同じ辺の数（`cnt`）。異なる辺の置き場所は異なり、すべて `[0, m)` に入る（`pos_ne`、`pos_lt`）。これにより頂点 `u` から出る辺は `target[head[u], head[u + 1])` に入力の順で並ぶ。
 - tick 数はちょうど `2 (n + m) + 1`。
 

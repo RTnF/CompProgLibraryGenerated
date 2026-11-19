@@ -13,7 +13,7 @@
 `verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/EnumerateQuotients.lean` を生成する。`Proofs/Cpp/EnumerateQuotients.lean` の `enumerate_quotients_spec` は全ての `n : UInt64` について、返る列（の各要素の `toNat`）が狭義単調増加で、その要素が ⌊n/x⌋ (x ≥ 1) の正の値と過不足なく一致し、tick 数が `t0 + 42 + 6 * Nat.sqrt n` 以下であることを示す。
 
 - 二分探索の不変条件は `ng < ok <= 2^32`、`n <= ok(ok+1)`、`ng = 0 ∨ ng(ng+1) < n` と、残りの反復回数 `bitWidth (ok - ng - 1)` による tick の上限。`k < 2^32` なので `k * (k + 1)` は 2^64 を法とせず数学的な積に一致する（`mid_toNat`）。終了時の性質が `KOK`。
-- 2 つの追加ループは旧来の `Proofs/EnumerateQuotientsMath.lean` の `firstPart`（`firstPart_succ`）と `secondPart` の先頭部分（`secondPart_take_succ`）で書き、結果は `qlist n K` に一致する。`i + 1` が桁あふれしないことは `KOK` から出る（`p_small`）。
+- 2 つの追加ループは旧来の `Proofs/Math/EnumerateQuotientsMath.lean` の `firstPart`（`firstPart_succ`）と `secondPart` の先頭部分（`secondPart_take_succ`）で書き、結果は `qlist n K` に一致する。`i + 1` が桁あふれしないことは `KOK` から出る（`p_small`）。
 - 結果の性質は `qlist_spec`、要素数 `⌊n/K⌋ + K − 1 <= 2√n + 2` は `size_bound`。
 
 差分テスト（`tests/diff/enumerate_quotients.py`）と C++ のテストで翻訳と実装を確かめる。

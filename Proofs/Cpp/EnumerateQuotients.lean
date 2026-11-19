@@ -1,6 +1,6 @@
 import Proofs.Cpp.Gen.EnumerateQuotients
 import Proofs.Cpp.Lib.Basic
-import Proofs.EnumerateQuotientsMath
+import Proofs.Math.EnumerateQuotientsMath
 import Mathlib.Data.Nat.Sqrt
 
 /-! # `enumerate_quotients` (library/number_theory/enumerate_quotients.hpp)

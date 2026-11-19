@@ -10,6 +10,8 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "verifier"))
 import lean_translate
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 class OriginalDynamicModIntTests(unittest.TestCase):
@@ -49,8 +51,8 @@ class OriginalDynamicModIntTests(unittest.TestCase):
                 f"abbrev DynamicModIntState := {states[0]}\n"
                 f"abbrev dynamicModIntStartup := {initializers[0]}\n"
             )
-            lean_command = [str(ROOT / ".tools/elan/bin/lake"), "env", "lean"]
-            lean_env = dict(os.environ, ELAN_HOME=str(ROOT / ".tools/elan"))
+            lean_command = [LAKE, "env", "lean"]
+            lean_env = dict(LAKE_ENV)
             lean.write_text(model + bindings + """
 open Proofs.Cpp.Gen
 def main : IO Unit := do

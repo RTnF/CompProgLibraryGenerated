@@ -1,5 +1,5 @@
 import Proofs.Cpp.Prelude
-import Proofs.Fermat
+import Proofs.Math.Fermat
 import Mathlib.Algebra.Field.Defs
 import Mathlib.Tactic.Ring
 

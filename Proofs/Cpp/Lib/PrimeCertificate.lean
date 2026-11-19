@@ -1,5 +1,5 @@
 import Proofs.Cpp.Prelude
-import Proofs.Fermat
+import Proofs.Math.Fermat
 
 /-! Balanced trial-division certificates. Computation recurses on the tree
 depth, rather than constructing a linear chain of divisor checks. -/

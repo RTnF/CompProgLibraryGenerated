@@ -33,10 +33,9 @@ def support_registry() -> dict[str, list[str]]:
         for path in paths:
             repo_file(path)
             if field == "lean_modules" and Path(path).parent not in (
-                    Path("Proofs"), Path("Proofs/Generated"), Path("Proofs/MonoidLazyGeneric"), Path("Proofs/Cpp"),
-                    Path("Proofs/Cpp/Lib")):
-                raise ValueError("shared Lean support must be declared in Proofs/, Proofs/Generated/, "
-                                 "Proofs/MonoidLazyGeneric/, Proofs/Cpp/ or Proofs/Cpp/Lib/")
+                    Path("Proofs/Math"), Path("Proofs/Cpp"), Path("Proofs/Cpp/Gen"), Path("Proofs/Cpp/Lib")):
+                raise ValueError("shared Lean support must be declared in Proofs/Math/, Proofs/Cpp/, Proofs/Cpp/Gen/ "
+                                 "or Proofs/Cpp/Lib/")
     return data
 
 
@@ -51,25 +50,14 @@ def load_component(metadata: Path) -> dict:
     if data.get("standard") not in ("c++17", "c++20"):
         raise ValueError(f"unsupported C++ standard for {name}")
     translation = data.get("translation")
-    if translation not in ("state_ir", "nested_ir", "context_class_ir", "lean_model"):
+    if translation != "lean_model":
         raise ValueError(f"unsupported translation for {name}")
-    if "signed_conversion" in data and (translation != "state_ir" or
-            data["signed_conversion"] not in ("checked", "gcc13.3-lp64-twos-complement")):
-        raise ValueError(f"invalid signed conversion contract for {name}")
-    if data["standard"] == "c++20" and translation != "lean_model":
-        raise ValueError(f"C++20 requires lean_model translation for {name}")
     namespace = data.get("lean_namespace")
     if (not isinstance(namespace, str) or not re.fullmatch(
             r"Proofs(?:\.[A-Za-z_][A-Za-z_0-9]*)+", namespace)
-            or data.get("bridge") != {"state_ir": "verifier/state_bridge.py",
-                                      "nested_ir": "verifier/nested_bridge.py",
-                                      "context_class_ir": "verifier/nested_bridge.py",
-                                      "lean_model": "verifier/model_bridge.py"}[translation]):
+            or data.get("bridge") != "verifier/model_bridge.py"):
         raise ValueError(f"invalid common state generator configuration for {name}")
-    if translation == "lean_model":
-        check_lean_model(name, data)
-    elif "diff" in data:
-        raise ValueError(f"differential tests need the lean_model translation for {name}")
+    check_lean_model(name, data)
     if "reviewed_ast_sha256" in data:
         raise ValueError(f"common translation must not select a reviewed AST fingerprint for {name}")
     if not isinstance(data.get("spec"), str) or not data["spec"].endswith(".md"):
@@ -113,20 +101,13 @@ def load_component(metadata: Path) -> dict:
     if not isinstance(declarations, list) or not declarations or not all(
         isinstance(item, str) and (
             re.fullmatch(r"[A-Za-z]+Decl:(?:[A-Za-z_][A-Za-z_0-9]*|operator[-+*/%<>=!&|^~]+)(?:<[0-9A-Za-z_, <>:]+>)?", item)
-            or (translation == "lean_model"
-                and re.fullmatch(r"(?:FunctionDecl|TypeAliasDecl|TypeAliasTemplateDecl|VarDecl):[A-Za-z_][A-Za-z_0-9]*::[A-Za-z_][A-Za-z_0-9]*", item))
+            or (re.fullmatch(r"(?:FunctionDecl|TypeAliasDecl|TypeAliasTemplateDecl|VarDecl):[A-Za-z_][A-Za-z_0-9]*::[A-Za-z_][A-Za-z_0-9]*", item))
         )
         for item in declarations
     ) or len(declarations) != len(set(declarations)):
         raise ValueError(f"invalid public declarations for {name}")
-    if translation == "context_class_ir":
-        qualified = data.get("qualified_class")
-        if (not isinstance(qualified, str)
-                or re.fullmatch(r"cp::[A-Za-z_][A-Za-z_0-9]*", qualified) is None
-                or declarations != [f"CXXRecordDecl:{qualified.removeprefix('cp::')}"]):
-            raise ValueError(f"context class translation requires exactly its registered cp:: class for {name}")
-    elif "qualified_class" in data:
-        raise ValueError(f"qualified_class requires context class translation for {name}")
+    if "qualified_class" in data:
+        raise ValueError(f"qualified_class is not a lean_model field: {name}")
     repo_file(f"library/{data['source']}")
     if not isinstance(data.get("dependencies"), list) or not all(
         isinstance(item, str) for item in data["dependencies"]
@@ -196,7 +177,7 @@ def registry() -> dict[str, dict]:
     if shared_proofs & (expected_proofs | expected_models):
         raise ValueError("shared infrastructure must not be registered as a component proof/model")
     lean_files = {path.relative_to(ROOT).as_posix() for path in (ROOT / "Proofs").rglob("*.lean")}
-    model_dirs = (Path("Proofs/Generated"), Path("Proofs/Cpp/Gen"))
+    model_dirs = (Path("Proofs/Cpp/Gen"),)
     actual_models = {path for path in lean_files if Path(path).parent in model_dirs}
     actual_proofs = lean_files - actual_models
     shared_models = {path for path in shared_proofs if Path(path).parent in model_dirs}

@@ -4,7 +4,7 @@
 
 `cp::SegmentTree<M>` は、モノイド `M` の反復型セグメント木（`experiments/library/cpp/segment_tree/segment_tree.hpp`、ACL ベース）である。構成子 `SegmentTree(const vector<T>& v)`、1 点更新 `set(idx, val)`、1 点取得 `get(idx)`、区間積 `product(l, r)`（`[l, r)`）、全体の積 `product_all()` を持つ。検証した具体化は `SegmentTree<SegMax<long long>>`（`long long` の最大値。`SegMax<T>` は `monoid.hpp` の `MonoidMax<T>` に当たる方針）と `SegmentTree<SegMin<long long>>`（最小値。`MonoidMin<T>` に当たる）。
 
-モノイド `M` は、`value_type`、静的な `e()`（単位元）、静的な `apply(a, b)`（結合的な演算）を持つ方針（policy）として与える。他のモノイド（`MonoidMin`、`MonoidMul`、和など）は、同じ形の方針と `template class SegmentTree<方針>;` を足して検証する（Lean の数学部分 `Proofs/SegTreeMath.lean` は任意のモノイドについて証明済みで、実行の証明は具体化ごとに書く）。
+モノイド `M` は、`value_type`、静的な `e()`（単位元）、静的な `apply(a, b)`（結合的な演算）を持つ方針（policy）として与える。他のモノイド（`MonoidMin`、`MonoidMul`、和など）は、同じ形の方針と `template class SegmentTree<方針>;` を足して検証する（Lean の数学部分 `Proofs/Math/SegTreeMath.lean` は任意のモノイドについて証明済みで、実行の証明は具体化ごとに書く）。
 
 配置: `n_node` は `n` 以上の最小の 2 冪（`n = 0` なら 0）、`h_node = log2(n_node)`、`node` は `2 * n_node` 個。葉は `node[n_node + i]`（`i < n`）、残りの葉は単位元、内部節点は `1 <= i < n_node` で `node[i] == apply(node[2i], node[2i+1])`。
 
@@ -23,4 +23,4 @@
 
 時間と領域: 構成子は `O(n_node)`（仕事量 `3000 * (2^k + 1) + 3000` 以下、`n_node = 2^k`）、`set` は `h_node + 1` 回の反復（仕事量 `900 * h_node + 300` 以下）、`product` は `log2(r - l) + 1` 回以下の反復（仕事量 `1600 * (log2(r - l) + 1) + 400` 以下）、`get`/`product_all` は定数。追加領域はどれも局所変数だけ。
 
-証明: `Proofs/SegTreeMath.lean`（任意のモノイド `Mon` に対する `rfold`、配置 `TInv`、`product` のループ不変条件 `PInv`/`prod_step`、`set` の `SInv`、構築の `BInv`）、`Proofs/SegmentTreeExec.lean`（インライン展開された `apply` の 5 文を扱う `appblk_exec`、`update(i)` の `upd_exec`、`maxMon`）、`SegmentTreeSet.lean`/`SegmentTreeProduct.lean`/`SegmentTreeGet.lean`/`SegmentTreeCtor.lean`（各関数の実行）、`SegmentTreePrepare.lean`（引数の準備。生成スクリプトで作成）、`SegmentTreeCall.lean`（呼び出し。最小値版は同じファイルの名前空間 `Min`）。最小値版の実行の証明は `SegmentTreeMin*.lean`（最大値版を機械的に写し、`apply` の条件 `b < a` の向きと単位元 `LLONG_MAX` だけを変えた）。C++ のテストは `tests/segment_tree.cpp`（元の `SegmentTree` の写しと素朴な実装との照合、全区間、`LLONG_MIN`/`LLONG_MAX`、2^16 + 1 要素、`-fsanitize=address,undefined`）。
+証明: `Proofs/Math/SegTreeMath.lean`（任意のモノイド `Mon` に対する `rfold`、配置 `TInv`、`product` のループ不変条件 `PInv`/`prod_step`、`set` の `SInv`、構築の `BInv`）、`Proofs/SegmentTreeExec.lean`（インライン展開された `apply` の 5 文を扱う `appblk_exec`、`update(i)` の `upd_exec`、`maxMon`）、`SegmentTreeSet.lean`/`SegmentTreeProduct.lean`/`SegmentTreeGet.lean`/`SegmentTreeCtor.lean`（各関数の実行）、`SegmentTreePrepare.lean`（引数の準備。生成スクリプトで作成）、`SegmentTreeCall.lean`（呼び出し。最小値版は同じファイルの名前空間 `Min`）。最小値版の実行の証明は `SegmentTreeMin*.lean`（最大値版を機械的に写し、`apply` の条件 `b < a` の向きと単位元 `LLONG_MAX` だけを変えた）。C++ のテストは `tests/segment_tree.cpp`（元の `SegmentTree` の写しと素朴な実装との照合、全区間、`LLONG_MIN`/`LLONG_MAX`、2^16 + 1 要素、`-fsanitize=address,undefined`）。

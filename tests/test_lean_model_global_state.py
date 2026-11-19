@@ -9,6 +9,8 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'verifier'))
 import lean_translate
+from lean_env import lean_environment
+LAKE, LAKE_ENV = lean_environment()
 
 
 class GlobalStateTests(unittest.TestCase):
@@ -25,9 +27,9 @@ example : oddChecks 997 0 4 = true := by decide
         with tempfile.TemporaryDirectory() as directory:
             lean = Path(directory) / 'Certificate.lean'
             lean.write_text(source)
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+            result = subprocess.run([LAKE, 'env', 'lean', str(lean)],
                                     text=True, capture_output=True, cwd=ROOT, timeout=30,
-                                    env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')))
+                                    env=LAKE_ENV)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_differential_protocol_keeps_global_state(self):
@@ -173,9 +175,9 @@ unsigned Number::modulus = 7;
                             + (ROOT / 'tests/lean/modint_arithmetic_contract.lean').read_text()
                             + (ROOT / 'tests/lean/modint_power_contract.lean').read_text()
                             + (ROOT / 'tests/lean/modint_globals_contract.lean').read_text())
-            result = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', str(lean)],
+            result = subprocess.run([LAKE, 'env', 'lean', str(lean)],
                                     text=True, capture_output=True, cwd=ROOT, timeout=60,
-                                    env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')))
+                                    env=LAKE_ENV)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_class_array_default_construction_and_assignment(self):
@@ -222,9 +224,9 @@ def main : IO Unit := do
             scratch = Path(directory)
             driver = scratch / 'Driver.lean'
             driver.write_text(model + main)
-            lean = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(driver)],
+            lean = subprocess.run([LAKE, 'env', 'lean', '--run', str(driver)],
                                   text=True, capture_output=True, cwd=ROOT, timeout=60,
-                                  env=dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan')))
+                                  env=LAKE_ENV)
             self.assertEqual(lean.returncode, 0, lean.stdout + lean.stderr)
             self.assertEqual(lean.stdout, '35\n14\n4\n')
             cpp = scratch / 'driver.cpp'
@@ -284,9 +286,9 @@ def main : IO Unit := do
             self.assertIn('def cp.unrelated (value : Int) : Cpp.M Int', model)
             driver = scratch / 'Driver.lean'
             driver.write_text(model + lean_main)
-            env = dict(os.environ, ELAN_HOME=str(ROOT / '.tools/elan'),
+            env = dict(LAKE_ENV,
                        ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
-            lean = subprocess.run([str(ROOT / '.tools/elan/bin/lake'), 'env', 'lean', '--run', str(driver)],
+            lean = subprocess.run([LAKE, 'env', 'lean', '--run', str(driver)],
                                   text=True, capture_output=True, cwd=ROOT, env=env, timeout=60)
             self.assertEqual(lean.returncode, 0, lean.stdout + lean.stderr)
             cpp = scratch / 'driver.cpp'

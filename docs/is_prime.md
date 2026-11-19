@@ -21,7 +21,7 @@
 
 ## 検証（新方式、`docs/translation.md`）
 
-`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/IsPrime.lean` を生成し、`Proofs/Cpp/IsPrime.lean` が 5 つの関数を証明する（`unsigned long long` の全値）。数学側は `Proofs/IsPrimeMath.lean`（旧 `Proofs/IsPrimeMr.lean` の純粋な部分: `wrun`/`mrwx`/`mrb`、素数に witness はない `mrwx_prime`、`badBase`、`MRWitnessSet`）と `Proofs/Fermat.lean`。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/IsPrime.lean` を生成し、`Proofs/Cpp/IsPrime.lean` が 5 つの関数を証明する（`unsigned long long` の全値）。数学側は `Proofs/Math/IsPrimeMath.lean`（旧 `Proofs/IsPrimeMr.lean` の純粋な部分: `wrun`/`mrwx`/`mrb`、素数に witness はない `mrwx_prime`、`badBase`、`MRWitnessSet`）と `Proofs/Math/Fermat.lean`。
 - `mul_mod_spec`: `a < m` のとき返り値は `a * b mod m`、tick 数はちょうど `2 + bitWidth b`。ループ不変条件は `r, x < m` と `(r + x * y) mod m = a * b mod m`。`r + x` は `r >= m - x` のときだけ `r - (m - x)` にする（`addmod_ge`/`addmod_lt`）。
 - `pow_mod_spec`: `x < m`、`2 <= m` のとき返り値は `x^y mod m`、tick 数はちょうど `1 + powLoop m x y`（`powLoop m b e <= 1 + 133 * bitWidth e`）。
 - `mr_base_wp`: 返り値は `mrb i`（`i >= 0`）。11 個の `if` は `i` の値で場合分けする（`mr_base_eq`）。

@@ -13,8 +13,8 @@
 結果（`Proofs/Cpp/Dijkstra.lean` の `dijkstra_correct`、一般の入力について証明）: 初期の `dist` を `d0` とする。
 - 健全性: `dist[v] != inf` なら、`d0[w] != inf` の頂点 `w` から `v` へのウォークがあり、`dist[v]` は `d0[w]` にそのウォークのコストを足した値に等しい。
 - 完全性: `inf` が「`d0[w]` ＋ 任意のウォークのコスト」より大きいとき（ウォークの長さは問わない）、`w` から `v` への任意のウォーク（コスト `c`）について `dist[v] ≤ d0[w] + c`。したがって `dist[v]` は最短距離に等しい。
-- 親: 各 `v` について `parent[v]` は初期値のままか、確定した頂点 `u = parent[v]`（`done[u] = 1`）から `v` への辺があり `dist[v] = dist[u] + その辺のコスト` が成り立つ（`ParInv`、`Proofs/DijkstraPMath.lean`）。
-- 証明は `Proofs/DijkstraMath.lean`（確定した頂点の集合 `D` についての不変条件 `Dj`: 確定した頂点の `dist` は最短で、確定していない頂点の `dist` は確定した頂点からの辺で緩和済み、確定した頂点の `dist` は確定していない頂点のものより小さい）、`Proofs/DijkstraScan.lean`（最小値の探索ループ）、`Proofs/DijkstraExec.lean`（緩和ループと外側のループ）、`Proofs/DijkstraPMath.lean`（親の更新と不変条件）、`Proofs/DijkstraPrepare.lean`/`Proofs/DijkstraCall.lean`（呼び出し。vector は 6 本）。
+- 親: 各 `v` について `parent[v]` は初期値のままか、確定した頂点 `u = parent[v]`（`done[u] = 1`）から `v` への辺があり `dist[v] = dist[u] + その辺のコスト` が成り立つ（`ParInv`、`Proofs/Math/DijkstraPMath.lean`）。
+- 証明は `Proofs/Math/DijkstraMath.lean`（確定した頂点の集合 `D` についての不変条件 `Dj`: 確定した頂点の `dist` は最短で、確定していない頂点の `dist` は確定した頂点からの辺で緩和済み、確定した頂点の `dist` は確定していない頂点のものより小さい）、`Proofs/DijkstraScan.lean`（最小値の探索ループ）、`Proofs/DijkstraExec.lean`（緩和ループと外側のループ）、`Proofs/Math/DijkstraPMath.lean`（親の更新と不変条件）、`Proofs/DijkstraPrepare.lean`/`Proofs/DijkstraCall.lean`（呼び出し。vector は 6 本）。
 
 時間と領域: 外側 `n` 周、各周で `n` 個の探索と選んだ頂点の出辺の緩和で、tick 数は `1 + n (1 + n) + W` 以下、`W`（確定した頂点の出辺の数の和）は `m = head[n]` 以下（`W_eq` と出次数の和）。全体で `O(n^2 + m)`。追加領域は局所変数だけ。
 
@@ -25,6 +25,6 @@
 
 ## 検証（新方式、`docs/translation.md`）
 
-`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/Dijkstra.lean` を生成する。`Proofs/Cpp/Dijkstra.lean` は `Cost = long long`（Lean では `Int`）について、翻訳した関数の配列が純関数モデル（`Proofs/DijkstraMath.lean` の `djIter`、`Proofs/DijkstraPMath.lean` の `pIter`）の状態に `[0, n)` 上で一致することを示す（`Rel`。最小値の走査は `scan_vc` と `picked`、辺 1 本の緩和は `relax_vc`、頂点の確定は `step_some`/`step_none`）。初期値 `d0` は `[0, n)` の外で `inf` とする（モデルの前提 `d0 w < inf → w < n` のため。配列との対応は `[0, n)` だけで決まる）。上の健全性・完全性・親の性質は、このモデルについての `dijkstra_spec`・`pIter_inv` から従う（`dijkstra_correct`）。
+`verifier/lean_translate.py` がヘッダから `Proofs/Cpp/Gen/Dijkstra.lean` を生成する。`Proofs/Cpp/Dijkstra.lean` は `Cost = long long`（Lean では `Int`）について、翻訳した関数の配列が純関数モデル（`Proofs/Math/DijkstraMath.lean` の `djIter`、`Proofs/Math/DijkstraPMath.lean` の `pIter`）の状態に `[0, n)` 上で一致することを示す（`Rel`。最小値の走査は `scan_vc` と `picked`、辺 1 本の緩和は `relax_vc`、頂点の確定は `step_some`/`step_none`）。初期値 `d0` は `[0, n)` の外で `inf` とする（モデルの前提 `d0 w < inf → w < n` のため。配列との対応は `[0, n)` だけで決まる）。上の健全性・完全性・親の性質は、このモデルについての `dijkstra_spec`・`pIter_inv` から従う（`dijkstra_correct`）。
 
 差分テスト（`tests/diff/dijkstra.py`、始点 1〜2 個）と C++ のテスト `tests/dijkstra.cpp` で翻訳と実装を確かめる。

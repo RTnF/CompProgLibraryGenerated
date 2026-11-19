@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
-from test_scalar_ir import lean_environment
+from lean_env import lean_environment
 from offline import disable_network
 ROOT = Path(__file__).resolve().parent.parent
 PROOF = '''import Proofs.Cpp.Group

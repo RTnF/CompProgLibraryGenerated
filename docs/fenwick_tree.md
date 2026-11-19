@@ -21,12 +21,12 @@
 
 - `init_0_spec`: `FenwickTree()` は空の配列を表す。1 tick。
 - `init_int_spec`: `FenwickTree(n)` は `n` 個の 0 を表す（`T()` が 0 であることを仮定）。`n + 2` tick。
-- `init_vec_spec`: `FenwickTree(v)` は `A j = v[j]` を表す。`3 n + 2` tick 以下。2 番目のループの不変条件は `Proofs/FenwickBuildMath.lean` の被覆範囲 `Wc` を使う（`BuildInv`、`build_step`）。
+- `init_vec_spec`: `FenwickTree(v)` は `A j = v[j]` を表す。`3 n + 2` tick 以下。2 番目のループの不変条件は `Proofs/Math/FenwickBuildMath.lean` の被覆範囲 `Wc` を使う（`BuildInv`、`build_step`）。
 - `sum_spec`: `sum(r)` は `A 0 + ... + A (r - 1)` を返し、木を変えない。tick 数は `stepsS r + 2`（`log2 n + 3` 以下）。
 - `sum_range_spec`: `sum(l, r)` は `A l + ... + A (r - 1)`。`2 log2 n + 7` tick 以下。
 - `add_spec`: `0 <= i < n` のとき、`add(i, val)` の後の木は `A i += val` を表す。tick 数は `stepsA (n + 1) (i + 1) + 2`（`log2 (n + 1) + 3` 以下）。
 
-`i & -i` が最下位ビット `lowb i` であることは `Proofs/Cpp/Lib/Lowbit.lean`、`lowb` の性質と反復回数の上界は `Proofs/FenwickMath.lean` による。すべての定理は停止（結果が得られること）を含む。
+`i & -i` が最下位ビット `lowb i` であることは `Proofs/Cpp/Lib/Lowbit.lean`、`lowb` の性質と反復回数の上界は `Proofs/Math/FenwickMath.lean` による。すべての定理は停止（結果が得られること）を含む。
 
 差分テスト（`tests/diff/fenwick_tree.py`、`T = long long` と `T = int`、前提を満たす乱択操作）と C++ のテスト（`tests/fenwick_tree.cpp`、素朴な累積和と元のクラスの逐語コピーとの比較、`+` を持たない型の具体化）で翻訳と実装を確かめる。
 
