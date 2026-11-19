@@ -46,7 +46,7 @@ def check_component(name, timeout=None):
     if not cases.strip():
         raise ValueError(f"no differential test commands for {name}")
     for instance in metadata["diff"]["instances"]:
-        count = diff_harness.run_diff(source, instance, model_module(metadata["model"]), cases, timeout, deps, standard)
+        count = diff_harness.run_diff(source, instance, model_module(metadata["model"]), cases, timeout, deps, standard, metadata["diff"].get("calls"))
         print(f"differential test of {name} with {instance}: {count} outputs agree")
     print(f"C++ header, translated Lean model and differential test match: {name}")
 

@@ -67,6 +67,7 @@ class MonoidLazyOriginalApiTests(unittest.TestCase):
         nested=public[public.index('\n',public.index('compares the two token by token'))+1:]
         nested=nested[:nested.index('template struct RangeSum<long long>;')]
         # The only differences are std:: qualification and the spelling of `ll`.
+        nested=re.sub(r'\busing std::(?:min|max);','',nested)
         normalised=re.sub(r'\bstd::','',nested).replace('long long','ll')
         self.assertEqual(normalised.split(),re.sub(r'\bstd::','',original).split())
         self.assertGreater(start,0)

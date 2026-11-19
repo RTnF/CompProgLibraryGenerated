@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <type_traits>
 #include <vector>  // the common nested generator audits the standard vector declarations of every source
@@ -76,7 +77,8 @@ template <class T = long long> struct RangeAddRangeMaxMin {
     RangeMax() : RangeMax(e()) {}
     static RangeMax e() { if constexpr (std::is_floating_point_v<T>) { return std::numeric_limits<T>::has_infinity ? -std::numeric_limits<T>::infinity() : std::numeric_limits<T>::lowest(); } else { return std::numeric_limits<T>::min(); } }
     friend RangeMax op(const RangeMax &a, const RangeMax &b) {
-      return std::max(a.x, b.x);
+      using std::max;
+      return max(a.x, b.x);
     }
   };
   struct RangeMin {
@@ -85,7 +87,8 @@ template <class T = long long> struct RangeAddRangeMaxMin {
     RangeMin() : RangeMin(e()) {}
     static RangeMin e() { if constexpr (std::is_floating_point_v<T>) { return std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity() : std::numeric_limits<T>::max(); } else { return std::numeric_limits<T>::max(); } }
     friend RangeMin op(const RangeMin &a, const RangeMin &b) {
-      return std::min(a.x, b.x);
+      using std::min;
+      return min(a.x, b.x);
     }
   };
   struct RangeAdd {
@@ -128,7 +131,8 @@ template <class T = long long> struct RangeSetRangeMaxMin {
     RangeMax() : RangeMax(e()) {}
     static RangeMax e() { if constexpr (std::is_floating_point_v<T>) { return std::numeric_limits<T>::has_infinity ? -std::numeric_limits<T>::infinity() : std::numeric_limits<T>::lowest(); } else { return std::numeric_limits<T>::min(); } }
     friend RangeMax op(const RangeMax &a, const RangeMax &b) {
-      return std::max(a.x, b.x);
+      using std::max;
+      return max(a.x, b.x);
     }
   };
   struct RangeMin {
@@ -137,7 +141,8 @@ template <class T = long long> struct RangeSetRangeMaxMin {
     RangeMin() : RangeMin(e()) {}
     static RangeMin e() { if constexpr (std::is_floating_point_v<T>) { return std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity() : std::numeric_limits<T>::max(); } else { return std::numeric_limits<T>::max(); } }
     friend RangeMin op(const RangeMin &a, const RangeMin &b) {
-      return std::min(a.x, b.x);
+      using std::min;
+      return min(a.x, b.x);
     }
   };
   struct RangeSet {
@@ -184,5 +189,12 @@ template struct RangeSet<long long>;
 template RangeSum<long long> op(const RangeSum<long long> &, const RangeSum<long long> &);
 template RangeAdd<long long> compose(const RangeAdd<long long> &, const RangeAdd<long long> &);
 template RangeSet<long long> compose(const RangeSet<long long> &, const RangeSet<long long> &);
+
+namespace monoid_lazy {
+template <class T = std::int64_t> using RangeAddRangeMaxMin = cp::RangeAddRangeMaxMin<T>;
+template <class T = std::int64_t> using RangeAddRangeSum = cp::RangeAddRangeSum<T>;
+template <class T = std::int64_t> using RangeSetRangeMaxMin = cp::RangeSetRangeMaxMin<T>;
+template <class T = std::int64_t> using RangeSetRangeSum = cp::RangeSetRangeSum<T>;
+} // namespace monoid_lazy
 
 } // namespace cp

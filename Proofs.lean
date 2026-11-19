@@ -614,3 +614,6 @@ import Proofs.Cpp.Lib.DynamicModIntFactorial
 import Proofs.LegacyScalarPrepare
 import Proofs.Cpp.DynamicModint
 import Proofs.Cpp.RollingHash
+import Proofs.Cpp.MonoidLazy
+import Proofs.Generated.MonoidLazy
+import Proofs.Cpp.Lib.DependentOperations

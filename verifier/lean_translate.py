@@ -239,6 +239,13 @@ def lean_type(ty: Ty) -> str:
         return "Cpp.OStream"
     if ty.kind == "tparam":
         return ty.name
+    if ty.kind == "field_value":
+        return f'(Cpp.ReadField.Value (member := "{ty.name}") (Record := {lean_type(ty.args[0])}))'
+    if ty.kind in ("add_result", "mul_result", "conditional_result"):
+        cls = {"add_result": "AddResult", "mul_result": "MulResult",
+               "conditional_result": "ConditionalResult"}[ty.kind]
+        left, right = (lean_type(a) for a in ty.args)
+        return f"(Cpp.{cls}.Value (Left := {left}) (Right := {right}))"
     if ty.kind == "vparam":
         return lean_name(ty.name)
     if ty.kind == "vlit":
@@ -446,7 +453,7 @@ class Requirements:
             self.items.append(item)
 
 
-ORDER = ["Cpp.Streams", "Cpp.TypeTraits", "Inhabited", "Zero", "One", "NatCast", "IntCast", "Add", "Sub", "Mul", "Neg", "Div", "Mod", "LT", "LE",
+ORDER = ["Cpp.Streams", "Cpp.TypeTraits", "Cpp.ReadField", "Cpp.MulResult", "Cpp.AddResult", "Cpp.ConditionalResult", "Inhabited", "Zero", "One", "NatCast", "IntCast", "Add", "Sub", "Mul", "Neg", "Div", "Mod", "LT", "LE",
          "DecidableLT", "DecidableLE", "DecidableEq", "Min", "Max"]
 
 
@@ -661,6 +668,9 @@ class Fn:
     def convert(self, text, ty, expected, node=None):
         if expected is None or ty == expected:
             return text, (expected if expected is not None and ty.kind == expected.kind == "int" else ty)
+        if ty.kind in ("add_result", "mul_result", "conditional_result") and expected.kind == "tparam":
+            self.reqs.add(f"Cpp.Conv {lean_type(ty)} {expected.name}")
+            return f"(Cpp.Conv.conv {text} : {expected.name})", expected
         if ty.kind == "tparam" and expected.kind == "tparam":
             # the implicit conversion of a template parameter T to another one S (whatever C++ does for the instance)
             self.reqs.add(f"Cpp.Conv {ty.name} {expected.name}")
@@ -783,6 +793,10 @@ class Fn:
                     for fname, fty, _ in info.fields:
                         if fname == member:
                             return f"{t}.{lean_name(fname)}", subst(fty, info.tparams, bty.args)
+                if (bty.kind == "tparam" and bty.name in self.sig.tparams and member
+                        and not n.get("isArrow") and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", member)):
+                    self.reqs.add(f'Cpp.ReadField "{member}" {lean_type(bty)}')
+                    return f'(Cpp.ReadField.read (member := "{member}") {t})', Ty("field_value", member, (bty,))
             raise Unsupported("member access without call")
         if kind == "ArraySubscriptExpr" or (kind == "CXXOperatorCallExpr" and self.operator_name(n) == "[]"):
             base, index = self.subscript_parts(n)
@@ -878,6 +892,20 @@ class Fn:
             sub_pre_t, sub_pre_e = [], []
             ct, _ = self.expr(c, pre, BOOL)
             tt, tty = self.expr(t, sub_pre_t)
+            if not sub_pre_t and expected is not None and expected.kind == "tparam" and tty.kind == "tparam":
+                e_ast = strip(e)
+                type_text = e_ast.get("type", {}).get("qualType", "")
+                right_type = type_text if type_text in self.sig.tparams or (
+                    self.cls is not None and type_text in self.cls.tparams) else None
+                if right_type and right_type != tty.name:
+                    et, ety = self.expr(e, sub_pre_e)
+                    if sub_pre_e:
+                        raise Unsupported("a call inside a conditional operator branch")
+                    left, right = lean_type(tty), lean_type(ety)
+                    self.reqs.add(f"Cpp.ConditionalResult {left} {right}")
+                    return (f"(if {ct} then Cpp.ConditionalResult.left (Right := {right}) {tt} "
+                            f"else Cpp.ConditionalResult.right (Left := {left}) {et})",
+                            Ty("conditional_result", args=(tty, ety)))
             et, ety = self.expr(e, sub_pre_e, tty if tty.kind != "int" else None)
             if sub_pre_t or sub_pre_e:
                 raise Unsupported("a call inside a conditional operator branch")
@@ -930,6 +958,15 @@ class Fn:
         if aty.kind in ("istream", "ostream"):
             return self.stream_shift(op, a, at, aty, b, pre)
         bt, bty = self.expr(b, pre)
+        if op == "*" and {aty.kind, bty.kind} == {"int", "tparam"}:
+            count = a if aty.kind == "int" else b
+            if strip(count).get("kind") == "CXXDependentScopeMemberExpr":
+                self.reqs.add(f"Cpp.MulResult {lean_type(aty)} {lean_type(bty)}")
+                return f"(Cpp.MulResult.mul {at} {bt})", Ty("mul_result", args=(aty, bty))
+        if op == "+" and ((aty.kind == "field_value" and bty.kind == "tparam")
+                          or (aty.kind == "tparam" and bty.kind == "mul_result")):
+            self.reqs.add(f"Cpp.AddResult {lean_type(aty)} {lean_type(bty)}")
+            return f"(Cpp.AddResult.add {at} {bt})", Ty("add_result", args=(aty, bty))
         if aty.kind == "cls" or bty.kind == "cls":
             return self.class_binary(op, a, at, aty, b, bt, bty, pre, callee)
         return self.arith(op, at, aty, a, bt, bty, b)
@@ -1665,12 +1702,18 @@ class Fn:
             if ty is None:
                 raise Unsupported(f"unknown variable {name}")
             return (self.var_name(name), [], ty, ty)
-        if kind == "CXXDependentScopeMemberExpr" and n.get("member") in ("first", "second") and inner(n):
+        if kind == "CXXDependentScopeMemberExpr" and inner(n) and not n.get("isArrow"):
             root, path, rty, bty = self.lvalue(inner(n)[0])
-            if bty.kind != "pair":
-                raise Unsupported("member of a non-pair")
-            i = 0 if n["member"] == "first" else 1
-            return (root, path + [("pair", i)], rty, bty.args[i])
+            member = n.get("member")
+            if bty.kind == "pair" and member in ("first", "second"):
+                i = 0 if member == "first" else 1
+                return (root, path + [("pair", i)], rty, bty.args[i])
+            if bty.kind == "cls":
+                info = self.tr.classes[bty.name]
+                for fname, fty, _ in info.fields:
+                    if fname == member:
+                        return (root, path + [("field", lean_name(fname))], rty, subst(fty, info.tparams, bty.args))
+            raise Unsupported("unrecognized dependent assignment field")
         if kind in ("CallExpr", "CXXMemberCallExpr") and len(inner(n)) == 1:
             callee = strip(inner(n)[0])
             if callee.get("kind") in ("MemberExpr", "CXXDependentScopeMemberExpr") and \
@@ -1935,7 +1978,17 @@ class Fn:
         if kind == "BinaryOperator" and n["opcode"] == "=":
             lhs, rhs = inner(n)
             target = self.lvalue(lhs)
-            value, _ = self.expr(rhs, pre, target[3])
+            if target[3].kind == "tparam" and strip(rhs).get("kind") == "BinaryOperator" \
+                    and strip(rhs).get("opcode") == "*":
+                value, value_type = self.expr(rhs, pre)
+                if value_type.kind == "mul_result":
+                    ty = lean_type(target[3])
+                    self.reqs.add(f"Cpp.AssignResult {ty} {lean_type(value_type)}")
+                    value = f"(Cpp.AssignResult.assign {self.read_lvalue(target)} {value})"
+                else:
+                    value, _ = self.convert(value, value_type, target[3], rhs)
+            else:
+                value, _ = self.expr(rhs, pre, target[3])
             if target[3].kind == "vec" and self.is_lvalue_vector(rhs):
                 pre.append(f"Cpp.tickN {value}.size")
             self.flush(pre)
@@ -2216,7 +2269,7 @@ class Fn:
         if not isinstance(node, dict):
             return out
         kind = node.get("kind")
-        def root(n):
+        def root(n, dependent=False):
             """The changed variable; `v[]` when only elements of `v` change (its size does not)."""
             n = strip_casts(n)
             element = False
@@ -2224,10 +2277,10 @@ class Fn:
                 k = n.get("kind")
                 if k == "DeclRefExpr":
                     return n["referencedDecl"]["name"] + ("[]" if element else "")
-                if k == "MemberExpr":
+                if k == "MemberExpr" or (dependent and k == "CXXDependentScopeMemberExpr" and inner(n) and not n.get("isArrow")):
                     b = strip(inner(n)[0])
                     if b.get("kind") == "CXXThisExpr":
-                        return "this." + n["name"] + ("[]" if element else "")
+                        return "this." + (n.get("name") or n["member"]) + ("[]" if element else "")
                     n = b
                     continue
                 if k == "ArraySubscriptExpr":
@@ -2252,14 +2305,14 @@ class Fn:
                     if op == ">>":
                         out.add(root(inner(node)[1 if kind == "BinaryOperator" else 2]))
         if kind in ("BinaryOperator",) and node.get("opcode") == "=":
-            out.add(root(inner(node)[0]))
+            out.add(root(inner(node)[0], dependent=True))
         if kind == "CompoundAssignOperator":
-            out.add(root(inner(node)[0]))
+            out.add(root(inner(node)[0], dependent=True))
         if kind == "UnaryOperator" and node.get("opcode") in ("++", "--"):
-            out.add(root(inner(node)[0]))
+            out.add(root(inner(node)[0], dependent=True))
         if kind == "CXXOperatorCallExpr" and self.operator_name(node).endswith("=") and \
                 self.operator_name(node) not in ("==", "!=", "<=", ">="):
-            out.add(root(inner(node)[1]))
+            out.add(root(inner(node)[1], dependent=True))
         if kind in ("CallExpr", "CXXMemberCallExpr"):
             callee = strip(inner(node)[0])
             if callee.get("kind") in ("MemberExpr", "CXXDependentScopeMemberExpr", "UnresolvedMemberExpr") and inner(callee):
@@ -2490,6 +2543,7 @@ class Translator:
         self.external = list(external)   # (decls, source bytes) of the dependencies: callable, not emitted          # list of top-level AST nodes in source order
         self.classes: dict[str, ClassInfo] = {}
         self.aliases: dict[str, Ty] = {}
+        self.nested_record_names = {}
         self.constants: dict[str, tuple[str, Ty, str]] = {}
         self.globals: dict[str, tuple[str, Ty, int | None]] = {}
         self.global_initializers: dict[str, dict] = {}
@@ -2794,7 +2848,7 @@ class Translator:
             if kind == "ClassTemplateDecl":
                 tps, values, constraints = self.template_params(node, allow_constraints=True)
                 rec = next((c for c in inner(node) if c.get("kind") == "CXXRecordDecl" and c.get("completeDefinition")), None)
-                if rec is not None:
+                if rec is not None and not self.collect_record_family(rec, tps, values, constraints):
                     self.collect_class(rec, tps, values, constraints)
             elif kind == "CXXRecordDecl" and node.get("completeDefinition"):
                 self.collect_class(node, [])
@@ -2823,6 +2877,16 @@ class Translator:
                 if re.search(r"[&*]|\b(?:const|volatile)\b", spelling):
                     raise Unsupported("namespace type alias must be an unqualified value type")
                 self.aliases[node.get("lean_cpp_name", node["name"])] = self.ty(spelling)
+            elif kind == "TypeAliasTemplateDecl" and node.get("lean_cpp_name"):
+                params, values, constraints = self.template_params(node)
+                aliases = [n for n in inner(node) if n.get("kind") == "TypeAliasDecl"]
+                family_names = {outer for outer, _ in self.nested_record_names.values()}
+                if len(aliases) != 1 or values or constraints:
+                    raise Unsupported("qualified alias requires a type-only record family")
+                target = type_of_decl(aliases[0]).removeprefix("cp::")
+                primary = target.split("<", 1)[0]
+                if primary not in family_names or target != primary + "<" + ", ".join(params) + ">":
+                    raise Unsupported("qualified alias must forward the record family parameters")
             elif kind in ("TypeAliasTemplateDecl", "FullComment"):
                 pass
             else:
@@ -2894,6 +2958,46 @@ class Translator:
         sig.containers = containers
         self.functions.setdefault(name, []).append(sig)
         self.order.append(("fn", sig))
+
+    def collect_record_family(self, rec, tps, values, constraints):
+        members = [n for n in inner(rec) if n.get("kind") == "CXXRecordDecl" and n.get("completeDefinition")]
+        if not members:
+            return False
+        if (rec.get("tagUsed") != "struct" or rec.get("bases") or values or constraints or not tps
+                or any(n not in members and not n.get("isImplicit") and n.get("kind") != "FullComment"
+                       for n in inner(rec))):
+            raise Unsupported("nested records require a public type-only template family")
+        qualifiers = {n["name"]: rec["name"] + "_" + n["name"] for n in members}
+        if len(qualifiers) != len(members) or set(tps) & qualifiers.keys():
+            raise Unsupported("ambiguous nested record names")
+        global_names = {n.get("name") for n in self.decls}
+        if set(qualifiers.values()) & (global_names | self.classes.keys()):
+            raise Unsupported("nested record model name conflicts with a class")
+        unqualified = {"TypeAliasDecl", "TypedefDecl", "TemplateTypeParmDecl", "EnumDecl"}
+        def reject_shadowing(node):
+            if node.get("kind") in unqualified and node.get("name") in qualifiers:
+                raise Unsupported("shadowing a nested record type")
+            for child in inner(node):
+                reject_shadowing(child)
+        for member in members:
+            reject_shadowing(member)
+        spelling = re.compile(r"(?<![A-Za-z0-9_:])(" + "|".join(map(re.escape, qualifiers)) + r")\b")
+        args = "<" + ", ".join(tps) + ">"
+        def map_types(value):
+            if isinstance(value, list):
+                return [map_types(x) for x in value]
+            if not isinstance(value, dict):
+                return value
+            return {k: spelling.sub(lambda m: qualifiers[m[0]] + args, v)
+                    if k in ("qualType", "desugaredQualType") and isinstance(v, str)
+                    else map_types(v) for k, v in value.items()}
+        for member in members:
+            cpp_name = member["name"]
+            record = map_types(member)
+            record["name"] = qualifiers[cpp_name]
+            self.collect_class(record, tps)
+            self.nested_record_names[record["name"]] = (rec["name"], cpp_name)
+        return True
 
     def collect_class(self, rec, tps, values=None, constraints=None):
         values = values or {}
@@ -3467,7 +3571,7 @@ def source_decls(source: Path, standard="c++17"):
                     is_function = kind == "FunctionDecl" and not name.startswith("operator") and any(
                         c.get("kind") == "CompoundStmt" for c in inner(node))
                     is_constant = kind == "VarDecl" and re.search(r"\bconst\b", type_of_decl(node))
-                    if not (is_function or is_constant or kind == "TypeAliasDecl"):
+                    if not (is_function or is_constant or kind in ("TypeAliasDecl", "TypeAliasTemplateDecl")):
                         raise Unsupported("child namespaces require free functions, constants or type aliases")
                     node["lean_cpp_name"] = "::".join((*namespace, name))
                 decls.append(node)
@@ -3491,6 +3595,10 @@ def translate_file(source: Path, imports: list[str], deps=(), standard="c++17") 
     decls = source_decls(source, standard)
     tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
     body = tr.translate()
+    dependent = {"Cpp.ReadField", "Cpp.AddResult", "Cpp.MulResult", "Cpp.AssignResult", "Cpp.ConditionalResult"}
+    if any(requirement.split()[0] in dependent
+           for fn in tr.built_functions.values() for requirement in fn.reqs.items):
+        imports = [*imports, "Proofs.Cpp.Lib.DependentOperations"]
     imp = "\n".join(f"import {m}" for m in ["Proofs.Cpp.Prelude", *imports])
     rel = source.resolve().relative_to(ROOT).as_posix() if source.resolve().is_relative_to(ROOT) else source.name
     return HEADER.format(source=rel, imports=imp) + "\n" + body + "\nend Proofs.Cpp.Gen\n"

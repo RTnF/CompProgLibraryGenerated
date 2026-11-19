@@ -1,42 +1,20 @@
 # monoid_lazy
 
-`cp::RangeSum`、`cp::RangeAdd`、`cp::RangeSet` は、遅延セグメント木に使う値と作用である。`experiments/library/cpp/algebraic_structure/monoid_lazy.hpp`（`RangeAddRangeMaxMin`・`RangeAddRangeSum`・`RangeSetRangeMaxMin`・`RangeSetRangeSum`）から作った。
+遅延セグメント木で使う `RangeAddRangeMaxMin`、`RangeSetRangeMaxMin`、`RangeAddRangeSum`、`RangeSetRangeSum` を提供する。元の4ファミリーの既定型 `std::int64_t` を使う場合は `cp::monoid_lazy` から同名のファミリーを選ぶ。従来の `cp::RangeAddRangeSum<>` などは既定型 `long long` のまま利用できる。 `cp::RangeSum`、`cp::RangeAdd`、`cp::RangeSet` も従来の平坦な API を持つ。
 
-- `RangeSum { long long x; int size; }`: 区間の和と長さ。既定値は `(0, 0)`、`op(a, b)` は `(a.x + b.x, a.size + b.size)`。
-- `RangeAdd { long long v; }`: 区間への加算。既定値（恒等）は `v = 0`、`compose(f, g)` は `RangeAdd(f.v + g.v)`、`applyExtremum(m)` は最大値（または最小値）`m` に対する新しい値 `m + v`、`applySumX(x, size)` は和 `x`・長さ `size` の区間の新しい和 `x + size * v`。
-- `RangeSet { long long v; bool noop; }`: 区間への代入。既定値（恒等）は `noop = true`、`compose(f, g)` は `f.noop` なら `g`、そうでなければ `f`（`g` を先に、`f` を後に適用する作用）。`applyExtremum(m)` は `noop` なら `m`、そうでなければ `v`。`applySumX(x, size)` は `noop` なら `x`、そうでなければ `v * size`。
+## 操作と前提
 
-## 元の入れ子API（2026-11-10 に公開側へ追加）
+- 和の値は和 `x` と区間長 `size` を持つ。併合は両成分を加える。加算の更新は `x + size * v`、上書きの更新は `v * size` を `x` に代入し、区間長を保つ。
+- 極値は `min` または `max` で併合する。既定の値は型の最小値・最大値を利用し、対応する浮動小数型では無限大を利用する。更新先 `M` を指定できる。加算では `x.x + v` が `M` に変換できること、上書きでは元の三項演算子と戻り値変換が有効であることが前提。上書きの無操作でも、異なる算術型では三項演算子の共通型を経由して丸めることがある。
+- `compose(f,g)` は `g` の後に `f` を適用する順序。加算は更新値を加え、上書きは `f` が無操作の場合だけ `g` を選ぶ。
+- 組込み算術の入力と途中の値は、対応する C++ 型の範囲に収まること。ユーザー定義の演算にはモデルで対応する値変換を与える。和の結合・分配の法則は該当する環の性質を満たす場合に適用できる。
 
-`cp::RangeAddRangeMaxMin<T>`・`cp::RangeAddRangeSum<T>`・`cp::RangeSetRangeMaxMin<T>`・`cp::RangeSetRangeSum<T>`（`T` の既定は `long long`）を、元の `experiments/library/cpp/algebraic_structure/monoid_lazy.hpp` と同じ形で公開した。入れ子の `RangeMax`・`RangeMin`・`RangeSum`・`RangeAdd`・`RangeSet`、`e()`・`id()`、hidden friend の `op`・`compose`、`apply`（`RangeMax`/`RangeMin` を受けるメンバーテンプレートと `RangeSum` を返す版）、`RangeSet` の 2 つのコンストラクタを含む。元との違いは `std::numeric_limits`・`std::max`・`std::min` の修飾と、`ll` を `long long` と書いた 2 点だけである（`tests/test_monoid_lazy_original_api.py` が空白を除いたトークン列で原本と一致することを確認する）。以下に述べる平らなクラス（`RangeSum<T>` など）は、これとは別に残した簡便なAPIである。
+要素の演算が定数時間・領域なら、各操作の時間と追加領域は `O(1)`。
 
-検証の範囲: 平らなAPIは従来どおり `Proofs/MonoidLazyCall.lean` が公開モデルを対象に証明する。入れ子のAPIは、変換器の整数型（32/64 bit の符号付き/なし。`T = int`・`unsigned int`・`long long`・`unsigned long long`、`long`/`unsigned long` は同じ型）の全部について、元ヘッダーから生成したモデルが Lean の任意型 `ty` の族（`Proofs/GenericLazy.lean`・`GenericCall.lean`・`GenericExtrema.lean`・`Proofs/MonoidLazyGeneric/`）と一致することを `tests/test_generic_family_*.py`（31本）で検査し、族について、任意の呼び出し元の全フィールド・既存のscalar/vectorの保持・IR仕事量を証明している。和と積は符号付き型では範囲外なら fault（`raw_sum_overflow_faults` など）、符号なし型では `2^width` で折り返す。残る未検証: `T` が `short`/`char`/`double` の場合（変換器が未対応、浮動小数の基盤は別途）、C++ の厳密なオブジェクト寿命（コピー・破棄の回数）。
+## 検証
 
-元のソースからの変更（元APIとコピー効果の差が未解消）:
+公開 C++ ヘッダから `Proofs/Cpp/Gen/MonoidLazy.lean` を生成する。 `Proofs/Cpp/MonoidLazy.lean` は構築、単位元、併合、更新、合成の値・停止・操作回数を証明する。型に依存する式は投影・演算・変換・代入の契約に分ける。差分実行と ASan/UBSan 付き C++ テストは負の長さ、丸め、異なる結果型の演算や既存値に依存する代入を扱う。
 
-- 型Tはクラステンプレートのまま保持し、検証した具体化はlong longである。`e()` と `id()` は既定コンストラクタに置き換えた。`numeric_limits` は使わない。
-- 元の値モノイド `RangeMax`・`RangeMin` は `monoid.hpp` の `MonoidMax`・`MonoidMin`（同一の定義）に統合した（重複の整理）。`RangeSum` だけをここに置く。
-- `apply` は値の型ごとに 1 つのメンバー関数にした: `applyExtremum`（元の `RangeMax`・`RangeMin` への 2 つの具体化は同じ式）と `applySumX`（元は `RangeSum` を返すが、長さは変わらないので新しい和だけを返す）。
-- `RangeSet::compose` の `f.noop ? g : f` は、変換器の対象にあわせて `if` と 2 引数コンストラクタで書いた。
+## 元のソースからの変更
 
-前提と結果（`Proofs/MonoidLazyCall.lean`、一般の入力について証明）: 11 個の関数すべて（`RangeSum_op_x`・`RangeSum_op_size`、`RangeAdd_new0`・`new1`・`compose`・`applyExtremum`・`applySumX`、`RangeSet_compose_v`・`compose_noop`・`applyExtremum`・`applySumX`）について、上の結果をそのまま返す。符号付き 64 bit の和・積が桁あふれしないことが前提（桁あふれは契約の外）。`RangeSet` の `noop` は 0 か 1。時間は定数、追加領域は局所変数 3 個以下。
-
-定理に含めていないこと: 結合律・恒等律・「作用が演算と整合する」性質（C++ のテストで確認している）、2 フィールドのクラスのコンストラクタ（`RangeSum`・`RangeSet`。変換器が 1 フィールドのクラスだけを関数として出す）。C++ のテストは `tests/monoid_lazy.cpp`（値の組の全探索で、合成が「先に g、後に f」の逐次適用と一致することを確認する）。
-
-型 `T` はテンプレート引数のままで（`RangeSum<T>`・`RangeAdd<T>`・`RangeSet<T>`、`op<T>`・`compose<T>` は自由関数テンプレート）、検証した具体化は `T = long long`（ヘッダー末尾の明示的な具体化）。元の入れ子の構造体 `RangeAddRangeSum<T>::RangeSum` などは平らなクラステンプレートにした（公開版は入れ子の型に未対応だった旧変換器の制約に合わせた形を保持している）。
-
-2026-11-06の原本比較では、原本のstatic idが公開版になく、RangeSet composeで
-コピーを観測するTに対する効果も異なることを確認した。原本は値引数と返却で3回コピーし、
-公開版はconst参照とTからの再構築で2回となった。入れ子の別型を平らにしたこと、e/idとapplyの
-APIを失ったことも未解消である。上記LLの定理は公開flatモデルを対象とし、
-元のgeneric API全体を検証したものではない。[原本調査](experiments_findings.md)を参照する。
-
-2026-11-09: 原本の入れ子型をそのまま使い、`RangeAddRangeMaxMin<long long>::RangeAdd::apply<M>`を`M=RangeMax/RangeMin`へ具体化した生成モデルでも一般証明を追加した。`original_extrema_add_member_general.lean`は任意の既存メモリP・receiver位置・64bit有効入力x/vについて、x+vが範囲内なら既存prefixを保持し、入力コピー・計算値・返却fieldの全セルを含むraw実行を証明する。IR仕事量は7、必要領域はP.length+10である。`original_extrema_member_prepare.lean`は任意callerから1参照と1値を準備する状態・仕事量5を証明する。登録回帰は両Max/Minで独立kernel各3313宣言とC++/UBSanを通過した。任意T/M・厳密なobject lifetimeと元の公開API復元は未完了である。
-
-AddのMax/Min applyは`original_extrema_add_member_call.lean`で任意callerへの接続も証明した。prepare、本体、結果fieldのcapture・exportを通じ、既存scalarの全値と権限・vectorの内容/参照・スコープを保持し、返却先のconst指定を反映する。仕事量の増分は14以下（prepare5、本体7、export2）。scalar/storage/outer peakの上界もcallerと初期stateから明示する。receiverの可変権限、typed入力、加算の範囲内、frameのwellFormed/権限表/所有スコープ、baseMemory範囲を前提とし、成功した呼出しそのものを前提にはしない。fresh原本モデルを使う登録テストで独立kernelはMax/Min各4079宣言、C++/UBSanと既存Set回帰も成功した。
-
-SetのMax/Min applyも`original_extrema_set_member_general.lean`と`original_extrema_set_member_call.lean`で任意prefix/入力から任意callerのexportまで証明した。noopなら入力recordをコピーし、それ以外はvから構築する選択枝だけを実行し、各scopeの一時セルを除去する。型が有効なv/x/boolを前提とし、加算や乗算の範囲条件は課さない。raw実行のIR仕事量はnoop時9・代入時12、必要領域はP.length+13以下。2参照+1値のprepareは仕事量7、exportも含む総増分は21以下で、既存scalar/vector・権限とconst結果、scopeとpeakを扱う。登録テストのfresh原本Add/Set×Max/Minは、独立kernel4080/4080/4100/4100宣言とC++/UBSanに成功した。任意T/M、厳密identity/lifetimeと公開版の元nested API復元は引き続き未完了である。
-
-2026-11-09: 元nested APIの公開前候補を`experiments/verification/algebraic_structure/monoid_lazy.hpp`に置いた。原本からnamespace/includeだけを変え、4familyと全nested型・hidden friend・e/id・record返却apply、型T/Mを保持する。公開`library/`のflat版はまだ切り替えていない。非自明なTのcopy/assignment/destruction traceと、元4familyの利用例を原本と比較した際、原本Add::idの`return 0`がTへの変換とRangeAddへの変換を重ねてコンパイルに失敗することを確認した。MaxMin/Sumの2か所を`return RangeAdd(0)`へ修正し、旧式だけを戻した負例で両方の失敗を検査する。
-
-修正後の原本と候補に対し、MaxMin applyの既存一般証明をfresh生成モデルから再検査した。両方とも固定kernel4080/4080/4100/4100宣言で成功し、旧frontend AddSum一般caller・両Add compose/id・API/copy回帰も成功した。これはlong longのモデルとnative非自明Tの回帰であり、任意T/MのLean検証・厳密なobject identity/lifetime・候補全体の公開条件は未達である。候補のSum構築/e/op/apply、MaxMin op/e、Add/Set composeにも既存一般証明を接続した。原本と候補が同じ生成・証明経路を使い、候補側でも任意callerの全field・既存scalar/vector・const権限・work/peakを確認する。7tests/507.224秒、固定kernelは原本構築4316、候補構築4316×2、Sum op4086×2、MaxMin op/e4117×4、Add compose4072×2、Set compose4102×2、Sum apply4126/4104で成功し、C++/UBSanと入力hash不変も確認した。1fieldの値構築とRangeAdd::idにも任意caller仕様を追加した。original_scalar_record_constructor_general.leanの12rootsは純粋scalar引数式の評価からfield capture/exportまで扱い、総IR workは引数式nodes+6以下（literalでは7以下）、raw needはP.length+7である。original_scalar_record_zero_factory_general.leanの6rootsはidの32→64bit変換と一時scopeを含め、総IR work9以下を示す。既存scalar/vectorと権限・const結果・scope/peakを保持する。原本/候補のRangeMax/RangeMin/RangeAddの6型ずつをfresh生成し、12回の固定kernel3857/3885宣言、C++/UBSan・入力hash不変で2tests/380.630秒成功。次はRangeSetの2field value/default/id入口を一般化し、任意T/Mと厳密な型・寿命の対応を解消する。
+公開 API は `cp` に置く。元の入れ子クラス構造と汎用の `apply<M>` を保持する。 `min/max` は `using std::min/max` を置いた非修飾呼出しで、引数依存名前探索を利用する。

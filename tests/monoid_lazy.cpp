@@ -1,9 +1,25 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/algebraic_structure/monoid_lazy.hpp"
 #include <climits>
+#include <cstdint>
+#include <type_traits>
 #include <vector>
 
+namespace adl_case {
+struct Value {
+    int value;
+};
+Value max(const Value &, const Value &right) { return right; }
+}  // namespace adl_case
+
 int main() {
+    using OriginalDefault = cp::monoid_lazy::RangeAddRangeSum<>::RangeSum;
+    using ExistingDefault = cp::RangeAddRangeSum<>::RangeSum;
+    static_assert(std::is_same_v<decltype(OriginalDefault::x), std::int64_t>);
+    static_assert(std::is_same_v<decltype(ExistingDefault::x), long long>);
+    using AdlMax = cp::monoid_lazy::RangeAddRangeMaxMin<adl_case::Value>::RangeMax;
+    assert(op(AdlMax(adl_case::Value{5}), AdlMax(adl_case::Value{2})).x.value == 2);
+
     using RangeAdd = cp::RangeAdd<long long>;
     using RangeSet = cp::RangeSet<long long>;
     using RangeSum = cp::RangeSum<long long>;

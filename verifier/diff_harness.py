@@ -448,6 +448,9 @@ class Harness:
     # ------------------------------------------------------------------ C++
     def cpp_class(self, info):
         args = [self.instance[t] for t in info.tparams]
+        if info.name in self.tr.nested_record_names:
+            family, member = self.tr.nested_record_names[info.name]
+            return f"cp::{family}<{', '.join(args)}>::{member}"
         return f"cp::{info.name}" + (f"<{', '.join(args)}>" if args else "")
 
     def cpp_driver(self) -> str:
@@ -791,9 +794,10 @@ class Harness:
         return "\n".join(lines) + "\n"
 
 
-def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None, deps=(), standard="c++17"):
+def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None,
+             deps=(), standard="c++17", calls=None):
     """Run both interpreters on `cases` (command text) and require identical output."""
-    h = Harness(source, instance, lean_module, deps, standard)
+    h = Harness(source, instance, lean_module, deps, standard, calls)
     lake = str(ROOT / ".tools/elan/bin/lake")
     env = os.environ.copy()
     env["ELAN_HOME"] = str(ROOT / ".tools/elan")

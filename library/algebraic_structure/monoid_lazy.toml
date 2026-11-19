@@ -1,14 +1,19 @@
 name = "monoid_lazy"
 source = "algebraic_structure/monoid_lazy.hpp"
 dependencies = []
-translation = "nested_ir"
-lean_namespace = "Proofs.MonoidLazyInstance"
-proof = "Proofs/MonoidLazyCall.lean"
-model = "Proofs/Generated/MonoidLazy.lean"
-bridge = "verifier/nested_bridge.py"
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.MonoidLazy"
+proof = "Proofs/Cpp/MonoidLazy.lean"
+model = "Proofs/Cpp/Gen/MonoidLazy.lean"
+bridge = "verifier/model_bridge.py"
 tests = ["tests/monoid_lazy.cpp"]
 sanitizers = true
 spec = "docs/monoid_lazy.md"
 standard = "c++17"
-source_sha256 = "036d12862ba1ed46e789a217394d364df97685c6c779c03ae9ca231daac64698"
-public_declarations = ["ClassTemplateDecl:RangeAdd", "ClassTemplateDecl:RangeAddRangeMaxMin", "ClassTemplateDecl:RangeAddRangeSum", "ClassTemplateDecl:RangeSet", "ClassTemplateDecl:RangeSetRangeMaxMin", "ClassTemplateDecl:RangeSetRangeSum", "ClassTemplateDecl:RangeSum", "ClassTemplateSpecializationDecl:RangeAdd<long long>", "ClassTemplateSpecializationDecl:RangeSet<long long>", "ClassTemplateSpecializationDecl:RangeSum<long long>", "FunctionTemplateDecl:compose<RangeAdd>", "FunctionTemplateDecl:compose<RangeSet>", "FunctionTemplateDecl:op<RangeSum>"]
+source_sha256 = "556253d2531cc46477ce05051dd62c1799c6d63a437f178f618c7ba623f2561f"
+public_declarations = ["ClassTemplateDecl:RangeAdd", "ClassTemplateDecl:RangeAddRangeMaxMin", "ClassTemplateDecl:RangeAddRangeSum", "ClassTemplateDecl:RangeSet", "ClassTemplateDecl:RangeSetRangeMaxMin", "ClassTemplateDecl:RangeSetRangeSum", "ClassTemplateDecl:RangeSum", "ClassTemplateSpecializationDecl:RangeAdd<long long>", "ClassTemplateSpecializationDecl:RangeSet<long long>", "ClassTemplateSpecializationDecl:RangeSum<long long>", "FunctionTemplateDecl:compose<RangeAdd>", "FunctionTemplateDecl:compose<RangeSet>", "FunctionTemplateDecl:op<RangeSum>", "TypeAliasTemplateDecl:monoid_lazy::RangeAddRangeMaxMin", "TypeAliasTemplateDecl:monoid_lazy::RangeAddRangeSum", "TypeAliasTemplateDecl:monoid_lazy::RangeSetRangeMaxMin", "TypeAliasTemplateDecl:monoid_lazy::RangeSetRangeSum"]
+
+[diff]
+instances = [{T = "long long"}]
+cases = "tests/diff/monoid_lazy.py"
+calls = ["RangeAdd.applyExtremum", "RangeAdd.applySumX", "RangeAdd.init_0", "RangeAdd.init_T", "RangeAddRangeMaxMin_RangeAdd.init", "RangeAddRangeMaxMin_RangeMax.init_0", "RangeAddRangeMaxMin_RangeMax.init_T", "RangeAddRangeMaxMin_RangeMin.init_0", "RangeAddRangeMaxMin_RangeMin.init_T", "RangeAddRangeSum_RangeAdd.init", "RangeAddRangeSum_RangeSum.init_0", "RangeAddRangeSum_RangeSum.init_T_int", "RangeSet.applyExtremum", "RangeSet.applySumX", "RangeSet.init_0", "RangeSet.init_T", "RangeSet.init_T_bool", "RangeSetRangeMaxMin_RangeMax.init_0", "RangeSetRangeMaxMin_RangeMax.init_T", "RangeSetRangeMaxMin_RangeMin.init_0", "RangeSetRangeMaxMin_RangeMin.init_T", "RangeSetRangeMaxMin_RangeSet.init_0", "RangeSetRangeMaxMin_RangeSet.init_T", "RangeSetRangeSum_RangeSet.init_0", "RangeSetRangeSum_RangeSet.init_T", "RangeSetRangeSum_RangeSum.init_0", "RangeSetRangeSum_RangeSum.init_T_int", "RangeSum.init_0", "RangeSum.init_T_int", "compose_RangeAddRangeMaxMin_RangeAdd_RangeAddRangeMaxMin_RangeAdd", "compose_RangeAddRangeSum_RangeAdd_RangeAddRangeSum_RangeAdd", "compose_RangeAdd_RangeAdd", "compose_RangeSetRangeMaxMin_RangeSet_RangeSetRangeMaxMin_RangeSet", "compose_RangeSetRangeSum_RangeSet_RangeSetRangeSum_RangeSet", "compose_RangeSet_RangeSet", "op_RangeAddRangeMaxMin_RangeMax_RangeAddRangeMaxMin_RangeMax", "op_RangeAddRangeMaxMin_RangeMin_RangeAddRangeMaxMin_RangeMin", "op_RangeAddRangeSum_RangeSum_RangeAddRangeSum_RangeSum", "op_RangeSetRangeMaxMin_RangeMax_RangeSetRangeMaxMin_RangeMax", "op_RangeSetRangeMaxMin_RangeMin_RangeSetRangeMaxMin_RangeMin", "op_RangeSetRangeSum_RangeSum_RangeSetRangeSum_RangeSum", "op_RangeSum_RangeSum"]
