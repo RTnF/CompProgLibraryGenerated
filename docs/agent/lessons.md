@@ -1,5 +1,10 @@
 # 作業上の教訓
 
+## 2026-11-21: メモリ不足でWSLを落とさない
+
+- 開発機のWSL2はswapがなく、cgroup・sudo・systemdのユーザーバスも使えない。`ulimit -v`はLeanのolean mmapを壊し、`lean -M`は11 GiBの暴走を止められなかった。重いLean・コンパイルは`tools/memguard.py`の監視下で動かす。空きメモリ（MemAvailable）とプロセスグループのRSSを監視し、閾値を越えたらグループをSIGTERM、続いてSIGKILLで止める。`check_public.py`と`process_supervisor.py`は組込み済み。単発の実行は`python3 tools/memguard.py [--max-rss-mb N] -- cmd`を使う。
+- 停止されたら上限を上げずに、証明の形を直す。mvcgenが作る多数のVCに`simp +zetaDelta ... at *`をかけると、`__do_jp`のletが全仮定に展開されて爆発する。
+
 ## 2026-11-08: recordの条件付き返却は選んだ全fieldをコピーする
 
 - 返却式がconditionalでも、外側はimplicit copy constructorになり得る。実ASTのconstructor signature・NoOp const化・lvalue分類と各parameter/fieldの宣言を確認する。値構成子で再構築するとnoop等の状態を落とす。

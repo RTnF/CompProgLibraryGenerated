@@ -10,6 +10,8 @@ import sys
 import tempfile
 import time
 
+import memguard
+
 PR_SET_PDEATHSIG = 1
 PR_SET_CHILD_SUBREAPER = 36
 
@@ -105,7 +107,7 @@ def main():
             raise subprocess.TimeoutExpired(command, 0)
         root = subprocess.Popen(command, start_new_session=True)
         remaining = None if args.deadline == 'none' else float(args.deadline)-time.monotonic()
-        result['returncode'] = root.wait(timeout=remaining)
+        result['returncode'] = memguard.wait(root, timeout=remaining, label=command[:3])
         result['reason'] = None
     except subprocess.TimeoutExpired:
         result['reason'] = 'timeout'

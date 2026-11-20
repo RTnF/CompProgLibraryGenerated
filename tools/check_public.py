@@ -13,6 +13,7 @@ import time
 
 import check_cache
 import ci_shards
+import memguard
 from public import ROOT, TEMPLATE, include_check, registry, repo_file, support_registry
 from offline import disable_network
 
@@ -38,7 +39,7 @@ def run(command, **kwargs):
     remaining = remaining_seconds()
     with subprocess.Popen(command, cwd=ROOT, start_new_session=True, **kwargs) as child:
         try:
-            code = child.wait(timeout=remaining)
+            code = memguard.wait(child, timeout=remaining, label=command[:3])
         except BaseException as error:
             try:
                 os.killpg(child.pid, signal.SIGKILL)

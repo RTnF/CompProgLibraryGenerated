@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import public
 import check_public
 import process_supervisor as supervisor
+import memguard
 import ci_check_cache
 import ci_shards
 from offline import disable_network
@@ -27,6 +28,18 @@ WORKER_SOURCE='from pathlib import Path\nimport json,os,subprocess,sys,time\nmar
 
 
 class SupportTests(unittest.TestCase):
+    def test_memguard_stops_a_group_over_its_memory_bound(self):
+        # The grandchild in the same group holds the memory; the whole group must stop.
+        hog = "import subprocess,sys;subprocess.run([sys.executable,'-c','a=bytearray(300<<20);import time;time.sleep(30)'])"
+        child = subprocess.Popen([sys.executable, '-c', hog], start_new_session=True)
+        started = time.monotonic()
+        with self.assertRaises(memguard.MemoryGuardError):
+            memguard.wait(child, timeout=20, reserve=0, max_rss=100 << 20)
+        self.assertLess(time.monotonic() - started, 15)
+        self.assertEqual(memguard.group_rss_bytes(child.pid), 0)
+        ok = subprocess.Popen([sys.executable, '-c', 'pass'], start_new_session=True)
+        self.assertEqual(memguard.wait(ok, timeout=20, reserve=0, max_rss=100 << 20), 0)
+
     def test_ci_checkpoint_revalidates_inputs_and_never_restores_the_final_audit(self):
         with tempfile.TemporaryDirectory(prefix='ci-checkpoint-') as directory:
             scratch = Path(directory)
