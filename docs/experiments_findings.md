@@ -261,3 +261,7 @@ const/mutableの両targetで旧scalar memory/binding/slotと既存scalar読取�
 ## 2026-11-19: SegmentTree の `n = 0` での `product_all`（前提に含める、未修正）
 
 `experiments/library/cpp/segment_tree/segment_tree.hpp` で `n = 0` のとき `n_node = 0`、`node` は空になり、`product_all()` が `node[1]` を読む（範囲外、未定義動作）。公開版 `library/segment_tree/segment_tree.hpp` も元のままで、`product_all` の前提を `n ≥ 1` とした（`Proofs/Cpp/SegmentTree.lean` の `product_all_spec`、`docs/segment_tree.md`）。`product(0, 0)` と探索は `n = 0` でも正しい。
+
+## 2026-11-20: LazySegmentTree の `n = 0` での `product_all` と、余りの葉への作用（前提に含める、未修正）
+
+`experiments/library/cpp/segment_tree/lazy_segment_tree.hpp` は `SegmentTree` と同じく `n = 0` で `product_all()` が空の `node` の `node[1]` を読む。公開版も元のままで、前提を `n ≥ 1` とした（`product_all_spec`）。また `push` は節点のタグを両方の子に作用させるので、`n_node` までの余りの葉（値 `e()`）にも `apply` が働く。`monoid_lazy.hpp` の `RangeAddRangeMaxMin` は `e()` が整数の最小値・最大値なので、区間加算で `e() + v` が溢れる（`tests/lazy_segment_tree.cpp` の UBSan で確認）。公開版は元のままで、`apply` が `e()` を含む全ての値で定義されることを前提にした（`docs/lazy_segment_tree.md`）。

@@ -1547,6 +1547,17 @@ class Fn:
             if name == "size" and not args:
                 return f"(UInt64.ofInt (Cpp.size {bt}))", U64
             raise Unsupported(f"string::{name}")
+        if bty.kind == "tparam" and self.cls is not None and bty.name in self.cls.tparams and len(args) == 1 \
+                and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name):
+            # `f.name(x)` for a value of a class template parameter type: the member of the actual argument, an
+            # instance of `Cpp.Method1` (docs/translation.md). The receiver is not changed.
+            at, aty = self.expr(args[0], pre)
+            rty = aty
+            a, r, fty = lean_type(aty), lean_type(rty), lean_type(bty)
+            self.reqs.add(f'Cpp.Method1 "{name}" {fty} {a} {r}')
+            tmp = self.fresh()
+            pre.append(f'let {tmp} ← Cpp.Method1.call (name := "{name}") (A := {a}) (R := {r}) {bt} {at}')
+            return tmp, rty
         if bty.kind == "cls":
             info = self.tr.classes[bty.name]
             sigs = [s for s in info.methods if s.cpp_name == name and not s.is_ctor]
@@ -3375,7 +3386,7 @@ class Translator:
                                        requirement) if bindings else requirement
                             type_text = " ".join(r.split()[1:])
                             if bindings or r.startswith(("Cpp.SourceStream", "Cpp.ModToUInt32", "Cpp.StaticCall",
-                                                         "Cpp.AdlCall2")):
+                                                         "Cpp.AdlCall2", "Cpp.Method1")):
                                 type_text = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', '', type_text)
                             type_names = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", type_text))
                             if not type_names <= own | {"Int", "UInt32", "UInt64", "Bool", "Unit", "Ordering", "Array"}:
@@ -3762,7 +3773,7 @@ def translate_file(source: Path, imports: list[str], deps=(), standard="c++17") 
     tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
     body = tr.translate()
     dependent = {"Cpp.ReadField", "Cpp.AddResult", "Cpp.MulResult", "Cpp.AssignResult", "Cpp.ConditionalResult",
-                 "Cpp.StaticCall", "Cpp.AdlCall2", "Cpp.Invoke1"}
+                 "Cpp.StaticCall", "Cpp.AdlCall2", "Cpp.Invoke1", "Cpp.Method1"}
     if any(requirement.split()[0] in dependent
            for fn in tr.built_functions.values() for requirement in fn.reqs.items):
         imports = [*imports, "Proofs.Cpp.Lib.DependentOperations"]

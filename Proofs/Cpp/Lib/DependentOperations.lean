@@ -42,4 +42,9 @@ operator on the argument type `A`. -/
 class Invoke1 (F A R : Type) where
   call : F → A → Cpp.M R
 
+/-- `f.name(x)` for a value `f` of a class template parameter type `F`: the translation of the member `name` of the
+actual argument on the argument type `A`. -/
+class Method1 (name : String) (F A R : Type) where
+  call : F → A → Cpp.M R
+
 end Proofs.Cpp

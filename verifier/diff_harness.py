@@ -403,10 +403,15 @@ class Harness:
         # functions give the Cpp.StaticCall / Cpp.AdlCall2 instances (docs/translation.md).
         self.record_bindings = {}
         for k, v in instance.items():
-            m = re.fullmatch(r"cp::(\w+)(?:<(.*)>)?", v.strip())
-            owners = [b for b in self.binding_trs if m and m.group(1) in b.classes]
+            m = re.fullmatch(r"cp::(\w+)(?:<(.*)>)?(?:::(\w+))?", v.strip())
+            name = m.group(1) if m else None
+            if m and m.group(3):
+                # A nested class cp::Family<args>::Member (the translator names it Family_Member).
+                name = next((n for b in self.binding_trs for n, fm in b.nested_record_names.items()
+                             if fm == (m.group(1), m.group(3))), None)
+            owners = [b for b in self.binding_trs if name and name in b.classes]
             if k not in policies and m and len(owners) == 1:
-                info = owners[0].classes[m.group(1)]
+                info = owners[0].classes[name]
                 args = tuple(instance_type(a) for a in lt.split_args(m.group(2))) if m.group(2) else ()
                 if len(args) != len(info.tparams):
                     raise lt.Unsupported(f"record binding {v} needs every class template argument")
@@ -486,6 +491,10 @@ class Harness:
             for ns in ("difftest", "cp"):
                 out.append(f"namespace {ns} {{ inline void rd({cpp} &m) {{ {reads} }} "
                            f"inline void pr(const {cpp} &m) {{ {prints} }} }}")
+            ctors = [g for g in info.methods if g.is_ctor and not g.params]
+            statics = [g.cpp_name for g in info.methods if g.is_static and not g.params and g.cpp_name in ("e", "id")]
+            start = f"{cpp}()" if ctors or not statics else f"{cpp}::{statics[0]}()"
+            out.append(f"namespace difftest {{ inline {cpp} start({cpp} *) {{ return {start}; }} }}")
         return out
 
     def lean_record_instances(self, requirements):
@@ -501,7 +510,7 @@ class Harness:
                        " ++ ".join(f"DiffTest.Pr.pr m.{lt.lean_name(f)}" for f, _ in fields))
         signed_bits = {"int": 32, "long": 64, "long long": 64, "std::int64_t": 64, "int64_t": 64, "std::int32_t": 32}
         for param, (info, cpp, ty, fields, owner) in self.record_bindings.items():
-            raw = re.fullmatch(r"cp::\w+(?:<(.*)>)?", cpp).group(1)
+            raw = re.fullmatch(r"cp::\w+(?:<(.*)>)?(?:::\w+)?", cpp).group(1)
             for tp, arg in zip(info.tparams, lt.split_args(raw) if raw else []):
                 uses = any(f'Cpp.NumericTraits "{tp}"' in req for fn in owner.built_functions.values()
                            for req in fn.reqs.items)
@@ -535,6 +544,46 @@ class Harness:
                     raise lt.Unsupported(f"argument-dependent function {m.group(1)} of {info.name}")
                 lty = self.lean_instance[m.group(2)]
                 out.append(f'instance : Proofs.Cpp.AdlCall2 "{m.group(1)}" {lty} {lty} {lty} := ⟨{chosen[0].lean_name}⟩')
+            m = re.fullmatch(r'Cpp\.Method1 "(\w+)" (\w+) (\w+) (\w+)', r)
+            if m and m.group(2) in self.record_bindings and m.group(3) in self.record_bindings \
+                    and m.group(3) == m.group(4) and r not in done:
+                done.add(r)
+                info = self.record_bindings[m.group(2)][0]
+                sigs = [g for g in info.methods if g.cpp_name == m.group(1) and not g.is_static and len(g.params) == 1]
+                if len(sigs) != 1:
+                    raise lt.Unsupported(f"member {m.group(1)} of {info.name}")
+                lf, lm = self.lean_instance[m.group(2)], self.lean_instance[m.group(3)]
+                # A non-const member returns the receiver with the result; the caller passes its own copy.
+                call = (f'{sigs[0].lean_name} f x' if sigs[0].is_const
+                        else f'(fun r => r.1) <$> {sigs[0].lean_name} f x')
+                out += self.dependent_int_instances(info, self.record_bindings[m.group(2)][4], sigs[0], done)
+                out.append(f'instance : Proofs.Cpp.Method1 "{m.group(1)}" {lf} {lm} {lm} := ⟨fun f x => {call}⟩')
+        return out
+
+    def dependent_int_instances(self, info, owner, sig, done):
+        """The dependent arithmetic requirements of a bound member on the integer model: every class template
+        argument of the bound class is a signed integer type, i.e. `Int` (docs/translation.md)."""
+        out = []
+        for req in owner.built_functions[id(sig)].reqs.items:
+            m = re.fullmatch(r"Cpp\.(AddResult|MulResult|AssignResult|ConditionalResult|Conv) (.*)", req)
+            if not m:
+                continue
+            text = req
+            for tp in info.tparams:
+                text = re.sub(rf"\b{tp}\b", "Int", text)
+            atoms = re.sub(r"Cpp\.\w+(\.\w+)?|\((Left|Right) :=", " ", text.split(" ", 1)[1])
+            if re.search(r"\b(?!Int\b)[A-Za-z_]\w*", atoms):
+                raise lt.Unsupported(f"dependent requirement {req} of {info.name} on a non-integer argument")
+            text = text.replace("Cpp.", "Proofs.Cpp.")
+            if text in done:
+                continue
+            done.add(text)
+            body = {"AddResult": "⟨Int, fun a b => (show Int from a) + (show Int from b)⟩",
+                    "MulResult": "⟨Int, fun a b => (show Int from a) * (show Int from b)⟩",
+                    "AssignResult": "⟨fun _ b => show Int from b⟩",
+                    "ConditionalResult": "⟨Int, fun a => show Int from a, fun b => show Int from b⟩",
+                    "Conv": "⟨fun a => show Int from a⟩"}[m.group(1)]
+            out.append(f"instance : {text} := {body}")
         return out
 
     def cpp_class(self, info):
@@ -598,7 +647,12 @@ class Harness:
                 else:
                     t = {"istream": "std::istringstream", "ostream": "std::ostringstream"}.get(pty.kind,
                                                                                           cpp_value_type(q, self.instance))
-                    decls.append(f"{t} a{i}; difftest::rd(a{i});")
+                    starts = [cpp for _info, cpp, _, _, _ in self.record_bindings.values() if cpp == t]
+                    if starts:
+                        # A bound class need not have a default constructor: start from its e() or id().
+                        decls.append(f"{t} a{i} = difftest::start(static_cast<{t} *>(nullptr)); difftest::rd(a{i});")
+                    else:
+                        decls.append(f"{t} a{i}; difftest::rd(a{i});")
                 names.append(f"a{i}")
             if info is None:
                 targs = [self.instance[t.removesuffix("_value_type")] if t.removesuffix("_value_type") in sig.containers

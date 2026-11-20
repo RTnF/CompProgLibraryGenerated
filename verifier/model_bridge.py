@@ -41,11 +41,22 @@ def check_component(name, timeout=None):
     proof = repo_file(metadata["proof"]).read_text()
     if f"import {model_module(metadata['model'])}" not in proof.splitlines():
         raise ValueError(f"the proof of {name} does not import its model")
-    cases = subprocess.run([sys.executable, "-I", str(repo_file(metadata["diff"]["cases"]))], capture_output=True,
-                           text=True, check=True, cwd=ROOT, timeout=timeout).stdout
-    if not cases.strip():
-        raise ValueError(f"no differential test commands for {name}")
-    for instance in metadata["diff"]["instances"]:
+    generated = {}
+
+    def commands(args):
+        # The generator may take arguments per instance (`case_args`, e.g. the field layout of a bound class).
+        if args not in generated:
+            generated[args] = subprocess.run([sys.executable, "-I", str(repo_file(metadata["diff"]["cases"])), *args],
+                                             capture_output=True, text=True, check=True, cwd=ROOT,
+                                             timeout=timeout).stdout
+            if not generated[args].strip():
+                raise ValueError(f"no differential test commands for {name}")
+        return generated[args]
+
+    commands(())
+    for raw in metadata["diff"]["instances"]:
+        instance = {k: v for k, v in raw.items() if k != "case_args"}
+        cases = commands(tuple(raw.get("case_args", "").split()))
         bindings = [(repo_file(f"library/{component(b)['source']}"), model_module(component(b)["model"]))
                     for b in metadata["diff"].get("bindings", [])]
         count = diff_harness.run_diff(source, instance, model_module(metadata["model"]), cases, timeout, deps, standard,

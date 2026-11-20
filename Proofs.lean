@@ -3,6 +3,7 @@ import Proofs.Cpp.Lib.Basic
 import Proofs.Cpp.Lib.DependentOperations
 import Proofs.Cpp.Lib.DynamicModIntFactorial
 import Proofs.Cpp.Lib.GroupMath
+import Proofs.Cpp.Lib.LazySegmentTreeMath
 import Proofs.Cpp.Lib.Lowbit
 import Proofs.Cpp.Lib.ModIntFactorial
 import Proofs.Cpp.Lib.ModIntMath
@@ -77,6 +78,7 @@ import Proofs.Cpp.Interval
 import Proofs.Cpp.IntervalUnion
 import Proofs.Cpp.InvGcd
 import Proofs.Cpp.IsPrime
+import Proofs.Cpp.LazySegmentTree
 import Proofs.Cpp.Lowlink
 import Proofs.Cpp.Mod61
 import Proofs.Cpp.Modint
