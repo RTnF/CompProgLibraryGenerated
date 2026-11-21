@@ -863,3 +863,6 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 変換器: 自己再帰（燃料つき `_rec`）、`static constexpr` メンバー定数、代入の連鎖、`(c ? a : b) op= x`、コンマ文、非テンプレートの vector 代入を追加（`docs/translation.md`）。既存58モデルは不変。差分テストは1530出力一致。元の不具合（chmin後の大きな加算で格納値が溢れる、`n = 0` の構築）は `docs/experiments_findings.md`。
 - メモリ: WSLの異常終了を防ぐため `tools/memguard.py` を追加し、ゲートの `run()` と `process_supervisor` に組み込んだ。重いLeanの単発実行は `python3 tools/memguard.py --max-rss-mb N -- cmd` で行う。mvcgen の多数のVCに `simp ... at *`（特に `Sz` 展開や omega の discharger）をかけるとメモリが爆発する。
 - 残り: `find_cycle`（`graph_list.hpp`/`edge.hpp` の移植）、`segtree_sum` の扱い、CI 20分の複数回確認。
+- 2026-11-21 継続（find_cycle再公開）: 取り下げ前と同じ形の `library/graph/find_cycle.hpp`（CSR・明示スタック・頂点列で返す）を新方式で再公開した。旧証明から純粋な数学（`FindCycleInv`/`Step`/`Spec`/`Phi`）を `Proofs/Math/` に戻し、Lean の更新で `rw` が `≤` を閉じなくなった箇所を直した。`Proofs/Cpp/FindCycle.lean` は lowlink と同じ形の橋渡し（`Abs`、外側の `OI`、探索の `II`、測度 `mu`）と後処理の 2 つのループの証明。差分テストは400出力一致。違反一覧に元の `ListGraph::find_cycle_directed` の形へ戻す作業を記載。
+- 注意: mvcgen のループ状態の射影や let 束縛の変数（`k✝ := fsp - j` など）は、omega に別の原子として見える。表示が同じでも omega が失敗するときは、変数を明示した小さな補題に切り出して単一化で渡す。`rename_i` は let 束縛も数えるので、仮定は `‹OI _ …›` の型で取る。
+- segment_tree_beats の push（245b637）後の CI は約10.5分で成功。

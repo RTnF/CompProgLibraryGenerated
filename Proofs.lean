@@ -27,6 +27,10 @@ import Proofs.Math.DijkstraOldExec
 import Proofs.Math.DijkstraPMath
 import Proofs.Math.EnumerateQuotientsMath
 import Proofs.Math.FenwickBuildMath
+import Proofs.Math.FindCycleInv
+import Proofs.Math.FindCyclePhi
+import Proofs.Math.FindCycleSpec
+import Proofs.Math.FindCycleStep
 import Proofs.Math.FenwickMath
 import Proofs.Math.Fermat
 import Proofs.Math.FloorSumArithmetic
@@ -70,6 +74,7 @@ import Proofs.Cpp.ElementCount
 import Proofs.Cpp.EnumerateQuotients
 import Proofs.Cpp.Extrema
 import Proofs.Cpp.FenwickTree
+import Proofs.Cpp.FindCycle
 import Proofs.Cpp.FloorSum
 import Proofs.Cpp.FloorSumUnsigned
 import Proofs.Cpp.FloydWarshall

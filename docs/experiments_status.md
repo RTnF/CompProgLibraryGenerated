@@ -21,7 +21,7 @@
 | graph/bellman_ford.hpp | 一部 | `bellman_ford`（辺の平行配列、親配列と負閉路の印 `-inf` を含む。元の `NEGATIVE_CYCLE` の値でなく `-inf`） |
 | graph/dijkstra.hpp | 一部 | `dijkstra`（CSR 配列、`priority_queue` の代わりに線形探索の O(n²+m)。親の配列 `parent` を含む。2026-10-29） |
 | graph/edge.hpp, edge_flow.hpp | 対象外（方針） | 利用者の決定（2026-10-12）: 標準入出力（`operator<<`）と ID 管理（静的カウンタ `next_id`）は本質から外れるので Lean の証明は要らない。辺は端点・費用（・容量）の配列で表すグラフアルゴリズムの正しさと計算量を優先する |
-| graph/find_cycle.hpp | 検証待ち | 2026-11-11 に公開を取り下げた（検証待ち）。旧方式の証明が全件CIの30分予算を超えるため、新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。取り下げ前の記録: `library/graph/find_cycle.hpp`（CSR・反復 DFS。閉路の有無と、閉路の頂点列を返す仕様、`O(n+m)` の仕事量まで証明。辺の構造体の配列で返す元の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の形を頂点列に変更） |
+| graph/find_cycle.hpp | 一部 | 2026-11-21 に新方式で再公開した（`library/graph/find_cycle.hpp`、取り下げ前と同じ形）。CSR 配列・明示スタックの反復 DFS で、閉路がないこと、または閉路の頂点列と `O(n+m)` の手数を `Proofs/Cpp/FindCycle.lean` で証明。違反一覧: `ListGraph` のメンバー関数を CSR の自由関数に、再帰ラムダを明示スタックに、返り値を辺の配列から頂点列に変更 |
 | graph/graph_flow.hpp, graph_list.hpp, graph_matrix.hpp | 一部 | `library/graph/csr_build.hpp`（`graph_list` の辺リストから CSR 配列を作る計数ソート。辺の属性と `vector<vector<>>` の形は未。違反一覧: `ListGraph` クラスを辺リスト→CSR の関数に変更）。`graph_flow`/`graph_matrix` は未（`vector<vector<>>`、`map`、構造体の vector） |
 | graph/topological_sort.hpp | 一部 | `topological_sort`（CSR 配列、カーンの方法のキュー版。辞書順最小版は未） |
 | graph/lowlink.hpp | 一部 | `library/graph/lowlink.hpp`（CSR 配列・反復 DFS。橋と関節点の同値、ord/par/low/sep の仕様と `O(n+m)` の仕事量まで証明。元の「ソート済みの配列を返す」形、`ListGraph` の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の配列を呼び出し側の配列に変更） |
@@ -101,6 +101,7 @@
 - 機能を落としている、または構造を変えている: `tree_root`/`tree_ancestor`（`Tree` の高さ・直径・全方位木 DP とコンストラクタ類を含めず、隣接リストを CSR、`stack<tuple>` を呼び出し側の `stk` に変えている。解消は残りの `Tree` の機能を同じ枠組みで足す）、`union_find`（`unite`/`same`/`size` が経路圧縮をしない。木の数を `ps` の末尾に持つ。入力assertは復元済み）、`interval`（`<=>` と入出力演算子なし）、`bellman_ford`（負閉路の印は元の `NEGATIVE_CYCLE` 値でなく `-inf`。負閉路から届く頂点が必ず `-inf` になることは未証明でテストのみ）、`dijkstra`（`priority_queue` でなく O(n²)）、`topological_sort`（辞書順最小版なし）、`floyd_warshall`（負の辺と親なし）、`mat_mul`（積のみ）、`segtree_sum`（和のみ）、`monoid_lazy`（平らなAPIは簡便APIとして残す。元の入れ子APIは公開済みで、`T` は変換器の整数4種のみ検証、`short`/`char`/浮動小数は未）。
 - 機能を落としている（`segment_tree`）: 元の `SegmentTree<M>` は任意のモノイド `M` のオブジェクトの木だが、公開版は値（`vector<value_type>`）の木で、モノイドは `value_type`・静的 `e()`・静的 `apply` を持つ方針として与える（1 つの値だけのモノイドに限る）。`search_prod_right`/`search_prod_left`（述語を取る二分探索）と `assert` は含めない。検証した具体化は `long long` の最大値と最小値のみ。解消は、構造体のオブジェクトのベクトルを扱う変換器の拡張、述語 `F` の扱い、`MonoidMin/Mul` などの具体化を足すこと。
 - 機能を落としている（`square_matrix`）: 元の `SquareMatrix<T, N>`（非型テンプレート引数 `N`、`operator*`/`+`/`-`/`==`、`pow`）を、`vector` と `int n` を取る関数 8 個（`mat_mul`・`mat_add_assign`・`mat_sub_assign`・`mat_zero`・`mat_negate`・`mat_identity`・`mat_equal`・`mat_pow`）にしている。値を返す演算子（`+`/`-`/`*`）、クラスとしての形は未（`!=` は `!mat_equal`、`pow` は `mat_pow` が相当し、`pow` の指数は非負の `unsigned long long` に限る）。解消はC配列・非型テンプレート・行参照・初期化状態の変換器対応を足し、公開mat配列と元の全クラスAPI・型traitを維持してクラス全体を検証すること。
+- 構造を変えている（`find_cycle`）: 元の `ListGraph::find_cycle_directed`（辺の構造体 `E` の配列を返すメンバー関数、再帰ラムダ）を、CSR 配列を取り閉路の頂点列を書く自由関数（明示スタック）にしている。解消は `ListGraph`/`Edge` を公開し、辺の配列で返すメンバー関数を同じ枠組みで検証すること（再帰は変換器が扱える）。
 - 入力範囲を狭めている: `union_find` の番兵表現は `n < 2^31 - 1` に制限している。元の別カウンタを復元して解消する。入力assertは復元済みで、正常終了定理に加え、共通の純粋拒否補題と生成モデル/C++の失敗経路テストを持つ。構成子の確保前の検査とは主張しない（元と同じ本体assert）。
 
 - （解消済み 2026-11-11）入力範囲を狭めていた `segment_tree_beats` の公開版（`4*n` を `8*n+8` に変え、長さと子添字を32-bit intのまま計算）は公開を取り下げた。新方式で再公開するときは元の範囲を保つ。
