@@ -273,3 +273,7 @@ const/mutableの両targetで旧scalar memory/binding/slotと既存scalar読取�
 ## 2026-11-21: SegmentTreeBeatsSum の溢れ（前提に含める、未修正）
 
 `experiments/library/cpp/segment_tree/segment_tree_beats_sum.hpp` は `segment_tree_beats.hpp` と同じ格納値の溢れ（上の項）を持つ。加えて、和 `sum[k]` とその更新 `(x - max_v[k]) * max_c[k]`、`len[k] * x` が `int64_t` を溢れうる。公開版は元のままで、前提を `segment_tree_beats` の上界 `B` に加えて `2 · n · B < 2^63` とした（`docs/segment_tree_beats_sum.md`）。`n = 0` の構築も同じく未定義動作で、前提は `1 ≤ n`。
+
+## 2026-11-22: factorize の `n = 0`（前提に含める、未修正）
+
+`experiments/library/cpp/number_theory/factorize.hpp` の `in::factorize(0)` は `while (!(n & 1))` で `0` を割り続け、`2` を無限に追加する（停止せず、メモリを使い果たす）。`factorize_count(0)` と `divisors(0)` も同じ。公開版 `library/number_theory/factorize.hpp` も元のままで、前提を `n >= 1` とした（`unsorted_rec_spec` など。`docs/factorize.md`）。

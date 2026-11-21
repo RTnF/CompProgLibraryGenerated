@@ -32,6 +32,7 @@ import Proofs.Math.FindCycleInv
 import Proofs.Math.FindCyclePhi
 import Proofs.Math.FindCycleSpec
 import Proofs.Math.FindCycleStep
+import Proofs.Math.FactorizeMath
 import Proofs.Math.FenwickMath
 import Proofs.Math.Fermat
 import Proofs.Math.FloorSumArithmetic
@@ -75,6 +76,7 @@ import Proofs.Cpp.ElementCount
 import Proofs.Cpp.EnumerateQuotients
 import Proofs.Cpp.Extrema
 import Proofs.Cpp.FenwickTree
+import Proofs.Cpp.Factorize
 import Proofs.Cpp.FindCycle
 import Proofs.Cpp.FloorSum
 import Proofs.Cpp.FloorSumUnsigned
