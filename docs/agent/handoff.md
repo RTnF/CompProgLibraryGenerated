@@ -866,3 +866,4 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 2026-11-21 継続（find_cycle再公開）: 取り下げ前と同じ形の `library/graph/find_cycle.hpp`（CSR・明示スタック・頂点列で返す）を新方式で再公開した。旧証明から純粋な数学（`FindCycleInv`/`Step`/`Spec`/`Phi`）を `Proofs/Math/` に戻し、Lean の更新で `rw` が `≤` を閉じなくなった箇所を直した。`Proofs/Cpp/FindCycle.lean` は lowlink と同じ形の橋渡し（`Abs`、外側の `OI`、探索の `II`、測度 `mu`）と後処理の 2 つのループの証明。差分テストは400出力一致。違反一覧に元の `ListGraph::find_cycle_directed` の形へ戻す作業を記載。
 - 注意: mvcgen のループ状態の射影や let 束縛の変数（`k✝ := fsp - j` など）は、omega に別の原子として見える。表示が同じでも omega が失敗するときは、変数を明示した小さな補題に切り出して単一化で渡す。`rename_i` は let 束縛も数えるので、仮定は `‹OI _ …›` の型で取る。
 - segment_tree_beats の push（245b637）後の CI は約10.5分で成功。
+- 2026-11-21: find_cycle push（d91c205）の CI は約7分で成功。cold_build の手動実行（run 44867998226）は全ビルドを含めて約12分で成功した。
