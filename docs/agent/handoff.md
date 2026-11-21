@@ -867,3 +867,4 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 注意: mvcgen のループ状態の射影や let 束縛の変数（`k✝ := fsp - j` など）は、omega に別の原子として見える。表示が同じでも omega が失敗するときは、変数を明示した小さな補題に切り出して単一化で渡す。`rename_i` は let 束縛も数えるので、仮定は `‹OI _ …›` の型で取る。
 - segment_tree_beats の push（245b637）後の CI は約10.5分で成功。
 - 2026-11-21: find_cycle push（d91c205）の CI は約7分で成功。cold_build の手動実行（run 44867998226）は全ビルドを含めて約12分で成功した。
+- 2026-11-21: 利用者の決定。目標「全ての部品を再公開する」は2026-11-11に取り下げた4部品（segment_tree、lazy_segment_tree、find_cycle、segment_tree_beats）を指し、完了とする。未移植の原本（graph_flow、graph_matrix、segment_tree_beats_sum など）と違反一覧の狭い形の解消は別の作業。segtree_sum は残す（未決事項から外す）。
