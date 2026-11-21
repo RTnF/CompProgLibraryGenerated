@@ -14,6 +14,7 @@ import Proofs.Cpp.Lib.RatioCost
 import Proofs.Cpp.Lib.RatioMath
 import Proofs.Cpp.Lib.RatioSpace
 import Proofs.Cpp.Lib.Rle
+import Proofs.Cpp.Lib.SegmentTreeBeatsMath
 import Proofs.Cpp.Lib.SegmentTreeMath
 import Proofs.Cpp.Lib.UnsignedMagnitude
 import Proofs.Math.BellmanFordExec
@@ -92,6 +93,7 @@ import Proofs.Cpp.RunLength
 import Proofs.Cpp.SafeMod
 import Proofs.Cpp.SearchUtil
 import Proofs.Cpp.SegmentTree
+import Proofs.Cpp.SegmentTreeBeats
 import Proofs.Cpp.SegtreeSum
 import Proofs.Cpp.SortUtil
 import Proofs.Cpp.SquareMatrix

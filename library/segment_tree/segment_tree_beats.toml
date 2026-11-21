@@ -1,0 +1,19 @@
+name = "segment_tree_beats"
+source = "segment_tree/segment_tree_beats.hpp"
+dependencies = []
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.SegmentTreeBeats"
+proof = "Proofs/Cpp/SegmentTreeBeats.lean"
+model = "Proofs/Cpp/Gen/SegmentTreeBeats.lean"
+bridge = "verifier/model_bridge.py"
+tests = ["tests/segment_tree_beats.cpp"]
+sanitizers = true
+spec = "docs/segment_tree_beats.md"
+standard = "c++17"
+source_sha256 = "73085ad481c31eea4be1760bc1a089f66736d71893728bae4d03b6e0bc57d9da"
+public_declarations = ["CXXRecordDecl:SegmentTreeBeats"]
+
+[diff]
+instances = [{}]
+cases = "tests/diff/segment_tree_beats.py"
+calls = ["SegmentTreeBeats.init", "SegmentTreeBeats.chmin", "SegmentTreeBeats.chmax", "SegmentTreeBeats.add_val", "SegmentTreeBeats.update_val", "SegmentTreeBeats.calc_max", "SegmentTreeBeats.calc_min"]

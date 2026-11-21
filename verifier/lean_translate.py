@@ -2113,14 +2113,61 @@ class Fn:
         if len(self.lines) == start:
             self.emit("pure ()")
 
+    def assignment_parts(self, n):
+        """(lhs, rhs, rebuild) of an assignment node, or None."""
+        n = strip(n)
+        if n.get("kind") == "BinaryOperator" and n.get("opcode") == "=":
+            lhs, rhs = inner(n)
+            return lhs, rhs, lambda a, b: {**n, "inner": [a, b]}
+        if n.get("kind") == "CXXOperatorCallExpr" and self.operator_name(n) == "=":
+            callee, lhs, rhs = inner(n)
+            return lhs, rhs, lambda a, b: {**n, "inner": [callee, a, b]}
+        return None
+
     def expr_stmt(self, node):
         n = strip(node)
         kind = n.get("kind")
         pre = []
+        if kind == "BinaryOperator" and n.get("opcode") == ",":
+            # A comma expression statement evaluates its operands in order.
+            a, b = inner(n)
+            self.expr_stmt(a)
+            self.expr_stmt(b)
+            return
+        if kind == "CompoundAssignOperator" and strip(inner(n)[0]).get("kind") == "ConditionalOperator":
+            # `(c ? a : b) op= x` stores into the selected operand: `if c then a op= x else b op= x`.
+            cond, yes, no = inner(strip(inner(n)[0]))
+            ct, _ = self.expr(cond, pre, BOOL)
+            self.flush(pre)
+            self.emit(f"if {ct} then")
+            self.indent += 1
+            self.expr_stmt({**n, "inner": [yes, inner(n)[1]]})
+            self.indent -= 1
+            self.emit("else")
+            self.indent += 1
+            self.expr_stmt({**n, "inner": [no, inner(n)[1]]})
+            self.indent -= 1
+            return
+        outer = self.assignment_parts(n)
+        if outer is not None and self.assignment_parts(outer[1]) is not None:
+            # `a = b = c` is `b = c; a = b;`: the value of an assignment is its left operand after the store.
+            inner_lhs = self.assignment_parts(outer[1])[0]
+            self.expr_stmt(outer[1])
+            self.expr_stmt(outer[2](outer[0], inner_lhs))
+            return
         if kind == "CXXOperatorCallExpr" and self.operator_name(n) == "=":
             callee, lhs, rhs = inner(n)
             declaration = self.tr.raw_declarations.get(strip(callee).get("referencedDecl", {}).get("id"), {})
             target = self.lvalue(lhs)
+            if target[3].kind == "vec":
+                # std::vector::operator=: the value of the right side (a copy costs its length).
+                value, _ = self.expr(rhs, pre, target[3])
+                if self.is_lvalue_vector(rhs):
+                    pre.append(f"Cpp.tickN {value}.size")
+                self.flush(pre)
+                for line in self.assign_lines(target, value):
+                    self.emit(line)
+                return
             if (not declaration.get("isImplicit") or declaration.get("name") != "operator="
                     or target[3].kind != "cls"
                     or any(ty.kind not in ("int", "u32", "u64", "bool")
@@ -3184,6 +3231,11 @@ class Translator:
                 kind = c["kind"]
             if kind == "AccessSpecDecl":
                 access = c.get("access", access)
+            if kind == "VarDecl" and c.get("storageClass") == "static" and c.get("constexpr") and not tps:
+                # A static constexpr literal member is a constant of the model (docs/translation.md).
+                c["lean_cpp_name"] = f"{name}_{c['name']}"
+                self.collect_constant(c)
+                continue
             if kind == "VarDecl":
                 spelling = type_of_decl(c)
                 if (c.get("storageClass") != "static" or c.get("tls") or tps or inner(c)
@@ -3404,6 +3456,10 @@ class Translator:
                 raise Unsupported(f"recursion through {index[key][0].cpp_name}")
             state[key] = "active"
             for callee in built[key].callees:
+                if id(callee) == key:
+                    # Direct self-recursion: translated with a decreasing fuel argument (docs/translation.md).
+                    index[key][0].self_recursive = True
+                    continue
                 if id(callee) in index:
                     visit(id(callee))
             state[key] = "done"
@@ -3679,7 +3735,20 @@ class Translator:
             if len(outs) > 1:
                 rtype = f"({rtype})"
         name = sig.lean_name
-        header = f"def {name} {binders(tps, reqs, {**(info.value_params if info else {}), **sig.value_params})} {' '.join(args)} : Cpp.M {rtype} := do"
+        bind = binders(tps, reqs, {**(info.value_params if info else {}), **sig.value_params})
+        if getattr(sig, "self_recursive", False):
+            # `name_rec fuel args` runs the body with the recursive calls on `fuel - 1`; it fails at fuel 0. The
+            # function itself starts with `Cpp.fuel`, the bound of every loop (docs/translation.md).
+            call = re.compile(rf"(?<![\w.]){re.escape(name)}(?![\w.])")
+            lines = [call.sub(f"{name}_rec __fuel", line) for line in fn.lines]
+            rec = re.sub(r"  +", " ", f"def {name}_rec {bind} (__fuel : Nat) {' '.join(args)} : Cpp.M {rtype} :=")
+            names = [a[1:].split(" : ")[0] for a in args]
+            body = [rec, "  match __fuel with", "  | 0 => failure", "  | __fuel + 1 => do",
+                    *("    " + line for line in lines)]
+            wrapper = re.sub(r"  +", " ", f"def {name} {bind} {' '.join(args)} : Cpp.M {rtype} :=")
+            return ("".join(x + "\n" for x in structs) + "\n".join(body) + "\n\n" + wrapper + "\n  "
+                    + f"{name}_rec Cpp.fuel {' '.join(names)}" + "\n")
+        header = f"def {name} {bind} {' '.join(args)} : Cpp.M {rtype} := do"
         header = re.sub(r"  +", " ", header)
         return "".join(x + "\n" for x in structs) + "\n".join([header] + fn.lines) + "\n"
 

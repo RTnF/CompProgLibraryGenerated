@@ -265,3 +265,7 @@ const/mutableの両targetで旧scalar memory/binding/slotと既存scalar読取�
 ## 2026-11-20: LazySegmentTree の `n = 0` での `product_all` と、余りの葉への作用（前提に含める、未修正）
 
 `experiments/library/cpp/segment_tree/lazy_segment_tree.hpp` は `SegmentTree` と同じく `n = 0` で `product_all()` が空の `node` の `node[1]` を読む。公開版も元のままで、前提を `n ≥ 1` とした（`product_all_spec`）。また `push` は節点のタグを両方の子に作用させるので、`n_node` までの余りの葉（値 `e()`）にも `apply` が働く。`monoid_lazy.hpp` の `RangeAddRangeMaxMin` は `e()` が整数の最小値・最大値なので、区間加算で `e() + v` が溢れる（`tests/lazy_segment_tree.cpp` の UBSan で確認）。公開版は元のままで、`apply` が `e()` を含む全ての値で定義されることを前提にした（`docs/lazy_segment_tree.md`）。
+
+## 2026-11-21: SegmentTreeBeats の格納値の溢れと `n = 0` の構築（前提に含める、未修正）
+
+`experiments/library/cpp/segment_tree/segment_tree_beats.hpp` は、実値が `int64_t` に収まっていても溢れることがある。節点に保留中の加算と、chmin で切り詰める前の格納値の和が溢れるからである。例: 値 `[-3.9e18, 3.9e18]` に `chmin(0, 2, -3.8e18)` の後、`add_val(0, 2, 3.85e18)` を 2 回行う。最後の実値は `3.8e18`、`3.9e18` で範囲内だが、`add_all` が `7.7e18 + 3.9e18` を計算する（UBSan で確認）。公開版は元のままで、前提を「初期値と chmin/chmax/update の引数が `|·| ≤ B`、各加算で `B` が `|x|` 増え、常に `B < 4e18`」とした（`docs/segment_tree_beats.md`、Lean の `Safe`）。また `n = 0` の構築は長さ 0 の配列の添字 0 に書き込む（未定義動作）。前提は `1 ≤ n`。

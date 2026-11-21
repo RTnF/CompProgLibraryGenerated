@@ -41,7 +41,7 @@
 | segment_tree/binary_indexed_tree.hpp | 済 | `fenwick_tree`（クラス。構築子 3 種、`sum(r)`、`sum(l, r)`、`add`。`T` はテンプレートのまま、検証した具体化は `long long`） |
 | segment_tree/segment_tree.hpp | 済（新方式、2026-11-19） | `segment_tree`（クラス `SegmentTree<M>` 全体: 構築子3種・`set`・`get`・`product`・`product_all`・`search_prod_right`・`search_prod_left`。元の本体のまま、任意のモノイド `M` と任意の述語について結果・停止・計算量を証明。`docs/segment_tree.md`）。`segtree_sum` は同じ原本から和だけを切り出した旧部品で、整理は未了 |
 | segment_tree/lazy_segment_tree.hpp | 済（新方式、2026-11-20） | `lazy_segment_tree`（クラス `LazySegmentTree<M, F>` 全体: 構築子3種・`set`・`get`・`product`・`product_all`・`update(idx, f)`・`update(l, r, f)`・`search_prod_right`/`left`。元の任意のモノイドと作用のオブジェクトの木のまま。`M`・`F` は汎用の `Act` で証明し、差分テストは `monoid_lazy` の `RangeAddRangeSum`・`RangeSetRangeSum`。`docs/lazy_segment_tree.md`） |
-| segment_tree/segment_tree_beats*.hpp | 検証待ち | 2026-11-11 に公開版（`library/segment_tree/segment_tree_beats.hpp`）と旧方式の証明（`Proofs/*Beats*` 228モジュール、全体の約50%）を外した。C++ の文ごとの記号実行による証明が全件CIの30分予算を超えるため。新方式（`docs/redesign_2026-11.md`）で再検証してから公開する。旧証明は Git 履歴に残る。`_sum`版は未検証 |
+| segment_tree/segment_tree_beats*.hpp | 一部公開 | 2026-11-21: `segment_tree_beats.hpp` を新方式で再公開した（`library/segment_tree/segment_tree_beats.hpp`）。API・型・入力範囲は元のままで、構築子だけを同じ値を作る再帰 `_build` に書き換えた（`docs/segment_tree_beats.md`）。構築と 6 操作を `Proofs/Cpp/SegmentTreeBeats.lean` で証明（各操作 `O(n)`。償却 `O(log^2 n)` は未証明）。`_sum`版は未検証 |
 | set/set.hpp, multiset.hpp | 未 | `std::set`/`map`/`multiset`（STL の契約が未登録） |
 | string/char_count.hpp | 一部 | `run_length`（文字列ではなく `long long` の vector） |
 | string/rolling_hash.hpp | 済 | `rolling_hash` に両クラス、全基数、文字列・整数列の公開操作を復元。旧公開 `cp::RollingHash<T>` を維持。ローカル全件検証済み。push後のCIは未確認 |

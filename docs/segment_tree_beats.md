@@ -1,80 +1,95 @@
 # segment_tree_beats
 
-> 2026-11-11: 公開を取り下げた（検証待ち）。旧方式の証明は全件CIの30分予算を超えるため削除し、新方式（`docs/redesign_2026-11.md`）で再検証する。以下は取り下げ前の記録で、記載の `library/`・`Proofs/` のファイルは現在のツリーにない。
+`library/segment_tree/segment_tree_beats.hpp` のクラス `cp::SegmentTreeBeats` は、元の `experiments/library/cpp/segment_tree/segment_tree_beats.hpp`（tjkendev の Segment Tree Beats）を移植したもの。値の列 `a`（`std::int64_t`）に対して次の操作を持つ。区間はいずれも半開区間 `[a, b)` で、位置は 0 始まり。
 
-`cp::SegmentTreeBeats` は Segment Tree Beats（`experiments/library/cpp/segment_tree/segment_tree_beats.hpp`、tjkendev の実装ベース）である。配列 `a`（`long long`）に対して、区間 chmin `chmin(a, b, x)`、区間 chmax `chmax(a, b, x)`、区間加算 `add_val(a, b, x)`、区間代入 `update_val(a, b, x)`、区間最大 `calc_max(a, b)`、区間最小 `calc_min(a, b)`（いずれも半開区間 `[a, b)`）を持つ。構成子は `SegmentTreeBeats(const std::vector<long long>& a)`。和は持たない（その代わり `INF` = 4×10^18 まで積める）。
+- 区間 chmin `chmin(a, b, x)`（各値を `min(値, x)` にする）
+- 区間 chmax `chmax(a, b, x)`
+- 区間加算 `add_val(a, b, x)`
+- 区間代入 `update_val(a, b, x)`
+- 区間最大 `calc_max(a, b)`、区間最小 `calc_min(a, b)`
 
-木は `[lo, hi)` を中点で分ける。木の節点 `k` の子は `2k+1`、`2k+2`。節点は最大値・次大値・最大値の個数、最小値・次小値・最小値の個数、区間の長さ `len`、保留中の加算 `ladd`、保留中の代入 `lval`（保留なしは `inf`）を持つ。chmin は、節点の次大値が `x` より小さいとき（`smax < x`）その節点の最大値だけを `x` にして止まり、そうでなければ子へ押し下げて再帰する（chmax は対称）。
+構築子は `SegmentTreeBeats(std::vector<ll> a)`。和は持たない代わりに、`INF = 4×10^18` まで値を積める。
+
+木は 2 冪 `n0 ≥ n` 個の葉を持つ。節点 `k` の子は `2k+1` と `2k+2`。各節点は次を持つ。
+
+- 最大値・第 2 最大値・最大値の個数
+- 最小値・第 2 最小値・最小値の個数
+- 長さ `len`
+- 保留中の加算 `ladd`
+- 保留中の代入 `lval`（保留なしは `INF`）
+
+chmin は、節点の第 2 最大値が `x` より小さいとき、その節点の最大値だけを `x` にして止まる。そうでなければ `push` で子へ押し下げて再帰する（chmax は対称）。
 
 ## 前提
 
-- 構成子: `1 <= a.size()`、`8 * a.size() + 8 < 2^31`（ベクタの確保長を計算する `int` の演算も範囲内）、要素は `-INF < v < INF`（`INF = 4000000000000000000`）。空の配列は扱わない。
-- 操作: `0 <= a <= b <= a.size()`（半開区間 `[a, b)`）。`x` は `-INF < x < INF`。
-- 値の安全性: 区間加算で、押し下げの途中の値と節点が持つ値が `±INF` に近づかないこと。Lean の定理では、操作ごとの木の述語（`chminSafe`、`chmaxSafe`、`addSafeRec`、`setSafeRec`、`calcSafe`）として前提に置く。これは「操作で触れる節点の値と保留中の加算の和がすべて `-INF < v < INF` に収まる」ことを意味する。満たさない入力は扱わない。
-- 最大値と最小値の返り値は、空の区間（`a == b`）で `-INF`（`calc_max`）、`INF`（`calc_min`）。
+- `1 ≤ n < 2^29`（配列の長さ `4n` が `int` に収まる。Lean の定理は `n ≤ 2^29` で示している）。
+- 値の上界 `B < INF` がある。
+  - 初めは `B ≥ max |a[i]|`。
+  - `chmin`/`chmax`/`update_val` の `x` は `|x| ≤ B`。
+  - `add_val` は上界を `B + |x|` に増やし、`B + |x| < INF` を要する。
+- `update_val`/`add_val` は `b ≤ n`。`a` は任意で、負の位置は無視される。`chmin`/`chmax`/`calc_max`/`calc_min` の `a`、`b` は任意の `int`（`[0, n)` の外の位置は無視される）。
+- 空の範囲では `calc_max` は `-INF`、`calc_min` は `INF` を返す。
 
 ## 元のソースからの変更
 
-- 再帰をやめ、明示スタック（`st_k`、`st_l`、`st_r`、深さ 128 以下）で走査する。訪れた節点を `ent` に積み、走査のあとに `ent` を逆順に `update` する（元の再帰の帰りがけの `update(k)` と同じ順）。結果は元の実装と同じ（`tests/segment_tree_beats.cpp` で元の実装の振る舞い＝素朴な配列と照合）。
-- 木の大きさは 2 冪に切り上げず、`n` 要素をそのまま中点で分ける（葉は `n` 個、節点番号は `8n+8` 未満）。区間の端 `lo[k]`、`hi[k]` を配列で持つ。元の `n0`（2 冪）と、padding の葉（`-INF`/`INF`）は持たない。
-- `inf` と `n` をメンバーとして持つ（元は大域の `INF` マクロ）。
-- 節点の更新（`update_node_max`/`update_node_min`/`push`/`update`/`add_all`/`update_all`）は、条件分岐の中で書き込まず、条件を `g` や `leaf` の変数に落とした分岐なしの形に書き直した（検証の枠組みの制約）。意味は元と同じ。
-- 構成子は、`vector<long long> a` を値渡しではなく `const` 参照で受ける。`chmin`/`chmax`/`add_val`/`update_val` は `apply_op`、`calc_max`/`calc_min` は `calc_op` に共通化した。
-- 元の機能（6 つの操作、構成子）はすべて残してある。
+- 名前空間 `cp`、標準ヘッダの include、`std::` の修飾を加えた。元が `template/small_template.hpp` から得ていた `ll = int64_t` と `INF = 4e18` は、クラス内の `using ll = std::int64_t;` と `static constexpr ll INF = 4000000000000000000;` に置き換えた。型と値は元と同じ。
+- 構築子の木の作り方を、元の 5 つのループから再帰 `_build(a, k, l, r)` に変えた。`_build` は節点 `k` に `ladd = 0`、`lval = INF`、`len = r - l` を書く。葉なら値（範囲外の葉は番兵 `-INF`/`INF`、個数 0）を置き、内部節点なら 2 つの子を作ってから `update(k)` を呼ぶ。
+  - 木の全節点（`0..2n0-2`）に格納される値は元と同じで、時間も `O(n)` のまま。
+  - 違うのは、木の節点でない添字 `2n0-1` の `lval` だけである（元は `INF`、新しい版は確保時の 0）。この添字はどの操作も読まない。
+  - `tests/segment_tree_beats.cpp` は、元の実装の逐語コピーとすべての操作の結果を照合する。
+  - 書き換えの理由は、ループの不変条件を使わず、他の操作と同じ高さについての帰納法で構築を証明するためである。
+- API（構築子 1 つと 6 つの操作）、型、入力範囲は元のまま。
 
-元の入力範囲には未解消の縮小がある。元の4*nの確保と2*n0までの木に対し、公開版は未使用節点・葉の子への参照を安全にするため8*n+8を確保するが、計算はintのままである。n=2^28では元のサイズ計算と添字がintに収まり、新しい確保長は収まらない。8*n+8<2^31を前提に置くだけでこの違反を解消したとは扱わず、サイズ/子添字の型や制御フローと証明を改善する作業を残す。`tests/lean/beats_capacities.lean` は巨大配列を実確保せず、この算術境界を確認する。
+## 結果（`Proofs/Cpp/SegmentTreeBeats.lean`）
 
-## 結果（`Proofs/SegmentTreeBeatsCall.lean` の条件付き定理）
+`Valid st vals B` は「`st` は値の列 `vals` を表す」ことを表す。その中身は次のとおり。
 
-2026-11-02: 旧構築Callと容量分離版構築Callの依存閉包6824宣言は、固定版nanoda・2threads・標準16MiB stackで独立検証に成功した。仕事量上界のインライン算術証明を、抽象的なcost/boundを扱う小補題へ分離したもので、定理の前提・結論・上界は同じ。`tests/test_beats_capacities.py` で両Callを再検査する。これは全件gateや元の全API・全入力範囲の検証完了を意味しない。
+- 形: `n0 = 2^H`、`2^H < 2n`、配列の長さが `2·2^H` 以上。
+- 不変条件 `Inv`（`Proofs/Cpp/Lib/SegmentTreeBeatsMath.lean`）: 各節点の要約が実値の最大・第 2 最大・個数などに一致し、保留中の操作が子と整合する。
+- 安全性 `Safe`: 各値に祖先の保留中の加算を任意に足しても `|·| ≤ B` に収まる。
+- 根の値の列が `vals` である。
 
-木の表現 `BRep n L ys b t H` は、15 本のベクタ（節点の配列）の内容 `b`、木 `t`（節点の値と保留中の作用を持つ）、その各節点の格納 `H`、配列 `ys` が対応していることを表す（不変条件: ベクタの長さが `L`（=`8n+8`）以上、節点の番号が `L` に収まる、`len` が区間の長さと一致、値が有効、`t` が `ys` を表す `Inv`、など）。
+`opL f a b 0 vals` は `[a, b)` の位置の値に `f` を適用した列、`maskL d a b 0 vals` は範囲外の値を `d` に置き換えた列である。
 
-実装への適用には未解決の不足がある。現在の `Lens b L` は3本の走査スタックにも長さ `L` 以上を要求するが、実構成子のスタックは各256要素である。構築定理の `8*n+8 ≤ L` と合わせると、`n ≥ 32` では実状態が前提を満たせない。したがって、以下の条件付き定理を、実クラスの全対象サイズの検証完了とは扱わない。節点用 `L` とスタック用 `S` を分離した公開定理を別の名前空間へ追加した（後段）。実装の容量や入力範囲は変更していない。追加定理の独立検証と全件検査は未完了である。
-
-- `segment_tree_beats_new0`（構成子）: 前提（`n >= 1`、`8n+8 <= L < 2^31`、要素が `INF` の内側、ベクタが 0 で初期化され `lval` が `INF`）のもとで、`BRep n L a bf (buildBT a 0 n) Hf` が成り立つ。つまり `a` を表す木ができる。
-- `segment_tree_beats_chmin`/`chmax`/`add_val`/`update_val`: `BRep n L ys b t H` と、その操作の安全性 `hsafe` のもとで、`ys` を `rangeMin 0 a b x ys`（区間 `[a, b)` の要素を `min(·, x)` にした配列）、`rangeMap (fun v => max v x) 0 a b ys`、`rangeMap (fun v => v + x) 0 a b ys`、`rangeMap (fun _ => x) 0 a b ys` に変えた配列を表す `BRep` が成り立つ。
-- `segment_tree_beats_calc_max`/`calc_min`: 返り値は `max (-INF) (rangeMaxOf 0 a b ys)` / `min INF (rangeMinOf 0 a b ys)`（区間の最大値／最小値、空なら `-INF`／`INF`）。木が表す配列は変わらない（押し下げのみ）。
-- いずれの定理も、呼び出しが停止すること（`callFuel` が `finished`）、呼び出し側の変数と他のベクタを壊さないこと（`ScalarPostMB`）を含む。
+- `init_spec`: `1 ≤ n ≤ 2^29`、`|a[i]| ≤ B < INF` なら、構築した木は `Valid st a B`。手数は `50n + 10` 以下。
+- `chmin_spec`/`chmax_spec`: `|x| ≤ B`、`-INF < x < INF` なら、結果は `Valid r (opL (min · x) a b 0 vals) B`（chmax は `max`）。
+- `update_val_spec`: `b ≤ n`、`|x| ≤ B`、`-INF < x < INF` なら `Valid r (opL (fun _ => x) a b 0 vals) B`。
+- `add_val_spec`: `b ≤ n`、`B + |x| < INF` なら `Valid r (opL (· + x) a b 0 vals) (B + |x|)`。
+- `calc_max_spec`/`calc_min_spec`: 返り値は `lmax (maskL (-INF) a b 0 vals)`、`lmin (maskL INF a b 0 vals)`。木はまた `vals` を表す（`push` だけが状態を変える）。
+- 各操作の手数は `48n + 1` 以下。
 
 ## 時間と領域
 
-- 証明した上界は 1 回の操作あたり木の節点数に比例する（`nodesOf t * 117614 + innerOf t * 24794 + 3012` 以下の仕事量。`calc_max`/`calc_min` は `nodesOf t * 72254 + 5030` 以下、構成子の本体は `4 * n * 45414 + 100` 以下（呼出し全体の scalar work 増分はさらに34、storage work 増分は `4 * n * 18 + 10` 以下））。木は `n` 個の葉を持ち `nodesOf t = 2n - 1` なので、**最悪で 1 回の操作は `O(n)`** である。
-- 償却 `O(log^2 n)`（Segment Tree Beats の既知の性質）は、まだ Lean で証明していない。この上界は未検証であり、性能の保証としては使わない。
-- 追加領域は局所変数と固定長のスタック（`st_k`、`st_l`、`st_r` は各 256 要素）、節点配列は `8n+8` 要素ずつ。呼び出し側の変数に加える領域の上限は定数（`ScalarPostMB 333`、`400`、`100`）で表す。
+- 証明した上界は、構築が `O(n)`、各操作が `O(n)`（1 回の操作は各節点を高々 1 度訪れる）。
+- Segment Tree Beats の既知の償却 `O(log^2 n)` は証明していない。性能の保証としては使わない。
+- 領域は長さ `4n` の配列 9 本。再帰の深さは木の高さ `⌈log2 n⌉ + 1`。
 
-## 証明
+## 証明の構成
 
-`Proofs/Beats*.lean`（共有の補題: 木のモデル `BeatsModel`/`BeatsTree`/…、各節点操作の不変条件、`chmin`/`chmax`/`add`/`update` の `Inv` の保存、走査 `travBT`、実行 `BeatsExec*`/`BeatsLoop*`/`BeatsOp*`/`BeatsCalc*`/`BeatsCtor*`、引数準備 `BeatsPrepGen`、呼び出し `BeatsCallGen`、生成モデル `Proofs/Generated/SegmentTreeBeats.lean`）、`Proofs/SegmentTreeBeatsCall.lean`（公開定理）。C++ のテストは `tests/segment_tree_beats.cpp`（素朴な配列との照合、`-fsanitize=address,undefined`）。
+- **数学層** `Proofs/Cpp/Lib/SegmentTreeBeatsMath.lean`:
+  - 列の要約 `Summ`。
+  - 節点の配列を関数として見た状態 `BS` と、節点操作（`unm`/`unmin`/`addAll`/`updAll`/`upd`/`push`）の補題。
+  - 木の値 `T`（祖先の保留中の加算と clamp を通した実値）、不変条件 `Inv`、安全性 `Safe`。
+- **橋渡し** `Proofs/Cpp/SegmentTreeBeats.lean`:
+  - `view` が C++ の配列を `BS` として読む。
+  - 生成モデルの節点操作は、`BS` の操作に等しい（`unm_cpp` … `push_cpp`）。
+- **再帰**: 各再帰（`_chmin`/`_chmax`/`_add_val`/`_update_val`/`_calc_max`/`_calc_min`/`_build`）は、節点の高さについての帰納法で示す。
+  - 内部節点の共通部分（押し下げ、2 つの子、`update`）は `inner_post`/`query_inner`/`build_inner` にまとめる。
+  - 祖先が押し下げ済みなので、訪れる節点の保留中の加算のオフセットは `[0]` である。加算だけは `[0, x]` を使う。
+- **数値の扱い**: 整数は数学的な整数として扱う。値と途中の値が `int64_t` に収まることは、上の `B < INF` の前提から従う。添字が `int` に収まることは `n < 2^29` から従う。
 
-## 未解決
+## 検証
 
-- 容量を分離した追加定理の独立カーネル検査と全件検査。旧Lensの制約は既存定理との互換性のため残っており、新しい適用にはBRepSを使う。
-- 償却計算量（上記）。
-- `x` の範囲（`|x| < INF`）と値の安全性は前提として明記したが、前提が満たされない入力（`±INF` 付近の値の加算）は扱わない。
+- **翻訳**: `verifier/lean_translate.py` がヘッダ全体を翻訳する。この部品のために次を加えた（`docs/translation.md`）。
+  - 自己再帰（燃料つきの `_rec`）
+  - `static constexpr` のメンバー定数
+  - 代入の連鎖
+  - コンマ文
+  - vector の代入
+- **差分テスト** `tests/diff/segment_tree_beats.py`: 前提を満たす操作列で、構築と 6 つの操作をモデルと C++ で比べる。
+- **C++ テスト** `tests/segment_tree_beats.cpp`（ASan/UBSan 付き）: 素朴な配列と元の実装の両方と照合する。値の大きさは 3 段階（小、`10^9`、`10^18`）で試す。
 
+## 元の実装の不具合と前提（`docs/experiments_findings.md`）
 
-## 容量を分離した補助証明（2026-11-01）
-
-`Proofs/BeatsCapCtor.lean` は `Capacities b L S` と `BRepS n L S ...` を導入し、node/entered配列の容量Lと走査スタックの容量Sを別々に扱う。中点分割Shapeから区間幅≤2^kなら高さ≤kを示し、n<2^31なら初期スタック予算1+height+2≤256を得る。構築本体の正常終了・意味・cost/need/wkと表現を、S≥34で構成する。`Proofs/BeatsCapChmin.lean` は同じ分離条件をchminの走査・後処理・生成メソッド本体・表現保存まで接続する。旧BRepからの包含もあり、既存定理の前提や結論は変更していない。
-
-`tests/test_beats_capacities.py` のLean回帰例は、実C++と同じ長さの初期配列でn=32、L=264、S=256を構成する。旧Lensは不成立、新Capacitiesは成立し、生成構築モデルから32個の0を表すBRepSを得る。全対象サイズの構築補題は一般のnを扱うが、この具体例は公開callerのallocation/prepareや任意操作列の証明ではない。構築と6操作の生成本体・公開Callへの接続は以下の追加定理へ進んだ。追加モジュールの独立カーネル検査と全件検査は未完了。
-
-
-## 容量を分離した公開呼出し定理
-
-`Proofs/BeatsCapUpdate1.lean`（chmax）、`BeatsCapUpdate2.lean`（加算）、`BeatsCapUpdate3.lean`（代入）、`BeatsCapCalc.lean`（最大/最小照会）も同じ分離条件で生成メソッドの実行と意味保存を扱う。`Proofs/SegmentTreeBeatsCall.lean` の名前空間 `Proofs.BeatsSeparate` に、既存と同名の構築・6操作の公開Call定理を追加した。これらは準備、正常終了、返却値、callerの保持、scalar/storageの仕事量と領域上界を含む。既存の `Proofs.BeatsRep` 側の定理は維持している。
-
-構築では `BFreshS L S b0`、`34 ≤ S`、`8*n+8 ≤ L < 2^31` を使い、`BRepS n L S ...` を構成する。操作ではこの表現と `S < 2^31` を使う。実装のS=256は双方の容量条件を満たし、Lは8*n+8にできる。従来の算術安全性・区間・型・所有権の前提は維持する。これにより旧Lensの `n≥32` の矛盾を避けて公開Callへ接続するが、C++の確保処理からcallerのBFreshS/CVecsそのものを構成する証明、独立検証器と全件検査の成功は別途必要である。
-
-
-## 確保処理を含む構築段階の生成
-
-`Proofs/Generated/BeatsConstructionStage.lean` は実ソースの15本のvector初期化と構成子本体を生成した補助モデルである。構築中の `update(e)` は共通のAST展開器で実フィールド局所変数へ展開する。初期化prefixの後の本体は、既存の本体モデルに対しvector引数のスロットを循環置換したものと構文上一致する。実ソースとの全文一致・型検査と、初期化の型/順序/容量・本体の置換を回帰検査する。[構築段階と範囲](constructor_stage_methods.md)を参照。
-
-この構文一致は、15本の実確保からBFreshS/CVecsを構成する一般証明や、評価器でのスロット置換の意味保存とは区別する。それらとクラスexport/寿命の接続は未完了である。
-
-
-## 元のサイズ範囲へ戻す構築候補
-
-[64-bit確保長・構築添字の候補](beats_wide_candidate.md)をexperimentsへ追加した。操作側の子添字は木の高さにより元のintサイズ範囲で安全と証明できるため、現候補は構成子だけを変更し、6操作の生成関数を保つ。検査済みの候補であり、公開版や構築の一般証明への切替は未完了。違反一覧の項目を解消済みにはしていない。
+- 実値が範囲内でも、chmin の後の大きな加算で、格納値と保留中の加算の和が `int64_t` を溢れることがある。例: `[-3.9e18, 3.9e18]` に `chmin(0, 2, -3.8e18)` の後、`add_val(0, 2, 3.85e18)` を 2 回。このため前提は実値ではなく、上の上界 `B`（各加算で `|x|` 増える）で述べる。
+- `n = 0` の構築は、長さ 0 の配列の添字 0 に書き込む（未定義動作）。前提は `1 ≤ n`。
