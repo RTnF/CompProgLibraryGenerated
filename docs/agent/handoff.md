@@ -868,3 +868,4 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - segment_tree_beats の push（245b637）後の CI は約10.5分で成功。
 - 2026-11-21: find_cycle push（d91c205）の CI は約7分で成功。cold_build の手動実行（run 44867998226）は全ビルドを含めて約12分で成功した。
 - 2026-11-21: 利用者の決定。目標「全ての部品を再公開する」は2026-11-11に取り下げた4部品（segment_tree、lazy_segment_tree、find_cycle、segment_tree_beats）を指し、完了とする。未移植の原本（graph_flow、graph_matrix、segment_tree_beats_sum など）と違反一覧の狭い形の解消は別の作業。segtree_sum は残す（未決事項から外す）。
+- 2026-11-21 継続（segment_tree_beats_sum公開）: 元の `SegmentTreeBeatsSum` 全体（構築子、6操作と `calc_sum`）を新方式で公開した。ヘッダは beats と同じ書き換え（`_build`、範囲外の葉は `sum = 0` を明示）。証明は beats の証明を `sum` を加えた構造体に移した `Proofs/Cpp/SegmentTreeBeatsSumCore.lean`（共有モジュール、約130秒・4.3GB）と、和の不変条件 `SInv` の数学 `Proofs/Cpp/Lib/SegmentTreeBeatsSumMath.lean`、各再帰が `SInv` を保つことと公開定理（`ValidS`）の `Proofs/Cpp/SegmentTreeBeatsSum.lean`（約55秒・3.8GB）。前の結果とは決定性から `triple_and` で合わせる。差分テスト1530出力一致。

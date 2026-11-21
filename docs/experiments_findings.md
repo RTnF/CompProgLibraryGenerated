@@ -269,3 +269,7 @@ const/mutableの両targetで旧scalar memory/binding/slotと既存scalar読取�
 ## 2026-11-21: SegmentTreeBeats の格納値の溢れと `n = 0` の構築（前提に含める、未修正）
 
 `experiments/library/cpp/segment_tree/segment_tree_beats.hpp` は、実値が `int64_t` に収まっていても溢れることがある。節点に保留中の加算と、chmin で切り詰める前の格納値の和が溢れるからである。例: 値 `[-3.9e18, 3.9e18]` に `chmin(0, 2, -3.8e18)` の後、`add_val(0, 2, 3.85e18)` を 2 回行う。最後の実値は `3.8e18`、`3.9e18` で範囲内だが、`add_all` が `7.7e18 + 3.9e18` を計算する（UBSan で確認）。公開版は元のままで、前提を「初期値と chmin/chmax/update の引数が `|·| ≤ B`、各加算で `B` が `|x|` 増え、常に `B < 4e18`」とした（`docs/segment_tree_beats.md`、Lean の `Safe`）。また `n = 0` の構築は長さ 0 の配列の添字 0 に書き込む（未定義動作）。前提は `1 ≤ n`。
+
+## 2026-11-21: SegmentTreeBeatsSum の溢れ（前提に含める、未修正）
+
+`experiments/library/cpp/segment_tree/segment_tree_beats_sum.hpp` は `segment_tree_beats.hpp` と同じ格納値の溢れ（上の項）を持つ。加えて、和 `sum[k]` とその更新 `(x - max_v[k]) * max_c[k]`、`len[k] * x` が `int64_t` を溢れうる。公開版は元のままで、前提を `segment_tree_beats` の上界 `B` に加えて `2 · n · B < 2^63` とした（`docs/segment_tree_beats_sum.md`）。`n = 0` の構築も同じく未定義動作で、前提は `1 ≤ n`。
