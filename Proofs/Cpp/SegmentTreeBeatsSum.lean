@@ -138,7 +138,7 @@ theorem push_sum (st : cp.SegmentTreeBeatsSum) (k : Int) (hk0 : 0 ≤ k)
   have hk2 := hk (by omega)
   have hd : decide (st.n0 - 1 ≤ k) = false := by simp [hleaf]
   simp only [cp.SegmentTreeBeatsSum.push, hd, Bool.false_eq_true, ite_false]
-  mvcgen [unm_both, unmin_both, addAll_both, updAll_both]
+  mvcgen -trivial [unm_both, unmin_both, addAll_both, updAll_both]
   all_goals try simp +zetaDelta only [st_eta, decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_true] at *
   all_goals try simp only [get_eq, ea, eb, cinf, fold_mx, fold_mn, fold_la, fold_lv, ne_eq, hleaf, false_imp_iff,
     true_and] at *

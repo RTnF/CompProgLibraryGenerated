@@ -41,7 +41,6 @@ theorem view_mk (n n0 : Int) (a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 : Array Int) :
       ⟨fun j => a1[j]!, fun j => a2[j]!, fun j => a3[j]!, fun j => a4[j]!, fun j => a5[j]!, fun j => a6[j]!,
         fun j => a7[j]!, fun j => a8[j]!, fun j => a9[j]!⟩ := rfl
 
-set_option maxHeartbeats 2000000 in
 theorem unm_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (x : Int) (hk0 : 0 ≤ k) (hk : k.toNat < st.max_v.size)
     (hsz : SzE st) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.SegmentTreeBeatsSum.update_node_max st k x
@@ -51,23 +50,27 @@ theorem unm_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (x : Int) (hk0 : 0 ≤ k
   have y4 : k.toNat < st.min_v.size := by omega
   have y5 : k.toNat < st.smin_v.size := by omega
   have y9 : k.toNat < st.lval.size := by omega
-  have hU : unm (view st) k.toNat x = unm (view st) k.toNat x := rfl
-  by_cases c1 : st.max_v[k.toNat]! = st.min_v[k.toNat]! <;>
-    by_cases c2 : st.max_v[k.toNat]! = st.smin_v[k.toNat]! <;>
-    by_cases c3 : st.lval[k.toNat]! = INF <;> by_cases c4 : x < st.lval[k.toNat]! <;>
-    by_cases c5 : st.smin_v[k.toNat]! = st.min_v[k.toNat]! <;>
-    simp only [cp.SegmentTreeBeatsSum.update_node_max, get_eq, cinf, c1, c2, c3, c4, c5, decide_true, decide_false,
-      ite_true, ite_false, Bool.and_true, Bool.true_and, Bool.false_and, Bool.and_false, ne_eq] <;>
-    mvcgen <;>
-    (try simp +zetaDelta only [] at *) <;>
-    refine ⟨?_, by simp [SzE, Sz, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10], by simp, by simp, by omega⟩ <;>
-    dsimp only [view_mk, unm, view, upF] <;>
-    simp only [getElemBang_set _ _ _ _ y1, getElemBang_set _ _ _ _ y4, getElemBang_set _ _ _ _ y5,
-      getElemBang_set _ _ _ _ y9, c1, c2, c3, c4, c5, ite_true, ite_false, if_true, if_false, ne_eq, not_false_eq_true,
-      and_self, size_set, not_true_eq_false, false_and, and_false, and_true, true_and] <;>
-    rfl
+  obtain ⟨n, n0, a1, a2, a3, a4, a5, a6, a10, a7, a8, a9⟩ := st
+  simp only at y1 y4 y5 y9 z1 z2 z3 z4 z5 z6 z7 z8 z9 z10 hk ⊢
+  by_cases c1 : a1[k.toNat]! = a4[k.toNat]! <;>
+    by_cases c2 : a1[k.toNat]! = a5[k.toNat]! <;>
+    by_cases c3 : a9[k.toNat]! = INF <;> by_cases c4 : x < a9[k.toNat]! <;>
+    (first | replace c1 := eq_false c1 | replace c1 := eq_true c1) <;>
+    (first | replace c2 := eq_false c2 | replace c2 := eq_true c2) <;>
+    (first | replace c3 := eq_false c3 | replace c3 := eq_true c3) <;>
+    (first | replace c4 := eq_false c4 | replace c4 := eq_true c4) <;>
+    (apply triple_of_run (c := t0 + 1)
+     · simp only [cp.SegmentTreeBeatsSum.update_node_max, get_eq, cinf, c1, c2, c3, c4, decide_true, decide_false,
+        ite_true, ite_false, Bool.and_true, Bool.true_and, Bool.false_and, Bool.and_false, ne_eq, not_true_eq_false,
+        not_false_eq_true]
+       rfl
+     · refine ⟨?_, ⟨by simp [SzE, Sz, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10], by simp⟩, rfl, rfl, rfl⟩
+       rw [view_mk]
+       simp only [unm, view, c1, c2, c3, c4, ne_eq, not_true_eq_false, not_false_eq_true, true_and, false_and,
+         and_true, and_false, ite_true, ite_false, get_eq, upF, getElemBang_set _ _ _ _ y1, getElemBang_set _ _ _ _ y9,
+         getElemBang_set _ _ _ _ y4, getElemBang_set _ _ _ _ y5, ↓reduceIte, size_set]
+       all_goals rfl)
 
-set_option maxHeartbeats 2000000 in
 theorem unmin_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (x : Int) (hk0 : 0 ≤ k) (hk : k.toNat < st.max_v.size)
     (hsz : SzE st) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.SegmentTreeBeatsSum.update_node_min st k x
@@ -77,22 +80,27 @@ theorem unmin_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (x : Int) (hk0 : 0 ≤
   have y2 : k.toNat < st.smax_v.size := by omega
   have y4 : k.toNat < st.min_v.size := by omega
   have y9 : k.toNat < st.lval.size := by omega
-  by_cases c1 : st.max_v[k.toNat]! = st.min_v[k.toNat]! <;>
-    by_cases c2 : st.smax_v[k.toNat]! = st.min_v[k.toNat]! <;>
-    by_cases c3 : st.lval[k.toNat]! = INF <;> by_cases c4 : st.lval[k.toNat]! < x <;>
-    by_cases c5 : st.max_v[k.toNat]! = st.smax_v[k.toNat]! <;>
-    simp only [cp.SegmentTreeBeatsSum.update_node_min, get_eq, cinf, c1, c2, c3, c4, c5, decide_true, decide_false,
-      ite_true, ite_false, Bool.and_true, Bool.true_and, Bool.false_and, Bool.and_false, ne_eq] <;>
-    mvcgen <;>
-    (try simp +zetaDelta only [] at *) <;>
-    refine ⟨?_, by simp [SzE, Sz, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10], by simp, by simp, by omega⟩ <;>
-    dsimp only [view_mk, unmin, view, upF] <;>
-    simp only [getElemBang_set _ _ _ _ y1, getElemBang_set _ _ _ _ y4, getElemBang_set _ _ _ _ y2,
-      getElemBang_set _ _ _ _ y9, c1, c2, c3, c4, c5, ite_true, ite_false, if_true, if_false, ne_eq, not_false_eq_true,
-      and_self, size_set, not_true_eq_false, false_and, and_false, and_true, true_and] <;>
-    rfl
+  obtain ⟨n, n0, a1, a2, a3, a4, a5, a6, a10, a7, a8, a9⟩ := st
+  simp only at y1 y2 y4 y9 z1 z2 z3 z4 z5 z6 z7 z8 z9 z10 hk ⊢
+  by_cases c1 : a1[k.toNat]! = a4[k.toNat]! <;>
+    by_cases c2 : a2[k.toNat]! = a4[k.toNat]! <;>
+    by_cases c3 : a9[k.toNat]! = INF <;> by_cases c4 : a9[k.toNat]! < x <;>
+    (first | replace c1 := eq_false c1 | replace c1 := eq_true c1) <;>
+    (first | replace c2 := eq_false c2 | replace c2 := eq_true c2) <;>
+    (first | replace c3 := eq_false c3 | replace c3 := eq_true c3) <;>
+    (first | replace c4 := eq_false c4 | replace c4 := eq_true c4) <;>
+    (apply triple_of_run (c := t0 + 1)
+     · simp only [cp.SegmentTreeBeatsSum.update_node_min, get_eq, cinf, c1, c2, c3, c4, decide_true, decide_false,
+        ite_true, ite_false, Bool.and_true, Bool.true_and, Bool.false_and, Bool.and_false, ne_eq, not_true_eq_false,
+        not_false_eq_true]
+       rfl
+     · refine ⟨?_, ⟨by simp [SzE, Sz, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10], by simp⟩, rfl, rfl, rfl⟩
+       rw [view_mk]
+       simp only [unmin, view, c1, c2, c3, c4, ne_eq, not_true_eq_false, not_false_eq_true, true_and, false_and,
+         and_true, and_false, ite_true, ite_false, get_eq, upF, getElemBang_set _ _ _ _ y1, getElemBang_set _ _ _ _ y9,
+         getElemBang_set _ _ _ _ y4, getElemBang_set _ _ _ _ y2, ↓reduceIte, size_set]
+       all_goals rfl)
 
-set_option maxHeartbeats 2000000 in
 theorem addAll_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (x : Int) (hk0 : 0 ≤ k) (hk : k.toNat < st.max_v.size)
     (hsz : SzE st) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.SegmentTreeBeatsSum.add_all st k x
@@ -104,20 +112,25 @@ theorem addAll_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (x : Int) (hk0 : 0 �
   have y5 : k.toNat < st.smin_v.size := by omega
   have y8 : k.toNat < st.ladd.size := by omega
   have y9 : k.toNat < st.lval.size := by omega
-  by_cases c1 : st.smax_v[k.toNat]! = -INF <;>
-    by_cases c2 : st.smin_v[k.toNat]! = INF <;>
-    by_cases c3 : st.lval[k.toNat]! = INF <;>
-    simp only [cp.SegmentTreeBeatsSum.add_all, get_eq, cinf, c1, c2, c3, decide_true, decide_false,
-      ite_true, ite_false, ne_eq, not_true_eq_false, not_false_eq_true, decide_not, Bool.not_true, Bool.not_false] <;>
-    mvcgen <;>
-    (try simp +zetaDelta only [] at *) <;>
-    refine ⟨?_, by simp [SzE, Sz, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10], by simp, by simp, by omega⟩ <;>
-    dsimp only [view_mk, addAll, view, upF] <;>
-    simp only [getElemBang_set _ _ _ _ y1, getElemBang_set _ _ _ _ y4, getElemBang_set _ _ _ _ y2,
-      getElemBang_set _ _ _ _ y5, getElemBang_set _ _ _ _ y8,
-      getElemBang_set _ _ _ _ y9, c1, c2, c3, ite_true, ite_false, if_true, if_false, ne_eq, not_false_eq_true,
-      and_self, size_set, not_true_eq_false, false_and, and_false, and_true, true_and] <;>
-    rfl
+  obtain ⟨n, n0, a1, a2, a3, a4, a5, a6, a10, a7, a8, a9⟩ := st
+  simp only at y1 y2 y4 y5 y8 y9 z1 z2 z3 z4 z5 z6 z7 z8 z9 z10 hk ⊢
+  by_cases c1 : a2[k.toNat]! = -INF <;>
+    by_cases c2 : a5[k.toNat]! = INF <;>
+    by_cases c3 : a9[k.toNat]! = INF <;>
+    (first | replace c1 := eq_false c1 | replace c1 := eq_true c1) <;>
+    (first | replace c2 := eq_false c2 | replace c2 := eq_true c2) <;>
+    (first | replace c3 := eq_false c3 | replace c3 := eq_true c3) <;>
+    (apply triple_of_run (c := t0 + 1)
+     · simp only [cp.SegmentTreeBeatsSum.add_all, get_eq, cinf, c1, c2, c3, decide_true, decide_false,
+        ite_true, ite_false, ne_eq, not_true_eq_false, not_false_eq_true, decide_not, Bool.not_true, Bool.not_false]
+       rfl
+     · refine ⟨?_, ⟨by simp [SzE, Sz, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10], by simp⟩, rfl, rfl, rfl⟩
+       rw [view_mk]
+       simp only [addAll, view, c1, c2, c3, ne_eq, not_true_eq_false, not_false_eq_true, true_and, false_and,
+         and_true, and_false, ite_true, ite_false, get_eq, upF, getElemBang_set _ _ _ _ y1, getElemBang_set _ _ _ _ y9,
+         getElemBang_set _ _ _ _ y4, getElemBang_set _ _ _ _ y2, getElemBang_set _ _ _ _ y5,
+         getElemBang_set _ _ _ _ y8, ↓reduceIte, size_set]
+       all_goals rfl)
 
 set_option maxHeartbeats 2000000 in
 theorem updAll_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (x : Int) (hk0 : 0 ≤ k) (hk : k.toNat < st.max_v.size)
@@ -142,7 +155,6 @@ theorem updAll_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (x : Int) (hk0 : 0 �
     getElemBang_set _ _ _ _ y9, get_eq, cinf, ite_true, size_set]
   rfl
 
-set_option maxHeartbeats 2000000 in
 theorem upd_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (hk0 : 0 ≤ k) (hk : 2 * k.toNat + 2 < st.max_v.size)
     (hsz : SzE st) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.SegmentTreeBeatsSum.update st k
@@ -158,20 +170,27 @@ theorem upd_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (hk0 : 0 ≤ k) (hk : 2 
   have eb : (2 * k + 2).toNat = 2 * k.toNat + 2 := by omega
   have na : 2 * k.toNat + 1 ≠ k.toNat := by omega
   have nb : 2 * k.toNat + 2 ≠ k.toNat := by omega
-  by_cases c1 : st.max_v[2 * k.toNat + 1]! < st.max_v[2 * k.toNat + 2]! <;>
-    by_cases c2 : st.max_v[2 * k.toNat + 1]! > st.max_v[2 * k.toNat + 2]! <;>
-    by_cases c3 : st.min_v[2 * k.toNat + 1]! < st.min_v[2 * k.toNat + 2]! <;>
-    by_cases c4 : st.min_v[2 * k.toNat + 1]! > st.min_v[2 * k.toNat + 2]! <;>
-    simp only [cp.SegmentTreeBeatsSum.update, get_eq, ea, eb, c1, c2, c3, c4, decide_true, decide_false,
-      ite_true, ite_false] <;>
-    mvcgen <;>
-    (try simp +zetaDelta only [] at *) <;>
-    refine ⟨?_, by simp [SzE, Sz, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10], by simp, by simp, by omega⟩ <;>
-    dsimp only [view_mk, upd, view, upF, combMax, combMin] <;>
-    simp only [getElemBang_set _ _ _ _ y1, getElemBang_set _ _ _ _ y4, getElemBang_set _ _ _ _ y2,
-      getElemBang_set _ _ _ _ y5, getElemBang_set _ _ _ _ y3, getElemBang_set _ _ _ _ y6, na, nb, c1, c2, c3, c4,
-      ite_true, ite_false, if_true, if_false, gt_iff_lt, size_set] <;>
-    first | rfl | (exfalso; omega)
+  obtain ⟨n, n0, a1, a2, a3, a4, a5, a6, a10, a7, a8, a9⟩ := st
+  simp only at y1 y2 y3 y4 y5 y6 z1 z2 z3 z4 z5 z6 z7 z8 z9 z10 hk ⊢
+  by_cases c1 : a1[2 * k.toNat + 1]! < a1[2 * k.toNat + 2]! <;>
+    by_cases c2 : a1[2 * k.toNat + 1]! > a1[2 * k.toNat + 2]! <;>
+    by_cases c3 : a4[2 * k.toNat + 1]! < a4[2 * k.toNat + 2]! <;>
+    by_cases c4 : a4[2 * k.toNat + 1]! > a4[2 * k.toNat + 2]! <;>
+    (first | replace c1 := eq_false c1 | replace c1 := eq_true c1) <;>
+    (first | replace c2 := eq_false c2 | replace c2 := eq_true c2) <;>
+    (first | replace c3 := eq_false c3 | replace c3 := eq_true c3) <;>
+    (first | replace c4 := eq_false c4 | replace c4 := eq_true c4) <;>
+    (apply triple_of_run (c := t0 + 1)
+     · simp only [cp.SegmentTreeBeatsSum.update, get_eq, ea, eb, c1, c2, c3, c4, decide_true, decide_false,
+        ite_true, ite_false]
+       rfl
+     · refine ⟨?_, ⟨by simp [SzE, Sz, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10], by simp⟩, rfl, rfl, rfl⟩
+       rw [view_mk]
+       simp only [upd, view, combMax, combMin, c1, c2, c3, c4, ite_true, ite_false, get_eq, ea, eb, upF,
+         getElemBang_set _ _ _ _ y1, getElemBang_set _ _ _ _ y2, getElemBang_set _ _ _ _ y3,
+         getElemBang_set _ _ _ _ y4, getElemBang_set _ _ _ _ y5, getElemBang_set _ _ _ _ y6, na, nb, ↓reduceIte,
+         size_set]
+       all_goals rfl)
 
 theorem st_eta (a : cp.SegmentTreeBeatsSum) :
     (⟨a.n, a.n0, a.max_v, a.smax_v, a.max_c, a.min_v, a.smin_v, a.min_c, a.sum, a.len, a.ladd, a.lval⟩ : cp.SegmentTreeBeatsSum) = a := rfl
@@ -286,7 +305,7 @@ theorem push_cpp (st : cp.SegmentTreeBeatsSum) (k : Int) (hk0 : 0 ≤ k)
   have hk2 := hk (by omega)
   have hd : decide (st.n0 - 1 ≤ k) = false := by simp [hleaf]
   simp only [cp.SegmentTreeBeatsSum.push, hd, Bool.false_eq_true, ite_false]
-  mvcgen
+  mvcgen -trivial
   all_goals try simp +zetaDelta only [st_eta, decide_eq_true_eq, decide_eq_false_iff_not, Bool.not_eq_true] at *
   all_goals try simp only [get_eq, ea, eb, cinf, fold_mx, fold_mn, fold_la, fold_lv, ne_eq, hleaf, false_imp_iff,
     true_and] at *
