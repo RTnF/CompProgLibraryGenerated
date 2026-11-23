@@ -722,9 +722,56 @@ class Fn:
                 return text, expected
         raise Unsupported(f"conversion from {ty} to {expected}")
 
+    def range_base(self, arg, which):
+        """The vector `v` of an iterator argument `v.begin()` / `v.end()`, or None."""
+        call = peel(arg)
+        callee = strip(inner(call)[0]) if inner(call) else {}
+        member = callee.get("name") or callee.get("member")
+        if call.get("kind") not in ("CallExpr", "CXXMemberCallExpr") or member != which or not inner(callee):
+            return None
+        return inner(callee)[0]
+
+    def lower_bound_index(self, n, pre):
+        """`std::lower_bound(v.begin(), v.end(), x) - v.begin()`: the index of the first element not less than `x`
+        (https://en.cppreference.com/w/cpp/algorithm/lower_bound; the range must be partitioned by `e < x`),
+        at most log2(n) + 1 comparisons. Returns (text, Ty) or None."""
+        if n.get("kind") == "BinaryOperator" and n.get("opcode") == "-":
+            left, right = inner(n)
+        elif n.get("kind") == "CXXOperatorCallExpr" and self.operator_name(n) == "-" and len(inner(n)) == 3:
+            left, right = inner(n)[1:]
+        else:
+            return None
+        call = peel(left)
+        if call.get("kind") != "CallExpr" or len(inner(call)) != 4:
+            return None
+        callee = strip(inner(call)[0])
+        name = callee.get("referencedDecl", {}).get("name") if callee.get("kind") == "DeclRefExpr" \
+            else callee.get("name")
+        if name != "lower_bound" or not re.sub(r"\s+", "", self.tr.span(callee)).startswith("std::lower_bound"):
+            return None
+        bases = [self.range_base(inner(call)[1], "begin"), self.range_base(inner(call)[2], "end"),
+                 self.range_base(right, "begin")]
+        if any(b is None for b in bases):
+            raise Unsupported("std::lower_bound over a range other than v.begin(), v.end()")
+        target = self.lvalue(bases[0])
+        if self.lvalue(bases[1])[:2] != target[:2] or self.lvalue(bases[2])[:2] != target[:2]:
+            raise Unsupported("std::lower_bound over different vectors")
+        if target[3].kind != "vec" or target[3].args[0].kind not in ("tparam", "int", "u32", "u64"):
+            raise Unsupported("std::lower_bound of a non-vector")
+        elem = target[3].args[0]
+        cur = self.read_lvalue(target)
+        x, _ = self.expr(inner(call)[3], pre, elem)
+        self.need("LT", elem)
+        self.need("DecidableLT", elem)
+        pre.append(f"Cpp.tickN (Nat.log2 {cur}.size + 1)")
+        return f"(Cpp.lowerBound {cur} {x})", INT
+
     def _expr(self, node, pre, expected):
         n = strip(node)
         kind = n.get("kind")
+        found = self.lower_bound_index(n, pre)
+        if found is not None:
+            return found
         if kind in ("UnresolvedLookupExpr", "DependentScopeDeclRefExpr"):
             text = re.sub(r"\s+", "", self.tr.span(n))
             m = re.fullmatch(r"std::is_floating_point_v<(\w+)>", text)
@@ -1695,6 +1742,45 @@ class Fn:
                 infer(formal, self.tr.ty(strip(arg)["type"]["qualType"], self))
             if set(sig.tparams) - bindings.keys():
                 raise Unsupported(f"cannot infer member template arguments of {sig.cpp_name}")
+        free_bindings = False
+        if not sig.owner and not sig.constraints and sig.tparams and not sig.value_params and not bindings:
+            # A free function template called with other template arguments than the caller's own (e.g.
+            # inv_perm(arg_sort(v)) with T = int): deduce them from the argument types as C++ does. When the
+            # deduction is the identity (the caller passes its own T), keep the same-name convention.
+            deduced = {}
+            def deduce(formal, actual):
+                if formal.kind == "tparam" and formal.name in sig.tparams:
+                    if formal.name in deduced and deduced[formal.name] != actual:
+                        raise Unsupported(f"conflicting template arguments of {sig.cpp_name}")
+                    deduced[formal.name] = actual
+                elif formal.kind == actual.kind and formal.name == actual.name:
+                    for f, a in zip(formal.args, actual.args):
+                        deduce(f, a)
+            qual = [strip(arg).get("type", {}).get("qualType", "") for arg in args]
+            def readable(q):
+                try:
+                    self.tr.ty(q, self)
+                    return True
+                except Unsupported:
+                    return False
+            if evaluated_args is None and not all(readable(q) for q in qual):
+                # The argument types are only known after translating them (calls of other templates).
+                evaluated_args = []
+                for (_, formal, is_ref), arg in zip(sig.params, args):
+                    if is_ref:
+                        evaluated_args.append((None, self.lvalue(arg)[3]))
+                    else:
+                        evaluated_args.append(self.expr(arg, pre))
+            for index, ((_, formal, _), arg) in enumerate(zip(sig.params, args)):
+                actual = evaluated_args[index][1] if evaluated_args is not None else self.tr.ty(qual[index], self)
+                deduce(formal, actual)
+            if set(sig.tparams) <= deduced.keys() and any(
+                    deduced[p] != Ty("tparam", p) for p in sig.tparams):
+                own = set(self.sig.tparams) | set(self.cls.tparams if self.cls else [])
+                if any(deduced[p].kind == "tparam" and deduced[p].name not in own for p in sig.tparams):
+                    raise Unsupported(f"template arguments of {sig.cpp_name}")
+                bindings.update(deduced)
+                free_bindings = True
         if sig.value_params:
             for index, ((_, formal, _), arg) in enumerate(zip(sig.params, args)):
                 if formal.kind == "cls":
@@ -1728,11 +1814,14 @@ class Fn:
             for parameter, (cpp, _, _) in packets.items():
                 pre.append(f'let _ : Cpp.ModToUInt32 "{parameter}" {lean_type(bindings[parameter])} := '
                            + mod_to_uint32_binding(cpp, parameter))
-        if (sig.owner and (sig.tparams or info.constraints)) or packets or sig.value_params:
-            self.member_call_bindings.setdefault(id(sig), []).append((dict(bindings), discharged))
+        if (sig.owner and (sig.tparams or info.constraints)) or packets or sig.value_params or free_bindings:
+            recorded = dict(bindings)
+            if free_bindings:
+                recorded["__free__"] = True
+            self.member_call_bindings.setdefault(id(sig), []).append((recorded, discharged))
         parts = [sig.lean_name]
         parameters = {**(info.value_params if info else {}), **sig.value_params}
-        if sig.owner or sig.constraints:
+        if sig.owner or sig.constraints or free_bindings:
             parameters = {**dict.fromkeys(sig.tparams), **parameters}
         for parameter in parameters:
             if parameter in bindings:
@@ -2455,6 +2544,66 @@ class Fn:
             return True
         if name == "assert" or name == "__assert_fail":
             raise Unsupported("assert")
+        if name in ("iota", "stable_sort") and len(args) == (3 if name == "iota" else 3):
+            bases = []
+            for arg, which in zip(args[:2], ("begin", "end")):
+                call = strip(arg)
+                callee = strip(inner(call)[0]) if inner(call) else {}
+                member = callee.get("name") or callee.get("member")
+                if call.get("kind") not in ("CallExpr", "CXXMemberCallExpr") or member != which or not inner(callee):
+                    raise Unsupported(f"std::{name} over a range other than v.begin(), v.end()")
+                bases.append(inner(callee)[0])
+            target = self.lvalue(bases[0])
+            if self.lvalue(bases[1])[:2] != target[:2]:
+                raise Unsupported(f"std::{name} over two different vectors")
+            if target[3].kind != "vec":
+                raise Unsupported(f"std::{name} of a non-vector")
+            elem = target[3].args[0]
+            cur = self.read_lvalue(target)
+            if name == "iota":
+                # std::iota(v.begin(), v.end(), x): v[i] = x + i, one step per element.
+                if elem.kind != "int":
+                    raise Unsupported(f"std::iota of {elem}")
+                pre = []
+                start, _ = self.expr(args[2], pre, elem)
+                self.flush(pre)
+                self.emit(f"Cpp.tickN {cur}.size")
+                for line in self.assign_lines(target, f"(Cpp.iota {cur}.size {start})"):
+                    self.emit(line)
+                return True
+            # std::stable_sort(v.begin(), v.end(), [&](E a, E b) { return e; }): a stable merge sort by the
+            # comparator, O(n log n) comparisons. The comparator must be a lambda whose body is one return of a
+            # pure expression over its parameters and captured variables.
+            lam = strip(args[2])
+            if lam.get("kind") != "LambdaExpr":
+                raise Unsupported("std::stable_sort comparator other than a lambda")
+            record = next((c for c in inner(lam) if c.get("kind") == "CXXRecordDecl"), None)
+            call_op = next((c for c in inner(record or {}) if c.get("kind") == "CXXMethodDecl"
+                            and c.get("name") == "operator()"), None)
+            body = inner(lam)[-1] if inner(lam) else {}
+            if call_op is None or body.get("kind") != "CompoundStmt":
+                raise Unsupported("std::stable_sort comparator shape")
+            params = [c for c in inner(call_op) if c.get("kind") == "ParmVarDecl"]
+            stmts = inner(body)
+            if len(params) != 2 or len(stmts) != 1 or stmts[0].get("kind") != "ReturnStmt" or not inner(stmts[0]):
+                raise Unsupported("std::stable_sort comparator must be one return of two parameters")
+            self.scopes.append({})
+            names = []
+            for p in params:
+                pty = self.tr.ty(type_of_decl(p), self)
+                if pty != elem:
+                    raise Unsupported("std::stable_sort comparator parameter type")
+                self.declare(p["name"], pty)
+                names.append(self.scopes[-1]["__names__"][p["name"]])
+            pre = []
+            cmp, _ = self.expr(inner(stmts[0])[0], pre, BOOL)
+            self.scopes.pop()
+            if pre:
+                raise Unsupported("std::stable_sort comparator with calls or steps")
+            self.emit(f"Cpp.tickN (Cpp.sortCost {cur}.size)")
+            for line in self.assign_lines(target, f"(Cpp.stableSortBy (fun {names[0]} {names[1]} => {cmp}) {cur})"):
+                self.emit(line)
+            return True
         if name == "sort" and len(args) == 2:
             bases = []
             for arg, which in zip(args, ("begin", "end")):
@@ -3460,7 +3609,7 @@ class Translator:
                             # Preserve quoted NumericTraits tags while substituting
                             # the carrier types at this particular call site.
                             r = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"|\b[A-Za-z_][A-Za-z_0-9]*\b',
-                                       lambda m: lean_type(bindings[m[0]]) if m[0] in bindings else m[0],
+                                       lambda m: lean_type(bindings[m[0]]) if m[0] in bindings and m[0] != "__free__" else m[0],
                                        requirement) if bindings else requirement
                             type_text = " ".join(r.split()[1:])
                             if bindings or r.startswith(("Cpp.SourceStream", "Cpp.ModToUInt32", "Cpp.StaticCall",
@@ -3469,6 +3618,12 @@ class Translator:
                             type_names = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", type_text))
                             if not type_names <= own | {"Int", "UInt32", "UInt64", "Bool", "Unit", "Ordering", "Array"}:
                                 raise Unsupported(f"requirement {r} of {callee.cpp_name} over another type parameter")
+                            if bindings.get("__free__") and not type_names & own \
+                                    and requirement.split()[0] in ("Inhabited", "Zero", "IntCast", "LT", "LE",
+                                                                   "DecidableLT", "DecidableLE", "DecidableEq",
+                                                                   "Cpp.Conv"):
+                                # Instantiated at concrete types only: Lean finds the instance at the call.
+                                continue
                             if r not in fn.reqs.items:
                                 fn.reqs.add(r)
                                 changed = True

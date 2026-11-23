@@ -20,33 +20,54 @@ def cp.inv_perm {T : Type} [Inhabited T] [Zero T] [IntCast T] [LT T] [LE T] [Dec
   Cpp.tickN t2.size
   return t2
 
-def cp.compress {T : Type} [Inhabited T] [LT T] [DecidableLT T] [DecidableEq T] (x : (Array T)) (unzip : (Array T)) (cmp : (Array Int)) : Cpp.M ((Array T) × (Array Int)) := do
+def cp.arg_sort {T : Type} [Inhabited T] [LT T] [DecidableLT T] (v : (Array T)) : Cpp.M (Array Int) := do
   Cpp.tick
+  let t1 := (Cpp.size v)
+  Cpp.tickN t1.toNat
+  let mut arg : (Array Int) := (Cpp.replicate t1 (0 : Int))
+  Cpp.tickN arg.size
+  arg := (Cpp.iota arg.size 0)
+  Cpp.tickN (Cpp.sortCost arg.size)
+  arg := (Cpp.stableSortBy (fun a b => (decide ((Cpp.get v a) < (Cpp.get v b)))) arg)
+  let t2 := arg
+  Cpp.tickN t2.size
+  return t2
+
+def cp.inv_arg_sort {T : Type} [Inhabited T] [LT T] [DecidableLT T] (v : (Array T)) : Cpp.M (Array Int) := do
+  Cpp.tick
+  let mut v := v
+  let t1 ← cp.arg_sort v
+  let t2 ← cp.inv_perm (T := Int) t1
+  return t2
+
+def cp.compress_vec_vec_int {T : Type} [Inhabited T] [IntCast T] [LT T] [DecidableLT T] [DecidableEq T] (x : (Array T)) (unzip : (Array T)) (offset : Int) : Cpp.M ((Array T) × (Array T)) := do
+  Cpp.tick
+  let mut x := x
   let mut unzip := unzip
-  let mut cmp := cmp
   let mut n : Int := (Cpp.size x)
-  for i in (Cpp.range 0 n) do
-    Cpp.tick
-    unzip := (Cpp.set unzip i (Cpp.get x i))
+  let t1 := n
+  Cpp.tickN t1.toNat
+  let mut cmp : (Array T) := (Cpp.replicate t1 (default : T))
+  Cpp.tickN x.size
+  unzip := x
   Cpp.tickN (Cpp.sortCost unzip.size)
   unzip := (Cpp.sort unzip)
   Cpp.tickN unzip.size
   unzip := (Cpp.unique unzip)
-  let mut m : Int := (Cpp.size unzip)
-  for i_1 in (Cpp.range 0 n) do
+  for i in (Cpp.range 0 n) do
     Cpp.tick
-    let mut lo : Int := 0
-    let mut hi : Int := m
-    for _ in Cpp.forever do
-      Cpp.tick
-      if !(decide (lo < hi)) then break
-      let mut mid : Int := (lo + (Cpp.div (hi - lo) 2))
-      if (decide ((Cpp.get unzip mid) < (Cpp.get x i_1))) then
-        lo := (mid + 1)
-      else
-        hi := mid
-    cmp := (Cpp.set cmp i_1 lo)
-  return (unzip, cmp)
+    Cpp.tickN (Nat.log2 unzip.size + 1)
+    cmp := (Cpp.set cmp i (Int.cast ((Cpp.lowerBound unzip (Cpp.get x i)) + offset) : T))
+  return (cmp, unzip)
+
+def cp.compress_vec_int {T : Type} [Inhabited T] [IntCast T] [LT T] [DecidableLT T] [DecidableEq T] (x : (Array T)) (offset : Int) : Cpp.M (Array T) := do
+  Cpp.tick
+  let mut x := x
+  let mut offset := offset
+  let mut tmp : (Array T) := ([] : List T).toArray
+  let t1 ← cp.compress_vec_vec_int x tmp offset
+  tmp := t1.2
+  return t1.1
 
 def cp.sort_vector {T : Type} [LT T] [DecidableLT T] (x : (Array T)) : Cpp.M (Array T) := do
   Cpp.tick

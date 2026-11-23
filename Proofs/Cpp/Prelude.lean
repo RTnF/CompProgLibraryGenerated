@@ -211,6 +211,21 @@ def sortLex {α β : Type} [LT α] [LT β] [DecidableEq α] [DecidableLT α] [De
     Array (α × β) :=
   (v.toList.mergeSort (fun a b => !decide (Prod.lexLt b a))).toArray
 
+/-- `std::stable_sort(v.begin(), v.end(), comp)` (https://en.cppreference.com/w/cpp/algorithm/stable_sort): the
+permutation of `v` sorted by the strict weak order `comp` that keeps the order of equivalent elements, with
+O(n log n) comparisons. `List.mergeSort` is stable. -/
+def stableSortBy {α : Type} (comp : α → α → Bool) (v : Array α) : Array α :=
+  (v.toList.mergeSort (fun a b => !comp b a)).toArray
+
+/-- `std::iota(v.begin(), v.end(), x)` (https://en.cppreference.com/w/cpp/algorithm/iota) on `n` elements. -/
+def iota (n : Nat) (x : Int) : Array Int := Array.ofFn (n := n) fun i => x + i
+
+/-- `std::lower_bound(v.begin(), v.end(), x) - v.begin()` (https://en.cppreference.com/w/cpp/algorithm/lower_bound):
+the index of the first element that is not less than `x`. C++ requires the range to be partitioned by `e < x`
+(e.g. sorted); on such a range this is the first index where `e < x` fails. -/
+def lowerBound {α : Type} [LT α] [DecidableLT α] (v : Array α) (x : α) : Int :=
+  (v.toList.findIdx (fun a => !decide (a < x)) : Int)
+
 /-- The cost (ticks) of `std::sort` on `n` elements: the documented O(n log n). -/
 def sortCost (n : Nat) : Nat := n * (Nat.log2 n + 1)
 

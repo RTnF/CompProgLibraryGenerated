@@ -1,7 +1,8 @@
 import Proofs.Cpp.Gen.SortUtil
 import Proofs.Cpp.Lib.Basic
 
-/-! # `sort_util` (library/array/sort_util.hpp): `inv_perm`, `compress`, `sort_vector`, `dedup_vector` -/
+/-! # `sort_util` (library/array/sort_util.hpp): `inv_perm`, `arg_sort`, `inv_arg_sort`, both `compress`, `sort_vector`,
+`dedup_vector` -/
 
 open Std.Do Proofs.Cpp Proofs.Cpp.Gen
 
@@ -137,76 +138,6 @@ theorem strict_idx {T : Type} [LinearOrder T] [Inhabited T] (u : Array T) (h : u
   have := List.pairwise_iff_getElem.mp h i j (by simp; omega) (by simpa using hj) hij
   simpa using this
 
-/-- The binary search invariant: everything before `lo` is below `t`, everything from `hi` is at least `t`. -/
-def BS {T : Type} [LinearOrder T] [Inhabited T] (u : Array T) (t : T) (lo hi : Int) : Prop :=
-  0 ≤ lo ∧ lo ≤ hi ∧ hi ≤ u.size ∧ (∀ i : Nat, (i : Int) < lo → u[i]! < t) ∧
-    (∀ i : Nat, hi ≤ (i : Int) → i < u.size → t ≤ u[i]!)
-
-theorem bw_half (d : Nat) (h : 0 < d) : bitWidth (d / 2) + 1 ≤ bitWidth d ∧ bitWidth (d - d / 2 - 1) + 1 ≤ bitWidth d := by
-  have := bitWidth_div_two d h
-  exact ⟨by omega, by have := bitWidth_mono (show d - d / 2 - 1 ≤ d / 2 by omega); omega⟩
-
-theorem bs_lt {T : Type} [LinearOrder T] [Inhabited T] (u : Array T) (hs : u.toList.Pairwise (· < ·)) (t : T)
-    (lo hi : Int) (H : BS u t lo hi) (hlh : lo < hi) (hm : get u (lo + div (hi - lo) 2) < t) :
-    BS u t (lo + div (hi - lo) 2 + 1) hi ∧
-      bitWidth (hi - (lo + div (hi - lo) 2 + 1)).toNat + 1 ≤ bitWidth (hi - lo).toNat ∧
-      (hi - (lo + div (hi - lo) 2 + 1)).toNat < (hi - lo).toNat ∧ lo < lo + div (hi - lo) 2 + 1 := by
-  obtain ⟨h0, h1, h2, h3, h4⟩ := H
-  simp only [div] at hm ⊢
-  rw [Int.tdiv_eq_ediv_of_nonneg (by omega)] at hm ⊢
-  rw [get_eq] at hm
-  obtain ⟨_, hb⟩ := bw_half (hi - lo).toNat (by omega)
-  have e : (hi - (lo + (hi - lo) / 2 + 1)).toNat = (hi - lo).toNat - (hi - lo).toNat / 2 - 1 := by omega
-  refine ⟨⟨by omega, by omega, h2, fun i hi' => ?_, h4⟩, by rw [e]; omega, by omega, by omega⟩
-  rcases Int.lt_or_le (i : Int) lo with h | h
-  · exact h3 i h
-  · rcases Nat.lt_or_ge i (lo + (hi - lo) / 2).toNat with h' | h'
-    · exact lt_trans (strict_idx u hs _ _ h' (by omega)) hm
-    · have : i = (lo + (hi - lo) / 2).toNat := by omega
-      subst this; exact hm
-
-theorem bs_ge {T : Type} [LinearOrder T] [Inhabited T] (u : Array T) (hs : u.toList.Pairwise (· < ·)) (t : T)
-    (lo hi : Int) (H : BS u t lo hi) (hlh : lo < hi) (hm : t ≤ get u (lo + div (hi - lo) 2)) :
-    BS u t lo (lo + div (hi - lo) 2) ∧
-      bitWidth (lo + div (hi - lo) 2 - lo).toNat + 1 ≤ bitWidth (hi - lo).toNat ∧
-      (lo + div (hi - lo) 2 - lo).toNat < (hi - lo).toNat ∧ div (hi - lo) 2 < hi - lo ∧
-      bitWidth (div (hi - lo) 2).toNat + 1 ≤ bitWidth (hi - lo).toNat := by
-  obtain ⟨h0, h1, h2, h3, h4⟩ := H
-  simp only [div] at hm ⊢
-  rw [Int.tdiv_eq_ediv_of_nonneg (by omega)] at hm ⊢
-  rw [get_eq] at hm
-  obtain ⟨hb, _⟩ := bw_half (hi - lo).toNat (by omega)
-  have e : (lo + (hi - lo) / 2 - lo).toNat = (hi - lo).toNat / 2 := by omega
-  have e2 : ((hi - lo) / 2).toNat = (hi - lo).toNat / 2 := by omega
-  refine ⟨⟨h0, by omega, by omega, h3, fun i hi' hin => ?_⟩, by rw [e]; omega, by omega, by omega, by rw [e2]; omega⟩
-  rcases Nat.lt_or_ge (lo + (hi - lo) / 2).toNat i with h' | h'
-  · exact le_of_lt (lt_of_le_of_lt hm (strict_idx u hs _ _ h' hin))
-  · have : i = (lo + (hi - lo) / 2).toNat := by omega
-    subst this; exact hm
-
-/-- When `t` occurs in `u`, the search ends on it. -/
-theorem bs_found {T : Type} [LinearOrder T] [Inhabited T] (u : Array T) (hs : u.toList.Pairwise (· < ·)) (t : T)
-    (ht : t ∈ u.toList) (lo : Int) (H : BS u t lo lo) : lo.toNat < u.size ∧ u[lo.toNat]! = t := by
-  obtain ⟨h0, -, h2, h3, h4⟩ := H
-  obtain ⟨q, hq, hqt⟩ := List.getElem_of_mem ht
-  simp at hq
-  have hq' : u[q]! = t := by rw [getElem!_pos u q hq]; simpa using hqt
-  have hql : lo ≤ (q : Int) := by
-    by_contra h
-    have := h3 q (by omega); rw [hq'] at this; exact lt_irrefl _ this
-  have hlt : lo.toNat < u.size := by omega
-  refine ⟨hlt, ?_⟩
-  have hge := h4 lo.toNat (by omega) hlt
-  rcases Nat.lt_or_ge lo.toNat q with h | h
-  · have := strict_idx u hs _ _ h hq
-    rw [hq'] at this; exact absurd (lt_of_le_of_lt hge this) (lt_irrefl _)
-  · have : q = lo.toNat := by omega
-    subst this; exact hq'
-
-/-- The invariant of the search loop of `compress` after the first `k` positions. -/
-def CI {T : Type} [LinearOrder T] [Inhabited T] (x u : Array T) (k : Nat) (cm : Array Int) : Prop :=
-  cm.size = x.size ∧ ∀ j, j < k → 0 ≤ cm[j]! ∧ cm[j]!.toNat < u.size ∧ u[cm[j]!.toNat]! = x[j]!
-
 theorem arr_eq {T : Type} [Inhabited T] (r x : Array T) (h1 : r.size = x.size) (h2 : ∀ i, i < x.size → r[i]! = x[i]!) :
     r = x := by
   apply Array.ext h1
@@ -230,19 +161,6 @@ termination_by l => l.length
 theorem unique_size {T : Type} [DecidableEq T] (x : Array T) : (Cpp.unique x).size ≤ x.size := by
   unfold Cpp.unique; simpa using uniqueList_length x.toList
 
-theorem copy_step {T : Type} [Inhabited T] (x b : Array T) (pref suff : List Int) (cur : Int)
-    (hr : range 0 (size x) = pref ++ cur :: suff) (h1 : b.size = x.size) (h2 : ∀ i, i < pref.length → b[i]! = x[i]!) :
-    (set b cur (get x cur)).size = x.size ∧ (∀ i, i < pref.length + 1 → (set b cur (get x cur))[i]! = x[i]!) := by
-  have e := range_cursor hr
-  have hl := congrArg List.length hr
-  simp [range_length, size] at hl e
-  subst e
-  refine ⟨by simp [h1], fun i hi => ?_⟩
-  rw [getElemBang_set _ _ _ _ (by simp; omega)]
-  split
-  · rename_i h; simp at h; subst h; rfl
-  · rename_i h; simp at h; exact h2 i (by omega)
-
 theorem mem_unique_sort {T : Type} [LinearOrder T] [Inhabited T] (x : Array T) (j : Nat) (hj : j < x.size) :
     x[j]! ∈ (Cpp.unique (Cpp.sort x)).toList := by
   unfold Cpp.unique
@@ -250,93 +168,229 @@ theorem mem_unique_sort {T : Type} [LinearOrder T] [Inhabited T] (x : Array T) (
   rw [(sort_perm x).mem_iff, getElem!_pos x j hj]
   exact Array.getElem_mem_toList hj
 
-theorem cmp_step {T : Type} [LinearOrder T] [Inhabited T] (x : Array T) (pref suff : List Int) (cur : Int)
-    (hr : range 0 (size x) = pref ++ cur :: suff) (b : Array Int) (H : CI x (Cpp.unique (Cpp.sort x)) pref.length b)
-    (lo : Int) (hb : BS (Cpp.unique (Cpp.sort x)) x[cur.toNat]! lo lo) :
-    CI x (Cpp.unique (Cpp.sort x)) (pref.length + 1) (set b cur lo) := by
-  have e := range_cursor hr
-  have hl := congrArg List.length hr
-  simp [range_length, size] at hl e
-  subst e
-  have hs := (unique_sorted _ (sort_sorted x)).1
-  have hlo0 := hb.1
-  obtain ⟨f1, f2⟩ := bs_found _ hs _ (mem_unique_sort x _ (by omega)) lo hb
-  obtain ⟨h1, h2⟩ := H
-  refine ⟨by simp [h1], fun j hj => ?_⟩
-  rw [getElemBang_set _ _ _ _ (by simp; omega)]
-  split
-  · rename_i h; simp at h; subst h
-    exact ⟨hlo0, f1, by simpa using f2⟩
-  · rename_i h; simp at h; exact h2 j (by omega)
 
-theorem compress_spec {T : Type} [LinearOrder T] [Inhabited T] (x unzip : Array T) (cmp : Array Int)
-    (hu : unzip.size = x.size) (hc : cmp.size = x.size) (hn : x.size < 2 ^ 31 - 1) (t0 : Nat) :
-    ⦃fun c => ⌜c = t0⌝⦄ cp.compress x unzip cmp
-    ⦃⇓ r c => ⌜r.1 = Cpp.unique (Cpp.sort x) ∧ r.2.size = x.size ∧
-      (∀ j, j < x.size → 0 ≤ r.2[j]! ∧ r.2[j]!.toNat < r.1.size ∧ r.1[r.2[j]!.toNat]! = x[j]!) ∧
-      c ≤ t0 + 1 + 2 * x.size + sortCost x.size + x.size * (2 + bitWidth x.size)⌝⦄ := by
-  mvcgen [cp.compress]
+/-- On a strictly increasing vector containing `t`, `std::lower_bound` finds `t`. -/
+theorem lowerBound_found {T : Type} [LinearOrder T] [Inhabited T] (u : Array T) (hs : u.toList.Pairwise (· < ·))
+    (t : T) (ht : t ∈ u.toList) :
+    0 ≤ lowerBound u t ∧ (lowerBound u t).toNat < u.size ∧ u[(lowerBound u t).toNat]! = t := by
+  obtain ⟨m, hm, e⟩ := List.getElem_of_mem ht
+  simp only [Array.length_toList] at hm
+  have hlt : u.toList.findIdx (fun a => !decide (a < t)) < u.toList.length :=
+    List.findIdx_lt_length.mpr ⟨t, ht, by simp⟩
+  have hk := List.findIdx_getElem (w := hlt)
+  simp only [Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not, not_lt] at hk
+  set k := u.toList.findIdx (fun a => !decide (a < t)) with hkdef
+  have hkm : k = m := by
+    rcases Nat.lt_trichotomy k m with h | h | h
+    · have := strict_idx u hs k m h hm
+      rw [getElem!_pos u k (by simpa using hlt), getElem!_pos u m hm] at this
+      simp only [Array.getElem_toList] at e hk
+      rw [e] at this
+      exact absurd hk (not_le.mpr this)
+    · exact h
+    · have := List.not_of_lt_findIdx (p := fun a => !decide (a < t)) (xs := u.toList) (i := m) (by omega)
+      simp only [e, lt_self_iff_false, decide_false, Bool.not_false, Bool.true_eq_false] at this
+  simp only [Array.length_toList] at hlt
+  refine ⟨by simp [lowerBound], by simp [lowerBound, ← hkdef]; omega, ?_⟩
+  simp only [lowerBound, ← hkdef, Int.toNat_natCast]
+  rw [hkm, getElem!_pos u m hm]
+  simpa using e
+/-- `compress(x, unzip, offset)`: `unzip` becomes the sorted distinct values of `x`, and the result holds the index of
+`x[j]` in it plus `offset` (converted to `T`). -/
+theorem compress_spec {T : Type} [LinearOrder T] [Inhabited T] [IntCast T] (x unzip : Array T) (offset : Int)
+    (hn : x.size < 2 ^ 31) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.compress_vec_vec_int x unzip offset
+    ⦃⇓ r c => ⌜r.2 = Cpp.unique (Cpp.sort x) ∧ r.1.size = x.size ∧
+      (∀ j, j < x.size → 0 ≤ lowerBound r.2 x[j]! ∧ (lowerBound r.2 x[j]!).toNat < r.2.size ∧
+        r.2[(lowerBound r.2 x[j]!).toNat]! = x[j]! ∧ r.1[j]! = ((lowerBound r.2 x[j]! + offset : Int) : T)) ∧
+      c ≤ t0 + 1 + 3 * x.size + sortCost x.size + x.size * (Nat.log2 x.size + 2)⌝⦄ := by
+  have hu := unique_size (Cpp.sort x)
+  rw [sort_size] at hu
+  have hlog : Nat.log2 (Cpp.unique (Cpp.sort x)).size ≤ Nat.log2 x.size := log2_mono2 _ _ hu
+  mvcgen [cp.compress_vec_vec_int]
   case inv1 =>
-    exact ⇓⟨xs, u⟩ c => ⌜u.size = x.size ∧ (∀ i, i < xs.prefix.length → u[i]! = x[i]!) ∧
-      c = t0 + 1 + xs.prefix.length⌝
-  case inv2 =>
-    rename_i r s1 _ _ _ _
-    exact ⇓⟨xs, cm⟩ c => ⌜r = x ∧ CI x (Cpp.unique (Cpp.sort r)) xs.prefix.length cm ∧
-      c ≤ s1 + sortCost x.size + x.size + xs.prefix.length * (2 + bitWidth x.size)⌝
-  case vc3.inv =>
-    rename_i r _ _ _ _ _ _ cur _ _ _ s2 _
-    exact ⟨fun ⟨lo, hi⟩ c => ⌜BS (Cpp.unique (Cpp.sort r)) x[cur.toNat]! lo hi ∧
-        c + bitWidth (hi - lo).toNat ≤ s2 + 1 + bitWidth (Cpp.unique (Cpp.sort r)).size⌝,
-      fun ⟨lo, _⟩ c => ⌜BS (Cpp.unique (Cpp.sort r)) x[cur.toNat]! lo lo ∧
-        c ≤ s2 + 2 + bitWidth (Cpp.unique (Cpp.sort r)).size⌝,
-      fun ⟨lo, hi⟩ => (hi - lo).toNat⟩
-  all_goals simp +zetaDelta [size] at *
+    exact ⇓⟨xs, cm⟩ c => ⌜cm.size = x.size ∧ (∀ j, j < xs.prefix.length →
+      cm[j]! = ((lowerBound (Cpp.unique (Cpp.sort x)) x[j]! + offset : Int) : T)) ∧
+      c ≤ t0 + 1 + 3 * x.size + sortCost x.size + xs.prefix.length * (Nat.log2 x.size + 2)⌝
+  all_goals simp +zetaDelta [size, sort_size] at *
   case vc1.step =>
-    obtain ⟨h1, h2, h3⟩ := ‹_ = x.size ∧ _ ∧ _›
-    obtain ⟨c1, c2⟩ := copy_step x _ _ _ _ ‹range 0 _ = _ ++ _ :: _› h1 h2
-    exact ⟨by simpa using c1, fun i hi => by simpa using c2 i hi, by omega⟩
-  case vc2.pre => exact ⟨hu, ‹_›⟩
-  case vc4.step.isTrue =>
-    obtain ⟨⟨b0, b1, b2, b3, b4⟩, hc⟩ := ‹BS _ _ _ _ ∧ _›
-    rename_i hle
-    have e : _ = _ := Int.le_antisymm hle b1
-    rw [e] at b2 b4 hc
-    exact ⟨⟨b0, Int.le_refl _, b2, b3, b4⟩, by simp at hc; omega⟩
-  case vc5.step.isFalse.isTrue =>
-    obtain ⟨H, hc⟩ := ‹BS _ _ _ _ ∧ _›
-    rename_i hlh hm
-    obtain ⟨q1, q2, q3, q4⟩ := bs_lt _ (unique_sorted _ (sort_sorted _)).1 _ _ _ H hlh hm
-    exact ⟨⟨q1, by omega⟩, q4, hlh⟩
-  case vc6.step.isFalse.isFalse =>
-    obtain ⟨H, hc⟩ := ‹BS _ _ _ _ ∧ _›
-    rename_i hlh hm
-    obtain ⟨q1, q2, q3, q4, q5⟩ := bs_ge _ (unique_sorted _ (sort_sorted _)).1 _ _ _ H hlh hm
-    exact ⟨⟨q1, by omega⟩, q4, hlh⟩
-  case vc7.step.pre =>
-    rename_i r _ _ _ _ _ _ _ _ _ _ _ _
-    have hm := unique_size (Cpp.sort r)
-    rw [sort_size] at hm
-    have := ‹r.size = x.size ∧ _ ∧ _›.1
-    refine ⟨⟨Int.le_refl _, by omega, by omega, fun i hi => absurd hi (by omega),
-      fun i hi hin => absurd hi (by omega)⟩, by simp only [fuel]; omega⟩
-  case vc8.step.post.success =>
-    obtain ⟨hrx, H, hc⟩ := ‹_ = x ∧ CI _ _ _ _ ∧ _›
-    obtain ⟨hb, hc2⟩ := ‹BS _ _ _ _ ∧ _›
-    rw [hrx] at H hb hc2 ⊢
-    have hm := unique_size (Cpp.sort x)
-    rw [sort_size] at hm
-    have hbw := bitWidth_mono hm
-    refine ⟨rfl, cmp_step _ _ _ _ ‹range 0 _ = _ ++ _ :: _› _ H _ hb, ?_⟩
-    rw [Nat.add_mul, Nat.one_mul]; omega
-  case vc9.post.success.pre =>
-    obtain ⟨h1, h2, h3⟩ := ‹_ = x.size ∧ _ ∧ _›
-    have e := arr_eq _ _ h1 h2
+    have hr := ‹range _ _ = _ ++ _ :: _›
+    obtain ⟨hs, hj, hc⟩ := ‹_ ∧ (∀ j, j < _ → _) ∧ _›
+    have e := range_cursor hr
+    have hl := congrArg List.length hr
+    simp +zetaDelta [range_length, size] at hl e
     subst e
-    exact ⟨rfl, ⟨hc, fun j hj => absurd hj (Nat.not_lt_zero _)⟩, by rw [sort_size]⟩
-  case vc10.post.success.post.success =>
-    obtain ⟨hrx, ⟨c1, c2⟩, hc⟩ := ‹_ = x ∧ CI _ _ _ _ ∧ _›
-    have h0 := ‹_ = x.size ∧ _ ∧ _›.2.2
-    rw [hrx] at c2 ⊢
-    exact ⟨rfl, c1, c2, by omega⟩
+    refine ⟨by simp [hs], fun j hj' => ?_, ?_⟩
+    · rw [getElemBang_set _ _ _ _ (by simp; omega)]
+      split
+      · rename_i h; simp at h; subst h; simp [get]
+      · rename_i h; simp at h; exact hj j (by omega)
+    · simp +zetaDelta only at *
+      rw [Nat.add_mul, Nat.one_mul]
+      omega
+  case vc2.pre => exact ⟨by simp [replicate], by omega⟩
+  case vc3.post.success =>
+    obtain ⟨hs, hj, hc⟩ := ‹_ ∧ (∀ j, j < _ → _) ∧ _›
+    have hsorted := (unique_sorted (Cpp.sort x) (sort_sorted x)).1
+    refine ⟨hs, fun j hj' => ?_, hc⟩
+    obtain ⟨h0, h1, h2⟩ := lowerBound_found _ hsorted _ (mem_unique_sort x j hj')
+    exact ⟨h0, h1, h2, hj j hj'⟩
+
+/-- `compress(x, offset)`: the indices of the values of `x` among its sorted distinct values, plus `offset`. -/
+theorem compress_offset_spec {T : Type} [LinearOrder T] [Inhabited T] [IntCast T] (x : Array T) (offset : Int)
+    (hn : x.size < 2 ^ 31) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.compress_vec_int x offset
+    ⦃⇓ r c => ⌜r.size = x.size ∧
+      (∀ j, j < x.size → 0 ≤ lowerBound (Cpp.unique (Cpp.sort x)) x[j]! ∧
+        (lowerBound (Cpp.unique (Cpp.sort x)) x[j]!).toNat < (Cpp.unique (Cpp.sort x)).size ∧
+        (Cpp.unique (Cpp.sort x))[(lowerBound (Cpp.unique (Cpp.sort x)) x[j]!).toNat]! = x[j]! ∧
+        r[j]! = ((lowerBound (Cpp.unique (Cpp.sort x)) x[j]! + offset : Int) : T)) ∧
+      c ≤ t0 + 2 + 3 * x.size + sortCost x.size + x.size * (Nat.log2 x.size + 2)⌝⦄ := by
+  have W := fun (Q : PostCond ((Array T) × (Array T)) PS) =>
+    wp_of_triple (Q := Q) (fun t => compress_spec x ([] : List T).toArray offset hn t)
+  mvcgen [cp.compress_vec_int, W]
+  all_goals simp +zetaDelta at *
+  intro r1 r2 c h1 h2 h3 hc
+  subst h1
+  exact ⟨h2, h3, by omega⟩
+
+theorem range_pair_sublist (n a b : Nat) (hba : b < a) (ha : a < n) : [b, a].Sublist (List.range n) := by
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    rw [List.range_succ]
+    by_cases h : a = n
+    · subst h
+      exact List.Sublist.append (List.singleton_sublist.mpr (List.mem_range.mpr hba)) (List.Sublist.refl _)
+    · exact (ih (by omega)).trans (List.sublist_append_left _ _)
+
+theorem nodup_pair_sublist {α : Type} (l : List α) (hl : l.Nodup) (a b : α) (h1 : [a, b].Sublist l)
+    (h2 : [b, a].Sublist l) : a = b := by
+  induction l with
+  | nil => simp at h1
+  | cons x t ih =>
+    have hx := (List.nodup_cons.mp hl).1
+    have ht := (List.nodup_cons.mp hl).2
+    rcases List.sublist_cons_iff.mp h1 with g1 | ⟨r1, e1, s1⟩ <;>
+      rcases List.sublist_cons_iff.mp h2 with g2 | ⟨r2, e2, s2⟩
+    · exact ih ht g1 g2
+    · simp at e2; obtain ⟨rfl, rfl⟩ := e2
+      exact absurd (g1.subset (by simp : b ∈ [a, b])) hx
+    · simp at e1; obtain ⟨rfl, rfl⟩ := e1
+      exact absurd (g2.subset (by simp : a ∈ [b, a])) hx
+    · simp at e1 e2; obtain ⟨rfl, rfl⟩ := e1; exact e2.1.symm
+
+/-- The stable sort of the indices `0 .. n-1` by `v`: ascending values, equal values in index order. -/
+theorem stable_index_sort {T : Type} [LinearOrder T] [Inhabited T] (v : Array T) (n : Nat) :
+    (((List.range n).map (fun i : Nat => (i : Int))).mergeSort
+      (fun a b => !decide (v[b.toNat]! < v[a.toNat]!))).Pairwise
+      (fun a b => v[a.toNat]! < v[b.toNat]! ∨ (v[a.toNat]! = v[b.toNat]! ∧ a < b)) := by
+  set l := (List.range n).map (fun i : Nat => (i : Int))
+  set le : Int → Int → Bool := fun a b => !decide (v[b.toNat]! < v[a.toNat]!)
+  have trans : ∀ a b c, le a b = true → le b c = true → le a c = true := fun a b c h1 h2 => by
+    simp [le] at h1 h2 ⊢; exact le_trans h1 h2
+  have total : ∀ a b, (le a b || le b a) = true := fun a b => by simp [le]; exact le_total _ _
+  have hs := List.pairwise_mergeSort trans total l
+  have hnd : (l.mergeSort le).Nodup := (List.mergeSort_perm l le).nodup_iff.mpr
+    (List.Pairwise.map _ (fun a b h e => h (by simpa using e)) List.nodup_range)
+  rw [List.pairwise_iff_forall_sublist] at hs ⊢
+  intro a b hab
+  have hle := hs hab
+  simp only [le, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not, not_lt] at hle
+  rcases lt_or_eq_of_le hle with h | h
+  · exact Or.inl h
+  · refine Or.inr ⟨h, ?_⟩
+    have hma : a ∈ l := (List.mergeSort_perm l le).subset (hab.subset (by simp))
+    have hmb : b ∈ l := (List.mergeSort_perm l le).subset (hab.subset (by simp))
+    simp only [l, List.mem_map, List.mem_range] at hma hmb
+    obtain ⟨a', ha', rfl⟩ := hma
+    obtain ⟨b', hb', rfl⟩ := hmb
+    by_contra hlt
+    rcases Nat.lt_or_ge b' a' with hba | hba
+    · have hsub : [(b' : Int), (a' : Int)].Sublist l := (range_pair_sublist n a' b' hba ha').map _
+      have hle' : le (b' : Int) (a' : Int) = true := by
+        simp only [le, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not, not_lt]
+        exact le_of_eq h.symm
+      have h2 := List.pair_sublist_mergeSort trans total hle' hsub
+      have e : (a' : Int) = (b' : Int) := nodup_pair_sublist _ hnd _ _ hab h2
+      omega
+    · have e : a' = b' := by omega
+      subst e
+      have := List.Nodup.sublist hab hnd
+      simp at this
+
+theorem stableSortBy_size {α : Type} (f : α → α → Bool) (l : Array α) : (Cpp.stableSortBy f l).size = l.size := by
+  unfold Cpp.stableSortBy
+  have := (List.mergeSort_perm l.toList (fun a b => !f b a)).length_eq
+  simpa using this
+
+/-- The result of `arg_sort(v)`. -/
+def argSort {T : Type} [LT T] [DecidableLT T] [Inhabited T] (v : Array T) : Array Int :=
+  Cpp.stableSortBy (fun a b => decide (v[a.toNat]! < v[b.toNat]!)) (Cpp.iota v.size 0)
+
+theorem iota_toList (n : Nat) : (Cpp.iota n 0).toList = (List.range n).map (fun i : Nat => (i : Int)) := by
+  apply List.ext_getElem
+  · simp [Cpp.iota]
+  · intro i h1 h2
+    simp [Cpp.iota]
+
+/-- `argSort v` lists `0 .. n-1`, by ascending value and, for equal values, by index. -/
+theorem argSort_spec {T : Type} [LinearOrder T] [Inhabited T] (v : Array T) :
+    (argSort v).toList.Perm ((List.range v.size).map (fun i : Nat => (i : Int))) ∧
+    (argSort v).toList.Pairwise
+      (fun a b => v[a.toNat]! < v[b.toNat]! ∨ (v[a.toNat]! = v[b.toNat]! ∧ a < b)) ∧
+    (argSort v).size = v.size := by
+  have hp : (argSort v).toList.Perm ((List.range v.size).map (fun i : Nat => (i : Int))) := by
+    unfold argSort Cpp.stableSortBy
+    simp only [List.toList_toArray]
+    rw [← iota_toList]
+    exact List.mergeSort_perm _ _
+  refine ⟨hp, ?_, by have := hp.length_eq; simpa using this⟩
+  unfold argSort Cpp.stableSortBy
+  simp only [List.toList_toArray]
+  rw [iota_toList]
+  exact stable_index_sort v v.size
+
+theorem arg_sort_spec {T : Type} [LinearOrder T] [Inhabited T] (v : Array T) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.arg_sort v
+    ⦃⇓ r c => ⌜r = argSort v ∧ c = t0 + 1 + 3 * v.size + sortCost v.size⌝⦄ := by
+  mvcgen [cp.arg_sort]
+  all_goals simp +zetaDelta [size, replicate, argSort, get] at *
+  have h1 : (Cpp.iota v.size 0).size = v.size := by simp [Cpp.iota]
+  refine ⟨rfl, ?_⟩
+  rw [stableSortBy_size, h1]
+  omega
+
+theorem argSort_perm_facts {T : Type} [LinearOrder T] [Inhabited T] (v : Array T) :
+    (∀ j, j < (argSort v).size → 0 ≤ (argSort v)[j]! ∧ (argSort v)[j]! < (argSort v).size) ∧
+    (∀ j k, j < (argSort v).size → k < (argSort v).size → (argSort v)[j]! = (argSort v)[k]! → j = k) := by
+  obtain ⟨hp, -, hs⟩ := argSort_spec v
+  have hnd : (argSort v).toList.Nodup := hp.nodup_iff.mpr
+    (List.Pairwise.map _ (fun a b h e => h (by simpa using e)) List.nodup_range)
+  refine ⟨fun j hj => ?_, fun j k hj hk e => ?_⟩
+  · have hm : (argSort v)[j]! ∈ (argSort v).toList := by
+      rw [getElem!_pos _ j hj]; exact Array.getElem_mem_toList hj
+    rw [hp.mem_iff] at hm
+    simp only [List.mem_map, List.mem_range] at hm
+    obtain ⟨i, hi, e⟩ := hm
+    rw [← e, hs]; omega
+  · rw [getElem!_pos _ j hj, getElem!_pos _ k hk] at e
+    exact (List.Nodup.getElem_inj (xs := (argSort v).toList) (i := j) (j := k) (hi := by simpa using hj)
+      (hj := by simpa using hk) hnd).mp (by simpa using e)
+
+theorem inv_arg_sort_spec {T : Type} [LinearOrder T] [Inhabited T] (v : Array T) (hn : v.size < 2 ^ 31) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.inv_arg_sort v
+    ⦃⇓ r c => ⌜r.size = v.size ∧ (∀ j, j < v.size → r[((argSort v)[j]!).toNat]! = j) ∧
+      c = t0 + 3 + 6 * v.size + sortCost v.size⌝⦄ := by
+  have hs := (argSort_spec v).2.2
+  obtain ⟨hv, hd⟩ := argSort_perm_facts v
+  have W1 := fun (Q : PostCond (Array Int) PS) => wp_of_triple (Q := Q) (fun t => arg_sort_spec v t)
+  have W2 := fun (Q : PostCond (Array Int) PS) =>
+    wp_of_triple (Q := Q) (fun t => inv_perm_spec (argSort v) (by omega) hv hd t)
+  mvcgen [cp.inv_arg_sort, W1]
+  all_goals simp +zetaDelta at *
+  apply (Triple.iff.mp (W2 _ _)) _
+  intro r' c' h1 h2 h3
+  exact ⟨by omega, fun j hj => h2 j (by omega), by omega⟩
 
 end Proofs.Cpp.SortUtil

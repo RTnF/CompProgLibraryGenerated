@@ -15,7 +15,7 @@
 | array/doubling.hpp | 済 | `doubling`, `bit_width_u64`。2026-11-10に「元のソースからの変更」を文書化し、元の関数の逐語コピーとの差分テストを追加 |
 | array/element_count.hpp | 済（具体化 `std::vector<long long>`・`std::vector<int>`。2026-11-11、他のコンテナ・要素型はC++回帰のみ） | `element_count`（元の `const T &v` と戻り値 `vector<pair<value_type, int>>` のまま。元は要素型に `T` を使う不具合で標準コンテナに具体化できなかったため `typename T::value_type` に修正、`docs/agent/fixes.md`）。結果の `pair` の vector は 2 行の入れ子 vector として変換（`pair<long long, int>` は広い型の行）。連の値と長さ・`v` の不変・線形の時間と追加領域を証明（`docs/element_count.md`）。以前の置き換え `run_length`（呼び出し側の 2 本の vector に書く形）は `search_util` の `counts`・`char_count` の分として残る |
 | array/search_util.hpp | 済（2026-11-12、新方式。任意の `T`） | `search_util`（`count`、`counts`、`lower_bound_index`）。`run_length` も `counts` と同じ集計を別の形で持つ |
-| array/sort_util.hpp | 一部 | `sort_util`（`inv_perm`, `compress`, `sort_vector`, `dedup_vector`）。`arg_sort`/`inv_arg_sort` は未（`stable_sort` とラムダ比較） |
+| array/sort_util.hpp | 済（新方式、2026-11-23） | `sort_util`（元の `inv_perm`・`arg_sort`・`inv_arg_sort`・`compress` 2 種をそのまま。追加の `sort_vector`・`dedup_vector`）。安定ソートの順序（`stable_index_sort`）、逆置換、座標圧縮の値と計算量を証明 |
 | fps/convolution.hpp | 一部 | `inv_gcd`（拡張ユークリッド。結果は呼び出し側の `out` に書く）、`countr_zero`（`countr_zero_constexpr`。末尾の 0 ビット数）。`pow_mod_constexpr(x, n, m)` は公開済みの `safe_mod`（`x` の符号を `[0, m)` に直す）と `pow_mod`（二乗法。`1 <= m <= 2^32`）の組み合わせと同じ関数なので、重複としてまとめた（`m = 1` は `pow_mod` も 0、`n = 0` は 1 を返す。`n` は元の `long long` の非負値を `unsigned long long` に読み替える。2 つの関数の合成が元と一致することは Lean では示していない）。NTT 本体（C++20 の `countr_zero`、多項式の `vector` を返す関数）と `safe_mod`/`pow_mod_constexpr`/`primitive_root_constexpr` の `constexpr` 版は未 |
 | geometry/line.hpp, polygon.hpp, vector.hpp | 未 | `double`（浮動小数の誤差の扱いが必要。`docs/trust_policy.md`） |
 | graph/bellman_ford.hpp | 一部 | `bellman_ford`（辺の平行配列、親配列と負閉路の印 `-inf` を含む。元の `NEGATIVE_CYCLE` の値でなく `-inf`） |
@@ -60,7 +60,7 @@
 | AlgebraicStructure/Mapping.hpp（`Affine<T>`） | `library/algebraic_structure/group.hpp` の `GroupAffine` | 一部。原本のpublic field・ide/compose・値渡しapplyを保持し、LLの12モデルとapplyのLL/intに一般callerの証明・独立kernel回帰を追加した（[有限具体化](original_template_classes.md)）。元APIの公開版への統合、任意T/U、完全object/lifetimeは未完了。`Affine<long long>(2,1).apply(0.5)` は旧版2・公開版1で、doubleはC++回帰のみ |
 | AlgebraicStructure/Monoid.hpp | `library/algebraic_structure/monoid.hpp` | 一部。原本MonoidMulのLL具体化4モデルを生成し、既定構築の一般callerと他3モデルの一致を独立kernelで確認。原本hidden friendの暗黙変換は公開C++で復元。公開版の全件gateは成功。任意T・完全object/lifetimeは未完了 |
 | Array/CumulativeSum.hpp | `library/array/cumulative_sum.hpp` | 統合済み（`CumulativeSum2D` を含む） |
-| Array/SortUtil.hpp | `library/array/sort_util.hpp`, `search_util.hpp` | 統合済み。`arg_sort` 系は未（ラムダ比較の `stable_sort`） |
+| Array/SortUtil.hpp | `library/array/sort_util.hpp`, `search_util.hpp` | 統合済み（`arg_sort` 系も 2026-11-23 に公開） |
 | Geometry/Point.hpp | なし | 未（`double`、`atan2` 系の偏角ソート） |
 | Graph/BellmanFord.hpp | `library/graph/bellman_ford.hpp` | 一部（辺の平行配列。親配列と負閉路の印は `-inf`） |
 | Graph/Dijkstra.hpp | `library/graph/dijkstra.hpp` | 一部（CSR、O(n²+m)、親あり） |
@@ -91,7 +91,7 @@
 | --- | --- | --- |
 | `ModInt` / `DynamicModInt` 周辺 | `modint`, `mod61`, `pow_mod`, `dynamic_modint` | 元のヘッダーごとに 1 つ（`mod61`・`mul61` は `string/rolling_hash.hpp` の `rh_in`、`pow_mod` の元を確認する） |
 | `RollingHash` | `rolling_hash`（両クラスと文字列・整数列API） | 元の基数表とヘルパーを `cp::rh_in` へ配置。複数基数の表は連続領域を使用 |
-| `SortUtil` 周辺 | `sort_util`（`inv_perm`・`compress`・`sort_vector`・`dedup_vector` を統合済み）、`search_util`（`count`・`lower_bound_index` を統合済み）、`element_count`（2026-11-11 に元の形で公開） | 元のヘッダー（`array/sort_util.hpp`、`search_util.hpp`）ごとに 1 つ |
+| `SortUtil` 周辺 | `sort_util`（`inv_perm`・`arg_sort`・`inv_arg_sort`・`compress`・`sort_vector`・`dedup_vector` を統合済み）、`search_util`（`count`・`lower_bound_index` を統合済み）、`element_count`（2026-11-11 に元の形で公開） | 元のヘッダー（`array/sort_util.hpp`、`search_util.hpp`）ごとに 1 つ |
 
 ### 2. 元の汎用性を狭めている変更
 

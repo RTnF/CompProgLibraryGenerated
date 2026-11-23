@@ -4,6 +4,7 @@
 #include <climits>
 #include <numeric>
 #include <random>
+#include <string>
 #include <vector>
 
 // Independent oracle: for every target p, search for the position holding p.
@@ -49,34 +50,67 @@ void test_compress() {
         for (int round = 0; round < 4; ++round) {
             std::vector<long long> x(n);
             for (long long &v : x) v = static_cast<long long>(random() % 15) - 7;
+            const int offset = static_cast<int>(random() % 7) - 3;
             std::vector<long long> unzip(n, 99);
-            std::vector<int> cmp(n, -1);
-            cp::compress(x, unzip, cmp);
+            const std::vector<long long> cmp = cp::compress(x, unzip, offset);
             std::vector<long long> expected = x;
             std::sort(expected.begin(), expected.end());
             expected.erase(std::unique(expected.begin(), expected.end()), expected.end());
             assert(unzip == expected);
+            assert((int)cmp.size() == n);
             for (int i = 0; i < n; ++i) {
-                assert(0 <= cmp[i] && cmp[i] < (int)unzip.size());
-                assert(unzip[cmp[i]] == x[i]);
-                assert(cmp[i] == (int)(std::lower_bound(expected.begin(), expected.end(), x[i]) - expected.begin()));
+                const long long k = cmp[i] - offset;
+                assert(0 <= k && k < (long long)unzip.size());
+                assert(unzip[k] == x[i]);
             }
+            // the overload without unzip, with and without the default offset
+            assert(cp::compress(x, offset) == cmp);
+            std::vector<long long> u2;
+            assert(cp::compress(x) == cp::compress(x, u2, 0));
         }
     }
-    // the extreme values of long long
+    // the extreme values of long long; the example from the header comment
     std::vector<long long> x = {LLONG_MAX, 0, LLONG_MIN, -1, LLONG_MAX, LLONG_MIN};
-    std::vector<long long> unzip(x.size());
-    std::vector<int> cmp(x.size());
-    cp::compress(x, unzip, cmp);
+    std::vector<long long> unzip;
+    assert((cp::compress(x, unzip) == std::vector<long long>{3, 2, 0, 1, 3, 0}));
     assert((unzip == std::vector<long long>{LLONG_MIN, -1, 0, LLONG_MAX}));
-    assert((cmp == std::vector<int>{3, 2, 0, 1, 3, 0}));
+    assert((cp::compress(std::vector<long long>{3, 3, 1, 5, 2}, 10) == std::vector<long long>{12, 12, 10, 13, 11}));
     // the element type is a template parameter
     {
-        std::vector<int> x = {5, 3, 5, 1}, u(4);
-        std::vector<int> id(4);
-        cp::compress(x, u, id);
+        std::vector<int> x = {5, 3, 5, 1}, u;
+        const std::vector<int> id = cp::compress(x, u);
         assert(u.size() == 3 && u[0] == 1 && id[0] == 2 && id[1] == 1 && id[3] == 0);
     }
+}
+
+// Independent oracle of the stable index sort: insertion sort of the indices.
+std::vector<int> arg_oracle(const std::vector<long long> &v) {
+    std::vector<int> a;
+    for (int i = 0; i < (int)v.size(); ++i) {
+        int k = (int)a.size();
+        while (k > 0 && v[i] < v[a[k - 1]]) --k;
+        a.insert(a.begin() + k, i);
+    }
+    return a;
+}
+
+void test_arg_sort() {
+    assert((cp::arg_sort(std::vector<long long>{3, 3, 1, 5, 2}) == std::vector<int>{2, 4, 0, 1, 3}));
+    assert((cp::inv_arg_sort(std::vector<long long>{3, 3, 1, 5, 2}) == std::vector<int>{2, 3, 0, 4, 1}));
+    assert(cp::arg_sort(std::vector<long long>{}).empty());
+    std::mt19937_64 random(20261123);
+    for (int n = 0; n <= 200; ++n) {
+        std::vector<long long> v(n);
+        const int range = n % 5 + 1;
+        for (long long &x : v) x = (n % 2 ? LLONG_MIN : 0) + static_cast<long long>(random() % range);
+        const auto a = cp::arg_sort(v);
+        assert(a == arg_oracle(v));
+        const auto b = cp::inv_arg_sort(v);
+        for (int j = 0; j < n; ++j) assert(b[a[j]] == j);
+    }
+    // other element types
+    assert((cp::arg_sort(std::vector<std::string>{"b", "a", "b", ""}) == std::vector<int>{3, 1, 0, 2}));
+    assert((cp::arg_sort(std::vector<double>{0.5, -1.0, 0.5}) == std::vector<int>{1, 0, 2}));
 }
 
 void test_sort_vector() {
@@ -129,6 +163,7 @@ void test_dedup_vector() {
 int main() {
     test_inv_perm();
     test_compress();
+    test_arg_sort();
     test_sort_vector();
     test_dedup_vector();
     return 0;

@@ -1,8 +1,8 @@
 # sort_util
 
-`library/array/sort_util.hpp` は元の `experiments/library/cpp/array/sort_util.hpp` の関数をまとめた 1 つのヘッダーで、`inv_perm`・`compress`・`sort_vector`・`dedup_vector` を持つ。すべて要素型 `T` のテンプレートのままで、検証した具体化はヘッダーの明示的な具体化に書いた型（`inv_perm<int>`、ほかは `long long`）。
+`library/array/sort_util.hpp` は元の `experiments/library/cpp/array/sort_util.hpp` の関数をまとめた 1 つのヘッダーで、元の `inv_perm`・`arg_sort`・`inv_arg_sort`・`compress`（2 つのオーバーロード）と、追加の `sort_vector`・`dedup_vector` を持つ。すべて要素型 `T` のテンプレートのままで、検証した具体化はヘッダーの明示的な具体化に書いた型（`inv_perm<int>`、ほかは `long long`）。
 
-元のソースからの変更: `arg_sort`・`inv_arg_sort`（`stable_sort` とラムダ比較）は未対応のため含めていない。`compress` は呼び出し側が用意した `unzip`・`cmp` に書き込む形で、元の「vector を返す版」と `offset` 引数は含めていない。`sort_vector`・`dedup_vector` は元のソースにはなく、`std::sort`・`std::unique` の契約を検証するための薄い包みである。
+元のソースからの変更: 本体は元と同じ（`namespace cp`、`std::` の明示）。`sort_vector`・`dedup_vector` は元のソースにはなく、`std::sort`・`std::unique` の契約を検証するための薄い包みである。2026-11-23 までの公開版の `compress(x, unzip, cmp)`（呼び出し側の vector に書く形、`offset` なし）は、元の 2 つの `compress` に置き換えた。
 
 ## 検証（新方式、`docs/translation.md`）
 
@@ -11,7 +11,9 @@
 - `sort_vector_spec`（全順序の任意の `T`）: 結果は `Cpp.sort x` で、昇順かつ `x` の並べ替え。tick 数は `1 + sortCost n`（`n log n` 程度）。
 - `dedup_vector_spec`（`DecidableEq` の任意の `T`）: 結果は `Cpp.unique x`（隣り合う等しい要素の連を先頭 1 つに）、tick 数 `1 + n`。`unique_sorted`: 昇順の入力では狭義昇順で、要素の集合が変わらない。
 - `inv_perm_spec`（具体化 `T = int`）: `v` が `[0, n)` の値を重複なく持つとき、結果は長さ `n` で `inv[v[j]] = j`、tick 数 `1 + 3n`。
-- `compress_spec`（全順序の任意の `T`）: `unzip` は `Cpp.unique (Cpp.sort x)`（`x` の値の狭義昇順の列）、各 `j` で `unzip[cmp[j]] = x[j]`。二分探索の不変条件は `BS`、見つかることは `bs_found`。tick 数は `1 + 2n + sortCost n + n (2 + bitWidth n)` 以下。
+- `arg_sort_spec`、`argSort_spec`（全順序の任意の `T`）: 結果は `argSort v`（`iota` の列を `v[a] < v[b]` で安定ソートしたもの）で、`0 .. n-1` の並べ替えであり、隣り合うとは限らない任意の 2 つ `a`（先）、`b`（後）について `v[a] < v[b]`、または `v[a] = v[b]` かつ `a < b`（安定性。`stable_index_sort`）。tick 数は `1 + 3n + sortCost n`。
+- `inv_arg_sort_spec`（全順序の任意の `T`、`n < 2^31`）: 結果 `r` は長さ `n` で `r[argSort v [j]] = j`。tick 数は `3 + 6n + sortCost n`。
+- `compress_spec`、`compress_offset_spec`（全順序で `IntCast` の任意の `T`、`n < 2^31`）: `unzip` は `Cpp.unique (Cpp.sort x)`（`x` の値の狭義昇順の列）、結果の `j` 番目は `lowerBound unzip x[j] + offset`（`T` に変換）で、`unzip` のその位置に `x[j]` がある（`lowerBound_found`）。tick 数は `1 + 3n + sortCost n + n (log2 n + 2)` 以下（引数 1 つ版は 1 多い）。
 
 差分テストは `tests/diff/sort_util.py`。
 
@@ -25,13 +27,20 @@
 
 C++ のテストは `tests/sort_util.cpp`。
 
+## arg_sort / inv_arg_sort
+
+`cp::arg_sort<T>(const std::vector<T> &v)` はソート結果の添字の列（例: `[3, 3, 1, 5, 2]` → `[2, 4, 0, 1, 3]`）。等しい値は添字の順（`std::stable_sort`）。`cp::inv_arg_sort<T>(v)` はその逆置換で、各添字がソートでどこへ移るか（例: `[2, 3, 0, 4, 1]`）。
+
+- 前提: `v.size() < 2^31`、`T` の `<` は狭義弱順序（Lean では全順序の型）。
+- 時間: O(n log n)。`std::stable_sort` の計算量はドキュメントのとおりと認める（`docs/trust_policy.md`）。
+
 ## compress
 
-`cp::compress<T>(const std::vector<T> &x, std::vector<T> &unzip, std::vector<int> &cmp)` は座標圧縮。`unzip` に `x` の値を昇順・重複なしで置き、`cmp[i]` に `x[i]` の `unzip` 中の位置を書く。
+`cp::compress<T>(const std::vector<T> &x, std::vector<T> &unzip, int offset = 0)` は座標圧縮（例: `[3, 3, 1, 5, 2]` → `[2, 2, 0, 3, 1] + offset`）。`unzip` に `x` の値を昇順・重複なしで置き、結果の `i` 番目に `x[i]` の `unzip` 中の位置に `offset` を足した値を返す。`cp::compress<T>(x, offset = 0)` は `unzip` を返さない版。
 
-- 前提: `x`、`unzip`、`cmp` は互いに別の vector で、`x.size() == unzip.size() == cmp.size() == n`、`n < 2^31 - 1`。`T` の `<` は全順序。
-- 結果: `unzip` は `Cpp.unique (Cpp.sort x)`（`x` の値の狭義昇順の列）、各 `j < n` で `unzip[cmp[j]] = x[j]`（`compress_spec`）。
-- 時間: O(n log n)（tick 数 `1 + 2n + sortCost n + n (2 + bitWidth n)` 以下）。
+- 前提: `x.size() < 2^31`、`T` の `<` は全順序、`T` は位置 + `offset` の整数から作れる。
+- 結果: `compress_spec`、`compress_offset_spec`。
+- 時間: O(n log n)。
 
 ## sort_vector
 
