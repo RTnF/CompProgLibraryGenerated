@@ -1,28 +1,43 @@
-"""Differential test commands for square_matrix (verifier/diff_harness.py)."""
-import random
+"""Differential test commands for SquareMatrix (verifier/diff_harness.py).
 
-rng = random.Random(20261112)
-
-
-def vec(xs):
-    return " ".join(map(str, [len(xs), *xs]))
-
-
-def mat(n, extra=0):
-    return [rng.choice([0, 1, 2**64 - 1, rng.randrange(2**64)]) for _ in range(n * n + extra)]
-
+Objects come from O() and I() and the arithmetic operations; element writes go through the row reference, which the
+command language does not express, so general matrices are covered by tests/square_matrix.cpp."""
 
 lines = []
-for _ in range(60):
-    n = rng.randint(0, 4)
-    a, b, c = mat(n, rng.randint(0, 2)), mat(n, rng.randint(0, 2)), mat(n, rng.randint(0, 2))
-    lines.append(f"call mat_mul {vec(a)} {vec(b)} {vec(c)} {n}")
-    lines.append(f"call mat_add_assign {vec(a)} {vec(b)} {n}")
-    lines.append(f"call mat_sub_assign {vec(a)} {vec(b)} {n}")
-    lines.append(f"call mat_zero {vec(a)} {n}")
-    lines.append(f"call mat_negate {vec(a)} {n}")
-    lines.append(f"call mat_identity {vec(a)} {n}")
-    lines.append(f"call mat_equal {vec(a)} {vec(a if rng.random() < 0.5 else b)} {n}")
-    e = rng.choice([0, 1, 2, 3, rng.randrange(100), rng.randrange(2**64)])
-    lines.append(f"call mat_pow {vec(a)} {vec(mat(n))} {vec(mat(n))} {vec(mat(n))} {n} {e}")
+count = 0
+
+
+def obj(command):
+    """A command that appends one object; returns its number."""
+    global count
+    lines.append(command)
+    count += 1
+    return count - 1
+
+
+o = obj("call SquareMatrix.O")
+i = obj("call SquareMatrix.I")
+two = obj(f"call op_add_SquareMatrix_SquareMatrix {i} {i}")
+neg = obj(f"do SquareMatrix.op_sub {i}")
+three = obj(f"call op_sub_SquareMatrix_SquareMatrix {two} {neg}")
+six = obj(f"call op_mul_SquareMatrix_SquareMatrix {two} {three}")
+mix = obj(f"call op_add_SquareMatrix_SquareMatrix {six} {neg}")
+pos = obj(f"do SquareMatrix.op_add {mix}")
+for k in (o, i, two, neg, three, six, mix, pos):
+    lines.append(f"field SquareMatrix.mat {k}")
+    for row in (0, 1):
+        lines.append(f"do SquareMatrix.op_index_int_const {k} {row}")
+for a in (o, i, two, six):
+    for b in (o, i, two, six):
+        lines.append(f"call op_eq_SquareMatrix_SquareMatrix {a} {b}")
+        lines.append(f"call op_ne_SquareMatrix_SquareMatrix {a} {b}")
+for e in (0, 1, 2, 3, 5, 10, 31):
+    k = obj(f"do SquareMatrix.pow {three} {e}")
+    lines.append(f"field SquareMatrix.mat {k}")
+for k in (two, three, neg):
+    lines.append(f"do SquareMatrix.op_mul_assign {k} {k}")
+    lines.append(f"field SquareMatrix.mat {k}")
+    lines.append(f"do SquareMatrix.op_add_assign {k} {i}")
+    lines.append(f"do SquareMatrix.op_sub_assign {k} {two}")
+    lines.append(f"field SquareMatrix.mat {k}")
 print("\n".join(lines))

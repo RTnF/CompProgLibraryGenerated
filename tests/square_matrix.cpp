@@ -1,124 +1,106 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/number/square_matrix.hpp"
+#include <array>
+#include <cassert>
+#include <climits>
 #include <random>
-#include <vector>
+#include <type_traits>
+#include <utility>
+
+using M2 = cp::SquareMatrix<long long, 2>;
+using M3 = cp::SquareMatrix<long long, 3>;
+
+// The original API: an aggregate with the public array, row references, pow(long long) const.
+static_assert(std::is_aggregate_v<M2> && std::is_trivial_v<M2> && std::is_standard_layout_v<M2>);
+static_assert(std::is_same_v<decltype(&M2::pow), M2 (M2::*)(long long) const>);
+static_assert(std::is_same_v<decltype(std::declval<M2 &>()[0]), long long (&)[2]>);
+static_assert(std::is_same_v<decltype(std::declval<const M2 &>()[0]), const long long (&)[2]>);
+static_assert(std::is_same_v<decltype(M2::mat), long long[2][2]>);
+
+template <int n> using Naive = std::array<std::array<long long, n>, n>;
+
+template <int n> Naive<n> naive_mul(const Naive<n> &a, const Naive<n> &b) {
+  Naive<n> c{};
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++)
+      for (int k = 0; k < n; k++) c[i][j] += a[i][k] * b[k][j];
+  return c;
+}
+
+template <int n, class V> void expect(const cp::SquareMatrix<long long, n> &m, const V &v) {
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++) assert(m[i][j] == v[i][j]);
+}
+
+template <int n> void random_checks(std::mt19937_64 &random) {
+  using M = cp::SquareMatrix<long long, n>;
+  for (int round = 0; round < 200; round++) {
+    M a, b;
+    Naive<n> va, vb;
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++) {
+        a[i][j] = va[i][j] = static_cast<long long>(random() % 7) - 3;
+        b[i][j] = vb[i][j] = static_cast<long long>(random() % 7) - 3;
+      }
+    Naive<n> sum, diff, neg;
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++) {
+        sum[i][j] = va[i][j] + vb[i][j];
+        diff[i][j] = va[i][j] - vb[i][j];
+        neg[i][j] = -va[i][j];
+      }
+    expect(a + b, sum);
+    expect(a - b, diff);
+    expect(-a, neg);
+    expect(+a, va);
+    expect(a * b, naive_mul<n>(va, vb));
+    M c = a;
+    c += b;
+    expect(c, sum);
+    c = a;
+    c -= b;
+    expect(c, diff);
+    c = a;
+    c *= b;
+    expect(c, naive_mul<n>(va, vb));
+    c = a;
+    c *= c; // the operand aliases the receiver
+    expect(c, naive_mul<n>(va, va));
+    assert(a == a && !(a != a));
+    assert((a == b) == (va == vb) && (a != b) == (va != vb));
+    // pow by repeated squaring against repeated multiplication
+    Naive<n> p{};
+    for (int i = 0; i < n; i++) p[i][i] = 1;
+    for (int e = 0; e <= 9; e++) {
+      expect(a.pow(e), p);
+      p = naive_mul<n>(p, va);
+    }
+  }
+}
 
 int main() {
-    std::mt19937_64 random(20261027);
-    for (int n = 0; n <= 14; ++n) {
-        for (int round = 0; round < 6; ++round) {
-            std::vector<unsigned long long> a(n * n), b(n * n), c(n * n, 12345);
-            for (auto &x : a) x = random();
-            for (auto &x : b) x = random();
-            // reference: accumulate in a different loop order (i, k, j); both wrap modulo 2^64
-            std::vector<unsigned long long> expected(n * n, 0);
-            for (int i = 0; i < n; ++i)
-                for (int k = 0; k < n; ++k)
-                    for (int j = 0; j < n; ++j) expected[i * n + j] += a[i * n + k] * b[k * n + j];
-            cp::mat_mul(a, b, c, n);
-            assert(c == expected);
-
-            // entrywise sum / difference wrap modulo 2^64
-            std::vector<unsigned long long> s = a, d = a;
-            cp::mat_add_assign(s, b, n);
-            cp::mat_sub_assign(d, b, n);
-            for (int i = 0; i < n * n; ++i) {
-                assert(s[i] == a[i] + b[i]);
-                assert(d[i] == a[i] - b[i]);
-            }
-            cp::mat_sub_assign(s, b, n);
-            assert(s == a);
-
-            // zero and identity overwrite every entry
-            std::vector<unsigned long long> z = a, id = a;
-            cp::mat_zero(z, n);
-            cp::mat_identity(id, n);
-            for (int i = 0; i < n; ++i)
-                for (int j = 0; j < n; ++j) {
-                    assert(z[i * n + j] == 0);
-                    assert(id[i * n + j] == (i == j ? 1ULL : 0ULL));
-                }
-            // negation: a + (-a) == 0, and -a == 0 - a entrywise
-            std::vector<unsigned long long> ng = a, sum = a;
-            cp::mat_negate(ng, n);
-            for (int i = 0; i < n * n; ++i) assert(ng[i] == 0ULL - a[i]);
-            cp::mat_add_assign(sum, ng, n);
-            for (int i = 0; i < n * n; ++i) assert(sum[i] == 0);
-            // I * A == A * I == A
-            std::vector<unsigned long long> left(n * n), right(n * n);
-            cp::mat_mul(id, a, left, n);
-            cp::mat_mul(a, id, right, n);
-            assert(left == a && right == a);
-        }
+  // O and I
+  M3 o = M3::O(), id = M3::I();
+  for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) {
+      assert(o[i][j] == 0);
+      assert(id[i][j] == (i == j));
     }
-    // the two read-only arguments may be the same vector (squaring)
-    std::vector<unsigned long long> m = {1, 1, 1, 0}, sq(4, 0);
-    cp::mat_mul(m, m, sq, 2);
-    assert((sq == std::vector<unsigned long long>{2, 1, 1, 1}));
-    // Fibonacci by repeated multiplication stays exact up to the wrap-around of 2^64
-    std::vector<unsigned long long> p = {1, 0, 0, 1}, q(4);
-    for (int i = 0; i < 90; ++i) {
-        cp::mat_mul(p, m, q, 2);
-        p = q;
-    }
-    assert(p[1] == 2880067194370816120ULL);
-    // the element type is a template parameter
-    {
-        std::vector<double> a = {1, 2, 3, 4}, b = {0.5, 0, 0, 2}, c(4);
-        cp::mat_mul(a, b, c, 2);
-        assert(c[0] == 0.5 && c[1] == 4 && c[2] == 1.5 && c[3] == 8);
-        cp::mat_add_assign(a, b, 2);
-        assert(a[0] == 1.5 && a[3] == 6);
-        cp::mat_negate(b, 2);
-        assert(b[0] == -0.5 && b[3] == -2);
-        cp::mat_identity(a, 2);
-        assert(a[0] == 1 && a[1] == 0 && a[2] == 0 && a[3] == 1);
-    }
-    // mat_equal
-    {
-        std::vector<unsigned long long> x = {1, 2, 3, 4}, y = x, z = {1, 2, 3, 5};
-        assert(cp::mat_equal(x, y, 2) && !cp::mat_equal(x, z, 2) && cp::mat_equal(x, x, 2));
-        std::vector<unsigned long long> long_a = {1, 2, 3, 4, 9}, long_b = {1, 2, 3, 4, 7};
-        assert(cp::mat_equal(long_a, long_b, 2));
-        assert(cp::mat_equal(x, z, 0));
-        std::vector<double> d = {1.5, 2, 0, 1}, e = {1.5, 3, 0, 1};
-        assert(cp::mat_equal(d, e, 1) && !cp::mat_equal(d, e, 2));
-    }
-    // mat_pow against repeated multiplication (reference loops written out), and the law A^(x + y) = A^x * A^y
-    {
-        std::mt19937_64 random(20261029);
-        auto reference_mul = [](const std::vector<unsigned long long> &x, const std::vector<unsigned long long> &y, int n) {
-            std::vector<unsigned long long> z(n * n, 0);
-            for (int i = 0; i < n; ++i)
-                for (int j = 0; j < n; ++j)
-                    for (int k = 0; k < n; ++k) z[i * n + j] += x[i * n + k] * y[k * n + j];
-            return z;
-        };
-        for (int round = 0; round < 400; ++round) {
-            int n = (int)(random() % 7);
-            std::vector<unsigned long long> a(n * n), r(n * n, 5), y(n * n, 7), t(n * n, 9);
-            for (auto &x : a) x = random();
-            std::vector<unsigned long long> keep = a;
-            unsigned long long e = random() % 40;
-            std::vector<unsigned long long> expect(n * n, 0);
-            for (int i = 0; i < n; ++i) expect[i * n + i] = 1;
-            for (unsigned long long k = 0; k < e; ++k) expect = reference_mul(expect, a, n);
-            cp::mat_pow(a, r, y, t, n, e);
-            assert(r == expect);
-            assert(a == keep);
-            unsigned long long e1 = random(), e2 = random() >> 1;
-            std::vector<unsigned long long> p1(n * n), p2(n * n), p3(n * n);
-            cp::mat_pow(a, p1, y, t, n, e1);
-            cp::mat_pow(a, p2, y, t, n, e2);
-            cp::mat_pow(a, p3, y, t, n, e1 + e2);  // e1 + e2 may wrap around 2^64: skip then
-            if (e1 + e2 >= e1) assert(p3 == reference_mul(p1, p2, n));
-        }
-        // the Fibonacci matrix: [[1, 1], [1, 0]]^e has F(e + 1), F(e), F(e), F(e - 1)
-        std::vector<unsigned long long> f = {1, 1, 1, 0}, r(4), y(4), t(4);
-        cp::mat_pow(f, r, y, t, 2, 90);
-        assert(r[1] == 2880067194370816120ULL);
-        cp::mat_pow(f, r, y, t, 2, 0);
-        assert(r[0] == 1 && r[1] == 0 && r[2] == 0 && r[3] == 1);
-    }
-    return 0;
+  std::mt19937_64 random(20261123);
+  random_checks<1>(random);
+  random_checks<2>(random);
+  random_checks<3>(random);
+  // Fibonacci by pow; pow(0) is the identity; aggregate initialization
+  M2 f{{{1, 1}, {1, 0}}};
+  assert(f.pow(90)[0][1] == 2880067194370816120LL);
+  assert(f.pow(0) == M2::I());
+  // pow(1) of extreme values does not square after the last bit (fixed in the original)
+  cp::SquareMatrix<long long, 1> big{{{LLONG_MAX}}};
+  assert(big.pow(1)[0][0] == LLONG_MAX);
+  cp::SquareMatrix<long long, 1> small{{{LLONG_MIN}}};
+  assert(small.pow(1)[0][0] == LLONG_MIN);
+  // another element type
+  cp::SquareMatrix<double, 2> d{{{0.5, 0.0}, {0.0, 2.0}}};
+  assert((d * d)[0][0] == 0.25 && (d * d)[1][1] == 4.0);
+  return 0;
 }

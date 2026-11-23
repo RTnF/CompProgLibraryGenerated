@@ -5,110 +5,146 @@ set_option linter.unusedVariables false
 
 namespace Proofs.Cpp.Gen
 
-def cp.mat_mul {T : Type} [Inhabited T] [Zero T] [Add T] [Mul T] (a : (Array T)) (b : (Array T)) (c : (Array T)) (n : Int) : Cpp.M (Array T) := do
+structure cp.SquareMatrix (T : Type) (n : Int) where
+  mat : (Array (Array T))
+  deriving Inhabited
+
+def cp.SquareMatrix.op_add_assign {T : Type} {n : Int} [Inhabited T] [Add T] (self : (cp.SquareMatrix T n)) (y : (cp.SquareMatrix T n)) : Cpp.M ((cp.SquareMatrix T n) × (cp.SquareMatrix T n)) := do
   Cpp.tick
-  let mut c := c
+  let mut mat := self.mat
   for i in (Cpp.range 0 n) do
     Cpp.tick
     for j in (Cpp.range 0 n) do
       Cpp.tick
-      let mut s : T := (0 : T)
+      mat := (Cpp.set mat i (Cpp.set (Cpp.get mat i) j ((Cpp.get (Cpp.get mat i) j) + (Cpp.get (Cpp.get y.mat i) j))))
+  return ((⟨mat⟩ : (cp.SquareMatrix T n)), (⟨mat⟩ : (cp.SquareMatrix T n)))
+
+def cp.op_add_SquareMatrix_SquareMatrix {T : Type} {n : Int} [Inhabited T] [Add T] (a : (cp.SquareMatrix T n)) (b : (cp.SquareMatrix T n)) : Cpp.M (cp.SquareMatrix T n) := do
+  Cpp.tick
+  Cpp.tickN ((n : Int).toNat * (n : Int).toNat)
+  let t1 ← cp.SquareMatrix.op_add_assign (n := n) a b
+  return t1.1
+
+def cp.SquareMatrix.op_sub_assign {T : Type} {n : Int} [Inhabited T] [Sub T] (self : (cp.SquareMatrix T n)) (y : (cp.SquareMatrix T n)) : Cpp.M ((cp.SquareMatrix T n) × (cp.SquareMatrix T n)) := do
+  Cpp.tick
+  let mut mat := self.mat
+  for i in (Cpp.range 0 n) do
+    Cpp.tick
+    for j in (Cpp.range 0 n) do
+      Cpp.tick
+      mat := (Cpp.set mat i (Cpp.set (Cpp.get mat i) j ((Cpp.get (Cpp.get mat i) j) - (Cpp.get (Cpp.get y.mat i) j))))
+  return ((⟨mat⟩ : (cp.SquareMatrix T n)), (⟨mat⟩ : (cp.SquareMatrix T n)))
+
+def cp.op_sub_SquareMatrix_SquareMatrix {T : Type} {n : Int} [Inhabited T] [Sub T] (a : (cp.SquareMatrix T n)) (b : (cp.SquareMatrix T n)) : Cpp.M (cp.SquareMatrix T n) := do
+  Cpp.tick
+  Cpp.tickN ((n : Int).toNat * (n : Int).toNat)
+  let t1 ← cp.SquareMatrix.op_sub_assign (n := n) a b
+  return t1.1
+
+def cp.SquareMatrix.op_mul_assign {T : Type} {n : Int} [Inhabited T] [Zero T] [Add T] [Mul T] (self : (cp.SquareMatrix T n)) (y : (cp.SquareMatrix T n)) : Cpp.M ((cp.SquareMatrix T n) × (cp.SquareMatrix T n)) := do
+  Cpp.tick
+  let mut mat := self.mat
+  let mut tmp : (cp.SquareMatrix T n) := (⟨(Cpp.replicate (n : Int) (Cpp.replicate (n : Int) (default : T)))⟩ : (cp.SquareMatrix T n))
+  for i in (Cpp.range 0 n) do
+    Cpp.tick
+    for j in (Cpp.range 0 n) do
+      Cpp.tick
+      tmp := { tmp with mat := (Cpp.set tmp.mat i (Cpp.set (Cpp.get tmp.mat i) j (0 : T))) }
       for k in (Cpp.range 0 n) do
         Cpp.tick
-        s := (s + ((Cpp.get a ((i * n) + k)) * (Cpp.get b ((k * n) + j))))
-      c := (Cpp.set c ((i * n) + j) s)
-  return c
-
-def cp.mat_add_assign {T : Type} [Inhabited T] [Add T] (a : (Array T)) (b : (Array T)) (n : Int) : Cpp.M (Array T) := do
-  Cpp.tick
-  let mut a := a
-  let mut m : Int := (n * n)
-  for i in (Cpp.range 0 m) do
+        tmp := { tmp with mat := (Cpp.set tmp.mat i (Cpp.set (Cpp.get tmp.mat i) j ((Cpp.get (Cpp.get tmp.mat i) j) + ((Cpp.get (Cpp.get mat i) k) * (Cpp.get (Cpp.get y.mat k) j))))) }
+  for i_1 in (Cpp.range 0 n) do
     Cpp.tick
-    a := (Cpp.set a i ((Cpp.get a i) + (Cpp.get b i)))
-  return a
+    for j_1 in (Cpp.range 0 n) do
+      Cpp.tick
+      mat := (Cpp.set mat i_1 (Cpp.set (Cpp.get mat i_1) j_1 (Cpp.get (Cpp.get tmp.mat i_1) j_1)))
+  return ((⟨mat⟩ : (cp.SquareMatrix T n)), (⟨mat⟩ : (cp.SquareMatrix T n)))
 
-def cp.mat_sub_assign {T : Type} [Inhabited T] [Sub T] (a : (Array T)) (b : (Array T)) (n : Int) : Cpp.M (Array T) := do
+def cp.op_mul_SquareMatrix_SquareMatrix {T : Type} {n : Int} [Inhabited T] [Zero T] [Add T] [Mul T] (a : (cp.SquareMatrix T n)) (b : (cp.SquareMatrix T n)) : Cpp.M (cp.SquareMatrix T n) := do
   Cpp.tick
-  let mut a := a
-  let mut m : Int := (n * n)
-  for i in (Cpp.range 0 m) do
-    Cpp.tick
-    a := (Cpp.set a i ((Cpp.get a i) - (Cpp.get b i)))
-  return a
+  Cpp.tickN ((n : Int).toNat * (n : Int).toNat)
+  let t1 ← cp.SquareMatrix.op_mul_assign (n := n) a b
+  return t1.1
 
-def cp.mat_zero {T : Type} [Inhabited T] [Zero T] (a : (Array T)) (n : Int) : Cpp.M (Array T) := do
+def cp.op_eq_SquareMatrix_SquareMatrix {T : Type} {n : Int} [Inhabited T] [DecidableEq T] (a : (cp.SquareMatrix T n)) (b : (cp.SquareMatrix T n)) : Cpp.M Bool := do
   Cpp.tick
-  let mut a := a
-  let mut m : Int := (n * n)
-  for i in (Cpp.range 0 m) do
-    Cpp.tick
-    a := (Cpp.set a i (0 : T))
-  return a
-
-def cp.mat_negate {T : Type} [Inhabited T] [Zero T] [Sub T] (a : (Array T)) (n : Int) : Cpp.M (Array T) := do
-  Cpp.tick
-  let mut a := a
-  let mut m : Int := (n * n)
-  for i in (Cpp.range 0 m) do
-    Cpp.tick
-    a := (Cpp.set a i ((0 : T) - (Cpp.get a i)))
-  return a
-
-def cp.mat_identity {T : Type} [Inhabited T] [Zero T] [One T] (a : (Array T)) (n : Int) : Cpp.M (Array T) := do
-  Cpp.tick
-  let mut a := a
   for i in (Cpp.range 0 n) do
     Cpp.tick
     for j in (Cpp.range 0 n) do
       Cpp.tick
-      a := (Cpp.set a ((i * n) + j) (0 : T))
-      if (decide (i = j)) then
-        a := (Cpp.set a ((i * n) + j) (1 : T))
-  return a
+      if (!(decide ((Cpp.get (Cpp.get a.mat i) j) = (Cpp.get (Cpp.get b.mat i) j)))) then
+        return false
+  return true
 
-def cp.mat_equal {T : Type} [Inhabited T] [DecidableEq T] (a : (Array T)) (b : (Array T)) (n : Int) : Cpp.M Bool := do
+def cp.op_ne_SquareMatrix_SquareMatrix {T : Type} {n : Int} [Inhabited T] [DecidableEq T] (a : (cp.SquareMatrix T n)) (b : (cp.SquareMatrix T n)) : Cpp.M Bool := do
   Cpp.tick
-  let mut m : Int := (n * n)
-  let mut same : Bool := true
-  for i in (Cpp.range 0 m) do
+  let t1 ← cp.op_eq_SquareMatrix_SquareMatrix (n := n) a b
+  return (!t1)
+
+def cp.SquareMatrix.O {T : Type} {n : Int} [Inhabited T] [Zero T] : Cpp.M (cp.SquareMatrix T n) := do
+  Cpp.tick
+  let mut ret : (cp.SquareMatrix T n) := (⟨(Cpp.replicate (n : Int) (Cpp.replicate (n : Int) (default : T)))⟩ : (cp.SquareMatrix T n))
+  for i in (Cpp.range 0 n) do
     Cpp.tick
-    if (decide ((Cpp.get a i) ≠ (Cpp.get b i))) then
-      same := false
-  return same
+    for j in (Cpp.range 0 n) do
+      Cpp.tick
+      ret := { ret with mat := (Cpp.set ret.mat i (Cpp.set (Cpp.get ret.mat i) j (0 : T))) }
+  return ret
 
-def cp.mat_pow {T : Type} [Inhabited T] [Zero T] [One T] [Add T] [Mul T] (a : (Array T)) (r : (Array T)) (y : (Array T)) (t : (Array T)) (n : Int) (e : UInt64) : Cpp.M ((Array T) × (Array T) × (Array T)) := do
+def cp.SquareMatrix.I {T : Type} {n : Int} [Inhabited T] [IntCast T] : Cpp.M (cp.SquareMatrix T n) := do
   Cpp.tick
-  let mut r := r
-  let mut y := y
-  let mut t := t
-  let mut n := n
+  let mut ret : (cp.SquareMatrix T n) := (⟨(Cpp.replicate (n : Int) (Cpp.replicate (n : Int) (default : T)))⟩ : (cp.SquareMatrix T n))
+  for i in (Cpp.range 0 n) do
+    Cpp.tick
+    for j in (Cpp.range 0 n) do
+      Cpp.tick
+      ret := { ret with mat := (Cpp.set ret.mat i (Cpp.set (Cpp.get ret.mat i) j (Int.cast (if (decide (i = j)) then (1 : Int) else 0) : T))) }
+  return ret
+
+def cp.SquareMatrix.op_index_int {T : Type} {n : Int} [Inhabited T] (self : (cp.SquareMatrix T n)) (i : Int) : Cpp.M ((Array T) × (cp.SquareMatrix T n)) := do
+  Cpp.tick
+  let mut mat := self.mat
+  return ((Cpp.get mat i), (⟨mat⟩ : (cp.SquareMatrix T n)))
+
+def cp.SquareMatrix.op_index_int_const {T : Type} {n : Int} [Inhabited T] (self : (cp.SquareMatrix T n)) (i : Int) : Cpp.M (Array T) := do
+  Cpp.tick
+  let mat := self.mat
+  return (Cpp.get mat i)
+
+def cp.SquareMatrix.op_add {T : Type} {n : Int} (self : (cp.SquareMatrix T n)) : Cpp.M (cp.SquareMatrix T n) := do
+  Cpp.tick
+  let mat := self.mat
+  return (⟨mat⟩ : (cp.SquareMatrix T n))
+
+def cp.SquareMatrix.op_sub {T : Type} {n : Int} [Inhabited T] [Neg T] (self : (cp.SquareMatrix T n)) : Cpp.M (cp.SquareMatrix T n) := do
+  Cpp.tick
+  let mat := self.mat
+  let mut minus : (cp.SquareMatrix T n) := (⟨(Cpp.replicate (n : Int) (Cpp.replicate (n : Int) (default : T)))⟩ : (cp.SquareMatrix T n))
+  for i in (Cpp.range 0 n) do
+    Cpp.tick
+    for j in (Cpp.range 0 n) do
+      Cpp.tick
+      minus := { minus with mat := (Cpp.set minus.mat i (Cpp.set (Cpp.get minus.mat i) j (-(Cpp.get (Cpp.get mat i) j)))) }
+  return minus
+
+def cp.SquareMatrix.pow {T : Type} {n : Int} [Inhabited T] [Zero T] [IntCast T] [Add T] [Mul T] (self : (cp.SquareMatrix T n)) (e : Int) : Cpp.M (cp.SquareMatrix T n) := do
+  Cpp.tick
+  let mat := self.mat
   let mut e := e
-  let mut m : Int := (n * n)
-  for i in (Cpp.range 0 m) do
-    Cpp.tick
-    y := (Cpp.set y i (Cpp.get a i))
-  for i_1 in (Cpp.range 0 m) do
-    Cpp.tick
-    r := (Cpp.set r i_1 (0 : T))
-  for i_2 in (Cpp.range 0 n) do
-    Cpp.tick
-    r := (Cpp.set r ((i_2 * n) + i_2) (1 : T))
+  Cpp.check (decide (e ≥ 0))
+  let mut y : (cp.SquareMatrix T n) := (⟨mat⟩ : (cp.SquareMatrix T n))
+  let t1 ← cp.SquareMatrix.I (n := n)
+  let mut r : (cp.SquareMatrix T n) := t1
   for _ in Cpp.forever do
     Cpp.tick
-    if !(decide (e ≠ (0 : UInt64))) then break
-    if (decide ((e % (2 : UInt64)) = (1 : UInt64))) then
-      let t1 ← cp.mat_mul r y t n
-      t := t1
-      for i_3 in (Cpp.range 0 m) do
-        Cpp.tick
-        r := (Cpp.set r i_3 (Cpp.get t i_3))
-    let t2 ← cp.mat_mul y y t n
-    t := t2
-    for i_4 in (Cpp.range 0 m) do
-      Cpp.tick
-      y := (Cpp.set y i_4 (Cpp.get t i_4))
-    e := (e / (2 : UInt64))
-  return (r, y, t)
+    if !(decide (e ≠ 0)) then break
+    if (decide ((Cpp.land e 1) ≠ 0)) then
+      let t2 ← cp.SquareMatrix.op_mul_assign (n := n) r y
+      r := t2.2
+    e := (Cpp.shr e 1)
+    if (decide (e ≠ 0)) then
+      let t3 ← cp.SquareMatrix.op_mul_assign (n := n) y y
+      y := t3.2
+  return r
 
 end Proofs.Cpp.Gen

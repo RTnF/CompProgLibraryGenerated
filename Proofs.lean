@@ -17,6 +17,7 @@ import Proofs.Cpp.Lib.Rle
 import Proofs.Cpp.Lib.SegmentTreeBeatsMath
 import Proofs.Cpp.Lib.SegmentTreeBeatsSumMath
 import Proofs.Cpp.Lib.SegmentTreeMath
+import Proofs.Cpp.Lib.SquareMatrixMath
 import Proofs.Cpp.Lib.UnsignedMagnitude
 import Proofs.Math.BellmanFordExec
 import Proofs.Math.BellmanFordMath
@@ -50,7 +51,6 @@ import Proofs.Math.LowlinkPush
 import Proofs.Math.LowlinkRoot
 import Proofs.Math.LowlinkScan
 import Proofs.Math.LowlinkSpec
-import Proofs.Math.MatPowMath
 import Proofs.Math.Mod61Math
 import Proofs.Math.PrimBridge
 import Proofs.Math.PrimExec

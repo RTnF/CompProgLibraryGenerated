@@ -79,6 +79,7 @@ template <class X> void rd(std::vector<X> &v);
 template <class A, class B> void rd(std::pair<A, B> &p);
 template <class X> void pr(const std::vector<X> &v);
 template <class A, class B> void pr(const std::pair<A, B> &p);
+template <class X, std::size_t N> void pr(const X (&a)[N]);
 template <class X> void rd(X &x) {
   if constexpr (std::is_unsigned_v<X>) { unsigned long long v; std::cin >> v; x = (X)v; }
   else { long long v; std::cin >> v; x = (X)v; }
@@ -108,6 +109,11 @@ template <class X> void pr(const std::vector<X> &v) {
   for (std::size_t i = 0; i < v.size(); i++) pr((X)v[i]);
 }
 template <class A, class B> void pr(const std::pair<A, B> &p) { pr(p.first); pr(p.second); }
+// A C array member (an Array in the model): its length and its elements.
+template <class X, std::size_t N> void pr(const X (&a)[N]) {
+  std::cout << ' ' << N;
+  for (std::size_t i = 0; i < N; i++) pr(a[i]);
+}
 } // namespace difftest
 """
 
@@ -463,6 +469,12 @@ class Harness:
                 self.stream_bits, self.stream_unsigned, self.stream_character = models[0]
 
 
+    def static_callable(self, info, sig):
+        """A static member function the command language can call: no policy or global state, and every class
+        template argument has an instance binding."""
+        return (not sig.policies and not sig.uses_globals and not sig.tparams
+                and all(t in self.lean_instance for t in info.tparams))
+
     def callables(self, *, unfiltered=False):
         out = []
         for kind, item in self.tr.order:
@@ -635,7 +647,7 @@ class Harness:
                     lines.append(f'      difftest::pr(objects_{info.name}[k].{name}); std::cout << "\\n"; continue;')
                     lines.append('    }')
         for info, sig in self.callables():
-            if (sig.is_static and info is not None) or not sig.public:
+            if not sig.public or (sig.is_static and info is not None and not self.static_callable(info, sig)):
                 continue
             quals = self.param_quals(sig)
             decls, names = [], []
@@ -668,6 +680,10 @@ class Harness:
             elif sig.is_ctor:
                 key = f"new {sig.lean_name.removeprefix('cp.')}"
                 call = None
+            elif sig.is_static:
+                # A static member function: `call Class.name args` runs `Class<instance>::name(args)`.
+                key = f"call {sig.lean_name.removeprefix('cp.')}"
+                call = f"{self.cpp_class(info)}::{sig.cpp_name}({', '.join(names)})"
             else:
                 key = f"do {sig.lean_name.removeprefix('cp.')}"
                 call = f"objects_{info.name}[k].{sig.cpp_name}({', '.join(names)})"
@@ -686,7 +702,9 @@ class Harness:
                     lines.append(f"        objects_{sig.ret.name}.push_back({call});")
                     lines.append("        std::cout << \"ok obj\";")
                 elif sig.ret.kind != "void":
-                    ref = "&" if sig.ret.kind in ("istream", "ostream") else ""
+                    # A reference to a C array (operator[] of a matrix row) must not decay to a pointer.
+                    ref = "&" if sig.ret.kind in ("istream", "ostream") or getattr(sig.ret, "length", None) is not None \
+                        else ""
                     lines.append(f"        auto {ref}r = {call};")
                     lines.append("        std::cout << \"ok\"; difftest::pr(r);")
                 else:
@@ -855,10 +873,10 @@ class Harness:
                     lines.append(f'    let value := objs.o_{info.name}[k.toNat]!.{lt.lean_name(name)}')
                     lines.append('    run ts objs (out.push ("ok" ++ DiffTest.Pr.pr value))')
         for info, sig in self.callables():
-            if (sig.is_static and info is not None) or not sig.public:
+            if not sig.public or (sig.is_static and info is not None and not self.static_callable(info, sig)):
                 continue
             label = sig.lean_name.removeprefix("cp.")
-            if info is None:
+            if info is None or sig.is_static:
                 head = f'  | "call" :: "{label}" :: ts => do'
             elif sig.is_ctor:
                 head = f'  | "new" :: "{label}" :: ts => do'
@@ -867,7 +885,7 @@ class Harness:
             lines.append(head)
             if sig.uses_globals:
                 lines.append("    let objs ← initializeObjects objs")
-            if info is not None and not sig.is_ctor:
+            if info is not None and not sig.is_ctor and not sig.is_static:
                 lines.append("    let (k, ts) ← DiffTest.arg (α := Int) ts")
                 lines.append(f"    let obj := objs.o_{info.name}[k.toNat]!")
             names = []
@@ -888,7 +906,12 @@ class Harness:
             if sig.constraints:
                 value_args += [f"({name} := {self.lean_instance[name]})"
                                for name in sig.tparams if name not in sig.value_params]
-            call = " ".join([sig.lean_name] + value_args + pols + (["obj"] if info is not None and not sig.is_ctor else []) + names)
+            receiver = ["obj"] if info is not None and not sig.is_ctor and not sig.is_static else []
+            if info is not None and sig.is_static:
+                # The class template arguments of a static member are not inferred from its arguments.
+                value_args = [f"({lt.lean_name(t)} := {self.lean_instance[t]})" for t in info.tparams] + \
+                    [a for a in value_args if not any(a.startswith(f"({lt.lean_name(t)} :=") for t in info.tparams)]
+            call = " ".join([sig.lean_name] + value_args + pols + receiver + names)
             if sig.uses_globals:
                 call += " objs.globalState.get!"
             lines.append(f"    match ({call}).run 0 with")

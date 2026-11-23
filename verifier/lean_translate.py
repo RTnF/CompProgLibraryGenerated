@@ -36,6 +36,8 @@ class Ty:
     name: str = ""            # tparam/cls name
     args: tuple = ()          # vec: (elem,), pair: (a, b), cls: template arguments
     width: int = field(default=64, compare=False)   # int: the C++ width (32, 64, 128); not part of the Lean type
+    # vec of a fixed-size C array member `T a[N]`: the length N (a vparam/vlit Ty); not part of the Lean type
+    length: object = field(default=None, compare=False)
 
     def __str__(self):
         return lean_type(self)
@@ -116,6 +118,18 @@ def parse_type(text: str, tparams: set[str], classes, value_params=None, aliases
         return OSTREAM
     if s in tparams:
         return Ty("tparam", s)
+    # `T (&)[n]` (a reference to an array, e.g. the row returned by operator[]): the array value.
+    s = re.sub(r"\s*\(\s*\)\s*(?=\[)", "", s)
+    m = re.fullmatch(r"([^\[\]]+?)\s*((?:\[[^\[\]]+\])+)", s)
+    if m:
+        # A fixed-size C array `T[a][b]` (a member of a class): nested Arrays of the given lengths.
+        ty = parse_type(m.group(1), tparams, classes, value_params, aliases)
+        for dim in reversed(re.findall(r"\[([^\[\]]+)\]", m.group(2))):
+            dim = dim.strip()
+            length = (Ty("vparam", dim, (value_params[dim],)) if dim in value_params
+                      else parse_value_arg(dim, INT, value_params))
+            ty = Ty("vec", args=(ty,), length=length)
+        return ty
     m = re.fullmatch(r"(?:std::)?vector<(.*)>", s)
     if m:
         args = split_args(m.group(1))
@@ -210,6 +224,15 @@ def source_stream_type(node):
     if spelling not in SOURCE_STREAM_TYPES:
         raise Unsupported(f'concrete stream source-type contract: {spelling}')
     return SOURCE_STREAM_TYPES[spelling]
+
+
+def return_type_text(fn_type: str) -> str:
+    """The return type in a function type `R (params)`. `T (&(int))[n]` (a function returning a reference to an array
+    `T[n]`) gives `T[n]`."""
+    array_ret = re.fullmatch(r"(.*?)\(\s*&\s*\(.*\)\s*(?:const)?\s*\)\s*((?:\[[^\[\]]+\])+)", fn_type)
+    if array_ret:
+        return array_ret.group(1).strip() + array_ret.group(2)
+    return fn_type.split("(")[0].strip()
 
 
 def container_text(text: str, containers) -> str:
@@ -710,6 +733,10 @@ class Fn:
             return f"(decide ({text} ≠ 0))", BOOL
         if ty.kind == "bool" and expected.kind == "int":
             return f"(if {text} then (1 : Int) else 0)", INT
+        if ty.kind == "bool" and expected.kind == "tparam":
+            # bool to an arithmetic T: false is 0 and true is 1.
+            self.need("IntCast", expected)
+            return f"(Int.cast (if {text} then (1 : Int) else 0) : {expected.name})", expected
         if ty.kind == "unknown":
             return text, expected
         if ty.kind == "tparam" and expected.kind in ("int", "u32", "u64"):
@@ -1048,8 +1075,9 @@ class Fn:
             if aty.kind != "cls" or bty.kind != "cls" or aty.name != bty.name:
                 raise Unsupported("unresolved binary operator needs the same class operands")
             info = self.tr.classes[aty.name]
-            if set(info.tparams) - info.value_params.keys():
-                raise Unsupported("unresolved binary operator with type parameters")
+            # With type parameters, argument-dependent lookup also searches their namespaces, but the hidden friend
+            # below is a non-template exact match: a competing exact match there would make the call ambiguous (a
+            # compile error), and templates lose to it, so the selection cannot change silently.
             if any(s.cpp_name == name for s in info.methods):
                 raise Unsupported("unresolved binary operator has member candidates")
             candidates = self.tr.functions.get(name, [])
@@ -1059,7 +1087,11 @@ class Fn:
             if (not sig.node.get("lean_hidden_friend") or len(sig.params) != 2
                     or any(t.kind != "cls" or t.name != aty.name for _, t, _ in sig.params)):
                 raise Unsupported("unresolved binary operator is not the class hidden friend")
-        if set(sig.tparams) - sig.value_params.keys():
+        if set(sig.tparams) - sig.value_params.keys() and not (
+                sig.node.get("lean_hidden_friend") and aty.kind == "cls" and aty == bty
+                and set(sig.tparams) <= set(self.sig.tparams) | set(self.cls.tparams if self.cls else [])
+                and all(a == Ty("tparam", p) or p in sig.value_params
+                        for p, a in zip(self.tr.classes[aty.name].tparams, aty.args))):
             raise Unsupported("binary operator with type template parameters")
         if sig.mut_refs:
             raise Unsupported("binary operator with mutable reference operands")
@@ -1330,11 +1362,29 @@ class Fn:
                         if len(copies) != 1:
                             raise Unsupported("ambiguous record copy")
                         raise Unsupported("user-defined record copy constructor")
-                    if any(fty.kind not in ("int", "u32", "u64", "bool", "tparam")
-                           for _, fty, _ in self.tr.classes[ty.name].fields):
-                        raise Unsupported("implicit record copy with non-scalar fields")
-                    # Implicit scalar record copy, not a converting constructor.
-                    return self.expr(args[0], pre, ty)[0]
+                    def carray_cells(fty):
+                        # The number of scalar cells of a fixed-size C array member, or None.
+                        if fty.kind in ("int", "u32", "u64", "bool", "tparam"):
+                            return []
+                        if fty.kind == "vec" and fty.length is not None:
+                            inner_cells = carray_cells(fty.args[0])
+                            if inner_cells is None:
+                                return None
+                            n = lean_name(fty.length.name) if fty.length.kind == "vparam" else fty.length.name
+                            return [f"({n} : Int).toNat"] + inner_cells
+                        return None
+                    cells = []
+                    for _, fty, _ in self.tr.classes[ty.name].fields:
+                        c = carray_cells(subst(fty, list(self.tr.classes[ty.name].tparams), list(ty.args)))
+                        if c is None:
+                            raise Unsupported("implicit record copy with non-scalar fields")
+                        if c:
+                            cells.append(" * ".join(c))
+                    # Implicit record copy (scalars and C arrays, element by element), not a converting constructor.
+                    value = self.expr(args[0], pre, ty)[0]
+                    if cells:
+                        pre.append(f"Cpp.tickN ({' + '.join(cells)})")
+                    return value
             sigs = [s for s in self.tr.classes[ty.name].methods if s.is_ctor]
             return self.call_sig(self.pick(sigs, args, f"constructor of {ty.name}"), None, args, pre, ty)[0]
         raise Unsupported(f"construct {ty}")
@@ -1349,10 +1399,23 @@ class Fn:
         if ty.kind == "tparam":
             self.need("Inhabited", ty)
             return f"(default : {ty.name})"
+        if ty.kind == "vec" and ty.length is not None:
+            # A C array member: its elements are default-initialized (the model starts from the default value;
+            # the C++ value of a scalar is indeterminate, so a component must write an element before reading it).
+            n = lean_name(ty.length.name) if ty.length.kind == "vparam" else ty.length.name
+            return f"(Cpp.replicate ({n} : Int) {self.default_value(ty.args[0])})"
         if ty.kind == "vec":
             return f"([] : List {lean_type(ty.args[0])}).toArray"
         if ty.kind == "pair":
             return f"({self.default_value(ty.args[0])}, {self.default_value(ty.args[1])})"
+        if ty.kind == "cls" and ty.name in self.tr.classes:
+            # The implicit default constructor of a class without user constructors and without default member
+            # initializers: every member is default-initialized.
+            info = self.tr.classes[ty.name]
+            if any(m.is_ctor for m in info.methods) or any(init is not None for _, _, init in info.fields):
+                raise Unsupported(f"default value of {ty}")
+            values = [self.default_value(subst(fty, list(info.tparams), list(ty.args))) for _, fty, _ in info.fields]
+            return f"(⟨{', '.join(values)}⟩ : {lean_type(ty)})"
         raise Unsupported(f"default value of {ty}")
 
     # ------------------------------------------------------------------ calls
@@ -2910,7 +2973,8 @@ def subst(ty: Ty, names, args):
         i = names.index(ty.name)
         return args[i] if i < len(args) else ty
     if ty.args:
-        return Ty(ty.kind, ty.name, tuple(subst(a, names, args) for a in ty.args))
+        return Ty(ty.kind, ty.name, tuple(subst(a, names, args) for a in ty.args), width=ty.width,
+                  length=subst(ty.length, names, args) if ty.length is not None else None)
     return ty
 
 
@@ -3332,7 +3396,7 @@ class Translator:
         text = json.dumps(node)
         containers = [t for t in tps if f"{t}::value_type" in text]
         tps = [f"{t}_value_type" if t in containers else t for t in tps]
-        ret_text = container_text(node["type"]["qualType"].split("(")[0].strip(), containers)
+        ret_text = container_text(return_type_text(node["type"]["qualType"]), containers)
         ret = parse_type(ret_text, set(tps) - values.keys(), self.classes, values, self.aliases)
         sig = Sig(name, f"cp.{model_name}", self.param_list(node, tps, containers, values), ret, node=node, tparams=tps, value_params=values, constraints=constraints or [])
         sig.containers = containers
@@ -3441,9 +3505,10 @@ class Translator:
                 qual = c["type"]["qualType"]
                 all_values = {**values, **member_values}
                 all_tps = list(tps) + member_tps
-                ret = VOID if is_ctor else parse_type(qual.split("(")[0].strip(), set(all_tps) - all_values.keys(), self.classes, all_values, self.aliases)
+                ret = VOID if is_ctor else parse_type(return_type_text(qual), set(all_tps) - all_values.keys(), self.classes, all_values, self.aliases)
                 sig = Sig(c["name"].split("<")[0] if is_ctor else c["name"], "", self.param_list(c, all_tps, values=all_values), ret, owner=name,
-                          is_const=qual.rstrip().endswith("const") or is_ctor, is_static=c.get("storageClass") == "static",
+                          is_const=qual.rstrip().endswith("const") or is_ctor
+                          or bool(re.search(r"\(&\s*\(.*\)\s*const\s*\)\s*\[", qual)), is_static=c.get("storageClass") == "static",
                           is_ctor=is_ctor, node=c, tparams=member_tps, value_params=member_values,
                           constraints=member_constraints, public=access == "public")
                 if is_ctor and len(sig.params) == 1 and sig.params[0][1].kind == "cls" and sig.params[0][1].name == name:
@@ -3475,6 +3540,10 @@ class Translator:
                 suffix = ""
                 if len(sigs) > 1:
                     suffix = "_" + "_".join(type_tag(p[1]) for p in s.params) if s.params else "_0"
+                    # const and non-const overloads with the same parameters (e.g. operator[]).
+                    same = [o for o in sigs if [p[1] for p in o.params] == [p[1] for p in s.params]]
+                    if len(same) == 2 and len({o.is_const for o in same}) == 2 and s.is_const:
+                        suffix += "_const"
                 s.lean_name = f"cp.{name}.{lean_name(base)}{suffix}"
         self.order.append(("class", info))
 
