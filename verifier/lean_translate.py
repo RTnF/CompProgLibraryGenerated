@@ -1949,6 +1949,17 @@ class Fn:
         if kind == "ReturnStmt":
             pre = []
             value = self.self_value() if self.sig.is_ctor else None
+            parts = self.assignment_parts(inner(node)[0]) if inner(node) else None
+            if parts is not None:
+                # `return a = e;` stores first; the value of an assignment is its left operand after the store,
+                # so the left operand is read again. Its evaluation must not have side effects.
+                if self.has_side_effects(parts[0]):
+                    raise Unsupported("returned assignment whose left operand has side effects")
+                self.expr_stmt(inner(node)[0])
+                value, _ = self.expr(parts[0], pre, self.sig.ret)
+                self.flush(pre)
+                self.emit("return " + self.result(value))
+                return
             if inner(node):
                 value, _ = self.expr(inner(node)[0], pre, self.sig.ret)
             self.flush(pre)
@@ -2112,6 +2123,21 @@ class Fn:
         self.block(node)
         if len(self.lines) == start:
             self.emit("pure ()")
+
+    def has_side_effects(self, n):
+        """Whether evaluating the expression may change state: calls other than a subscript, `++`/`--`,
+        assignments."""
+        n = strip(n)
+        kind = n.get("kind")
+        if kind in ("CompoundAssignOperator", "CallExpr", "CXXMemberCallExpr"):
+            return True
+        if kind == "BinaryOperator" and n.get("opcode") in ("=", ","):
+            return True
+        if kind == "UnaryOperator" and n.get("opcode") in ("++", "--"):
+            return True
+        if kind == "CXXOperatorCallExpr" and self.operator_name(n) != "[]":
+            return True
+        return any(self.has_side_effects(c) for c in inner(n))
 
     def assignment_parts(self, n):
         """(lhs, rhs, rebuild) of an assignment node, or None."""

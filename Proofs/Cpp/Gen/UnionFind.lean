@@ -6,106 +6,111 @@ set_option linter.unusedVariables false
 namespace Proofs.Cpp.Gen
 
 structure cp.UnionFind where
-  ps : (Array Int)
+  _ps : (Array Int)
+  _num_groups : Int
+  _n : Int
   deriving Inhabited
-
-def cp.UnionFind.find_root (self : cp.UnionFind) (a : Int) : Cpp.M Int := do
-  Cpp.tick
-  let ps := self.ps
-  let mut a := a
-  for _ in Cpp.forever do
-    Cpp.tick
-    if !(decide ((Cpp.get ps a) ≥ 0)) then break
-    a := (Cpp.get ps a)
-  return a
 
 def cp.UnionFind.init_0 : Cpp.M cp.UnionFind := do
   Cpp.tick
-  let t1 := 1
-  Cpp.tickN t1.toNat
-  let mut ps : (Array Int) := (Cpp.replicate t1 (-1))
-  return (⟨ps⟩ : cp.UnionFind)
+  let mut _ps : (Array Int) := ([] : List Int).toArray
+  let mut _num_groups : Int := 0
+  let mut _n : Int := 0
+  return (⟨_ps, _num_groups, _n⟩ : cp.UnionFind)
 
 def cp.UnionFind.init_int (n : Int) : Cpp.M cp.UnionFind := do
   Cpp.tick
-  let t1 := (n + 1)
+  let t1 := n
   Cpp.tickN t1.toNat
-  let mut ps : (Array Int) := (Cpp.replicate t1 (-1))
-  Cpp.check (decide (0 ≤ n))
-  ps := (Cpp.set ps n ((-1) - n))
-  return (⟨ps⟩ : cp.UnionFind)
+  let mut _ps : (Array Int) := (Cpp.replicate t1 (-1))
+  let mut _num_groups : Int := n
+  let mut _n : Int := n
+  Cpp.check (decide (n ≥ 0))
+  return (⟨_ps, _num_groups, _n⟩ : cp.UnionFind)
+
+def cp.UnionFind.root_rec (__fuel : Nat) (self : cp.UnionFind) (a : Int) : Cpp.M (Int × cp.UnionFind) :=
+  match __fuel with
+  | 0 => failure
+  | __fuel + 1 => do
+      Cpp.tick
+      let mut _ps := self._ps
+      let mut _num_groups := self._num_groups
+      let mut _n := self._n
+      Cpp.check ((decide (0 ≤ a)) && (decide (a < _n)))
+      if (decide ((Cpp.get _ps a) < 0)) then
+        return (a, (⟨_ps, _num_groups, _n⟩ : cp.UnionFind))
+      let t1 ← cp.UnionFind.root_rec __fuel (⟨_ps, _num_groups, _n⟩ : cp.UnionFind) (Cpp.get _ps a)
+      _ps := t1.2._ps
+      _num_groups := t1.2._num_groups
+      _n := t1.2._n
+      _ps := (Cpp.set _ps a t1.1)
+      return ((Cpp.get _ps a), (⟨_ps, _num_groups, _n⟩ : cp.UnionFind))
+
+def cp.UnionFind.root (self : cp.UnionFind) (a : Int) : Cpp.M (Int × cp.UnionFind) :=
+  cp.UnionFind.root_rec Cpp.fuel self a
 
 def cp.UnionFind.unite (self : cp.UnionFind) (a : Int) (b : Int) : Cpp.M (Int × cp.UnionFind) := do
   Cpp.tick
-  let mut ps := self.ps
-  Cpp.check (decide (0 ≤ a))
-  Cpp.check (decide (a < ((Cpp.size ps) - 1)))
-  Cpp.check (decide (0 ≤ b))
-  Cpp.check (decide (b < ((Cpp.size ps) - 1)))
-  let t1 ← cp.UnionFind.find_root (⟨ps⟩ : cp.UnionFind) a
-  let mut x : Int := t1
-  let t2 ← cp.UnionFind.find_root (⟨ps⟩ : cp.UnionFind) b
-  let mut y : Int := t2
+  let mut _ps := self._ps
+  let mut _num_groups := self._num_groups
+  let mut _n := self._n
+  Cpp.check ((decide (0 ≤ a)) && (decide (a < _n)))
+  Cpp.check ((decide (0 ≤ b)) && (decide (b < _n)))
+  let t1 ← cp.UnionFind.root (⟨_ps, _num_groups, _n⟩ : cp.UnionFind) a
+  _ps := t1.2._ps
+  _num_groups := t1.2._num_groups
+  _n := t1.2._n
+  let mut x : Int := t1.1
+  let t2 ← cp.UnionFind.root (⟨_ps, _num_groups, _n⟩ : cp.UnionFind) b
+  _ps := t2.2._ps
+  _num_groups := t2.2._num_groups
+  _n := t2.2._n
+  let mut y : Int := t2.1
   if (decide (x = y)) then
-    return (x, (⟨ps⟩ : cp.UnionFind))
-  if (decide ((0 - (Cpp.get ps x)) < (0 - (Cpp.get ps y)))) then
-    let mut t : Int := x
+    return (x, (⟨_ps, _num_groups, _n⟩ : cp.UnionFind))
+  if (decide ((-(Cpp.get _ps x)) < (-(Cpp.get _ps y)))) then
+    let t3 := x
     x := y
-    y := t
-  ps := (Cpp.set ps x ((Cpp.get ps x) + (Cpp.get ps y)))
-  ps := (Cpp.set ps y x)
-  let mut last : Int := ((Cpp.size ps) - 1)
-  ps := (Cpp.set ps last ((Cpp.get ps last) + 1))
-  return (x, (⟨ps⟩ : cp.UnionFind))
+    y := t3
+  _ps := (Cpp.set _ps x ((Cpp.get _ps x) + (Cpp.get _ps y)))
+  _ps := (Cpp.set _ps y x)
+  _num_groups := (_num_groups - 1)
+  return (x, (⟨_ps, _num_groups, _n⟩ : cp.UnionFind))
 
-def cp.UnionFind.same (self : cp.UnionFind) (a : Int) (b : Int) : Cpp.M Bool := do
+def cp.UnionFind.same (self : cp.UnionFind) (a : Int) (b : Int) : Cpp.M (Bool × cp.UnionFind) := do
   Cpp.tick
-  let ps := self.ps
-  Cpp.check (decide (0 ≤ a))
-  Cpp.check (decide (a < ((Cpp.size ps) - 1)))
-  Cpp.check (decide (0 ≤ b))
-  Cpp.check (decide (b < ((Cpp.size ps) - 1)))
-  let t1 ← cp.UnionFind.find_root (⟨ps⟩ : cp.UnionFind) a
-  let mut x : Int := t1
-  let t2 ← cp.UnionFind.find_root (⟨ps⟩ : cp.UnionFind) b
-  let mut y : Int := t2
-  return (decide (x = y))
+  let mut _ps := self._ps
+  let mut _num_groups := self._num_groups
+  let mut _n := self._n
+  Cpp.check ((decide (0 ≤ a)) && (decide (a < _n)))
+  Cpp.check ((decide (0 ≤ b)) && (decide (b < _n)))
+  let t1 ← cp.UnionFind.root (⟨_ps, _num_groups, _n⟩ : cp.UnionFind) a
+  _ps := t1.2._ps
+  _num_groups := t1.2._num_groups
+  _n := t1.2._n
+  let t2 ← cp.UnionFind.root (⟨_ps, _num_groups, _n⟩ : cp.UnionFind) b
+  _ps := t2.2._ps
+  _num_groups := t2.2._num_groups
+  _n := t2.2._n
+  return ((decide (t1.1 = t2.1)), (⟨_ps, _num_groups, _n⟩ : cp.UnionFind))
 
-def cp.UnionFind.root (self : cp.UnionFind) (a : Int) : Cpp.M (Int × cp.UnionFind) := do
+def cp.UnionFind.size_ (self : cp.UnionFind) (a : Int) : Cpp.M (Int × cp.UnionFind) := do
   Cpp.tick
-  let mut ps := self.ps
-  let mut a := a
-  Cpp.check (decide (0 ≤ a))
-  Cpp.check (decide (a < ((Cpp.size ps) - 1)))
-  let mut r : Int := a
-  for _ in Cpp.forever do
-    Cpp.tick
-    if !(decide ((Cpp.get ps r) ≥ 0)) then break
-    r := (Cpp.get ps r)
-  for _ in Cpp.forever do
-    Cpp.tick
-    if !(decide (a ≠ r)) then break
-    let mut next : Int := (Cpp.get ps a)
-    ps := (Cpp.set ps a r)
-    a := next
-  return (r, (⟨ps⟩ : cp.UnionFind))
+  let mut _ps := self._ps
+  let mut _num_groups := self._num_groups
+  let mut _n := self._n
+  Cpp.check ((decide (0 ≤ a)) && (decide (a < _n)))
+  let t1 ← cp.UnionFind.root (⟨_ps, _num_groups, _n⟩ : cp.UnionFind) a
+  _ps := t1.2._ps
+  _num_groups := t1.2._num_groups
+  _n := t1.2._n
+  return ((-(Cpp.get _ps t1.1)), (⟨_ps, _num_groups, _n⟩ : cp.UnionFind))
 
-def cp.UnionFind.size_ (self : cp.UnionFind) (a : Int) : Cpp.M Int := do
+def cp.UnionFind.num_groups (self : cp.UnionFind) : Cpp.M (Int × cp.UnionFind) := do
   Cpp.tick
-  let ps := self.ps
-  let mut a := a
-  Cpp.check (decide (0 ≤ a))
-  Cpp.check (decide (a < ((Cpp.size ps) - 1)))
-  for _ in Cpp.forever do
-    Cpp.tick
-    if !(decide ((Cpp.get ps a) ≥ 0)) then break
-    a := (Cpp.get ps a)
-  return (0 - (Cpp.get ps a))
-
-def cp.UnionFind.num_groups (self : cp.UnionFind) : Cpp.M Int := do
-  Cpp.tick
-  let ps := self.ps
-  let mut last : Int := ((Cpp.size ps) - 1)
-  return ((-1) - (Cpp.get ps last))
+  let mut _ps := self._ps
+  let mut _num_groups := self._num_groups
+  let mut _n := self._n
+  return (_num_groups, (⟨_ps, _num_groups, _n⟩ : cp.UnionFind))
 
 end Proofs.Cpp.Gen

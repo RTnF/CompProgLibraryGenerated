@@ -1,46 +1,39 @@
 # union_find
 
-`cp::UnionFind` は素集合データ構造（Union Find）のクラスである。元の `experiments/library/cpp/union_find/union_find.hpp` の `UnionFind` と同じ構成子とメンバー関数を持つ（`UnionFind()`、`UnionFind(int n)`、`unite`、`same`、`root`、`size`、`num_groups`）。要素は `0 .. n-1`、結合は大きさによる（union by size）。
+`cp::UnionFind` は素集合データ構造（Union Find）のクラスである。元の `experiments/library/cpp/union_find/union_find.hpp`（`disjoint_set_union.hpp` は同じ内容）の `UnionFind` をそのまま公開する。要素は `0 .. n-1`、結合は大きさによる（union by size）、根を求めるたびに経路を圧縮する（path compression）。
 
 | メンバー | 内容 | 時間 |
 | --- | --- | --- |
 | `UnionFind()` | 要素のない構造 | O(1) |
 | `UnionFind(int n)` | `n` 個の要素がそれぞれ 1 つの木 | O(n) |
-| `unite(a, b)` | `a`、`b` を含む木を結合し、結果の根を返す。同じ木なら何も変えず根を返す | O(log n) |
-| `same(a, b)` | 同じ木にあるか | O(log n) |
-| `root(a)` | `a` を含む木の根（`a` から根までの経路を圧縮する） | 償却ほぼ定数 |
-| `size(a)` | `a` を含む木の要素数 | O(log n) |
+| `unite(a, b)` | `a`、`b` を含む木を結合し（大きい木の根が親）、結果の根を返す。同じ木なら何も変えず根を返す | O(log n)、償却ほぼ定数 |
+| `same(a, b)` | 同じ木にあるか | 同上 |
+| `root(a)` | `a` を含む木の根。`a` から根までの経路の各要素を根に直接つなぐ | 同上 |
+| `size(a)` | `a` を含む木の要素数 | 同上 |
 | `num_groups()` | 木の数 | O(1) |
 
-森の表現: vector `ps` は `n + 1` 個の要素を持つ。`i < n` について、`ps[i] < 0` なら `i` は根で値は木の大きさの符号反転、`ps[i] >= 0` なら `ps[i]` が `i` の親である。最後の要素 `ps[n] = -1 - (木の数)` は、`n` 未満の添字からは到達されない根（番兵）で、木の数を持つ。
+表現: `_ps[i] < 0` なら `i` は根で `-_ps[i]` が木の大きさ、`_ps[i] >= 0` なら `_ps[i]` が `i` の親。`_num_groups` は木の数、`_n` は要素数。
 
-元のソースからの変更（検証できる形にするために書き換えた）:
+- 前提: `0 <= n < 2^31`、各メソッドの引数は `0 <= a, b < n`（`assert` で検査する。`NDEBUG` のビルドは失敗経路の保証の対象外）。
+- `same`・`size` も経路を圧縮するので `const` ではない（元のまま）。
 
-- 元は木の数と要素数を別のフィールド（`_num_groups`、`_n`）に持つ。検証できる関数は、クラスをフィールドごとの引数（vector は参照）に分けて作る。公開版の既存証明では木の数を `ps` の最後の要素に置き、要素数は `ps.size() - 1` で得る。変換器は現在、可変スカラーフィールドを参照で受ける関数を扱える。元の別フィールドを保つ候補と全状態照合は [union_find_experiment.md](union_find_experiment.md) に記録しており、候補の一般call証明とクラス全体の不変条件への接続が未完了である。
-- `unite`、`same`、`size` は、根を求めるときに経路圧縮をしない（元は毎回圧縮する）。木の高さは大きさによる結合で `log2 n` 以下なので 1 回あたり最悪 O(log n) だが、元の償却の見積もり（逆アッカーマン関数）は主張しない。`root` は元どおり経路圧縮をする。
-- 元の `assert(0 <= a && a < _n)` は、`assert(0 <= a)` と `assert(a < (int)ps.size() - 1)` に分けて保持する。`b` も同じ順序で検査する。`UnionFind(int n)` の本体にも元と同じ非負検査を保持する。assert有効の固定C++17検証プロファイルでは、不正な添字はvectorの読み取り前に異常終了する。`NDEBUG` でassertを無効にしたビルドは、この失敗経路の保証対象に含めない。
-- `-ps[x]` は `0 - ps[x]` と書いた（検証済みの式に、vector の読み取りへの単項マイナスがないため）。
+## 元のソースからの変更
 
-前提:
-
-- 正常終了の前提は `0 <= n < 2^31 - 1`、`0 <= a, b < n`。番兵を含む `ps.length` ではなく、要素数 `ps.length - 1` を上限にする。
-- 森の条件（`Forest ps rank`）: 要素の親は要素（番兵を指さない）で、親へ進むたびに厳密に減るランク `rank : Nat → Nat` が存在する（閉路がない）。値（大きさの和、番兵の値など）は `int` に収まる（部品の前提。モデルの整数は数学的な整数）。
+- 公開側では `namespace cp` に置き、`std::` を明示した（`swap` は `std::swap`）。本体は元と同じ。
 
 ## 検証（新方式、`docs/translation.md`）
 
-`verifier/lean_translate.py` がクラスを Lean の構造体 `cp.UnionFind`（フィールド `ps`）とメソッドの関数に翻訳し（`Proofs/Cpp/Gen/UnionFind.lean`）、`Proofs/Cpp/UnionFind.lean` が次を示す。到達関係は `Reach`（親をたどる）、根は `IsRoot`。
+`verifier/lean_translate.py` がクラスを Lean の構造体 `cp.UnionFind`（`_ps`、`_num_groups`、`_n`）とメソッドに翻訳する（`Proofs/Cpp/Gen/UnionFind.lean`）。自己再帰の `root` は燃料つきの `root_rec`、`return _ps[a] = root(_ps[a]);` は代入のあと `_ps[a]` を返す形になる。
 
-- `init_int_spec`、`init_0_spec`: `UnionFind(n)` は `ps = [-1, ..., -1, -1 - n]`、`UnionFind()` は `ps = [-1]` で、どちらも `Forest`（ランク 0）。
-- `find_root_spec`（非公開）、`size_spec`、`same_spec`: `a` から根 `r` に到達し、`size` は `-ps[r]`、`same` は 2 つの根が等しいことを返す。tick 数は `rank a + 2` 程度（`same` は 2 回分）。
-- `root_spec`: 戻り値は `a` の根で、結果の vector は同じ長さで再び `Forest`（同じランク）を満たし、各要素は元のままか、`a` から根への経路上（根を除く）にあって根を指す。ループの不変条件は `CInv`（書き換えた節点のランクは現在の節点より大きいので、現在の節点の親は元のまま読める）。
-- `unite_spec`: `a`、`b` の根 `r1`、`r2` について、等しければ何も変えずに `r1` を返す。異なれば大きさで親を決め（`ps[r2] < ps[r1]` なら `r2` が親）、`uniteArr`（親の大きさを足し、子を親につなぎ、番兵に 1 を足す）を返す。結果は新しいランク `urank`（子の木のランクを親のランク + 1 だけ上げる）で `Forest` を満たす（`unite_forest`）。
-- `num_groups_spec`: `-1 - ps[ps.size() - 1]`。
-- ループの停止には、ランクを要素数以下に正規化した `nrank` を使う。呼び出し先 `find_root` の仕様は `find_root_wp`（結果の性質を満たすすべての値について継続が成り立つ形）で、`unite`、`same` の中で使う。
+`Proofs/Cpp/UnionFind.lean` が次を示す。到達関係は `Reach`（親をたどる）、根は `IsRoot`、`a` の根が `r` であることは `RootOf`。不変条件 `Inv uf rank` は、`_ps` が森（親は要素で、親へ進むたびに厳密に減るランク `rank` がある）、`_n = _ps.size()`、`_ps.size() < 2^31`。
 
-差分テスト（`tests/diff/union_find.py`、乱択の操作列）と C++ のテストで翻訳と実装を確かめる。
+- `init_int_spec`、`init_0_spec`: 全要素が大きさ 1 の根で、`_num_groups = n`、ランク 0 で `Inv`。
+- `root_spec`: 戻り値は `a` の根（元の配列での `RootOf`）。結果の配列は `Comp`（根の集合と根の値が同じで、新しい配列でたどった根は元の配列でも同じ根）を満たし、同じランクで `Inv`。tick 数は `rank a + 1` 以下。証明は `root_rec_spec`（燃料についての帰納法。燃料 `2^64` はランクを要素数以下に正規化した `nrank` より大きい）と `compress_step`（再帰の後に `_ps[a]` を根に書いても森のまま）、`compress_comp`。
+- `same_spec`: 元の配列での `a`、`b` の根 `r1`、`r2` について、結果は `r1 = r2`。2 回目の探索は圧縮後の配列で行うが、`Comp` により元の根と一致する。
+- `size_spec`: `a` の根 `r` について `-_ps[r]`（元の配列の値）。
+- `unite_spec`: `a`、`b` の根 `r1`、`r2`（元の配列）について、2 回の圧縮の後の配列 `ps2`（`Comp`）に対し、等しければ `ps2` のまま `r1` を返す。異なれば大きさで親を決め（`-_ps[r1] < -_ps[r2]` なら `r2` が親）、`link`（親の値に子の値を足し、子を親につなぐ）を返し、`_num_groups` を 1 減らす。結果は新しいランク `urank` で `Inv` を満たす（`link_forest`）。
+- `num_groups_spec`: `_num_groups` をそのまま返す。
 
-定理に含めていないこと: 木の数が実際の木の数に等しいという不変条件、大きさによる結合での高さ `log2 n` の上界（計算量の上界はランクで述べる）、`unite`/`same`/`size` での経路圧縮。C++ のテストは `tests/union_find.cpp` で、乱択の操作列を素朴な成分の再ラベル付けと照合し、20 万要素の連鎖も確認する。
+木の大きさの値（`-_ps[r]` が木の要素数に等しいこと）と、償却の逆アッカーマン上界は主張しない。
 
-`tests/test_union_find_bounds.py` は専用の `tests/imports/union_find_bounds/in/cases.txt` と `out/cases.txt` を読み、元の入力検査を生成NProgramのfaultとC++のSIGABRTで照合する。空集合、先頭/末尾の正しい要素、番兵、負数、INT_MIN/INT_MAX、二引数メソッドの両引数を扱い、ASan/UBSanで不正アクセスが先行しないことを確認する。assertを除くと空集合の番兵が根0として正常返却される対照も確認する。
-
-構成子のvectorフィールド初期化は本体のassertより前に実行される（元のソースも同じ順序）。負のnが確保例外を起こす場合までSIGABRTとは主張しない。n=-1では空vectorの初期化後、本体assertで停止する。番兵のための `n+1` の範囲制限、元の別カウンタ、unite/same/sizeの経路圧縮は引き続き未解消である。
+差分テスト（`tests/diff/union_find.py`、乱択の操作列）と C++ のテスト（`tests/union_find.cpp`、素朴な実装との比較）で翻訳と実装を確かめる。
