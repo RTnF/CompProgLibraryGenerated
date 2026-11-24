@@ -47,4 +47,14 @@ actual argument on the argument type `A`. -/
 class Method1 (name : String) (F A R : Type) where
   call : F → A → Cpp.M R
 
+/-- `a << b` / `a >> b` for a value `a` of a template parameter type and an `int` shift count `b`. The instance for
+the mathematical integer carrier of the signed integer types is the prelude's `Cpp.shl` / `Cpp.shr`. -/
+class ShiftInt (T : Type) where
+  shl : T → Int → T
+  shr : T → Int → T
+
+instance : ShiftInt Int where
+  shl := Cpp.shl
+  shr := Cpp.shr
+
 end Proofs.Cpp

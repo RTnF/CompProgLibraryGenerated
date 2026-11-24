@@ -22,11 +22,11 @@
 | graph/dijkstra.hpp | 一部 | `dijkstra`（CSR 配列、`priority_queue` の代わりに線形探索の O(n²+m)。親の配列 `parent` を含む。2026-10-29） |
 | graph/edge.hpp, edge_flow.hpp | 対象外（方針） | 利用者の決定（2026-10-12）: 標準入出力（`operator<<`）と ID 管理（静的カウンタ `next_id`）は本質から外れるので Lean の証明は要らない。辺は端点・費用（・容量）の配列で表すグラフアルゴリズムの正しさと計算量を優先する |
 | graph/find_cycle.hpp | 一部 | 2026-11-21 に新方式で再公開した（`library/graph/find_cycle.hpp`、取り下げ前と同じ形）。CSR 配列・明示スタックの反復 DFS で、閉路がないこと、または閉路の頂点列と `O(n+m)` の手数を `Proofs/Cpp/FindCycle.lean` で証明。違反一覧: `ListGraph` のメンバー関数を CSR の自由関数に、再帰ラムダを明示スタックに、返り値を辺の配列から頂点列に変更 |
-| graph/graph_flow.hpp, graph_list.hpp, graph_matrix.hpp | 一部 | `library/graph/csr_build.hpp`（`graph_list` の辺リストから CSR 配列を作る計数ソート。辺の属性と `vector<vector<>>` の形は未。違反一覧: `ListGraph` クラスを辺リスト→CSR の関数に変更）。`graph_flow`/`graph_matrix` は未（`vector<vector<>>`、`map`、構造体の vector） |
+| graph/graph_flow.hpp, graph_list.hpp | 一部 | `library/graph/csr_build.hpp`（`graph_list` の辺リストから CSR 配列を作る計数ソート。辺の属性と `vector<vector<>>` の形は未。違反一覧: `ListGraph` クラスを辺リスト→CSR の関数に変更）。`graph_flow` は未（`map`、構造体の vector） |
+| graph/graph_matrix.hpp, warshall_floyd.hpp | 済（新方式、2026-11-25） | `library/graph/graph_matrix.hpp`（元の `MatrixGraph<Cost>` を 1 クラスに: `UNREACHABLE`・構築子・`add_edge`・`warshall_floyd`・`distance`・`get_shortest_path`・`has_negative_cycle`・`operator<<`）。親の初期化の不具合を修正（`docs/agent/fixes.md`）。距離が最短の歩道の重みであること（負の閉路がないとき）、負閉路の判定、経路復元が止まり最短の歩道を返すこと、計算量を証明（`Cost = long long`、`docs/graph_matrix.md`）。`operator<<` は方針により C++ テストのみ。旧部品 `floyd_warshall`（距離だけの関数）は残している |
 | graph/topological_sort.hpp | 一部 | `topological_sort`（CSR 配列、カーンの方法のキュー版。辞書順最小版は未） |
 | graph/lowlink.hpp | 一部 | `library/graph/lowlink.hpp`（CSR 配列・反復 DFS。橋と関節点の同値、ord/par/low/sep の仕様と `O(n+m)` の仕事量まで証明。元の「ソート済みの配列を返す」形、`ListGraph` の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の配列を呼び出し側の配列に変更） |
 | graph/prim.hpp | 一部 | `library/graph/prim.hpp`（配列版 CSR、`O(n²+m)`、最小全域森の最適性まで証明。`priority_queue` 版と `ListGraph` の形は未。違反一覧: 元の `O((n+m) log n)`・`ListGraph` を CSR 配列・線形探索に変更） |
-| graph/warshall_floyd.hpp | 一部 | `floyd_warshall`（非負の辺、親の行列は含めない。平らな形と `vector<vector<T>>` の形） |
 | interval/interval.hpp | 済 | `interval`。2026-11-09に元の既定 `operator<=>` と同じ順序の `==`/`!=`/`<`/`>`/`<=`/`>=` を追加（C++17、単一return式）。生成モデル13関数と一般定理 `interval_{eq,ne,lt,gt,le,ge}_correct`、全件gate（実7336秒、独立kernel49269宣言）成功。入出力演算子は方針（2026-10-12）により対象外 |
 | interval/interval_union.hpp | 一部 | `interval_union`（組を 2 本の vector に分け、結果は呼び出し側の 2 本の vector に書く。挿入ソート `O(n²)`） |
 | modint/dynamic_modint.hpp | 公開 | `dynamic_modint` に元のクラスAPI、静的な法、負指数、入出力、両階乗表、二項係数を復元。動的版の二項係数は `cp::dynamic_modint::C`。ローカル全件gate済み。push後のCIは未確認 |
@@ -65,9 +65,9 @@
 | Graph/BellmanFord.hpp | `library/graph/bellman_ford.hpp` | 一部（辺の平行配列。親配列と負閉路の印は `-inf`） |
 | Graph/Dijkstra.hpp | `library/graph/dijkstra.hpp` | 一部（CSR、O(n²+m)、親あり） |
 | Graph/TopologicalSort.hpp | `library/graph/topological_sort.hpp` | 一部（辞書順最小版なし） |
-| Graph/WarshallFloyd.hpp | `library/graph/floyd_warshall.hpp` | 一部（非負の辺、親なし。平らな形と `vector<vector<T>>` の形） |
+| Graph/GraphM.hpp, WarshallFloyd.hpp | `library/graph/graph_matrix.hpp` | 統合済み（旧版の `GraphM`。名前が `addEdge`/`warshallFloyd`/`getDist`/`getShortestPath`/`hasNegativeCycle` で、`UNREACHABLE` がクラス内初期化。機能は `MatrixGraph` と同じで、親の初期化の不具合も同じ） |
 | Graph/UnionFind.hpp | `library/union_find/union_find.hpp` | 一部（対応先を共有。元`DisjointSet::getNum()`の選択生成・元field条件からの実call/復元・仕事量/3peakと原本C++ UBSanを確認。元constructor/残りAPIと任意caller ASTは未検証。経路圧縮・別カウンタ・元の入力範囲の公開版復元も未完了） |
-| Graph/GraphL.hpp, GraphM.hpp, Lowlink.hpp, Prim.hpp | なし | 未（追記 47 の機能待ち） |
+| Graph/GraphL.hpp, Lowlink.hpp, Prim.hpp | なし | 未（追記 47 の機能待ち） |
 | ModInt/ModInt.hpp | `library/modint/modint.hpp` | 新方式のlibrary側ではIOと型template構築も復元。library3原本との差分確認は別途必要 |
 | NumberTheory/Factorize.hpp, IsPrime.hpp | なし | 未（`__uint128_t`、ミラー–ラビン） |
 | SegmentTree/SegmentTree.hpp | `library/segment_tree/segtree_sum.hpp` | 一部（和のみ。任意のモノイドは構造体の要素が要る） |

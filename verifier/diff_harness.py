@@ -362,7 +362,7 @@ end DiffTest
 
 class Harness:
     def __init__(self, source: Path, instance: dict, lean_module: str, deps=(), standard="c++17", calls=None,
-                 bindings=()):
+                 bindings=(), unverified=()):
         # bindings: (header, Lean model module) of components whose classes may be bound to template parameters
         self.bindings = list(bindings)
         self.binding_trs = []
@@ -374,7 +374,7 @@ class Harness:
         self.source = source
         self.instance = instance             # template parameter -> C++ type
         self.lean_module = lean_module
-        tr = lt.Translator(lt.source_decls(source, standard), source.read_bytes(),
+        tr = lt.Translator(lt.drop_unverified(lt.source_decls(source, standard), unverified), source.read_bytes(),
                            [(lt.source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
         translated = tr.translate()
         self.numeric_trait_parameters = sorted(set(re.findall(r'Cpp\.NumericTraits "(\w+)"', translated)))
@@ -482,7 +482,10 @@ class Harness:
                 out.append((None, item))
             else:
                 for sig in item.methods:
-                    out.append((item, sig))
+                    # a static data member modelled as a function (lean_translate.inline_template_static_constants)
+                    # is no C++ function; its value is used by the other members
+                    if not sig.node.get("lean_static_constant"):
+                        out.append((item, sig))
         if self.selected_calls is not None and not unfiltered:
             out = [(info, sig) for info, sig in out
                    if sig.lean_name.removeprefix("cp.") in self.selected_calls]
@@ -980,9 +983,9 @@ def lean_environment():
 
 
 def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None,
-             deps=(), standard="c++17", calls=None, bindings=()):
+             deps=(), standard="c++17", calls=None, bindings=(), unverified=()):
     """Run both interpreters on `cases` (command text) and require identical output."""
-    h = Harness(source, instance, lean_module, deps, standard, calls, bindings)
+    h = Harness(source, instance, lean_module, deps, standard, calls, bindings, unverified)
     lake, env = lean_environment()
     env.pop("LEAN_PATH", None)
     with tempfile.TemporaryDirectory(prefix="diff-") as directory:

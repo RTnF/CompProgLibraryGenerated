@@ -40,6 +40,7 @@ import Proofs.Math.FloorSumArithmetic
 import Proofs.Math.FloorSumReciprocity
 import Proofs.Math.FloorSumSignedArithmetic
 import Proofs.Math.FloydWarshallCall
+import Proofs.Math.GraphMatrixMath
 import Proofs.Math.InvGcdMath
 import Proofs.Math.IsPrimeMath
 import Proofs.Math.LowlinkFinal
@@ -83,6 +84,7 @@ import Proofs.Cpp.FloorSum
 import Proofs.Cpp.FloorSumUnsigned
 import Proofs.Cpp.FloydWarshall
 import Proofs.Cpp.GcdU64
+import Proofs.Cpp.GraphMatrix
 import Proofs.Cpp.Group
 import Proofs.Cpp.Interval
 import Proofs.Cpp.IntervalUnion

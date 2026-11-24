@@ -838,6 +838,11 @@ class Fn:
             constant = self.tr.constants.get(n["referencedDecl"].get("id"))
             if constant is not None:
                 return f"cp.{scoped_lean_name(constant[0])}", constant[1]
+            if key in self.tr.static_constant_methods:
+                methods = [] if self.cls is None else [s for s in self.cls.methods if s.node.get("id") == key]
+                if len(methods) != 1:
+                    raise Unsupported(f"static constant {name} outside its class")
+                return self.call_sig(methods[0], None, [], pre)
             ty = self.lookup(name)
             if ty is None:
                 raise Unsupported(f"unknown variable {name}")
@@ -1189,6 +1194,10 @@ class Fn:
             if ty.kind in ("u32", "u64"):
                 bt, _ = self.convert(bt, bty, ty, b)
                 return f"({at} {'<<<' if op == '<<' else '>>>'} {bt})", ty
+            if ty.kind == "tparam":
+                bt, _ = self.convert(bt, bty, INT, b)
+                self.reqs.add(f"Cpp.ShiftInt {lean_type(ty)}")
+                return f"(Cpp.ShiftInt.{'shl' if op == '<<' else 'shr'} {at} {bt})", ty
             if ty.kind != "int":
                 raise Unsupported(f"shift of {ty}")
             bt, _ = self.convert(bt, bty, INT, b)
@@ -2607,7 +2616,7 @@ class Fn:
             return True
         if name == "assert" or name == "__assert_fail":
             raise Unsupported("assert")
-        if name in ("iota", "stable_sort") and len(args) == (3 if name == "iota" else 3):
+        if name in ("iota", "stable_sort", "reverse") and len(args) == (2 if name == "reverse" else 3):
             bases = []
             for arg, which in zip(args[:2], ("begin", "end")):
                 call = strip(arg)
@@ -2623,6 +2632,12 @@ class Fn:
                 raise Unsupported(f"std::{name} of a non-vector")
             elem = target[3].args[0]
             cur = self.read_lvalue(target)
+            if name == "reverse":
+                # std::reverse(v.begin(), v.end()): Array.reverse, one step per element.
+                self.emit(f"Cpp.tickN {cur}.size")
+                for line in self.assign_lines(target, f"{cur}.reverse"):
+                    self.emit(line)
+                return True
             if name == "iota":
                 # std::iota(v.begin(), v.end(), x): v[i] = x + i, one step per element.
                 if elem.kind != "int":
@@ -2989,6 +3004,7 @@ class Translator:
         self.aliases: dict[str, Ty] = {}
         self.nested_record_names = {}
         self.constants: dict[str, tuple[str, Ty, str]] = {}
+        self.static_constant_methods: set[str] = set()
         self.globals: dict[str, tuple[str, Ty, int | None]] = {}
         self.global_initializers: dict[str, dict] = {}
         self.local_statics: set[str] = set()
@@ -3115,6 +3131,40 @@ class Translator:
                     raise Unsupported(f"non-type template parameter {name}")
                 values[name] = ty
         return names, values, constraints
+
+    def inline_template_static_constants(self):
+        """`static const T NAME;` in a class template with the out-of-line definition
+        `template <...> const T C<...>::NAME = e;` becomes the static member function `T NAME() { return e; }` of the
+        model (one step per use); its uses call it."""
+        members = {}
+        for node in self.decls:
+            if node.get("kind") != "ClassTemplateDecl":
+                continue
+            rec = next((c for c in inner(node) if c.get("kind") == "CXXRecordDecl" and c.get("completeDefinition")), None)
+            for c in inner(rec or {}):
+                if (c.get("kind") == "VarDecl" and c.get("storageClass") == "static" and not inner(c)
+                        and not c.get("constexpr") and re.search(r"\bconst\b", type_of_decl(c))
+                        and not re.search(r"[&*\[]|\bvolatile\b", type_of_decl(c))):
+                    members[c["id"]] = (rec, c)
+        if not members:
+            return
+        kept = []
+        for node in self.decls:
+            if node.get("kind") == "VarDecl" and node.get("previousDecl") in members and len(inner(node)) >= 1:
+                rec, c = members.pop(node["previousDecl"])
+                init = [x for x in inner(node) if x.get("kind") != "NestedNameSpecifier"]
+                if len(init) != 1:
+                    raise Unsupported("static constant definition requires one initializer")
+                ty = re.sub(r"\bconst\b", "", type_of_decl(c)).strip()
+                c.clear()
+                c.update({"kind": "CXXMethodDecl", "name": node["name"], "id": node["previousDecl"],
+                          "storageClass": "static", "type": {"qualType": f"{ty} ()"},
+                          "lean_static_constant": True,
+                          "inner": [{"kind": "CompoundStmt", "inner": [{"kind": "ReturnStmt", "inner": init}]}]})
+                self.static_constant_methods.add(node["previousDecl"])
+                continue
+            kept.append(node)
+        self.decls[:] = kept
 
     def collect_constant(self, node):
         """Direct literals and fully initialized fixed arrays of direct literals."""
@@ -3287,6 +3337,7 @@ class Translator:
                     self.functions.setdefault(name, []).append(sig)
                 elif kind in ("FunctionTemplateDecl", "ClassTemplateDecl", "CXXRecordDecl"):
                     raise Unsupported(f"templates and classes of a dependency ({node.get('name')})")
+        self.inline_template_static_constants()
         for node in self.decls:
             kind = node.get("kind")
             if kind == "ClassTemplateDecl":
@@ -4087,12 +4138,36 @@ namespace Proofs.Cpp.Gen
 """
 
 
-def translate_file(source: Path, imports: list[str], deps=(), standard="c++17") -> str:
-    decls = source_decls(source, standard)
+def drop_unverified(decls, names):
+    """Remove the functions named in `unverified_functions` of the component (stream operators only, by the user
+    decision recorded in docs/translation.md): top-level functions and hidden friends of classes."""
+    names = set(names)
+    if not names:
+        return decls
+    if not names <= {"operator<<", "operator>>"}:
+        raise Unsupported(f"only stream operators may be left unverified: {sorted(names)}")
+    def keep(node):
+        kind = node.get("kind")
+        if kind in ("FunctionDecl", "FunctionTemplateDecl") and node.get("name") in names:
+            return False
+        if kind == "FriendDecl" and any(c.get("kind") in ("FunctionDecl", "FunctionTemplateDecl")
+                                        and c.get("name") in names for c in inner(node)):
+            return False
+        return True
+    def walk(node):
+        if node.get("kind") in ("ClassTemplateDecl", "CXXRecordDecl"):
+            node["inner"] = [walk(c) if isinstance(c, dict) else c for c in node.get("inner", [])
+                             if not isinstance(c, dict) or keep(c)]
+        return node
+    return [walk(d) for d in decls if keep(d)]
+
+
+def translate_file(source: Path, imports: list[str], deps=(), standard="c++17", unverified=()) -> str:
+    decls = drop_unverified(source_decls(source, standard), unverified)
     tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
     body = tr.translate()
     dependent = {"Cpp.ReadField", "Cpp.AddResult", "Cpp.MulResult", "Cpp.AssignResult", "Cpp.ConditionalResult",
-                 "Cpp.StaticCall", "Cpp.AdlCall2", "Cpp.Invoke1", "Cpp.Method1"}
+                 "Cpp.StaticCall", "Cpp.AdlCall2", "Cpp.Invoke1", "Cpp.Method1", "Cpp.ShiftInt"}
     if any(requirement.split()[0] in dependent
            for fn in tr.built_functions.values() for requirement in fn.reqs.items):
         imports = [*imports, "Proofs.Cpp.Lib.DependentOperations"]
@@ -4108,8 +4183,9 @@ def main():
     parser.add_argument("--dep", dest="deps", action="append", default=[], help="header of a dependency")
     parser.add_argument("--output")
     parser.add_argument("--standard", choices=("c++17", "c++20"), default="c++17")
+    parser.add_argument("--unverified", action="append", default=[], help="stream operator left out of the model")
     args = parser.parse_args()
-    text = translate_file(Path(args.source), args.imports, args.deps, args.standard)
+    text = translate_file(Path(args.source), args.imports, args.deps, args.standard, args.unverified)
     if args.output:
         Path(args.output).write_text(text)
     else:

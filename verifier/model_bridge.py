@@ -35,7 +35,7 @@ def check_component(name, timeout=None):
     imports = [model_module(component(dep)["model"]) for dep in metadata["dependencies"]]
     deps = [repo_file(f"library/{component(dep)['source']}") for dep in metadata["dependencies"]]
     standard = metadata["standard"]
-    expected = lean_translate.translate_file(source, imports, deps, standard)
+    expected = lean_translate.translate_file(source, imports, deps, standard, metadata.get("unverified_functions", []))
     if repo_file(metadata["model"]).read_text() != expected:
         raise ValueError(f"C++/translated Lean model mismatch for {name}; regenerate with verifier/lean_translate.py")
     proof = repo_file(metadata["proof"]).read_text()
@@ -60,7 +60,7 @@ def check_component(name, timeout=None):
         bindings = [(repo_file(f"library/{component(b)['source']}"), model_module(component(b)["model"]))
                     for b in metadata["diff"].get("bindings", [])]
         count = diff_harness.run_diff(source, instance, model_module(metadata["model"]), cases, timeout, deps, standard,
-                                      metadata["diff"].get("calls"), bindings)
+                                      metadata["diff"].get("calls"), bindings, metadata.get("unverified_functions", []))
         print(f"differential test of {name} with {instance}: {count} outputs agree")
     print(f"C++ header, translated Lean model and differential test match: {name}")
 
