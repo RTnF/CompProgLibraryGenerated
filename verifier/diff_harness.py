@@ -21,6 +21,7 @@ Outputs of a call: the returned value (if not void), then each non-const referen
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import re
@@ -844,11 +845,17 @@ class Harness:
         lines = [f"import {self.lean_module}", *(f"import {mod}" for _, mod in self.bindings), LEAN_PRELUDE, streams, integer_ops, *numeric_traits, *type_traits, *remainder_bindings, "open Proofs.Cpp.Gen", *facts,
                  "namespace DiffTest", *self.lean_record_instances(requirements), "end DiffTest", "",
                  "structure Objects where"]
+        state_ty = self.tr.global_state_name
+        if self.tr.static_family is not None:
+            # One counter state per specialization: the Lean carrier and the C++ spelling of the class argument.
+            family_param = self.tr.static_family[1]
+            state_ty = (f"({self.tr.global_state_name} {self.lean_instance[family_param]} "
+                        f"{json.dumps(self.instance[family_param])})")
         for info in classes:
             cty = self.lean_type_inst(lt.Ty("cls", info.name, tuple(lt.Ty("tparam", t) for t in info.tparams)))
             lines.append(f"  o_{info.name} : Array {cty} := #[]")
         if self.tr.globals:
-            lines.append(f"  globalState : Option {self.tr.global_state_name} := none")
+            lines.append(f"  globalState : Option {state_ty} := none")
         if not classes:
             lines.append("  unused : Unit := ()")
         lines.append("")
@@ -861,7 +868,7 @@ class Harness:
             lines.append("  match objs.globalState with")
             lines.append("  | some _ => pure objs")
             lines.append("  | none =>")
-            lines.append(f"    match (cp.{self.tr.initializer_name} : Proofs.Cpp.M {self.tr.global_state_name}) 0 with")
+            lines.append(f"    match (cp.{self.tr.initializer_name} : Proofs.Cpp.M {state_ty}) 0 with")
             lines.append('    | none => throw (IO.userError "global initialization failed")')
             lines.append("    | some (state, _) => pure { objs with globalState := some state }")
             lines.append("")

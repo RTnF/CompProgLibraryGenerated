@@ -539,7 +539,7 @@ class Fn:
 
     def global_value(self):
         return "({ " + ", ".join(f"{lean_name(name)} := {self.global_names[key]}"
-                                   for key, (name, _, _) in self.tr.globals.items()) + f" }} : {self.tr.global_state_name})"
+                                   for key, (name, _, _) in self.tr.globals.items()) + f" }} : {self.tr.global_state_type()})"
 
     # scopes
     def declare(self, name, ty):
@@ -3012,6 +3012,11 @@ class Translator:
         self.static_member_literals: dict[str, str] = {}
         self.static_member_definitions: dict[str, str] = {}
         self.global_state_name = "cp.GlobalState"
+        self.static_family = None          # (class name, its type parameter) of a templated static counter
+        self.static_family_member = None
+        self.static_tag = "cppStaticSpecialization"
+        while re.search(rb"\b" + self.static_tag.encode() + rb"\b", source_bytes):
+            self.static_tag += "_"
         self.functions: dict[str, list[Sig]] = {}
         self.qualified_functions: dict[str, str] = {}
         self.order: list = []       # ("class", ClassInfo) / ("fn", Sig)
@@ -3251,8 +3256,11 @@ class Translator:
         ty = self.ty(type_of_decl(node))
         children = inner(node)
         literal = strip(children[0]) if len(children) == 1 else {}
-        if (ty.kind != "u32" or literal.get("kind") != "IntegerLiteral"
-                or not 0 <= int(literal["value"]) < 2**32):
+        family_member = declaration == self.static_family_member
+        upper = 2**31 if family_member else 2**32
+        allowed_type = (ty.kind == "int" and ty.width == 32) if family_member else ty.kind == "u32"
+        if (not allowed_type or literal.get("kind") != "IntegerLiteral"
+                or not 0 <= int(literal["value"]) < upper):
             raise Unsupported("static data needs an in-range UInt32 literal initializer")
         name = self.static_members[declaration]
         if declaration in self.globals or any(lean_name(n) == lean_name(name) for n, _, _ in self.globals.values()):
@@ -3260,6 +3268,11 @@ class Translator:
         self.static_member_definitions[node["id"]] = declaration
         self.static_member_literals[declaration] = literal["value"]
         self.globals[declaration] = (name, ty, None)
+
+    def global_state_type(self):
+        if self.static_family is None:
+            return self.global_state_name
+        return f"({self.global_state_name} {self.static_family[1]} {self.static_tag})"
 
     def resolve_static_member_references(self):
         if not self.static_members:
@@ -3423,7 +3436,10 @@ class Translator:
             self.initializer_name = name
             node = {"kind": "FunctionDecl", "id": "lean_global_initializer", "name": name,
                     "lean_global_initializer": True, "inner": []}
-            self.order.append(("fn", Sig(name, "cp." + name, [], VOID, node=node,
+            family_params = [self.static_family[1]] if self.static_family is not None else []
+            if family_params and self.globals.keys() != {self.static_family_member}:
+                raise Unsupported("template static state must be separate from other mutable state")
+            self.order.append(("fn", Sig(name, "cp." + name, [], VOID, node=node, tparams=family_params,
                                          uses_globals=True, initializes_globals=True, public=False)))
 
     def param_list(self, node, tps, containers=(), values=None):
@@ -3528,9 +3544,17 @@ class Translator:
                 continue
             if kind == "VarDecl":
                 spelling = type_of_decl(c)
-                if (c.get("storageClass") != "static" or c.get("tls") or tps or inner(c)
-                        or re.search(r"\b(?:const|volatile)\b|[&*]", spelling)
-                        or self.ty(spelling).kind != "u32"):
+                if (c.get("storageClass") != "static" or c.get("tls") or inner(c)
+                        or re.search(r"\b(?:const|volatile)\b|[&*]", spelling)):
+                    raise Unsupported("static member needs a mutable out-of-line definition")
+                if tps:
+                    # One signed int counter per specialization of a one-parameter class template
+                    # (e.g. Edge<T>::next_id): the state is indexed by T and the C++ specialization tag.
+                    if len(tps) != 1 or values or constraints or spelling != "int" or self.static_family is not None:
+                        raise Unsupported("templated static state requires one class type and one signed int member")
+                    self.static_family = (name, tps[0])
+                    self.static_family_member = c["id"]
+                elif self.ty(spelling).kind != "u32":
                     raise Unsupported("static member needs a mutable UInt32 out-of-line definition")
                 self.static_members[c["id"]] = name + "_" + c["name"]
                 continue
@@ -3672,6 +3696,8 @@ class Translator:
                 for sig, info in sigs:
                     direct, calls = graph[id(sig)]
                     if not sig.uses_globals and (direct or calls & affected):
+                        if self.static_family is not None and (info is None or info.name != self.static_family[0]):
+                            raise Unsupported("template static state cannot cross class specialization")
                         params = [p for p in inner(sig.node) if p.get("kind") == "ParmVarDecl"]
                         if not self.static_members:
                             if info or any("&" in type_of_decl(p) for p in params):
@@ -3782,7 +3808,8 @@ class Translator:
                 raise Unsupported("global state model name conflicts with a source declaration")
             requirements = sorted({r for _, ty, _ in self.globals.values()
                                    for r in class_requirements(ty, self.classes)})
-            lines = [f"structure {self.global_state_name} " + " ".join(f"[{r}]" for r in requirements) + " where"]
+            state_param = f"({self.static_family[1]} : Type) ({self.static_tag} : String) " if self.static_family else ""
+            lines = [f"structure {self.global_state_name} {state_param}" + " ".join(f"[{r}]" for r in requirements) + " where"]
             for name, ty, _ in self.globals.values():
                 lines.append(f"  {lean_name(name)} : {lean_type(ty)}")
             lines.append("  deriving Inhabited")
@@ -4016,7 +4043,7 @@ class Translator:
         for pname, pty, _ in sig.params:
             args.append(f"({lean_name(pname)} : {lean_type(pty)})")
         if sig.uses_globals and not sig.initializes_globals:
-            args.append(f"({fn.global_input} : {self.global_state_name})")
+            args.append(f"({fn.global_input} : {self.global_state_type()})")
         outs = []
         for o in sig.outputs():
             if o == "ret":
@@ -4024,7 +4051,7 @@ class Translator:
             elif o == "self":
                 outs.append(cls_ty)
             elif o == "@globals":
-                outs.append(self.global_state_name)
+                outs.append(self.global_state_type())
             else:
                 outs.append(lean_type(next(p[1] for p in sig.params if p[0] == o)))
         if sig.is_ctor and not sig.uses_globals:
