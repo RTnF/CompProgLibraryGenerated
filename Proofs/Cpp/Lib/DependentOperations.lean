@@ -57,4 +57,20 @@ instance : ShiftInt Int where
   shl := Cpp.shl
   shr := Cpp.shr
 
+/-- `x.member` for a value `x` of a class type parameter whose default argument is a known class: the member's type
+`Value` is the one in that class (docs/translation.md). -/
+class Field (member : String) (Record : Type) (Value : Type) where
+  get : Record → Value
+
+/-- The state that the constructors of `E` share (e.g. the id counter of `Edge<T>`; `Unit` for a class without
+static data). -/
+class ConstructState (E : Type) where
+  State : Type
+  /-- the state at program start (the static initialization) -/
+  start : M State
+
+/-- The constructor of `E` on the argument tuple `Args` (`(from, to, args...)`), with its effect on the state. -/
+class Construct (E Args : Type) [ConstructState E] where
+  make : Args → ConstructState.State E → M (E × ConstructState.State E)
+
 end Proofs.Cpp

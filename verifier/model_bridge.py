@@ -60,7 +60,8 @@ def check_component(name, timeout=None):
         bindings = [(repo_file(f"library/{component(b)['source']}"), model_module(component(b)["model"]))
                     for b in metadata["diff"].get("bindings", [])]
         count = diff_harness.run_diff(source, instance, model_module(metadata["model"]), cases, timeout, deps, standard,
-                                      metadata["diff"].get("calls"), bindings, metadata.get("unverified_functions", []))
+                                      metadata["diff"].get("calls"), bindings, metadata.get("unverified_functions", []),
+                                      metadata["diff"].get("packs"), metadata["diff"].get("lean_imports", []))
         print(f"differential test of {name} with {instance}: {count} outputs agree")
     print(f"C++ header, translated Lean model and differential test match: {name}")
 

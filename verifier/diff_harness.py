@@ -363,12 +363,18 @@ end DiffTest
 
 class Harness:
     def __init__(self, source: Path, instance: dict, lean_module: str, deps=(), standard="c++17", calls=None,
-                 bindings=(), unverified=()):
+                 bindings=(), unverified=(), packs=None, lean_imports=()):
+        # packs: type parameter pack -> the C++ argument type lists of its calls (one command per list)
+        self.packs = dict(packs or {})
+        # lean_imports: hand-written modules with the instances of the bound classes (e.g. Cpp.Construct)
+        self.lean_imports = list(lean_imports)
         # bindings: (header, Lean model module) of components whose classes may be bound to template parameters
         self.bindings = list(bindings)
         self.binding_trs = []
         for header, _module in self.bindings:
-            btr = lt.Translator(lt.source_decls(Path(header), standard), Path(header).read_bytes(), [])
+            # the stream operators of a bound class are outside the models (docs/translation.md)
+            btr = lt.Translator(lt.drop_unverified(lt.source_decls(Path(header), standard), ("operator<<", "operator>>")),
+                                Path(header).read_bytes(), [])
             btr.translate()
             self.binding_trs.append(btr)
         self.selected_calls = None if calls is None else frozenset(calls)
@@ -492,6 +498,28 @@ class Harness:
                    if sig.lean_name.removeprefix("cp.") in self.selected_calls]
         return out
 
+    def call_variants(self):
+        """(info, sig, label, pack) for each driver command: one per C++ argument list of a forwarded pack."""
+        out = []
+        for info, sig in self.callables():
+            label = sig.lean_name.removeprefix("cp.")
+            packs = [p[1].name for p in sig.params if p[1].kind == "tparam" and p[1].name in self.tr.packs]
+            if not packs:
+                out.append((info, sig, label, None))
+                continue
+            if len(packs) != 1 or packs[0] not in self.packs:
+                raise lt.Unsupported(f"differential calls of {label} need the argument lists of pack {packs[0]}")
+            for j, types in enumerate(self.packs[packs[0]]):
+                out.append((info, sig, f"{label}@{j}", list(types)))
+        return out
+
+    def construct_state_type(self):
+        for _info, sig in self.callables():
+            for _, pty, _ in sig.params:
+                if pty.kind == "cstate":
+                    return f"(Proofs.Cpp.ConstructState.State {self.lean_type_inst(pty.args[0])})"
+        return None
+
     def param_quals(self, sig):
         return [p.get("type", {}).get("qualType", "") for p in lt.inner(sig.node) if p.get("kind") == "ParmVarDecl"]
 
@@ -509,8 +537,11 @@ class Harness:
                            f"inline void pr(const {cpp} &m) {{ {prints} }} }}")
             ctors = [g for g in info.methods if g.is_ctor and not g.params]
             statics = [g.cpp_name for g in info.methods if g.is_static and not g.params and g.cpp_name in ("e", "id")]
-            start = f"{cpp}()" if ctors or not statics else f"{cpp}::{statics[0]}()"
-            out.append(f"namespace difftest {{ inline {cpp} start({cpp} *) {{ return {start}; }} }}")
+            has_default = ctors or not any(g.is_ctor for g in info.methods)
+            if has_default or statics:
+                # a value to read into (a class without a default constructor or e()/id() is only an output)
+                start = f"{cpp}()" if has_default else f"{cpp}::{statics[0]}()"
+                out.append(f"namespace difftest {{ inline {cpp} start({cpp} *) {{ return {start}; }} }}")
         return out
 
     def lean_record_instances(self, requirements):
@@ -650,13 +681,18 @@ class Harness:
                     lines.append('      long long k; std::cin >> k; std::cout << "ok";')
                     lines.append(f'      difftest::pr(objects_{info.name}[k].{name}); std::cout << "\\n"; continue;')
                     lines.append('    }')
-        for info, sig in self.callables():
+        for info, sig, label, pack in self.call_variants():
             if not sig.public or (sig.is_static and info is not None and not self.static_callable(info, sig)):
                 continue
             quals = self.param_quals(sig)
             decls, names = [], []
             for i, q in enumerate(quals):
                 pty = sig.params[i][1]
+                if pty.kind == "tparam" and pty.name in self.tr.packs:
+                    for m, t in enumerate(pack):
+                        decls.append(f"{cpp_value_type(t, self.instance)} a{i}_{m}; difftest::rd(a{i}_{m});")
+                        names.append(f"a{i}_{m}")
+                    continue
                 if pty.kind == "cls":
                     # an object argument is given by its number
                     decls.append(f"long long a{i}k; std::cin >> a{i}k; auto &a{i} = objects_{pty.name}[a{i}k];")
@@ -679,17 +715,17 @@ class Harness:
                     # Class template parameters do not make its friend a function template.
                     targs = []
                 callee = ("" if hidden_friend else "cp::") + sig.cpp_name + (f"<{', '.join(targs)}>" if targs else "")
-                key = f"call {sig.lean_name.removeprefix('cp.')}"
+                key = f"call {label}"
                 call = f"{callee}({', '.join(names)})"
             elif sig.is_ctor:
-                key = f"new {sig.lean_name.removeprefix('cp.')}"
+                key = f"new {label}"
                 call = None
             elif sig.is_static:
                 # A static member function: `call Class.name args` runs `Class<instance>::name(args)`.
-                key = f"call {sig.lean_name.removeprefix('cp.')}"
+                key = f"call {label}"
                 call = f"{self.cpp_class(info)}::{sig.cpp_name}({', '.join(names)})"
             else:
-                key = f"do {sig.lean_name.removeprefix('cp.')}"
+                key = f"do {label}"
                 call = f"objects_{info.name}[k].{sig.cpp_name}({', '.join(names)})"
             cmd, label = key.split(" ", 1)
             lines.append(f'    if (cmd == "{cmd}" && name == "{label}") {{')
@@ -715,6 +751,8 @@ class Harness:
                     lines.append(f"        {call};")
                     lines.append("        std::cout << \"ok\";")
                 for i, (pname, pty, is_ref) in enumerate(sig.params):
+                    if is_ref and pty.kind == "cstate":
+                        continue   # the constructor state is no C++ argument
                     if is_ref:
                         if pty.kind == "cls":
                             lines.append('        std::cout << " objref";')
@@ -842,7 +880,8 @@ class Harness:
             value = lt.mod_to_uint32_binding(self.instance[parameter], parameter).replace("Cpp.", "Proofs.Cpp.")
             remainder_bindings.append(f'local instance cppModToUInt32_{parameter} : '
                                       f'Proofs.Cpp.ModToUInt32 "{parameter}" {self.lean_instance[parameter]} := {value}')
-        lines = [f"import {self.lean_module}", *(f"import {mod}" for _, mod in self.bindings), LEAN_PRELUDE, streams, integer_ops, *numeric_traits, *type_traits, *remainder_bindings, "open Proofs.Cpp.Gen", *facts,
+        lines = [f"import {self.lean_module}", *(f"import {mod}" for _, mod in self.bindings),
+                 *(f"import {mod}" for mod in self.lean_imports), LEAN_PRELUDE, streams, integer_ops, *numeric_traits, *type_traits, *remainder_bindings, "open Proofs.Cpp.Gen", *facts,
                  "namespace DiffTest", *self.lean_record_instances(requirements), "end DiffTest", "",
                  "structure Objects where"]
         state_ty = self.tr.global_state_name
@@ -856,9 +895,24 @@ class Harness:
             lines.append(f"  o_{info.name} : Array {cty} := #[]")
         if self.tr.globals:
             lines.append(f"  globalState : Option {state_ty} := none")
+        cstate_ty = self.construct_state_type()
+        if cstate_ty is not None:
+            lines.append(f"  cstate : Option {cstate_ty} := none")
         if not classes:
             lines.append("  unused : Unit := ()")
         lines.append("")
+        if cstate_ty is not None:
+            # The state of the constructors of a bound class at program start (e.g. Edge's counter at 0).
+            elem = next(self.lean_type_inst(pty.args[0]) for _i, sig in self.callables()
+                        for _, pty, _ in sig.params if pty.kind == "cstate")
+            lines.append("def constructState (objs : Objects) : IO (Objects × " + cstate_ty + ") := do")
+            lines.append("  match objs.cstate with")
+            lines.append("  | some st => pure (objs, st)")
+            lines.append("  | none =>")
+            lines.append(f"    match (Proofs.Cpp.ConstructState.start (E := {elem})).run 0 with")
+            lines.append('    | none => throw (IO.userError "constructor state initialization failed")')
+            lines.append("    | some (st, _) => pure ({ objs with cstate := some st }, st)")
+            lines.append("")
         if self.tr.globals:
             # Class-only commands do not observe globals. Materialize their
             # model state when first used, retaining every previously created
@@ -882,10 +936,9 @@ class Harness:
                     lines.append('    let (k, ts) ← DiffTest.arg (α := Int) ts')
                     lines.append(f'    let value := objs.o_{info.name}[k.toNat]!.{lt.lean_name(name)}')
                     lines.append('    run ts objs (out.push ("ok" ++ DiffTest.Pr.pr value))')
-        for info, sig in self.callables():
+        for info, sig, label, pack in self.call_variants():
             if not sig.public or (sig.is_static and info is not None and not self.static_callable(info, sig)):
                 continue
-            label = sig.lean_name.removeprefix("cp.")
             if info is None or sig.is_static:
                 head = f'  | "call" :: "{label}" :: ts => do'
             elif sig.is_ctor:
@@ -900,7 +953,18 @@ class Harness:
                 lines.append(f"    let obj := objs.o_{info.name}[k.toNat]!")
             names = []
             for i, (pname, pty, is_ref) in enumerate(sig.params):
-                if pty.kind == "cls":
+                if pty.kind == "tparam" and pty.name in self.tr.packs:
+                    # the pack's Lean value: () for an empty pack, the value, or the tuple of the values
+                    tys = [lean_instance_type(t) for t in pack]
+                    for m, t in enumerate(tys):
+                        lines.append(f"    let (a{i}_{m}, ts) ← DiffTest.arg (α := {t}) ts")
+                    value = "()" if not tys else (f"a{i}_0" if len(tys) == 1 else
+                                                 "(" + ", ".join(f"a{i}_{m}" for m in range(len(tys))) + ")")
+                    lean_ty = "Unit" if not tys else " × ".join(tys)
+                    lines.append(f"    let a{i} : {lean_ty} := {value}")
+                elif pty.kind == "cstate":
+                    lines.append(f"    let (objs, a{i}) ← constructState objs")
+                elif pty.kind == "cls":
                     lines.append(f"    let (a{i}k, ts) ← DiffTest.arg (α := Int) ts")
                     lines.append(f"    let a{i} := objs.o_{pty.name}[a{i}k.toNat]!")
                 else:
@@ -943,6 +1007,8 @@ class Harness:
                 if o == "ret" and sig.ret.kind == "cls":
                     parts.append('" obj"')
                     continue
+                if o != "ret" and next(p[1] for p in sig.params if p[0] == o).kind == "cstate":
+                    continue
                 if o != "ret" and next(p[1] for p in sig.params if p[0] == o).kind == "cls":
                     parts.append('" objref"')
                     continue
@@ -957,6 +1023,11 @@ class Harness:
                     j = outputs.index(pname)
                     sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
                     lines.append(f"      let objs := {{ objs with o_{pty.name} := objs.o_{pty.name}.set! a{i}k.toNat {sel} }}")
+            for pname, pty, is_ref in sig.params:
+                if is_ref and pty.kind == "cstate":
+                    j = outputs.index(pname)
+                    sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
+                    lines.append(f"      let objs := {{ objs with cstate := some {sel} }}")
             if "self" in outputs:
                 j = outputs.index("self")
                 sel = "r" if len(outputs) == 1 else "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
@@ -990,9 +1061,9 @@ def lean_environment():
 
 
 def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None,
-             deps=(), standard="c++17", calls=None, bindings=(), unverified=()):
+             deps=(), standard="c++17", calls=None, bindings=(), unverified=(), packs=None, lean_imports=()):
     """Run both interpreters on `cases` (command text) and require identical output."""
-    h = Harness(source, instance, lean_module, deps, standard, calls, bindings, unverified)
+    h = Harness(source, instance, lean_module, deps, standard, calls, bindings, unverified, packs, lean_imports)
     lake, env = lean_environment()
     env.pop("LEAN_PATH", None)
     with tempfile.TemporaryDirectory(prefix="diff-") as directory:

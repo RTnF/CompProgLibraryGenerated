@@ -124,7 +124,8 @@ def check_lean_model(name: str, data: dict) -> None:
     if data.get("model") != f"Proofs/Cpp/Gen/{stem}.lean" or data.get("proof") != f"Proofs/Cpp/{stem}.lean":
         raise ValueError(f"lean_model components use Proofs/Cpp/Gen/{stem}.lean and Proofs/Cpp/{stem}.lean: {name}")
     diff = data.get("diff")
-    if not isinstance(diff, dict) or set(diff) - {"instances", "cases", "calls", "bindings"} or not {"instances", "cases"} <= set(diff):
+    if not isinstance(diff, dict) or set(diff) - {"instances", "cases", "calls", "bindings", "packs", "lean_imports"} \
+            or not {"instances", "cases"} <= set(diff):
         raise ValueError(f"missing differential test (diff.instances, diff.cases) for {name}")
     if "calls" in diff and (not isinstance(diff["calls"], list) or not diff["calls"]
             or not all(isinstance(call, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", call)
@@ -133,6 +134,18 @@ def check_lean_model(name: str, data: dict) -> None:
     if "bindings" in diff and (not isinstance(diff["bindings"], list) or not diff["bindings"] or not all(
             isinstance(b, str) and re.fullmatch(r"[a-z_][a-z_0-9]*", b) for b in diff["bindings"])):
         raise ValueError(f"invalid differential bindings for {name}")
+    # packs: a type parameter pack -> the C++ argument type lists of its differential commands
+    if "packs" in diff and (not isinstance(diff["packs"], dict) or not diff["packs"] or not all(
+            isinstance(k, str) and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", k) and isinstance(v, list) and v
+            and all(isinstance(t, list) and all(isinstance(x, str) and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9: <>,]*", x)
+                                                for x in t) for t in v)
+            for k, v in diff["packs"].items())):
+        raise ValueError(f"invalid differential packs for {name}")
+    # lean_imports: hand-written Lean modules with the instances of the bound classes
+    if "lean_imports" in diff and (not isinstance(diff["lean_imports"], list) or not diff["lean_imports"] or not all(
+            isinstance(m, str) and re.fullmatch(r"Proofs(?:\.[A-Z][A-Za-z0-9]*)+", m)
+            and repo_file(m.replace(".", "/") + ".lean").is_file() for m in diff["lean_imports"])):
+        raise ValueError(f"invalid differential Lean imports for {name}")
     instances = diff["instances"]
     if not isinstance(instances, list) or not instances or not all(
             isinstance(item, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in item.items())

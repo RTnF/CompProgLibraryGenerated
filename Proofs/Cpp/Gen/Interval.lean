@@ -101,7 +101,6 @@ def cp.Interval.intersection {T : Type} [Zero T] [LE T] [DecidableLE T] [Decidab
   let s := self.s
   let e := self.e
   let is_n := self.is_n
-  let mut b := b
   if ((decide (b.s ≥ e)) || (decide (s ≥ b.e))) then
     let t1 ← cp.Interval.init_0
     return t1

@@ -18,6 +18,7 @@ import Proofs.Cpp.Lib.SegmentTreeBeatsMath
 import Proofs.Cpp.Lib.SegmentTreeBeatsSumMath
 import Proofs.Cpp.Lib.SegmentTreeMath
 import Proofs.Cpp.Lib.SquareMatrixMath
+import Proofs.Cpp.Lib.UMap
 import Proofs.Cpp.Lib.UnsignedMagnitude
 import Proofs.Math.BellmanFordExec
 import Proofs.Math.BellmanFordMath
@@ -86,6 +87,8 @@ import Proofs.Cpp.FloorSum
 import Proofs.Cpp.FloorSumUnsigned
 import Proofs.Cpp.FloydWarshall
 import Proofs.Cpp.GcdU64
+import Proofs.Cpp.GraphList
+import Proofs.Cpp.GraphListEdge
 import Proofs.Cpp.GraphMatrix
 import Proofs.Cpp.Group
 import Proofs.Cpp.Interval
