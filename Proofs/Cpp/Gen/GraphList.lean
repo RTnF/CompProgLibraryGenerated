@@ -17,6 +17,40 @@ structure cp.ListGraph (Cost : Type) (E : Type) where
   shortest_path_parent : (Cpp.UMap Int (Array Int))
   deriving Inhabited
 
+def cp.ListGraph.prim_span {Cost : Type} {E : Type} [Inhabited Cost] [Inhabited E] [Zero Cost] [Add Cost] [LT Cost] [DecidableLT Cost] [Cpp.Field "cost" E Cost] [Cpp.Field "to" E Int] (self : (cp.ListGraph Cost E)) (start_node : Int) (mst_dist : Cost) (dist : (Array Cost)) (used : (Array Bool)) : Cpp.M (Cost × (Array Cost) × (Array Bool)) := do
+  Cpp.tick
+  let n_ := self.n_
+  let m_ := self.m_
+  let adj := self.adj
+  let shortest_path_dist := self.shortest_path_dist
+  let shortest_path_parent := self.shortest_path_parent
+  let mut mst_dist := mst_dist
+  let mut dist := dist
+  let mut used := used
+  dist := (Cpp.set dist start_node (0 : Cost))
+  let mut pq : (Cpp.PQ (Cost × Int)) := ([] : (Cpp.PQ (Cost × Int)))
+  let t1 ← Cpp.pqPush pq ((0 : Cost), start_node)
+  pq := t1
+  for _ in Cpp.forever do
+    Cpp.tick
+    if !(!(List.isEmpty pq)) then break
+    let t2 ← Cpp.pqTop (fun a b => (Cpp.pairLt (fun a b : Cost => decide (a < b)) (fun a b : Int => decide (a < b))) b a) pq
+    let mut p : (Cost × Int) := t2
+    let t3 ← Cpp.pqPop (fun a b => (Cpp.pairLt (fun a b : Cost => decide (a < b)) (fun a b : Int => decide (a < b))) b a) pq
+    pq := t3
+    let mut v : Int := p.2
+    if ((Cpp.get used v) || (decide ((Cpp.get dist v) < p.1))) then
+      continue
+    mst_dist := (mst_dist + (Cpp.get dist v))
+    used := (Cpp.set used v true)
+    for e in (Cpp.get adj v) do
+      Cpp.tick
+      if ((!(Cpp.get used (Cpp.Field.get (member := "to") e))) && (decide ((Cpp.Field.get (member := "cost") e) < (Cpp.get dist (Cpp.Field.get (member := "to") e))))) then
+        dist := (Cpp.set dist (Cpp.Field.get (member := "to") e) (Cpp.Field.get (member := "cost") e))
+        let t4 ← Cpp.pqPush pq ((Cpp.get dist (Cpp.Field.get (member := "to") e)), (Cpp.Field.get (member := "to") e))
+        pq := t4
+  return (mst_dist, dist, used)
+
 def cp.ListGraph.UNREACHABLE {Cost : Type} {E : Type} [Cpp.NumericTraits "Cost" Cost] [Cpp.ShiftInt Cost] : Cpp.M Cost := do
   Cpp.tick
   return (Cpp.ShiftInt.shr (Cpp.NumericTraits.maximum (tag := "Cost") (α := Cost)) 2)
@@ -268,5 +302,29 @@ def cp.ListGraph.bellman_ford {Cost : Type} {E : Type} [Inhabited Cost] [Zero Co
   let t9 ← Cpp.umapSet shortest_path_parent start_node parent
   shortest_path_parent := t9
   return (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E))
+
+def cp.ListGraph.prim {Cost : Type} {E : Type} [Inhabited Cost] [Inhabited E] [Zero Cost] [Add Cost] [LT Cost] [DecidableLT Cost] [Cpp.Field "cost" E Cost] [Cpp.Field "to" E Int] [Cpp.NumericTraits "Cost" Cost] [Cpp.ShiftInt Cost] (self : (cp.ListGraph Cost E)) : Cpp.M (Cost × (cp.ListGraph Cost E)) := do
+  Cpp.tick
+  let mut n_ := self.n_
+  let mut m_ := self.m_
+  let mut adj := self.adj
+  let mut shortest_path_dist := self.shortest_path_dist
+  let mut shortest_path_parent := self.shortest_path_parent
+  let mut mst_dist : Cost := (0 : Cost)
+  let t1 ← cp.ListGraph.UNREACHABLE (E := E)
+  let t2 := n_
+  Cpp.tickN t2.toNat
+  let mut dist : (Array Cost) := (Cpp.replicate t2 t1)
+  let t3 := n_
+  Cpp.tickN t3.toNat
+  let mut used : (Array Bool) := (Cpp.replicate t3 false)
+  for i in (Cpp.range 0 n_) do
+    Cpp.tick
+    if (!(Cpp.get used i)) then
+      let t4 ← cp.ListGraph.prim_span (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)) i mst_dist dist used
+      mst_dist := t4.1
+      dist := t4.2.1
+      used := t4.2.2
+  return (mst_dist, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
 
 end Proofs.Cpp.Gen

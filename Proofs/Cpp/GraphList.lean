@@ -4,6 +4,7 @@ import Proofs.Cpp.Lib.Basic
 import Proofs.Math.ParentChain
 import Proofs.Math.ListDijkstraMath
 import Proofs.Math.ListBellmanFordMath
+import Proofs.Math.ListPrimMath
 
 /-! # `ListGraph<Cost, E>` (library/graph/graph_list.hpp)
 
@@ -690,5 +691,402 @@ theorem bellman_ford_correct {E : Type} [Field "from" E Int] [Field "to" E Int] 
   bf_correct hV hs hC hU hNU hNEG v hv
 
 end BellmanFord
+
+/-! ## `prim` (`Cost = long long`) -/
+
+section Prim
+open Proofs.ListPrimMath
+open Proofs.DijkstraOldExec (doneOf)
+
+local instance : Cpp.NumericTraits "Cost" Int := Cpp.intNumericTraits "Cost" 64 true
+
+/-- The pair `(to, cost)` of an edge value. -/
+def pairOf {E : Type} [Field "to" E Int] [Field "cost" E Int] (e : E) : Int × Int :=
+  (Field.get (member := "to") e, Field.get (member := "cost") e)
+
+def outP {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (adj : Array (Array E)) (v : Nat) :
+    List (Int × Int) := (adj[v]!).toList.map pairOf
+
+abbrev RP {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E) : Nat :=
+  restU (outP g.adj) (Array.replicate g.n_.toNat false) g.n_.toNat
+
+abbrev KP {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E) : Nat :=
+  Nat.log2 (2 * RP g + 2) + 3
+
+/-- The invariant of the loop of `prim_span` started at `i` from the picks `D`. -/
+def SCont {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E)
+    (U : Int) (i : Nat) (D : List Nat) (B : Nat) (st : Int × Array Int × Array Bool × List (Int × Int)) (c : Nat) :
+    Prop :=
+  ∃ D' cs', (SpanA g.n_.toNat U (outP g.adj) D' cs' st.2.1 st.2.2.1 st.2.2.2 ∨
+      SpanB g.n_.toNat U (outP g.adj) D' cs' st.2.1 st.2.2.1 st.2.2.2 i) ∧ st.1 = cs'.sum ∧
+    (i ∈ D' ∨ SpanB g.n_.toNat U (outP g.adj) D' cs' st.2.1 st.2.2.1 st.2.2.2 i) ∧ (∀ y ∈ D, y ∈ D') ∧
+    st.2.2.1.size = g.n_.toNat ∧
+    2 * restU (outP g.adj) st.2.2.1 g.n_.toNat + st.2.2.2.length ≤ 2 * RP g + 1 ∧
+    c + KP g * (2 * restU (outP g.adj) st.2.2.1 g.n_.toNat + st.2.2.2.length) ≤ B
+
+theorem span_spec {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int]
+    (g : cp.ListGraph Int E) (U : Int) (hU : 0 ≤ U) (hV : ValidP g.n_.toNat U (outP g.adj))
+    (hsmall : 2 * RP g + 1 < 2 ^ 64) (i : Int) (hi0 : 0 ≤ i) (hin : i.toNat < g.n_.toNat)
+    (D : List Nat) (cs : List Int) (mst : Int) (dist : Array Int) (used : Array Bool)
+    (hA : SpanA g.n_.toNat U (outP g.adj) D cs dist used []) (hiD : i.toNat ∉ D) (hmst : mst = cs.sum)
+    (hR : restU (outP g.adj) used g.n_.toNat ≤ RP g) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.prim_span g i mst dist used
+    ⦃⇓ r c => ⌜(∃ D' cs', SpanA g.n_.toNat U (outP g.adj) D' cs' r.2.1 r.2.2 [] ∧ r.1 = cs'.sum ∧
+        i.toNat ∈ D' ∧ (∀ y ∈ D, y ∈ D')) ∧
+      (∀ y < g.n_.toNat, used[y]! = true → r.2.2[y]! = true) ∧
+      c + KP g * (2 * restU (outP g.adj) r.2.2 g.n_.toNat) ≤
+        t0 + 3 + KP g * (2 * restU (outP g.adj) used g.n_.toNat + 1)⌝⦄ := by
+  mvcgen [cp.ListGraph.prim_span, Cpp.pqPush, Cpp.pqTop, Cpp.pqPop]
+  case vc1.inv =>
+    exact ⟨fun st c => ⌜SCont g U i.toNat D (t0 + 2 + KP g * (2 * restU (outP g.adj) used g.n_.toNat + 1)) st c⌝,
+      fun st c => ⌜st.2.2.2 = [] ∧
+        SCont g U i.toNat D (t0 + 3 + KP g * (2 * restU (outP g.adj) used g.n_.toNat + 1)) st c⌝,
+      fun st => 2 * restU (outP g.adj) st.2.2.1 g.n_.toNat + st.2.2.2.length⟩
+  case inv1 =>
+    rename_i b _ _ _ _ _ _ c0 _ _ x _ _ _ _ _ _
+    exact ⇓⟨xs, st⟩ c => ⌜st = (xs.prefix.map pairOf).foldl (astep (Cpp.set b.2.2.1 x.2 true))
+      (b.2.1, b.2.2.2.eraseIdx (pqBestIdx G b.2.2.2)) ∧
+      (b.2.2.2.eraseIdx (pqBestIdx G b.2.2.2)).length + (Cpp.get g.adj x.2).size + 1 ≤ 2 * RP g + 2 ∧
+      c0 ≤ c ∧ c ≤ c0 + KP g * (xs.prefix.length + 1)⌝
+  case vc3.step.isFalse.h_1.isTrue => simp_all
+  case vc9.step.isFalse.h_1.isFalse.isFalse.post.except => simp
+  case vc10.step.isFalse.h_2 =>
+    rename_i b _ _ _ _ _ _ _ _ hne hnone
+    have hne' : b.2.2.2 ≠ [] := by intro e; simp +zetaDelta [e] at hne
+    obtain ⟨y, _, h2, _⟩ := pqBest_spec G G_irr G_trans b.2.2.2 hne'
+    have : pqBest G b.2.2.2 = none := hnone
+    rw [this] at h2; cases h2
+  case vc5.step.isTrue =>
+    rename_i pref cur suff hsplit st _ _ c hinv hcond _
+    simp at hinv
+    obtain ⟨heq, hlenQ, hc0, hc⟩ := hinv
+    refine ⟨?_, by omega, by simp +zetaDelta; omega, ?_⟩
+    · rw [List.map_append, List.foldl_append, ← heq]
+      simp only [List.map_cons, List.map_nil, List.foldl_cons, List.foldl_nil]
+      unfold astep pairOf
+      rw [if_pos (by simpa +zetaDelta using hcond)]
+    · have hpl := congrArg List.length hsplit
+      simp +zetaDelta at hpl
+      have hq : ∀ (u : Array Bool) (st0 : Array Int × List (Int × Int)), st = (pref.map pairOf).foldl (astep u) st0 →
+          st.2.length ≤ st0.2.length + (pref.map pairOf).length := by
+        intro u st0 h; rw [h]; exact fold_astep_len u _ st0
+      have hq := hq _ _ heq
+      simp only [List.length_map] at hq
+      have := log_bound (a := st.2.length + 1) (b := 2 * RP g + 2) (by simp +zetaDelta at hq hlenQ hpl ⊢; omega)
+      simp +zetaDelta; unfold KP at hc ⊢; rw [Nat.mul_succ]; omega
+  case vc6.step.isFalse =>
+    rename_i pref cur suff hsplit st _ _ c hinv hcond
+    simp at hinv
+    obtain ⟨heq, hlenQ, hc0, hc⟩ := hinv
+    refine ⟨?_, by omega, by (try simp +zetaDelta); omega, ?_⟩
+    · rw [List.map_append, List.foldl_append, ← heq]
+      simp only [List.map_cons, List.map_nil, List.foldl_cons, List.foldl_nil]
+      unfold astep pairOf
+      rw [if_neg (by simpa +zetaDelta using hcond)]
+    · simp +zetaDelta; unfold KP at hc ⊢; rw [Nat.mul_succ]; omega
+  case vc11.pre =>
+    obtain ⟨hS, hI, hQI⟩ := hA
+    have hiN : ((i.toNat : Nat) : Int) = i := Int.toNat_of_nonneg hi0
+    have hl1 : Nat.log2 1 = 0 := by decide
+    have hset : (Cpp.set dist i 0).toList = dist.toList.set i.toNat 0 := by
+      rw [← hiN]; simp only [Int.toNat_natCast]; exact toList_set dist _ 0 (by rw [hS.1]; exact hin)
+    have hB : SpanB g.n_.toNat U (outP g.adj) D cs (Cpp.set dist i 0) used [(0, i)] i.toNat := by
+      refine ⟨⟨by simp [hS.1], hS.2.1, hS.2.2⟩, dist.toList, hI, hset, hiD, hin, fun x hx hxD => ?_, by rw [hiN]⟩
+      rw [getD_toList]
+      by_contra h
+      have := hQI.2 x hx hxD (by omega)
+      simp at this
+    refine ⟨⟨D, cs, Or.inr hB, by simp +zetaDelta [hmst], Or.inr hB, fun y hy => hy, hS.2.1, ?_, ?_⟩, ?_⟩
+    · simp +zetaDelta; omega
+    · simp +zetaDelta [hl1]; omega
+    · simp +zetaDelta [fuel]; omega
+  case vc12.post.success =>
+    rename_i r _ _ _ _ _ _ c h
+    obtain ⟨hemp, D', cs', hAB, hmst', hiD', hsub, _, _, hc⟩ := h
+    rcases hAB with hA' | hB'
+    · rcases hiD' with hiD' | hB''
+      · refine ⟨⟨D', cs', by rw [← hemp]; exact hA', hmst', hiD', hsub⟩, ?_, ?_⟩
+        · intro y hy hu
+          have h1 := hA.1.2.2 y hy; rw [h1] at hu
+          have h2 := hA'.1.2.2 y hy
+          simp +zetaDelta at h2 ⊢; rw [h2]; simpa using hsub y (by simpa using hu)
+        · simp +zetaDelta at hc ⊢; rw [hemp] at hc; simpa using hc
+      · obtain ⟨_, _, _, _, _, _, _, hQ⟩ := hB''; rw [hemp] at hQ; simp at hQ
+    · obtain ⟨_, _, _, _, _, _, _, hQ⟩ := hB'; rw [hemp] at hQ; simp at hQ
+  case vc2.step.isTrue =>
+    rename_i b _ _ _ _ _ _ c hC hemp
+    obtain ⟨D', cs', h1, h2, h3, h4, h5, h6, h7⟩ := hC
+    exact ⟨by simpa +zetaDelta using hemp, D', cs', h1, h2, h3, h4, h5, h6, by simp +zetaDelta; omega⟩
+  case vc4.step.isFalse.h_1.isFalse.isTrue =>
+    rename_i b _ _ _ _ _ _ c hC _ x hx0 _ _ hst
+    have hx : pqBest G b.2.2.2 = some x := hx0
+    obtain ⟨hperm, hmin⟩ := top_pop _ _ hx
+    obtain ⟨D', cs', hAB, hmst', hiD', hsub, hsz, hbound, hcost⟩ := hC
+    -- in state B the pop is the root, which is not stale
+    have hnotB : ¬ SpanB g.n_.toNat U (outP g.adj) D' cs' b.2.1 b.2.2.1 b.2.2.2 i.toNat := by
+      intro hB
+      obtain ⟨hQ, hd0, hu0, _⟩ := freshB hV hU hB
+      rw [hQ] at hx
+      have : x = (0, ((i.toNat : Nat) : Int)) := by
+        simp [pqBest, pqBestIdx] at hx; rw [← hx]; congr 1; omega
+      subst this
+      simp only [Int.natCast_toNat_eq_self.mpr hi0] at hd0 hu0
+      simp +zetaDelta [Int.natCast_toNat_eq_self.mpr hi0, hd0, hu0] at hst
+    have hA : SpanA g.n_.toNat U (outP g.adj) D' cs' b.2.1 b.2.2.1 b.2.2.2 := by
+      rcases hAB with h | h
+      · exact h
+      · exact absurd h hnotB
+    obtain ⟨hS, hI, hQI⟩ := hA
+    have hQI' := qi_stale hS hQI hperm (by simpa +zetaDelta using hst)
+    have hlq := hperm.length_eq; simp at hlq
+    have := log_bound (a := b.2.2.2.length) (b := 2 * RP g + 2) (by omega)
+    have hK : KP g = Nat.log2 (2 * RP g + 2) + 3 := rfl
+    have hKm : KP g * (2 * restU (outP g.adj) b.2.2.1 g.n_.toNat + (b.2.2.2.eraseIdx (pqBestIdx G b.2.2.2)).length)
+        + KP g = KP g * (2 * restU (outP g.adj) b.2.2.1 g.n_.toNat + b.2.2.2.length) := by
+      rw [← Nat.mul_succ]; congr 1; omega
+    refine ⟨⟨D', cs', Or.inl ⟨hS, hI, hQI'⟩, by simpa +zetaDelta using hmst', ?_, hsub, hsz, ?_, ?_⟩, ?_⟩
+    · rcases hiD' with h | h
+      · exact Or.inl h
+      · exact absurd h hnotB
+    · simp +zetaDelta; unfold G at *; omega
+    · simp +zetaDelta; unfold G at hKm; omega
+    · simp +zetaDelta; unfold G at *; omega
+  case vc7.step.isFalse.h_1.isFalse.isFalse.pre =>
+    rename_i b _ _ _ _ _ _ c hC _ x hx0 _ _ hst _ _
+    have hx : pqBest G b.2.2.2 = some x := hx0
+    obtain ⟨hperm, _⟩ := top_pop _ _ hx
+    obtain ⟨D', cs', hAB, _, _, _, hsz, hbound, _⟩ := hC
+    have hlq := hperm.length_eq; simp at hlq
+    simp +zetaDelta [get_eq] at hst
+    have hx0' : 0 ≤ x.2 := by
+      rcases hAB with ⟨_, _, hQI⟩ | ⟨_, Dd0, _, _, _, _, _, hQ⟩
+      · exact (hQI.1 x (hperm.mem_iff.mpr List.mem_cons_self)).1
+      · rw [hQ] at hx; simp [pqBest, pqBestIdx] at hx; rw [← hx]; simp
+    have hxn : x.2.toNat < g.n_.toNat := by
+      rcases hAB with ⟨_, _, hQI⟩ | ⟨_, Dd0, _, _, _, hin', _, hQ⟩
+      · have := (hQI.1 x (hperm.mem_iff.mpr List.mem_cons_self)).2.1; omega
+      · rw [hQ] at hx; simp [pqBest, pqBestIdx] at hx; rw [← hx]; simpa using hin'
+    have hr := restU_ge (outP g.adj) b.2.2.1 x.2.toNat g.n_.toNat hxn hst.1
+    have hdeg : (outP g.adj x.2.toNat).length = (Cpp.get g.adj x.2).size := by simp [outP, get_eq]
+    have := log_bound (a := b.2.2.2.length) (b := 2 * RP g + 2) (by omega)
+    refine ⟨by simp +zetaDelta, by simp +zetaDelta; unfold G at *; omega, by simp +zetaDelta; omega, ?_⟩
+    simp +zetaDelta; unfold KP; omega
+  case vc8.step.isFalse.h_1.isFalse.isFalse.post.success =>
+    rename_i b _ _ _ _ _ _ c hC _ x hx0 _ _ hst _ _ r _ _ c' hinv
+    have hx : pqBest G b.2.2.2 = some x := hx0
+    obtain ⟨hperm, hmin⟩ := top_pop _ _ hx
+    obtain ⟨D', cs', hAB, hmst', hiD', hsub, hsz, hbound, hcost⟩ := hC
+    simp at hinv
+    obtain ⟨heq, _, _, hc'⟩ := hinv
+    have hlq := hperm.length_eq; simp at hlq
+    have hKm : ∀ a b : Nat, a ≤ b → KP g * a ≤ KP g * b := fun a b h => Nat.mul_le_mul_left _ h
+    have hout : ∀ v : Nat, x.2 = (v : Int) → (Cpp.get g.adj x.2).toList.map pairOf = outP g.adj v := by
+      intro v hv; rw [hv]; simp [outP, get_eq]
+    obtain ⟨v, k, D'', cs'', hv, hk, hvn, hvu, hA'', hcs, hi'', hsub'', hlen⟩ :
+        ∃ (v : Nat) (k : Int) (D'' : List Nat) (cs'' : List Int), x.2 = (v : Int) ∧ Cpp.get b.2.1 x.2 = k ∧
+          v < g.n_.toNat ∧ b.2.2.1[v]! = false ∧
+          SpanA g.n_.toNat U (outP g.adj) D'' cs'' r.1 (Cpp.set b.2.2.1 x.2 true) r.2 ∧
+          cs'' = cs' ++ [k] ∧ i.toNat ∈ D'' ∧ (∀ y ∈ D', y ∈ D'') ∧
+          r.2.length ≤ (b.2.2.2.eraseIdx (pqBestIdx G b.2.2.2)).length + (outP g.adj v).length := by
+      by_cases hB : SpanB g.n_.toNat U (outP g.adj) D' cs' b.2.1 b.2.2.1 b.2.2.2 i.toNat
+      · obtain ⟨hQ, hd0, hu0, hA2, hlen2, hin2, hiD2⟩ := freshB hV hU hB
+        have hxe : x = (0, ((i.toNat : Nat) : Int)) := by
+          rw [hQ] at hx; simp [pqBest, pqBestIdx] at hx; rw [← hx]; congr 1; omega
+        have hQ' : b.2.2.2.eraseIdx (pqBestIdx G b.2.2.2) = [] := by rw [hQ]; simp [pqBestIdx]
+        have hr : r = (outP g.adj i.toNat).foldl (astep (Cpp.set b.2.2.1 ((i.toNat : Nat) : Int) true)) (b.2.1, []) := by
+          rw [heq, hQ', hout i.toNat (by rw [hxe])]; simp +zetaDelta [hxe]
+        refine ⟨i.toNat, 0, D' ++ [i.toNat], cs' ++ [0], by rw [hxe], by rw [hxe]; exact hd0, hin2, ?_, ?_, rfl,
+          by simp, fun y hy => by simp [hy], ?_⟩
+        · have := hB.1.2.2 i.toNat hin2; rw [this]; simp [hiD2]
+        · rw [hr, hxe]; exact hA2
+        · rw [hr, hQ']; simpa using hlen2
+      · have hA : SpanA g.n_.toNat U (outP g.adj) D' cs' b.2.1 b.2.2.1 b.2.2.2 := by
+          rcases hAB with h | h
+          · exact h
+          · exact absurd h hB
+        obtain ⟨hk, hA2, hlen2, hvn2, hvD2⟩ := freshA hV hU hA hperm hmin (by simpa +zetaDelta using hst)
+        have hx0' : 0 ≤ x.2 := (hA.2.2.1 x (hperm.mem_iff.mpr List.mem_cons_self)).1
+        have hvi : x.2 = ((x.2.toNat : Nat) : Int) := (Int.toNat_of_nonneg hx0').symm
+        have hr : r = (outP g.adj x.2.toNat).foldl (astep (Cpp.set b.2.2.1 ((x.2.toNat : Nat) : Int) true))
+            (b.2.1, b.2.2.2.eraseIdx (pqBestIdx G b.2.2.2)) := by
+          rw [heq, hout x.2.toNat hvi, ← hvi]
+        refine ⟨x.2.toNat, x.1, D' ++ [x.2.toNat], cs' ++ [x.1], hvi, hk, hvn2, ?_, ?_, rfl, ?_, ?_, ?_⟩
+        · have := hA.1.2.2 x.2.toNat hvn2; rw [this]; simp [hvD2]
+        · rw [hr, ← hvi]; rw [← hvi] at hA2; exact hA2
+        · rcases hiD' with h | h
+          · simp [h]
+          · exact absurd h hB
+        · intro y hy; simp [hy]
+        · rw [hr]; exact hlen2
+    have hdeg : (Cpp.get g.adj x.2).size = (outP g.adj v).length := by
+      rw [← hout v hv]; simp
+    have hrs := restU_set (outP g.adj) b.2.2.1 v (by omega) hvu g.n_.toNat
+    rw [if_pos hvn, ← hv] at hrs
+    have hsz' : (Cpp.set b.2.2.1 x.2 true).size = g.n_.toNat := by simp [hsz]
+    have hA2 : 2 * restU (outP g.adj) (Cpp.set b.2.2.1 x.2 true) g.n_.toNat + r.2.length +
+        ((outP g.adj v).length + 1) ≤ 2 * restU (outP g.adj) b.2.2.1 g.n_.toNat + b.2.2.2.length := by omega
+    have := hKm _ _ hA2
+    rw [Nat.mul_add] at this
+    rw [hdeg] at hc'
+    refine ⟨⟨D'', cs'', Or.inl hA'', ?_, Or.inl hi'', fun y hy => hsub'' y (hsub y hy), hsz',
+      by simp +zetaDelta; omega, ?_⟩, by simp +zetaDelta; omega⟩
+    · simp +zetaDelta; rw [hcs, List.sum_append, ← hmst', ← hk, hv]; simp
+    · simp +zetaDelta; omega
+
+
+/-- `prim_span` as a step for `mvcgen`. -/
+@[spec] theorem span_wp {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int]
+    (g : cp.ListGraph Int E) (hV : ValidP g.n_.toNat Proofs.Cpp.GraphList.U (outP g.adj))
+    (hsmall : 2 * RP g + 1 < 2 ^ 64) (i : Int) (hi0 : 0 ≤ i) (hin : i.toNat < g.n_.toNat)
+    (mst : Int) (dist : Array Int) (used : Array Bool)
+    (hPre : ∃ D cs, SpanA g.n_.toNat Proofs.Cpp.GraphList.U (outP g.adj) D cs dist used [] ∧ i.toNat ∉ D ∧ mst = cs.sum)
+    (hR : restU (outP g.adj) used g.n_.toNat ≤ RP g) {Q : PostCond (Int × Array Int × Array Bool) PS} :
+    ⦃fun t => ⌜∀ r c, ((∃ D' cs', SpanA g.n_.toNat Proofs.Cpp.GraphList.U (outP g.adj) D' cs' r.2.1 r.2.2 [] ∧ r.1 = cs'.sum ∧
+        i.toNat ∈ D') ∧ (∀ y < g.n_.toNat, used[y]! = true → r.2.2[y]! = true) ∧
+      c + KP g * (2 * restU (outP g.adj) r.2.2 g.n_.toNat) ≤
+        t + 3 + KP g * (2 * restU (outP g.adj) used g.n_.toNat + 1)) → (Q.1 r c).down⌝⦄
+      cp.ListGraph.prim_span g i mst dist used ⦃Q⦄ := by
+  obtain ⟨D, cs, hA, hiD, hmst⟩ := hPre
+  apply Triple.iff.mpr
+  intro t ht
+  obtain ⟨r, c, hx, ⟨⟨D', cs', h1, h2, h3, _⟩, h4, h5⟩⟩ :=
+    run_of_triple (span_spec g Proofs.Cpp.GraphList.U (by decide) hV hsmall i hi0 hin D cs mst dist used hA hiD hmst hR t)
+  simp [wp, hx]
+  exact ht r c ⟨⟨D', cs', h1, h2, h3⟩, h4, h5⟩
+
+
+
+
+open Proofs.PrimBridge (IsMSF toArc prim_msf)
+
+/-- The outer loop of `prim` after the first `j` vertices: every one of them is picked. -/
+def OInv {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E) (t0 j : Nat)
+    (st : Int × Array Int × Array Bool) (c : Nat) : Prop :=
+  (∃ D cs, SpanA g.n_.toNat Proofs.Cpp.GraphList.U (outP g.adj) D cs st.2.1 st.2.2 [] ∧ st.1 = cs.sum) ∧
+    (∀ y < j, st.2.2[y]! = true) ∧
+    c + KP g * (2 * restU (outP g.adj) st.2.2 g.n_.toNat) ≤ t0 + 2 + 2 * g.n_.toNat + KP g * (2 * RP g) + j * (KP g + 4)
+
+theorem len_of_all {n : Nat} {D : List Nat} (hnd : D.Nodup) (hlt : ∀ v ∈ D, v < n) (hall : ∀ j < n, j ∈ D) :
+    D.length = n := by
+  have h1 : D.length ≤ n := by
+    have := (List.Nodup.subperm hnd (l₂ := List.range n) (fun x hx => List.mem_range.mpr (hlt x hx))).length_le
+    simpa using this
+  have h2 : n ≤ D.length := by
+    have := (List.Nodup.subperm (List.nodup_range) (l₂ := D) (fun x hx => hall x (List.mem_range.mp hx))).length_le
+    simpa using this
+  omega
+
+theorem prim_spec {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int]
+    (g : cp.ListGraph Int E) (hV : ValidP g.n_.toNat Proofs.Cpp.GraphList.U (outP g.adj)) (hsmall : 2 * RP g + 1 < 2 ^ 64)
+    (hsym : ∀ e ∈ EdOf g.n_.toNat (outP g.adj), (e.2.1, e.1, e.2.2) ∈ EdOf g.n_.toNat (outP g.adj)) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.prim g
+    ⦃⇓ r c => ⌜r.2 = g ∧ 0 ≤ r.1 ∧
+      IsMSF g.n_.toNat Proofs.Cpp.GraphList.U.toNat ((EdOf g.n_.toNat (outP g.adj)).map toArc) r.1.toNat ∧
+      c ≤ t0 + 2 + 2 * g.n_.toNat + KP g * (2 * RP g) + g.n_.toNat * (KP g + 4)⌝⦄ := by
+  have hg : ∀ (h : cp.ListGraph Int E),
+      (⟨h.n_, h.m_, h.adj, h.shortest_path_dist, h.shortest_path_parent⟩ : cp.ListGraph Int E) = h :=
+    fun h => rfl
+  mvcgen [cp.ListGraph.prim, unr_spec]
+  case inv1 => exact ⇓⟨xs, st⟩ c => ⌜OInv g t0 xs.prefix.length st c⌝
+  case vc3.hi0 =>
+    rename_i pref cur suff hsplit _ _ _ _ _ _ _ _
+    have := range_cursor hsplit; omega
+  case vc4.hin =>
+    rename_i pref cur suff hsplit _ _ _ _ _ _ _ _
+    have h1 := range_cursor hsplit; have h2 := range_prefix_length hsplit; simp +zetaDelta; omega
+  case vc5.hPre =>
+    rename_i pref cur suff hsplit b _ _ _ _ c hinv hcond
+    obtain ⟨⟨D, cs, hA, hmst⟩, _, _⟩ := hinv
+    have h1 := range_cursor hsplit; have h2 := range_prefix_length hsplit
+    refine ⟨D, cs, by simpa +zetaDelta using hA, fun h => ?_, by simpa +zetaDelta using hmst⟩
+    have := hA.1.2.2 cur.toNat (by simp +zetaDelta at h2 ⊢; omega)
+    simp +zetaDelta [get_eq] at hcond
+    rw [this] at hcond; simp [h] at hcond
+  case vc6.hR =>
+    rename_i pref cur suff hsplit b _ _ _ _ c hinv _
+    obtain ⟨⟨D, cs, hA, _⟩, _, _⟩ := hinv
+    have := restU_le (outP g.adj) b.2.2 g.n_.toNat
+    rw [hA.1.2.1] at this
+    simpa +zetaDelta using this
+  case vc7.step.isTrue =>
+    rename_i pref cur suff hsplit b _ _ _ _ c hinv hcond
+    intro r c' ⟨D', cs', hA', hmst', hi'⟩ hmono hcost
+    obtain ⟨_, hpre, hc⟩ := hinv
+    have h1 := range_cursor hsplit; have h2 := range_prefix_length hsplit
+    simp +zetaDelta only at hcost
+    rw [hg] at hcost
+    try simp
+    refine ⟨⟨D', cs', hA', hmst'⟩, fun y hy => ?_, ?_⟩
+    · try simp at hy
+      by_cases e : y < pref.length
+      · exact hmono y (by simp +zetaDelta at h2; omega) (by simpa +zetaDelta using hpre y e)
+      · have hy' : y = cur.toNat := by omega
+        rw [hy', hA'.1.2.2 cur.toNat (by simp +zetaDelta at h2; omega)]; simp [hi']
+    · have e : (pref ++ [cur]).length * (KP g + 4) = pref.length * (KP g + 4) + (KP g + 4) := by
+        rw [List.length_append, List.length_singleton, Nat.succ_mul]
+      have e1 : KP g * (2 * restU (outP g.adj) b.2.2 g.n_.toNat + 1) =
+          KP g * (2 * restU (outP g.adj) b.2.2 g.n_.toNat) + KP g := by rw [Nat.mul_add, Nat.mul_one]
+      have e2 : (pref ++ [cur]).length * (KP g + 4) = pref.length * (KP g + 4) + (KP g + 4) := by
+        rw [List.length_append, List.length_singleton, Nat.succ_mul]
+      have e3 : (pref.length + 1) * (KP g + 4) = pref.length * (KP g + 4) + (KP g + 4) := Nat.succ_mul _ _
+      dsimp only at hc hcost ⊢
+      try simp +zetaDelta only at hcost ⊢
+      omega
+  case vc8.step.isFalse =>
+    rename_i pref cur suff hsplit b _ _ _ _ c hinv hcond
+    obtain ⟨hA, hpre, hc⟩ := hinv
+    have h1 := range_cursor hsplit; have h2 := range_prefix_length hsplit
+    refine ⟨hA, fun y hy => ?_, ?_⟩
+    · try simp at hy
+      by_cases e : y < pref.length
+      · exact hpre y e
+      · have hy' : y = cur.toNat := by omega
+        rw [hy']; simp +zetaDelta [get_eq] at hcond; exact hcond
+    · have e : (pref ++ [cur]).length * (KP g + 4) = pref.length * (KP g + 4) + (KP g + 4) := by
+        rw [List.length_append, List.length_singleton, Nat.succ_mul]
+      dsimp only at hc ⊢; rw [e]; simp +zetaDelta only at hc ⊢; omega
+  case vc9.pre =>
+    rename_i hs0
+    have hU0 : (0 : Int) ≤ Proofs.Cpp.GraphList.U := by decide
+    refine ⟨⟨[], [], ⟨⟨by simp +zetaDelta [Cpp.replicate], by simp +zetaDelta [Cpp.replicate], fun x hx => by simp +zetaDelta [Cpp.replicate, hx]⟩,
+      ?_, fun q hq => by simp at hq, fun x hx _ h => by simp +zetaDelta [Cpp.replicate, hx] at h⟩, rfl⟩,
+      fun y hy => by simp at hy, ?_⟩
+    · have := Proofs.PrimStep.PInv_init g.n_.toNat Proofs.Cpp.GraphList.U (EdOf g.n_.toNat (outP g.adj))
+        (Array.replicate g.n_.toNat Proofs.Cpp.GraphList.U).toList (by simp) (fun j hj => by simp [List.getD_eq_getElem?_getD, hj]) hU0
+      simpa +zetaDelta [Cpp.replicate, Proofs.Cpp.GraphList.U] using this
+    · simp +zetaDelta [Cpp.replicate]; omega
+  case vc10.post.success =>
+    rename_i r _ c hinv
+    obtain ⟨⟨D, cs, hA, hmst⟩, hall, hc⟩ := hinv
+    obtain ⟨hS, hI, _⟩ := hA
+    rw [range_length] at hall hc
+    have hn : (g.n_ - 0).toNat = g.n_.toNat := by omega
+    rw [hn] at hall hc
+    have hD : ∀ j < g.n_.toNat, j ∈ D := by
+      intro j hj; have := hall j hj; rw [hS.2.2 j hj] at this; simpa using this
+    have hlen := len_of_all hI.nodup hI.lt hD
+    have hpk : ∀ x ∈ cs, 0 ≤ x := by
+      intro x hx
+      obtain ⟨j, hj, rfl⟩ := List.getElem_of_mem hx
+      have hjD : j < D.length := by rw [← hI.len]; exact hj
+      have h1 := hI.cl3 j hjD
+      have h2 := (hI.bnd D[j] (hI.lt D[j] (List.getElem_mem hjD))).1
+      rw [h1] at h2; simpa [List.getD_eq_getElem?_getD, hj] using h2
+    obtain ⟨hmsf, hsum⟩ := prim_msf (Cm := Proofs.Cpp.GraphList.U) hI hlen (by decide) (fun e he => by
+      obtain ⟨h1, p, hp, he'⟩ := mem_EdOf.mp he
+      obtain ⟨a1, a2, a3, a4⟩ := hV _ h1 p hp
+      rw [he']; exact ⟨h1, by simp; omega, a3, le_of_lt a4⟩) hsym hpk
+    have hsum0 : ∀ l : List Int, (∀ x ∈ l, 0 ≤ x) → 0 ≤ l.sum := by
+      intro l; induction l with
+      | nil => simp
+      | cons a l ih => intro h; simp; have := h a (by simp); have := ih (fun x hx => h x (by simp [hx])); omega
+    have hr1 : 0 ≤ r.1 := by rw [hmst]; exact hsum0 cs hpk
+    refine ⟨by simp +zetaDelta, hr1, ?_, ?_⟩
+    · have : r.1.toNat = (cs.map Int.toNat).sum := by rw [hmst, ← hsum]; simp
+      rw [this]; exact hmsf
+    · omega
+  case vc11.post.except => simp
+
+end Prim
 
 end Proofs.Cpp.GraphList

@@ -47,6 +47,7 @@ import Proofs.Math.InvGcdMath
 import Proofs.Math.IsPrimeMath
 import Proofs.Math.ListBellmanFordMath
 import Proofs.Math.ListDijkstraMath
+import Proofs.Math.ListPrimMath
 import Proofs.Math.LowlinkFinal
 import Proofs.Math.LowlinkGraph
 import Proofs.Math.LowlinkInv

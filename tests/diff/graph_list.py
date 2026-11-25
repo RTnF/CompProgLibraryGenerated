@@ -81,4 +81,12 @@ for _ in range(60):
         lines.append(f"do ListGraph.distance_int {k} {src}")
         for t in range(n):
             lines.append(f"do ListGraph.shortest_path {k} {src} {t}")
+# prim on undirected graphs with nonnegative costs
+for _ in range(60):
+    n = rng.randint(0, 8)
+    k = new(f"new ListGraph.init_int {n}")
+    for _ in range(rng.randint(0, 2 * n)):
+        a, b = rng.randrange(n), rng.randrange(n)
+        lines.append(f"do ListGraph.add_bidirectional_edge@1 {k} {a} {b} {rng.randint(0, 40)}")
+    lines.append(f"do ListGraph.prim {k}")
 print("\n".join(lines))

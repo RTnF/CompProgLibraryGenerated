@@ -28,7 +28,7 @@
 | graph/graph_matrix.hpp, warshall_floyd.hpp | 済（新方式、2026-11-25） | `library/graph/graph_matrix.hpp`（元の `MatrixGraph<Cost>` を 1 クラスに: `UNREACHABLE`・構築子・`add_edge`・`warshall_floyd`・`distance`・`get_shortest_path`・`has_negative_cycle`・`operator<<`）。親の初期化の不具合を修正（`docs/agent/fixes.md`）。距離が最短の歩道の重みであること（負の閉路がないとき）、負閉路の判定、経路復元が止まり最短の歩道を返すこと、計算量を証明（`Cost = long long`、`docs/graph_matrix.md`）。`operator<<` は方針により C++ テストのみ。旧部品 `floyd_warshall`（距離だけの関数）は残している |
 | graph/topological_sort.hpp | 一部 | `topological_sort`（CSR 配列、カーンの方法のキュー版。辞書順最小版は未） |
 | graph/lowlink.hpp | 一部 | `library/graph/lowlink.hpp`（CSR 配列・反復 DFS。橋と関節点の同値、ord/par/low/sep の仕様と `O(n+m)` の仕事量まで証明。元の「ソート済みの配列を返す」形、`ListGraph` の形は未。違反一覧: 再帰ラムダを明示的スタックに、返り値の配列を呼び出し側の配列に変更） |
-| graph/prim.hpp | 一部 | `library/graph/prim.hpp`（配列版 CSR、`O(n²+m)`、最小全域森の最適性まで証明。`priority_queue` 版と `ListGraph` の形は未。違反一覧: 元の `O((n+m) log n)`・`ListGraph` を CSR 配列・線形探索に変更） |
+| graph/prim.hpp | 済（新方式、2026-11-25） | `library/graph/graph_list.hpp` の `ListGraph::prim`（元の本体、ラムダ `span` を非公開メンバー `prim_span` に、`Cost v` を `int v` に）。無向グラフで返り値が最小全域森の重みであること、`O((n+m) log(n+m))` の手数を証明（`Cost = long long`、`docs/graph_list.md`）。旧部品 `prim`（CSR 配列・O(n²)）は残している |
 | interval/interval.hpp | 済 | `interval`。2026-11-09に元の既定 `operator<=>` と同じ順序の `==`/`!=`/`<`/`>`/`<=`/`>=` を追加（C++17、単一return式）。生成モデル13関数と一般定理 `interval_{eq,ne,lt,gt,le,ge}_correct`、全件gate（実7336秒、独立kernel49269宣言）成功。入出力演算子は方針（2026-10-12）により対象外 |
 | interval/interval_union.hpp | 済（新方式） | `interval_union`（元の `interval_union_inclusive` の本体のまま。244b2ec。`docs/interval_union.md`） |
 | modint/dynamic_modint.hpp | 公開 | `dynamic_modint` に元のクラスAPI、静的な法、負指数、入出力、両階乗表、二項係数を復元。動的版の二項係数は `cp::dynamic_modint::C`。ローカル全件gate済み。push後のCIは未確認 |

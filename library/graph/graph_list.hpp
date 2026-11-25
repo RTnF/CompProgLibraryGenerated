@@ -22,6 +22,30 @@ template <class Cost = long long, class E = Edge<Cost>> class ListGraph {
   std::unordered_map<int, std::vector<Cost>> shortest_path_dist;
   std::unordered_map<int, std::vector<int>> shortest_path_parent;
 
+  // prim: the original lambda `span` (one tree of the forest from start_node)
+  void prim_span(int start_node, Cost &mst_dist, std::vector<Cost> &dist, std::vector<bool> &used) const {
+    using P = std::pair<Cost, int>;
+    dist[start_node] = 0;
+    std::priority_queue<P, std::vector<P>, std::greater<P>> pq;
+    pq.emplace(0, start_node);
+    while (!pq.empty()) {
+      P p = pq.top();
+      pq.pop();
+      int v = p.second;
+      if (used[v] || dist[v] < p.first) {
+        continue;
+      }
+      mst_dist += dist[v];
+      used[v] = true;
+      for (const auto &e : adj[v]) {
+        if (!used[e.to] && e.cost < dist[e.to]) {
+          dist[e.to] = e.cost;
+          pq.emplace(dist[e.to], e.to);
+        }
+      }
+    }
+  }
+
 public:
   static const Cost UNREACHABLE;
   static const Cost NEGATIVE_CYCLE;
@@ -124,6 +148,19 @@ public:
     }
     shortest_path_dist[start_node] = std::move(dist);
     shortest_path_parent[start_node] = std::move(parent);
+  }
+
+  // プリム法 (experiments/library/cpp/graph/prim.hpp)
+  Cost prim() {
+    Cost mst_dist = 0;
+    std::vector<Cost> dist(n_, ListGraph<Cost>::UNREACHABLE);
+    std::vector<bool> used(n_, false);
+    for (int i = 0; i < n_; ++i) {
+      if (!used[i]) {
+        prim_span(i, mst_dist, dist, used);
+      }
+    }
+    return mst_dist;
   }
 
   template <class C_, class E_>

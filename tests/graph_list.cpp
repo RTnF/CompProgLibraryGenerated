@@ -136,6 +136,33 @@ static void test_bellman_ford() {
   }
 }
 
+// ListGraph::prim against Kruskal's algorithm on random undirected multigraphs (self loops, several components).
+static void test_prim() {
+  std::mt19937 rng(20261127);
+  for (int iter = 0; iter < 300; ++iter) {
+    int n = rng() % 9;
+    cp::ListGraph<long long> g(n);
+    std::vector<std::tuple<long long, int, int>> es;
+    int m = n ? rng() % (2 * n + 1) : 0;
+    for (int k = 0; k < m; ++k) {
+      int a = rng() % n, b = rng() % n;
+      long long c = rng() % 30;
+      g.add_bidirectional_edge(a, b, c);
+      es.emplace_back(c, a, b);
+    }
+    std::sort(es.begin(), es.end());
+    std::vector<int> uf(n);
+    for (int i = 0; i < n; ++i) uf[i] = i;
+    auto find = [&](int x) { while (uf[x] != x) x = uf[x] = uf[uf[x]]; return x; };
+    long long best = 0;
+    for (auto [c, a, b] : es) {
+      int x = find(a), y = find(b);
+      if (x != y) uf[x] = y, best += c;
+    }
+    assert(g.prim() == best);
+  }
+}
+
 int main() {
   // ListGraph<long long, Edge<long long>>: the default arguments
   cp::ListGraph<> g(3);
@@ -180,5 +207,6 @@ int main() {
   // after the id checks above (the ids come from the shared Edge<long long> counter)
   test_dijkstra();
   test_bellman_ford();
+  test_prim();
   return 0;
 }

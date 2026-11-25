@@ -10,7 +10,7 @@ tests = ["tests/graph_list.cpp"]
 sanitizers = true
 spec = "docs/graph_list.md"
 standard = "c++17"
-source_sha256 = "8fc13ee5fa739a2b6344f88be31704e9ef680d94efa910a2d3bb35fa3dc6b89f"
+source_sha256 = "d1ac3985603a4efc222df5be6444ce252b47f2bd41a0bf4fa73e0808d8d5fea1"
 public_declarations = ["ClassTemplateDecl:Edge", "VarDecl:next_id", "ClassTemplateDecl:ListGraph", "VarDecl:UNREACHABLE", "VarDecl:NEGATIVE_CYCLE", "FunctionTemplateDecl:operator<<<ostream>"]
 unverified_functions = ["operator<<"]
 
@@ -19,5 +19,5 @@ instances = [{ Cost = "long long", E = "cp::Edge<long long>" }]
 bindings = ["edge"]
 lean_imports = ["Proofs.Cpp.GraphListEdge"]
 packs = { Args = [[], ["long long"]] }
-calls = ["ListGraph.init_0", "ListGraph.init_int", "ListGraph.op_index", "ListGraph.add_node", "ListGraph.add_edge", "ListGraph.add_bidirectional_edge", "ListGraph.reset_shortest", "ListGraph.distance_int", "ListGraph.distance_int_int", "ListGraph.shortest_path", "ListGraph.dijkstra", "ListGraph.bellman_ford"]
+calls = ["ListGraph.init_0", "ListGraph.init_int", "ListGraph.op_index", "ListGraph.add_node", "ListGraph.add_edge", "ListGraph.add_bidirectional_edge", "ListGraph.reset_shortest", "ListGraph.distance_int", "ListGraph.distance_int_int", "ListGraph.shortest_path", "ListGraph.dijkstra", "ListGraph.bellman_ford", "ListGraph.prim"]
 cases = "tests/diff/graph_list.py"

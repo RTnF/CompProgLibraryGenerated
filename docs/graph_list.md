@@ -16,6 +16,7 @@
 | `shortest_path(from, to)` | 始点 `from` の親の配列を `to` から `-1` までたどり、逆順にした頂点列 | O(経路長)（平均） |
 | `dijkstra(start)` | 始点 `start` からの距離と親を計算して表に入れる（辺の費用は非負。計算済みなら何もしない） | O((n + m) log(n + m))（＋表の操作） |
 | `bellman_ford(start)` | 始点からの距離と親を計算して表に入れる（負の辺可）。到達不能は `UNREACHABLE`、負閉路から届く頂点は `NEGATIVE_CYCLE`（親 `-1`）。計算済みなら何もしない | O(n (n + m)) |
+| `prim()` | 最小全域森の重み（辺は `add_bidirectional_edge` で入れた無向辺、費用は非負） | O((n + m) log(n + m)) |
 | `operator<<` | `N = n, M = m` と全辺を出力する | O(n + m) |
 
 - 前提: 頂点の引数は `[0, n)`。`distance(from, to)`・`shortest_path(from, …)` は始点 `from` の最短路を計算した後に呼ぶ（計算するメンバーは下記）。`E` は `E(from, to, args...)` で構築でき、公開フィールド `from`・`to`（`int`）と `cost`（`Cost`）を持つ。
@@ -25,6 +26,7 @@
 
 - `namespace cp` に置き、`std::` を明示した。本体は元のまま。
 - `dijkstra` は元の `experiments/library/cpp/graph/dijkstra.hpp` の本体をクラス内に置いた。`Cost v = p.second;` を `int v = p.second;` にした（`v` は頂点の番号で、`adj[v]`・`dist[v]` の添字にしか使わない。整数の `Cost` では同じ値。浮動小数の `Cost` でも番号は正確に表せる範囲なので結果は同じ）。
+- `prim` は元の `experiments/library/cpp/graph/prim.hpp` の本体をクラス内に置いた。ラムダ `span` は、参照引数を取る非公開の const メンバー関数 `prim_span(start_node, mst_dist, dist, used)` にした（同じ処理）。`Cost v = p.second;` を `int v = p.second;` にした（`dijkstra` と同じ理由）。
 - `bellman_ford` は元の `experiments/library/cpp/graph/bellman_ford.hpp` の本体をそのままクラス内に置いた。
 - 元のヘッダは `dijkstra`・`bellman_ford`・`prim`・`lowlink`・`find_cycle_directed`・`topological_sort`・`topological_sort_minimum` を宣言だけし、定義はそれぞれのヘッダ（`dijkstra.hpp` など）にある。公開側では 1 つのクラスにまとめるため、各ヘッダを移植するときに本体ごとこのクラスに加える。まだ移植していないメンバーは宣言も置いていない（宣言だけでは呼び出しがリンクできないので、使える機能は元のヘッダ単体と同じ）。
 
@@ -48,6 +50,7 @@
 - 証明の要点: 済みの頂点の列 `D` と最後に取り出したキー `L` を幽霊変数とし、キュー内の組 `(k, x)` は `d[x] ≤ k`・`L ≤ k`、有限の距離の頂点は済みかキューに `(d[x], x)` がある、済みの頂点の辺は緩和済みで距離は `L` 以下、`(d[x], x)` はキューに高々 1 つ、済みの頂点の残りの組は古い、親は先に済んだ頂点。取り出しは古い組（何もしない）か新しく済む頂点で、済みの頂点を再び処理することはない（`not_redone`）。停止の測度は `|Q| + Σ_{x ∉ D}(deg x + 1)`。
 - `bf_spec`（`Cost = long long`、任意の `E`。前提: 始点が未計算）: 表に入る配列は、辺を走査順（行ごと）に並べた列 `allE` について、前半 `n - 1` 周（`round1`）と後半 `n` 周（`round2`）の結果 `bfFinal`。手数は `BB0 + 2n (1 + (行の数) + 3m) + 2 + 表の大きさ` 以下（`BB0 = 3 + 表の大きさ + 2n`）。`bellman_ford_cached_spec`: 計算済みなら何も変わらない。
 - `bellman_ford_correct`（`Proofs/Math/ListBellmanFordMath.lean` の `bf_correct`。前提: 端点が `[0, n)`、`|cost| ≤ C`、`n C < UNREACHABLE`、`NEGATIVE_CYCLE + C` が有限の距離の下限 `-(1 + (n-1) m) C` より小さい）: 各頂点 `v` について、始点から到達できなければ `UNREACHABLE`、負の閉路を通って到達できる（`NegReach`）なら `NEGATIVE_CYCLE`、それ以外は最短の歩道の費用（全歩道の費用以下で `UNREACHABLE` 未満）で、親をたどると `-1` で終わり（`Chain`）、その列は費用が距離の歩道（`WalkB`）。証明の要点: 前半は完全性（`r` 周で `r` 辺以下の歩道の費用以下）、健全性（有限の距離は歩道の費用）、最後の更新時刻の幽霊変数による親の不変条件（親が後で更新されると不等号が厳密）、鳩の巣による閉路の除去（負閉路に届かない頂点の歩道は `n - 1` 辺以下にできる）。後半は、負閉路に届かない頂点は変わらず、負閉路のどれかの頂点が 1 周目に印を受け、印が 1 周に 1 辺以上広がる。
+- `prim_spec`（`Cost = long long`、任意の `E`。前提: 全辺の行き先が `[0, n)` で費用が `[0, UNREACHABLE)`、辺の集合が対称（`add_bidirectional_edge` で入れた無向グラフ）、`2(n + m) + 1 < 2^64`）: 返り値は非負で、最小全域森の重み（`IsMSF`: その重みの全域森があり、どの全域森の重みもそれ以上。`Proofs/Math/PrimBridge.lean` の既存の証明を使う）。手数は `2 + 2n + K' 2(n + m) + n (K' + 4)` 以下（`K' = log2(2(n + m) + 2) + 3`）。証明は、キューから取り出した新しい頂点が未訪問の頂点の中で距離が最小であること（`Proofs/Math/ListPrimMath.lean` のキューの不変条件 `QI` と、各連結成分の最初の頂点の状態 `SpanB`）を示し、既存の不変条件 `PInv` を進める（`span_spec`）。
 - 数値の範囲: 距離と `dist[v] + cost` が `long long` に収まること（例えば費用の総和が `UNREACHABLE` 未満）は前提として C++ 側で負う。Lean の証明は数学的整数で行う。
 
-C++ のテスト（`tests/graph_list.cpp`）は既定の型の辺の番号・費用、両方向の辺、`add_node`、静的メンバー、`operator<<`、別の辺の型（追加の構築子引数）、`operator[]` を通した書き換えを確かめる。差分テスト（`tests/diff/graph_list.py`、`Cost = long long`、`E = Edge<long long>`）は 2 種の構築子、`add_node`、費用ありとなしの `add_edge`・`add_bidirectional_edge`、`reset_shortest`、表にない始点の `distance(from)` を混ぜ、全行を `operator[]` で比べる。費用が非負のグラフで `dijkstra`（2 回目の呼び出しを含む）、`distance` 2 種、全頂点への `shortest_path` を比べる。C++ のテストは Bellman–Ford と距離を比べ、経路が実在の辺をたどり費用が距離に等しいことを確かめる。`bellman_ford` は負の辺と負閉路を含むグラフで、到達可能性・負閉路の判定（参照実装）と比べ、全頂点への `shortest_path` の費用を確かめる。差分テストも負の費用のグラフで `bellman_ford`、`distance`、`shortest_path` を比べる。
+C++ のテスト（`tests/graph_list.cpp`）は既定の型の辺の番号・費用、両方向の辺、`add_node`、静的メンバー、`operator<<`、別の辺の型（追加の構築子引数）、`operator[]` を通した書き換えを確かめる。差分テスト（`tests/diff/graph_list.py`、`Cost = long long`、`E = Edge<long long>`）は 2 種の構築子、`add_node`、費用ありとなしの `add_edge`・`add_bidirectional_edge`、`reset_shortest`、表にない始点の `distance(from)` を混ぜ、全行を `operator[]` で比べる。費用が非負のグラフで `dijkstra`（2 回目の呼び出しを含む）、`distance` 2 種、全頂点への `shortest_path` を比べる。C++ のテストは Bellman–Ford と距離を比べ、経路が実在の辺をたどり費用が距離に等しいことを確かめる。`bellman_ford` は負の辺と負閉路を含むグラフで、到達可能性・負閉路の判定（参照実装）と比べ、全頂点への `shortest_path` の費用を確かめる。差分テストも負の費用のグラフで `bellman_ford`、`distance`、`shortest_path` を比べる。`prim` は無向の多重グラフ（自己ループ、非連結を含む）でクラスカル法と比べ、差分テストでも比べる。
