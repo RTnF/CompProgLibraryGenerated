@@ -92,6 +92,40 @@ public:
     shortest_path_parent[start_node] = std::move(parent);
   }
 
+  // ベルマンフォード法 (experiments/library/cpp/graph/bellman_ford.hpp)
+  void bellman_ford(int start_node) {
+    if (shortest_path_dist.count(start_node)) {
+      return;
+    }
+    std::vector<Cost> dist(n_, ListGraph::UNREACHABLE);
+    std::vector<int> parent(n_, -1);
+    dist[start_node] = 0;
+    for (int i = 0; i < n_ - 1; ++i) {
+      for (auto &es : adj) {
+        for (auto &e : es) {
+          if (dist[e.from] != ListGraph::UNREACHABLE &&
+              dist[e.from] + e.cost < dist[e.to]) {
+            dist[e.to] = dist[e.from] + e.cost;
+            parent[e.to] = e.from;
+          }
+        }
+      }
+    }
+    for (int i = 0; i < n_; ++i) {
+      for (auto &es : adj) {
+        for (auto &e : es) {
+          if (dist[e.from] != ListGraph::UNREACHABLE &&
+              dist[e.from] + e.cost < dist[e.to]) {
+            dist[e.to] = ListGraph::NEGATIVE_CYCLE;
+            parent[e.to] = -1;
+          }
+        }
+      }
+    }
+    shortest_path_dist[start_node] = std::move(dist);
+    shortest_path_parent[start_node] = std::move(parent);
+  }
+
   template <class C_, class E_>
   friend std::ostream &operator<<(std::ostream &, const ListGraph<C_, E_> &);
 };

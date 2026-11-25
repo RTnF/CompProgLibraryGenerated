@@ -224,4 +224,49 @@ def cp.ListGraph.dijkstra {Cost : Type} {E : Type} [Inhabited Cost] [Inhabited E
   shortest_path_parent := t10
   return (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E))
 
+def cp.ListGraph.bellman_ford {Cost : Type} {E : Type} [Inhabited Cost] [Zero Cost] [Add Cost] [LT Cost] [DecidableLT Cost] [DecidableEq Cost] [Cpp.Field "cost" E Cost] [Cpp.Field "from" E Int] [Cpp.Field "to" E Int] [Cpp.NumericTraits "Cost" Cost] [Cpp.ShiftInt Cost] (self : (cp.ListGraph Cost E)) (start_node : Int) : Cpp.M (cp.ListGraph Cost E) := do
+  Cpp.tick
+  let mut n_ := self.n_
+  let mut m_ := self.m_
+  let mut adj := self.adj
+  let mut shortest_path_dist := self.shortest_path_dist
+  let mut shortest_path_parent := self.shortest_path_parent
+  let t1 ← Cpp.umapCount shortest_path_dist start_node
+  if (decide (t1 ≠ 0)) then
+    return (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E))
+  let t2 ← cp.ListGraph.UNREACHABLE (E := E)
+  let t3 := n_
+  Cpp.tickN t3.toNat
+  let mut dist : (Array Cost) := (Cpp.replicate t3 t2)
+  let t4 := n_
+  Cpp.tickN t4.toNat
+  let mut parent : (Array Int) := (Cpp.replicate t4 (-1))
+  dist := (Cpp.set dist start_node (0 : Cost))
+  for i in (Cpp.range 0 (n_ - 1)) do
+    Cpp.tick
+    for es in adj do
+      Cpp.tick
+      for e in es do
+        Cpp.tick
+        let t5 ← cp.ListGraph.UNREACHABLE (E := E)
+        if ((decide ((Cpp.get dist (Cpp.Field.get (member := "from") e)) ≠ t5)) && (decide (((Cpp.get dist (Cpp.Field.get (member := "from") e)) + (Cpp.Field.get (member := "cost") e)) < (Cpp.get dist (Cpp.Field.get (member := "to") e))))) then
+          dist := (Cpp.set dist (Cpp.Field.get (member := "to") e) ((Cpp.get dist (Cpp.Field.get (member := "from") e)) + (Cpp.Field.get (member := "cost") e)))
+          parent := (Cpp.set parent (Cpp.Field.get (member := "to") e) (Cpp.Field.get (member := "from") e))
+  for i_1 in (Cpp.range 0 n_) do
+    Cpp.tick
+    for es_1 in adj do
+      Cpp.tick
+      for e_1 in es_1 do
+        Cpp.tick
+        let t6 ← cp.ListGraph.UNREACHABLE (E := E)
+        if ((decide ((Cpp.get dist (Cpp.Field.get (member := "from") e_1)) ≠ t6)) && (decide (((Cpp.get dist (Cpp.Field.get (member := "from") e_1)) + (Cpp.Field.get (member := "cost") e_1)) < (Cpp.get dist (Cpp.Field.get (member := "to") e_1))))) then
+          let t7 ← cp.ListGraph.NEGATIVE_CYCLE (E := E)
+          dist := (Cpp.set dist (Cpp.Field.get (member := "to") e_1) t7)
+          parent := (Cpp.set parent (Cpp.Field.get (member := "to") e_1) (-1))
+  let t8 ← Cpp.umapSet shortest_path_dist start_node dist
+  shortest_path_dist := t8
+  let t9 ← Cpp.umapSet shortest_path_parent start_node parent
+  shortest_path_parent := t9
+  return (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E))
+
 end Proofs.Cpp.Gen

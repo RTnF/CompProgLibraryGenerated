@@ -3,6 +3,7 @@ import Proofs.Cpp.GraphListEdge
 import Proofs.Cpp.Lib.Basic
 import Proofs.Math.ParentChain
 import Proofs.Math.ListDijkstraMath
+import Proofs.Math.ListBellmanFordMath
 
 /-! # `ListGraph<Cost, E>` (library/graph/graph_list.hpp)
 
@@ -499,5 +500,195 @@ theorem dijkstra_correct {E : Type} [Inhabited E] [Field "to" E Int] [Field "cos
   ⟨hI.dle t ht, fun _ hw => final_le hV hI hw, fun hlt => final_chain hV hI t ht hlt⟩
 
 end Dijkstra
+
+/-! ## `bellman_ford` (`Cost = long long`) -/
+
+section BellmanFord
+open Proofs.ListBellmanFordMath
+
+local instance : Cpp.NumericTraits "Cost" Int := Cpp.intNumericTraits "Cost" 64 true
+
+def N : Int := -2 ^ 61
+
+theorem unr_val' : Cpp.ShiftInt.shr (Cpp.NumericTraits.maximum (tag := "Cost") (α := Int)) 2 = U := by decide
+theorem neg_val : Cpp.ShiftInt.shr (Cpp.NumericTraits.minimum (tag := "Cost") (α := Int)) 2 = N := by decide
+
+/-- The edge `(from, to, cost)` of an edge value. -/
+def tri {E : Type} [Field "from" E Int] [Field "to" E Int] [Field "cost" E Int] (e : E) : Ed :=
+  (Field.get (member := "from") e, Field.get (member := "to") e, Field.get (member := "cost") e)
+
+def rowE {E : Type} [Field "from" E Int] [Field "to" E Int] [Field "cost" E Int] (es : Array E) : List Ed :=
+  es.toList.map tri
+
+/-- All edges in the scan order of `bellman_ford` (row by row). -/
+def allE {E : Type} [Field "from" E Int] [Field "to" E Int] [Field "cost" E Int] (adj : Array (Array E)) :
+    List Ed := adj.toList.flatMap rowE
+
+/-- The arrays after both phases. -/
+abbrev bfFinal {E : Type} [Field "from" E Int] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E)
+    (s : Nat) : Array Int × Array Int :=
+  (round2 U N (allE g.adj))^[g.n_.toNat] ((round1 U (allE g.adj))^[g.n_.toNat - 1] (st0 g.n_.toNat s U))
+
+/-- The graph after `bellman_ford(s)`: both arrays cached for `s`. -/
+abbrev bfResult {E : Type} [Field "from" E Int] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E)
+    (s : Nat) : cp.ListGraph Int E :=
+  { g with shortest_path_dist := umapPut g.shortest_path_dist s (bfFinal g s).1,
+           shortest_path_parent := umapPut g.shortest_path_parent s (bfFinal g s).2 }
+
+/-- The steps before the first loop. -/
+abbrev BB0 {E : Type} (g : cp.ListGraph Int E) : Nat := 3 + g.shortest_path_dist.length + 2 * g.n_.toNat
+
+/-- The steps of one round (both phases): the round, each row, at most 3 per edge. -/
+abbrev KB {E : Type} [Field "from" E Int] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E) : Nat :=
+  1 + g.adj.size + 3 * (allE g.adj).length
+
+theorem bf_spec {E : Type} [Inhabited E] [Field "from" E Int] [Field "to" E Int] [Field "cost" E Int]
+    (g : cp.ListGraph Int E) (s : Nat) (hnew : umapFind g.shortest_path_dist s = none) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.bellman_ford g s
+    ⦃⇓ r c => ⌜r = bfResult g s ∧ c ≤ t0 + BB0 g + (2 * g.n_.toNat) * KB g + 2 + g.shortest_path_dist.length +
+      g.shortest_path_parent.length⌝⦄ := by
+  mvcgen [cp.ListGraph.bellman_ford, Cpp.umapCount, Cpp.umapSet, cp.ListGraph.UNREACHABLE,
+    cp.ListGraph.NEGATIVE_CYCLE]
+  case inv1 =>
+    exact ⇓⟨xs, st⟩ c => ⌜st = (round1 U (allE g.adj))^[xs.prefix.length] (st0 g.n_.toNat s U) ∧
+      c ≤ t0 + BB0 g + xs.prefix.length * KB g⌝
+  case inv2 =>
+    rename_i xs _ _ _ _ b _ _ c0 _
+    exact ⇓⟨ys, st⟩ c => ⌜st = (ys.prefix.flatMap rowE).foldl (step1 U) b ∧
+      c ≤ c0 + 1 + ys.prefix.length + 3 * (ys.prefix.flatMap rowE).length⌝
+  case inv3 =>
+    rename_i row _ _ b _ _ c0 _
+    exact ⇓⟨zs, st⟩ c => ⌜st = (zs.prefix.map tri).foldl (step1 U) b ∧ c ≤ c0 + 1 + 3 * zs.prefix.length⌝
+  case inv4 =>
+    exact ⇓⟨xs, st⟩ c => ⌜st = (round2 U N (allE g.adj))^[xs.prefix.length]
+      ((round1 U (allE g.adj))^[g.n_.toNat - 1] (st0 g.n_.toNat s U)) ∧
+      c ≤ t0 + BB0 g + (g.n_.toNat - 1) * KB g + xs.prefix.length * KB g⌝
+  case inv5 =>
+    rename_i xs _ _ _ _ b _ _ c0 _
+    exact ⇓⟨ys, st⟩ c => ⌜st = (ys.prefix.flatMap rowE).foldl (step2 U N) b ∧
+      c ≤ c0 + 1 + ys.prefix.length + 3 * (ys.prefix.flatMap rowE).length⌝
+  case inv6 =>
+    rename_i row _ _ b _ _ c0 _
+    exact ⇓⟨zs, st⟩ c => ⌜st = (zs.prefix.map tri).foldl (step2 U N) b ∧ c ≤ c0 + 1 + 3 * zs.prefix.length⌝
+  case vc2.step.isTrue =>
+    rename_i pref cur suff _ b _ _ _ hinv hcond _ _
+    simp at hinv ⊢
+    obtain ⟨hinv, hc⟩ := hinv
+    refine ⟨?_, by omega⟩
+    rw [← hinv]
+    unfold step1 tri
+    rw [unr_val'] at hcond
+    rw [if_pos (by simpa +zetaDelta using hcond)]
+  case vc3.step.isFalse =>
+    rename_i pref cur suff _ b _ _ _ hinv hcond
+    simp at hinv ⊢
+    obtain ⟨hinv, hc⟩ := hinv
+    refine ⟨?_, by omega⟩
+    rw [← hinv]
+    unfold step1 tri
+    rw [unr_val'] at hcond
+    rw [if_neg (by simpa +zetaDelta using hcond)]
+  case vc11.step.isTrue =>
+    rename_i pref cur suff _ b _ _ _ hinv hcond _ _
+    simp at hinv ⊢
+    obtain ⟨hinv, hc⟩ := hinv
+    refine ⟨?_, by omega⟩
+    rw [← hinv]
+    unfold step2 tri
+    rw [unr_val'] at hcond
+    rw [if_pos (by simpa +zetaDelta using hcond)]
+    simp +zetaDelta [neg_val]
+  case vc12.step.isFalse =>
+    rename_i pref cur suff _ b _ _ _ hinv hcond
+    simp at hinv ⊢
+    obtain ⟨hinv, hc⟩ := hinv
+    refine ⟨?_, by omega⟩
+    rw [← hinv]
+    unfold step2 tri
+    rw [unr_val'] at hcond
+    rw [if_neg (by simpa +zetaDelta using hcond)]
+  case vc10.isFalse.pre =>
+    simp +zetaDelta [Cpp.replicate, unr_val', BB0]
+    omega
+  case vc19.isFalse.post.success.pre =>
+    rename_i h
+    simp +zetaDelta at h ⊢
+    obtain ⟨h, hc⟩ := h
+    rw [range_length] at h hc
+    refine ⟨by rw [h]; congr 1; omega, ?_⟩
+    have : (g.n_ - 1 - 0).toNat = g.n_.toNat - 1 := by omega
+    rw [this] at hc; omega
+  case vc1.isTrue => rename_i h; simp +zetaDelta [hnew] at h
+  all_goals (try simp_all +zetaDelta [List.flatMap_append, round1, round2, allE, rowE,
+    Function.iterate_succ_apply', unr_val', neg_val])
+  all_goals try (
+    simp only [Nat.succ_mul, Nat.add_mul, Nat.one_mul, List.flatMap_append, List.length_append,
+      List.length_cons, List.length_nil, List.length_flatMap] at *
+    simp only [KB, allE] at *
+    omega)
+  case vc8.step.post.success =>
+    rename_i h1 h2
+    obtain ⟨_, hc1⟩ := h1
+    obtain ⟨_, hc2⟩ := h2
+    have e1 : (List.map (fun a => a.size) g.adj.toList).sum = (allE g.adj).length := by
+      simp [allE, rowE, List.length_flatMap]
+    have e2 : g.adj.toList.length = g.adj.size := by simp
+    have hK : KB g = 1 + g.adj.size + 3 * (allE g.adj).length := rfl
+    rw [Nat.succ_mul]; omega
+  case vc17.step.post.success =>
+    rename_i h1 h2
+    obtain ⟨_, hc1⟩ := h1
+    obtain ⟨_, hc2⟩ := h2
+    have e1 : (List.map (fun a => a.size) g.adj.toList).sum = (allE g.adj).length := by
+      simp [allE, rowE, List.length_flatMap]
+    have e2 : g.adj.toList.length = g.adj.size := by simp
+    have hK : KB g = 1 + g.adj.size + 3 * (allE g.adj).length := rfl
+    rw [Nat.succ_mul]; omega
+  case vc20.isFalse.post.success.post.success =>
+    rename_i _ h2
+    obtain ⟨_, hc⟩ := h2
+    simp only [range_length, Int.sub_zero, bfFinal, allE]
+    simp
+    rw [range_length] at hc
+    have hn : (g.n_ - 0).toNat = g.n_.toNat := by omega
+    rw [hn] at hc
+    have h3 : (g.n_.toNat - 1) * KB g ≤ g.n_.toNat * KB g := Nat.mul_le_mul_right _ (by omega)
+    have h4 : 2 * g.n_.toNat * KB g = g.n_.toNat * KB g + g.n_.toNat * KB g := by
+      rw [Nat.mul_assoc, Nat.two_mul]
+    omega
+
+
+/-- `bellman_ford(s)` when the distances from `s` are already cached: nothing changes. -/
+theorem bellman_ford_cached_spec {E : Type} [Inhabited E] [Field "from" E Int] [Field "to" E Int]
+    [Field "cost" E Int] (g : cp.ListGraph Int E) (s : Int) (D : Array Int)
+    (hD : umapFind g.shortest_path_dist s = some D) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.bellman_ford g s
+    ⦃⇓ r c => ⌜r = g ∧ c = t0 + 2 + g.shortest_path_dist.length⌝⦄ := by
+  mvcgen [cp.ListGraph.bellman_ford, Cpp.umapCount]
+  case inv1 => exact ⇓ _ => ⌜False⌝
+  case inv2 => exact ⇓ _ => ⌜False⌝
+  case inv3 => exact ⇓ _ => ⌜False⌝
+  case inv4 => exact ⇓ _ => ⌜False⌝
+  case inv5 => exact ⇓ _ => ⌜False⌝
+  case inv6 => exact ⇓ _ => ⌜False⌝
+  all_goals simp_all +zetaDelta
+  all_goals omega
+
+/-- The meaning of the cached arrays `bfFinal g s` (`ListBellmanFordMath.bf_correct` with the edges of `g` in
+scan order): unreachable vertices get `UNREACHABLE`, vertices that a negative cycle reaches get `NEGATIVE_CYCLE`,
+the others the least walk cost, and their parents give such a walk. -/
+theorem bellman_ford_correct {E : Type} [Field "from" E Int] [Field "to" E Int] [Field "cost" E Int]
+    (g : cp.ListGraph Int E) (s : Nat) (C : Int) (hV : Valid g.n_.toNat C (allE g.adj)) (hs : s < g.n_.toNat)
+    (hC : 0 ≤ C) (hU : (g.n_.toNat : Int) * C < U) (hNU : N + C < U)
+    (hNEG : N + C < -(((1 + (g.n_.toNat - 1) * (allE g.adj).length : Nat) : Int) * C))
+    (v : Nat) (hv : v < g.n_.toNat) :
+    ((¬ ∃ w k, Walk (allE g.adj) s v w k) → (bfFinal g s).1[v]! = U) ∧
+    (NegReach (allE g.adj) s v → (bfFinal g s).1[v]! = N) ∧
+    ((∃ w k, Walk (allE g.adj) s v w k) → ¬ NegReach (allE g.adj) s v →
+      (bfFinal g s).1[v]! < U ∧ (∀ w k, Walk (allE g.adj) s v w k → (bfFinal g s).1[v]! ≤ w) ∧
+      ∃ Cl, Chain (bfFinal g s).2 v Cl ∧ WalkB (allE g.adj) s Cl (bfFinal g s).1[v]!) :=
+  bf_correct hV hs hC hU hNU hNEG v hv
+
+end BellmanFord
 
 end Proofs.Cpp.GraphList

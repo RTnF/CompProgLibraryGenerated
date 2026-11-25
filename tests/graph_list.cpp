@@ -1,6 +1,7 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/graph/graph_list.hpp"
 #include <cassert>
+#include <climits>
 #include <random>
 #include <sstream>
 #include <tuple>
@@ -62,6 +63,79 @@ static void test_dijkstra() {
   }
 }
 
+// ListGraph::bellman_ford against a reference: Floyd-Warshall reachability and distances on small graphs with
+// negative costs; a vertex reachable from s through a vertex on a negative cycle is NEGATIVE_CYCLE, an unreachable
+// one UNREACHABLE, the others the shortest distance with a shortest path.
+static void test_bellman_ford() {
+  std::mt19937 rng(20261126);
+  using G = cp::ListGraph<long long>;
+  for (int iter = 0; iter < 300; ++iter) {
+    int n = rng() % 7 + 1;
+    G g(n);
+    std::vector<std::tuple<int, int, long long>> edges;
+    int m = rng() % (2 * n + 1);
+    for (int k = 0; k < m; ++k) {
+      int a = rng() % n, b = rng() % n;
+      long long c = (long long)(rng() % 21) - 6;
+      g.add_edge(a, b, c);
+      edges.emplace_back(a, b, c);
+    }
+    std::vector<std::vector<bool>> reach(n, std::vector<bool>(n, false));
+    for (int i = 0; i < n; ++i) reach[i][i] = true;
+    for (auto [a, b, c] : edges) reach[a][b] = true;
+    for (int k = 0; k < n; ++k)
+      for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j)
+          if (reach[i][k] && reach[k][j]) reach[i][j] = true;
+    // x is on a negative cycle iff the n-round Bellman-Ford from x still improves x (closed walks from x)
+    auto on_neg = [&](int x) {
+      const long long INF = std::numeric_limits<long long>::max() / 4;
+      std::vector<long long> d(n, INF);
+      d[x] = 0;
+      for (int r = 0; r < 2 * n; ++r)
+        for (auto [a, b, c] : edges)
+          if (d[a] != INF && d[a] + c < d[b]) d[b] = d[a] + c;
+      return d[x] < 0;
+    };
+    std::vector<bool> neg(n);
+    for (int x = 0; x < n; ++x) neg[x] = on_neg(x);
+    for (int s = 0; s < n; ++s) {
+      g.bellman_ford(s);
+      g.bellman_ford(s);
+      for (int t = 0; t < n; ++t) {
+        bool negreach = false;
+        for (int x = 0; x < n; ++x) negreach = negreach || (reach[s][x] && neg[x] && reach[x][t]);
+        long long dt = g.distance(s, t);
+        if (!reach[s][t]) {
+          assert(dt == G::UNREACHABLE);
+        } else if (negreach) {
+          assert(dt == G::NEGATIVE_CYCLE);
+        } else {
+          // the shortest distance: Bellman-Ford with n rounds over the walks avoiding negative cycles
+          const long long INF = G::UNREACHABLE;
+          std::vector<long long> d(n, INF);
+          d[s] = 0;
+          for (int r = 0; r < n; ++r)
+            for (auto [a, b, c] : edges)
+              if (d[a] != INF && d[a] + c < d[b]) d[b] = d[a] + c;
+          assert(dt == d[t]);
+          auto path = g.shortest_path(s, t);
+          assert(path.front() == s && path.back() == t);
+          long long cost = 0;
+          for (size_t i = 0; i + 1 < path.size(); ++i) {
+            long long best = LLONG_MAX;
+            for (auto [a, b, c] : edges)
+              if (a == path[i] && b == path[i + 1]) best = std::min(best, c);
+            assert(best != LLONG_MAX);
+            cost += best;
+          }
+          assert(cost == dt);
+        }
+      }
+    }
+  }
+}
+
 int main() {
   // ListGraph<long long, Edge<long long>>: the default arguments
   cp::ListGraph<> g(3);
@@ -105,5 +179,6 @@ int main() {
   assert(g[1][0].cost == 10);
   // after the id checks above (the ids come from the shared Edge<long long> counter)
   test_dijkstra();
+  test_bellman_ford();
   return 0;
 }
