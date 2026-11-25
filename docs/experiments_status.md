@@ -21,7 +21,7 @@
 | graph/bellman_ford.hpp | 一部 | `bellman_ford`（辺の平行配列、親配列と負閉路の印 `-inf` を含む。元の `NEGATIVE_CYCLE` の値でなく `-inf`） |
 | graph/dijkstra.hpp | 一部 | `dijkstra`（CSR 配列、`priority_queue` の代わりに線形探索の O(n²+m)。親の配列 `parent` を含む。2026-10-29） |
 | graph/edge.hpp | 済（新方式、2026-11-25） | `library/graph/edge.hpp`（元の `Edge<T>` をそのまま: 構築子 2 種・公開フィールド・具体化ごとの番号のカウンタ `next_id`・`operator<<`）。構築した値とカウンタの更新を任意の `T` で証明（`docs/edge.md`）。`operator<<` は方針により C++ テストのみ |
-| graph/edge_flow.hpp | 未 | `graph_flow` と一緒に移植する（`EdgeFlow` は容量と逆辺の番号を持つ） |
+| graph/edge_flow.hpp | 済（新方式、2026-11-25） | `library/graph/edge_flow.hpp`（元の `FlowEdge<T>` をそのまま: 構築子 3 種・公開フィールド・具体化ごとの番号のカウンタ・`operator<<`）。構築した値（容量は `max(cap, 0)`）とカウンタの更新を任意の `T` で証明（`docs/edge_flow.md`）。`operator<<` は C++ テストのみ |
 | graph/find_cycle.hpp | 一部 | 2026-11-21 に新方式で再公開した（`library/graph/find_cycle.hpp`、取り下げ前と同じ形）。CSR 配列・明示スタックの反復 DFS で、閉路がないこと、または閉路の頂点列と `O(n+m)` の手数を `Proofs/Cpp/FindCycle.lean` で証明。違反一覧: `ListGraph` のメンバー関数を CSR の自由関数に、再帰ラムダを明示スタックに、返り値を辺の配列から頂点列に変更 |
 | graph/graph_flow.hpp, graph_list.hpp | 一部 | `library/graph/csr_build.hpp`（`graph_list` の辺リストから CSR 配列を作る計数ソート。辺の属性と `vector<vector<>>` の形は未。違反一覧: `ListGraph` クラスを辺リスト→CSR の関数に変更）。`graph_flow` は未（`map`、構造体の vector） |
 | graph/graph_matrix.hpp, warshall_floyd.hpp | 済（新方式、2026-11-25） | `library/graph/graph_matrix.hpp`（元の `MatrixGraph<Cost>` を 1 クラスに: `UNREACHABLE`・構築子・`add_edge`・`warshall_floyd`・`distance`・`get_shortest_path`・`has_negative_cycle`・`operator<<`）。親の初期化の不具合を修正（`docs/agent/fixes.md`）。距離が最短の歩道の重みであること（負の閉路がないとき）、負閉路の判定、経路復元が止まり最短の歩道を返すこと、計算量を証明（`Cost = long long`、`docs/graph_matrix.md`）。`operator<<` は方針により C++ テストのみ。旧部品 `floyd_warshall`（距離だけの関数）は残している |
