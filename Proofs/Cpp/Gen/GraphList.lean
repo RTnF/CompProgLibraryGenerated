@@ -4,6 +4,7 @@ import Proofs.Cpp.Prelude
 import Proofs.Cpp.Gen.Edge
 import Proofs.Cpp.Lib.DependentOperations
 import Proofs.Cpp.Lib.UMap
+import Proofs.Cpp.Lib.PQ
 set_option linter.unusedVariables false
 
 namespace Proofs.Cpp.Gen
@@ -178,5 +179,49 @@ def cp.ListGraph.shortest_path {Cost : Type} {E : Type} (self : (cp.ListGraph Co
   let t2 := path
   Cpp.tickN t2.size
   return (t2, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
+
+def cp.ListGraph.dijkstra {Cost : Type} {E : Type} [Inhabited Cost] [Inhabited E] [Zero Cost] [Add Cost] [LT Cost] [DecidableLT Cost] [Cpp.Field "cost" E Cost] [Cpp.Field "to" E Int] [Cpp.NumericTraits "Cost" Cost] [Cpp.ShiftInt Cost] (self : (cp.ListGraph Cost E)) (start_node : Int) : Cpp.M (cp.ListGraph Cost E) := do
+  Cpp.tick
+  let mut n_ := self.n_
+  let mut m_ := self.m_
+  let mut adj := self.adj
+  let mut shortest_path_dist := self.shortest_path_dist
+  let mut shortest_path_parent := self.shortest_path_parent
+  let t1 ← Cpp.umapCount shortest_path_dist start_node
+  if (decide (t1 ≠ 0)) then
+    return (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E))
+  let t2 ← cp.ListGraph.UNREACHABLE (E := E)
+  let t3 := n_
+  Cpp.tickN t3.toNat
+  let mut dist : (Array Cost) := (Cpp.replicate t3 t2)
+  let t4 := n_
+  Cpp.tickN t4.toNat
+  let mut parent : (Array Int) := (Cpp.replicate t4 (-1))
+  dist := (Cpp.set dist start_node (0 : Cost))
+  let mut pq : (Cpp.PQ (Cost × Int)) := ([] : (Cpp.PQ (Cost × Int)))
+  let t5 ← Cpp.pqPush pq ((0 : Cost), start_node)
+  pq := t5
+  for _ in Cpp.forever do
+    Cpp.tick
+    if !(!(List.isEmpty pq)) then break
+    let t6 ← Cpp.pqTop (fun a b => (Cpp.pairLt (fun a b : Cost => decide (a < b)) (fun a b : Int => decide (a < b))) b a) pq
+    let mut p : (Cost × Int) := t6
+    let t7 ← Cpp.pqPop (fun a b => (Cpp.pairLt (fun a b : Cost => decide (a < b)) (fun a b : Int => decide (a < b))) b a) pq
+    pq := t7
+    let mut v : Int := p.2
+    if (decide ((Cpp.get dist v) < p.1)) then
+      continue
+    for e in (Cpp.get adj v) do
+      Cpp.tick
+      if (decide (((Cpp.get dist v) + (Cpp.Field.get (member := "cost") e)) < (Cpp.get dist (Cpp.Field.get (member := "to") e)))) then
+        dist := (Cpp.set dist (Cpp.Field.get (member := "to") e) ((Cpp.get dist v) + (Cpp.Field.get (member := "cost") e)))
+        parent := (Cpp.set parent (Cpp.Field.get (member := "to") e) v)
+        let t8 ← Cpp.pqPush pq ((Cpp.get dist (Cpp.Field.get (member := "to") e)), (Cpp.Field.get (member := "to") e))
+        pq := t8
+  let t9 ← Cpp.umapSet shortest_path_dist start_node dist
+  shortest_path_dist := t9
+  let t10 ← Cpp.umapSet shortest_path_parent start_node parent
+  shortest_path_parent := t10
+  return (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E))
 
 end Proofs.Cpp.Gen

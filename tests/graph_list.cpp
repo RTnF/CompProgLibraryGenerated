@@ -1,7 +1,9 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/graph/graph_list.hpp"
 #include <cassert>
+#include <random>
 #include <sstream>
+#include <tuple>
 
 // A user edge type: ListGraph<Cost, E> forwards the extra arguments of add_edge to E's constructor.
 struct Labeled {
@@ -10,6 +12,55 @@ struct Labeled {
   char label;
   Labeled(int f, int t, long long c, char l) : from(f), to(t), cost(c), label(l) {}
 };
+
+// ListGraph::dijkstra against Bellman-Ford on random graphs with nonnegative costs: the distances, UNREACHABLE for
+// the unreachable vertices, and shortest_path (a walk along real edges whose cost is the distance).
+static void test_dijkstra() {
+  std::mt19937 rng(20261125);
+  for (int iter = 0; iter < 300; ++iter) {
+    int n = rng() % 9 + 1;
+    cp::ListGraph<long long> g(n);
+    std::vector<std::vector<long long>> w(n, std::vector<long long>(n, -1));
+    int m = rng() % (n * n + 1);
+    std::vector<std::tuple<int, int, long long>> edges;
+    for (int k = 0; k < m; ++k) {
+      int a = rng() % n, b = rng() % n;
+      long long c = rng() % 20;
+      g.add_edge(a, b, c);
+      edges.emplace_back(a, b, c);
+    }
+    for (int s = 0; s < n; ++s) {
+      g.dijkstra(s);
+      g.dijkstra(s);  // a second call keeps the cached result
+      const long long INF = cp::ListGraph<long long>::UNREACHABLE;
+      std::vector<long long> d(n, INF);
+      d[s] = 0;
+      for (int r = 0; r < n; ++r)
+        for (auto [a, b, c] : edges)
+          if (d[a] != INF && d[a] + c < d[b]) d[b] = d[a] + c;
+      auto dist = g.distance(s);
+      assert((int)dist.size() == n);
+      for (int t = 0; t < n; ++t) {
+        assert(dist[t] == d[t] && g.distance(s, t) == d[t]);
+        if (d[t] == INF) continue;
+        auto path = g.shortest_path(s, t);
+        assert(!path.empty() && path.front() == s && path.back() == t);
+        long long cost = 0;
+        for (size_t i = 0; i + 1 < path.size(); ++i) {
+          long long best = -1;
+          for (auto [a, b, c] : edges)
+            if (a == path[i] && b == path[i + 1] && (best < 0 || c < best)) best = c;
+          assert(best >= 0);
+          cost += best;
+        }
+        assert(cost == d[t]);
+      }
+    }
+    // adding an edge clears the caches
+    g.add_edge(0, 0, 1LL);
+    assert(g.distance(0).empty());
+  }
+}
 
 int main() {
   // ListGraph<long long, Edge<long long>>: the default arguments
@@ -52,5 +103,7 @@ int main() {
   // writing through operator[]
   g[1][0].cost = 10;
   assert(g[1][0].cost == 10);
+  // after the id checks above (the ids come from the shared Edge<long long> counter)
+  test_dijkstra();
   return 0;
 }

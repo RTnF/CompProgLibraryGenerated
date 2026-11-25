@@ -1,6 +1,8 @@
 import Proofs.Cpp.Gen.GraphList
 import Proofs.Cpp.GraphListEdge
 import Proofs.Cpp.Lib.Basic
+import Proofs.Math.ParentChain
+import Proofs.Math.ListDijkstraMath
 
 /-! # `ListGraph<Cost, E>` (library/graph/graph_list.hpp)
 
@@ -10,7 +12,7 @@ vertex to its arrays; the algorithms that fill them are separate members). The c
 additions are proved for `E = Edge<T>` (the default argument, with its id counter); the other members for any `E`.
 Costs: the documented worst case of `std::unordered_map` (`size + 1` steps per lookup or `clear`). -/
 
-open Std.Do Proofs.Cpp Proofs.Cpp.Gen
+open Std.Do Proofs.Cpp Proofs.Cpp.Gen Proofs.ParentChain
 
 namespace Proofs.Cpp.GraphList
 
@@ -146,36 +148,6 @@ theorem distance_int_spec {Cost E : Type} [Inhabited Cost] (g : cp.ListGraph Cos
   all_goals simp_all +zetaDelta
   all_goals first | (simp +arith; done) | exact ⟨rfl, by simp +arith⟩
 
-/-- The parent chain `cur, P[cur], P[P[cur]], …` up to (not including) `-1`. -/
-inductive Chain (P : Array Int) : Int → List Int → Prop
-  | stop : Chain P (-1) []
-  | step (cur : Int) (L : List Int) : cur ≠ -1 → Chain P (Cpp.get P cur) L → Chain P cur (cur :: L)
-
-theorem chain_det {P : Array Int} {c : Int} {L L' : List Int} (h : Chain P c L) (h' : Chain P c L') : L = L' := by
-  induction h generalizing L' with
-  | stop => cases h' with
-    | stop => rfl
-    | step _ _ hne _ => exact absurd rfl hne
-  | step cur L hne _ ih => cases h' with
-    | stop => exact absurd rfl hne
-    | step _ L2 _ h2 => rw [ih h2]
-
-theorem chain_cons {P : Array Int} {c : Int} {L : List Int} (h : Chain P c L) (hc : c ≠ -1) :
-    ∃ L', L = c :: L' ∧ Chain P (Cpp.get P c) L' := by
-  cases h with
-  | stop => exact absurd rfl hc
-  | step _ L' _ h' => exact ⟨L', rfl, h'⟩
-
-open Classical in
-/-- The length of the chain from `c` (0 when there is none). -/
-noncomputable def clen (P : Array Int) (c : Int) : Nat :=
-  if h : ∃ L, Chain P c L then (Classical.choose h).length else 0
-
-theorem clen_of {P : Array Int} {c : Int} {L : List Int} (h : Chain P c L) : clen P c = L.length := by
-  have hex : ∃ L, Chain P c L := ⟨L, h⟩
-  unfold clen
-  rw [dite_cond_eq_true (eq_true hex), chain_det (Classical.choose_spec hex) h]
-
 theorem step_cost (s t0 S k k' : Nat) (hk : k' = k) (hs : s = t0 + 1 + S * (k + 3)) :
     s + 1 + 1 + (k' + 1) = t0 + 1 + (S + 1) * (k + 3) := by
   subst hk hs; rw [Nat.add_mul]; omega
@@ -227,5 +199,305 @@ theorem shortest_path_spec {Cost E : Type} (g : cp.ListGraph Cost E) (u v : Int)
     refine ⟨by simp [hpath], by cases g; simp_all, ?_⟩
     have hsz : r.2.1.size = L.length := by rw [← Array.length_toList, hpath]
     rw [hc, hsz, Nat.mul_add, Nat.mul_add]; omega
+
+/-! ## `dijkstra` (`Cost = long long`) -/
+
+section Dijkstra
+open Proofs.ListDijkstraMath
+
+local instance : Cpp.NumericTraits "Cost" Int := Cpp.intNumericTraits "Cost" 64 true
+
+def U : Int := 2 ^ 61 - 1
+
+@[spec] theorem unr_spec {E : Type} {Q : PostCond Int PS} :
+    ⦃fun t => Q.1 U (t + 1)⦄ (cp.ListGraph.UNREACHABLE (Cost := Int) (E := E)) ⦃Q⦄ := by
+  mvcgen [cp.ListGraph.UNREACHABLE]
+
+/-- The comparison of `std::priority_queue<std::pair<long long, int>, …, std::greater<>>`. -/
+abbrev G : Int × Int → Int × Int → Bool :=
+  fun a b => pairLt (fun a b : Int => decide (a < b)) (fun a b : Int => decide (a < b)) b a
+
+theorem G_irr (a : Int × Int) : G a a = false := by
+  simp [G, pairLt]
+
+theorem G_trans (a b c : Int × Int) (h1 : G a b = true) (h2 : G b c = true) : G a c = true := by
+  simp [G, pairLt] at *; omega
+
+theorem G_min {x y : Int × Int} (h : G x y = false) : x.1 ≤ y.1 := by
+  simp [G, pairLt] at h; omega
+
+theorem perm_eraseIdx {α : Type} {q : List α} {i : Nat} {x : α} (h : q[i]? = some x) :
+    q.Perm (x :: q.eraseIdx i) := by
+  have hi : i < q.length := by
+    rcases Nat.lt_or_ge i q.length with h' | h'
+    · exact h'
+    · rw [List.getElem?_eq_none h'] at h; cases h
+  have hx : q[i] = x := by rw [List.getElem?_eq_getElem hi] at h; exact Option.some.inj h
+  have e : q = q.take i ++ x :: q.drop (i + 1) := by
+    rw [← hx, List.getElem_cons_drop]; exact (List.take_append_drop i q).symm
+  rw [List.eraseIdx_eq_take_drop_succ]
+  conv => lhs; rw [e]
+  exact List.perm_middle
+
+/-- The top of a nonempty queue and the queue after `pop`. -/
+theorem top_pop (Q : List (Int × Int)) (x : Int × Int) (h : pqBest G Q = some x) :
+    Q.Perm (x :: Q.eraseIdx (pqBestIdx G Q)) ∧ ∀ q ∈ Q, x.1 ≤ q.1 := by
+  have hne : Q ≠ [] := by intro e; subst e; simp [pqBest] at h
+  obtain ⟨y, h1, h2, h3⟩ := pqBest_spec G G_irr G_trans Q hne
+  rw [h] at h2; cases h2
+  exact ⟨perm_eraseIdx h1, fun q hq => G_min (h3 q hq)⟩
+
+/-- The pair `(to, cost)` of an edge. -/
+def toPair {E : Type} [Field "to" E Int] [Field "cost" E Int] (e : E) : Int × Int :=
+  (Field.get (member := "to") e, Field.get (member := "cost") e)
+
+/-- The edges `(to, cost)` of each vertex. -/
+def outOf {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (adj : Array (Array E)) (x : Nat) :
+    List (Int × Int) := (adj[x]!).toList.map toPair
+
+theorem relax_len (v : Int) (st : Array Int × Array Int × List (Int × Int)) (e : Int × Int) :
+    (relax v st e).2.2.length ≤ st.2.2.length + 1 := by
+  unfold relax; split <;> simp
+
+theorem fold_len (v : Int) (es : List (Int × Int)) (st : Array Int × Array Int × List (Int × Int)) :
+    (es.foldl (relax v) st).2.2.length ≤ st.2.2.length + es.length := by
+  induction es generalizing st with
+  | nil => simp
+  | cons e es ih =>
+    simp only [List.foldl_cons, List.length_cons]
+    have := ih (relax v st e); have := relax_len v st e; omega
+
+
+/-- `Σ_{x < n} (deg x + 1) = n + m`. -/
+abbrev R0 {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E) : Nat :=
+  rest (outOf g.adj) [] g.n_.toNat
+
+/-- The step bound of one queue operation or relaxation: the queues have fewer than `2 R0 + 2` pairs. -/
+abbrev K {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E) : Nat :=
+  Nat.log2 (2 * R0 g + 2) + 3
+
+/-- The steps before the main loop. -/
+abbrev C1 {E : Type} (g : cp.ListGraph Int E) : Nat := 4 + g.shortest_path_dist.length + 2 * g.n_.toNat
+
+/-- The invariant of the main loop with its potential `K (2 restS + |Q|)`. -/
+def Cont {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] (g : cp.ListGraph Int E) (s : Nat)
+    (t0 : Nat) (st : Array Int × Array Int × List (Int × Int)) (c : Nat) : Prop :=
+  (∃ D L, Inv g.n_.toNat s U (outOf g.adj) st.1 st.2.1 st.2.2 D L) ∧ t0 + C1 g ≤ c ∧
+    c + K g * (2 * restS U (outOf g.adj) st.1 st.2.2 g.n_.toNat + st.2.2.length) ≤
+      t0 + C1 g + K g * (2 * R0 g + 1)
+
+theorem restS_ge (U : Int) (out : Nat → List (Int × Int)) (d : Array Int) (Q : List (Int × Int)) (x n : Nat)
+    (hx : x < n) (h : ¬(d[x]! < U ∧ (d[x]!, (x : Int)) ∉ Q)) : (out x).length + 1 ≤ restS U out d Q n := by
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    simp only [restS]
+    by_cases e : x = n
+    · subst e; rw [if_neg h]; omega
+    · have := ih (by omega); split <;> omega
+
+theorem cont_bound {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] {g : cp.ListGraph Int E}
+    {s t0 : Nat} {st : Array Int × Array Int × List (Int × Int)} {c : Nat} (h : Cont g s t0 st c) :
+    2 * restS U (outOf g.adj) st.1 st.2.2 g.n_.toNat + st.2.2.length ≤ 2 * R0 g + 1 := by
+  obtain ⟨_, h1, h2⟩ := h
+  have hK : 0 < K g := by unfold K; omega
+  exact Nat.le_of_mul_le_mul_left (by omega) hK
+
+theorem log_bound {a b : Nat} (h : a ≤ b) : Nat.log2 a ≤ Nat.log2 b := log2_mono2 a b h
+
+/-- The facts about a pair popped with the distance of its vertex. -/
+theorem fresh_facts {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int] {g : cp.ListGraph Int E}
+    {s t0 : Nat} {b : Array Int × Array Int × List (Int × Int)} {c0 : Nat} (hC : Cont g s t0 b c0)
+    {x : Int × Int} (hx : pqBest G b.2.2 = some x) (hfresh : ¬ (get b.1 x.2 < x.1)) :
+    0 ≤ x.2 ∧ x.2 < g.n_.toNat ∧ get b.1 x.2 = x.1 ∧
+      (b.2.2.eraseIdx (pqBestIdx G b.2.2)).length + (outOf g.adj x.2.toNat).length + 2 ≤ 2 * R0 g + 1 := by
+  obtain ⟨hperm, hmin⟩ := top_pop _ _ hx
+  have hb := cont_bound hC
+  obtain ⟨⟨D, L, hI⟩, _, _⟩ := hC
+  have hxQ : x ∈ b.2.2 := hperm.mem_iff.mpr List.mem_cons_self
+  obtain ⟨h0, hn, hle, _, _⟩ := hI.qok x hxQ
+  have heq : get b.1 x.2 = x.1 := by rw [get_eq] at hfresh ⊢; omega
+  refine ⟨h0, by omega, heq, ?_⟩
+  have hr := restS_ge U (outOf g.adj) b.1 b.2.2 x.2.toNat g.n_.toNat (by omega) (by
+    intro ⟨_, h2⟩; apply h2
+    have : (x.2.toNat : Int) = x.2 := Int.toNat_of_nonneg h0
+    rw [this, ← get_eq, heq]; exact hxQ)
+  have := hperm.length_eq; simp at this
+  omega
+
+theorem dijkstra_spec {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int]
+    (g : cp.ListGraph Int E) (s : Nat) (hn : g.adj.size = g.n_.toNat) (hn0 : 0 ≤ g.n_) (hs : s < g.n_.toNat)
+    (hV : Valid g.n_.toNat (outOf g.adj)) (hnew : umapFind g.shortest_path_dist s = none)
+    (hsmall : 2 * R0 g + 1 < 2 ^ 64) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.dijkstra g s
+    ⦃⇓ r c => ⌜(∃ d par D L, Inv g.n_.toNat s U (outOf g.adj) d par [] D L ∧
+      r = { g with shortest_path_dist := umapPut g.shortest_path_dist s d,
+                   shortest_path_parent := umapPut g.shortest_path_parent s par }) ∧
+      c ≤ t0 + C1 g + K g * (2 * R0 g + 1) + 3 + g.shortest_path_dist.length + g.shortest_path_parent.length⌝⦄ := by
+  mvcgen [cp.ListGraph.dijkstra, Cpp.umapCount, Cpp.pqPush, Cpp.pqTop, Cpp.pqPop, Cpp.umapSet]
+  case vc2.inv =>
+    exact ⟨fun st c => ⌜Cont g s t0 st c⌝,
+           fun st c => ⌜st.2.2 = [] ∧ (∃ D L, Inv g.n_.toNat s U (outOf g.adj) st.1 st.2.1 st.2.2 D L) ∧
+             c ≤ t0 + C1 g + K g * (2 * R0 g + 1) + 1⌝,
+           fun st => 2 * restS U (outOf g.adj) st.1 st.2.2 g.n_.toNat + st.2.2.length⟩
+  case inv1 =>
+    rename_i b _ _ _ _ c0 _ _ x _ _ _ _
+    exact ⇓⟨xs, st⟩ c => ⌜st = (xs.prefix.map toPair).foldl (relax x.2)
+        (b.1, b.2.1, b.2.2.eraseIdx (pqBestIdx G b.2.2)) ∧ c0 ≤ c ∧ c ≤ c0 + K g * (xs.prefix.length + 1)⌝
+  case vc8.step.isFalse.h_1.isFalse.isFalse.pre =>
+    rename_i b _ _ _ _ c0 hC _ x hx _ _ _
+    refine ⟨by simp +zetaDelta, by simp +zetaDelta; omega, ?_⟩
+    have := cont_bound hC
+    have := log_bound (a := b.2.2.length) (b := 2 * R0 g + 2) (by omega)
+    simp +zetaDelta; unfold K; omega
+  case vc6.step.isTrue =>
+    rename_i b _ _ _ _ c0 hC _ x hx _ _ hfresh pref cur suff hsplit st _ _ _ _ c hinv hcond _ _
+    simp at hinv
+    obtain ⟨heq, hc0, hc⟩ := hinv
+    obtain ⟨h0, hn', hdv, hlen⟩ := fresh_facts hC hx (by simpa using hfresh)
+    refine ⟨?_, by (try simp +zetaDelta); omega, ?_⟩
+    · rw [List.map_append, List.foldl_append, ← heq]
+      simp only [List.map_cons, List.map_nil, List.foldl_cons, List.foldl_nil]
+      unfold relax toPair
+      rw [if_pos (by simpa using hcond)]
+    · have hpl : pref.length + 1 ≤ (outOf g.adj x.2.toNat).length := by
+        have : (outOf g.adj x.2.toNat).length = (get g.adj x.2).toList.length := by simp [outOf, get_eq]
+        rw [this]; simp +zetaDelta at hsplit; rw [hsplit]; simp
+      have hq := fold_len x.2 (List.map toPair pref) (b.1, b.2.1, b.2.2.eraseIdx (pqBestIdx G b.2.2))
+      rw [← heq] at hq
+      simp only [List.length_map] at hq
+      have := log_bound (a := st.2.2.length + 1) (b := 2 * R0 g + 2) (by omega)
+      simp +zetaDelta; unfold K at hc ⊢
+      rw [Nat.mul_succ]; omega
+  case vc7.step.isFalse =>
+    rename_i b _ _ _ _ c0 hC _ x hx _ _ hfresh pref cur suff hsplit st _ _ _ _ c hinv hcond
+    simp at hinv
+    obtain ⟨heq, hc0, hc⟩ := hinv
+    refine ⟨?_, by (try simp +zetaDelta); omega, ?_⟩
+    · rw [List.map_append, List.foldl_append, ← heq]
+      simp only [List.map_cons, List.map_nil, List.foldl_cons, List.foldl_nil]
+      unfold relax toPair
+      rw [if_neg (by simpa using hcond)]
+    · simp +zetaDelta; unfold K at hc ⊢; rw [Nat.mul_succ]; omega
+  case vc9.step.isFalse.h_1.isFalse.isFalse.post.success =>
+    rename_i b _ _ _ _ c0 hC _ x hx _ _ hfresh r _ _ _ _ c hinv
+    simp at hinv
+    obtain ⟨heq, hc0, hc⟩ := hinv
+    obtain ⟨h0, hn', hdv, _⟩ := fresh_facts hC hx (by simpa using hfresh)
+    have hb := cont_bound hC
+    obtain ⟨⟨D, L, hI⟩, hC2, hC3⟩ := hC
+    obtain ⟨hperm, hmin⟩ := top_pop _ _ hx
+    obtain ⟨v, hv⟩ : ∃ v : Nat, x.2.toNat = v := ⟨_, rfl⟩
+    have hvi : (v : Int) = x.2 := by rw [← hv]; exact Int.toNat_of_nonneg h0
+    have hdv' : b.1[v]! = x.1 := by rw [← hdv, get_eq, hv]
+    have hQ : b.2.2.Perm ((x.1, (v : Int)) :: b.2.2.eraseIdx (pqBestIdx G b.2.2)) := by rw [hvi]; exact hperm
+    have hvD : v ∉ D := not_redone hI (hQ.mem_iff.mpr List.mem_cons_self) hdv'
+    have hout : (get g.adj x.2).toList.map toPair = outOf g.adj v := by simp [outOf, get_eq, hv]
+    have hvn : v < g.n_.toNat := by omega
+    have hr : r = (outOf g.adj v).foldl (relax (v : Int)) (b.1, b.2.1, b.2.2.eraseIdx (pqBestIdx G b.2.2)) := by
+      rw [heq, hvi]; simp +zetaDelta [hout]
+    obtain ⟨hI', hlen'⟩ := inv_fresh hV hI hQ hmin hdv' hvD
+    rw [← hr] at hI' hlen'
+    have e1 := rest_eq hI g.n_.toNat le_rfl
+    have e2 := rest_eq hI' g.n_.toNat le_rfl
+    have e3 := rest_step (outOf g.adj) D v hvD g.n_.toNat
+    rw [if_pos hvn] at e3
+    have hlq := hperm.length_eq; simp +zetaDelta at hlq
+    have hdeg : (get g.adj x.2).size = (outOf g.adj v).length := by rw [← hout]; simp
+    simp +zetaDelta at hlen' hc
+    -- the potential
+    have hA : (2 * restS U (outOf g.adj) r.1 r.2.2 g.n_.toNat + r.2.2.length) + ((outOf g.adj v).length + 1) + 1 ≤
+        2 * restS U (outOf g.adj) b.1 b.2.2 g.n_.toNat + b.2.2.length := by omega
+    have hK := Nat.mul_le_mul_left (K g) hA
+    rw [Nat.mul_add, Nat.mul_add] at hK
+    rw [hdeg] at hc
+    refine ⟨⟨⟨D ++ [v], x.1, hI'⟩, by (try simp +zetaDelta); omega, ?_⟩, by (try simp +zetaDelta); omega⟩
+    simp +zetaDelta
+    omega
+  case vc5.step.isFalse.h_1.isFalse.isTrue =>
+    rename_i b _ _ _ _ c hC _ x hx0 _ _ hst
+    have hx : pqBest G b.2.2 = some x := hx0
+    have hb := cont_bound hC
+    obtain ⟨⟨D, L, hI⟩, hC2, hC3⟩ := hC
+    obtain ⟨hperm, hmin⟩ := top_pop _ _ hx
+    have hst' : b.1[x.2.toNat]! < x.1 := by
+      have := hst; simp +zetaDelta [get_eq] at this; exact of_decide_eq_true this
+    have hI' := inv_stale (v := x.2) hI hperm hmin hst'
+    have e1 := rest_eq hI g.n_.toNat le_rfl
+    have e2 := rest_eq hI' g.n_.toNat le_rfl
+    have hlq := hperm.length_eq; simp +zetaDelta at hlq
+    have := log_bound (a := b.2.2.length) (b := 2 * R0 g + 2) (by omega)
+    have hK : K g * (2 * restS U (outOf g.adj) b.1 (b.2.2.eraseIdx (pqBestIdx G b.2.2)) g.n_.toNat +
+        (b.2.2.eraseIdx (pqBestIdx G b.2.2)).length) + K g =
+        K g * (2 * restS U (outOf g.adj) b.1 b.2.2 g.n_.toNat + b.2.2.length) := by
+      rw [← Nat.mul_succ]; congr 1; omega
+    have hKdef : K g = Nat.log2 (2 * R0 g + 2) + 3 := rfl
+    have hmeas : 2 * restS U (outOf g.adj) b.1 (b.2.2.eraseIdx (pqBestIdx G b.2.2)) g.n_.toNat +
+        (b.2.2.eraseIdx (pqBestIdx G b.2.2)).length <
+        2 * restS U (outOf g.adj) b.1 b.2.2 g.n_.toNat + b.2.2.length := by omega
+    refine ⟨⟨⟨D, x.1, hI'⟩, by simp +zetaDelta; omega, ?_⟩, by simpa +zetaDelta using hmeas⟩
+    simp +zetaDelta
+    unfold G at hK
+    omega
+  case vc3.step.isTrue =>
+    rename_i b _ _ _ _ c hC hemp
+    obtain ⟨hI, _, h3⟩ := hC
+    refine ⟨by simpa +zetaDelta using hemp, hI, by omega⟩
+  case vc4.step.isFalse.h_1.isTrue =>
+    rename_i h _ _ h'
+    simp_all
+  case vc11.step.isFalse.h_2 =>
+    rename_i b _ _ _ _ c _ hne hnone
+    have hne' : b.2.2 ≠ [] := by intro e; simp +zetaDelta [e] at hne
+    obtain ⟨y, _, h2, _⟩ := pqBest_spec G G_irr G_trans b.2.2 hne'
+    have : pqBest G b.2.2 = none := hnone
+    rw [this] at h2; cases h2
+  case vc1.isTrue =>
+    rename_i h
+    simp +zetaDelta [hnew] at h
+  case vc10.step.isFalse.h_1.isFalse.isFalse.post.except =>
+    simp
+  case vc12.isFalse.pre =>
+    rename_i hc0 _
+    have hU : (0 : Int) < U := by decide
+    have hI := inv_init g.n_.toNat s U (outOf g.adj) hs hU
+    have e := rest_eq hI g.n_.toNat le_rfl
+    have hl1 : Nat.log2 1 = 0 := by decide
+    have hR : R0 g = rest (outOf g.adj) [] g.n_.toNat := rfl
+    refine ⟨⟨⟨[], 0, ?_⟩, ?_, ?_⟩, ?_⟩
+    · simpa +zetaDelta [Cpp.replicate] using hI
+    · simp +zetaDelta [C1]; omega
+    · simp +zetaDelta [C1, Cpp.replicate] at e ⊢
+      rw [← e, ← hR, hl1]; omega
+    · simp +zetaDelta [Cpp.replicate, fuel] at e ⊢
+      rw [← e]; omega
+  case vc13.isFalse.post.success =>
+    rename_i r _ _ _ c h
+    obtain ⟨hemp, ⟨D, L, hI⟩, hc⟩ := h
+    refine ⟨⟨r.1, r.2.1, D, L, by rw [← hemp]; exact hI, by simp +zetaDelta⟩, ?_⟩
+    simp +zetaDelta; omega
+
+
+/-- `dijkstra(s)` when the distances from `s` are already cached: nothing changes. -/
+theorem dijkstra_cached_spec {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int]
+    (g : cp.ListGraph Int E) (s : Int) (D : Array Int) (hD : umapFind g.shortest_path_dist s = some D) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.dijkstra g s
+    ⦃⇓ r c => ⌜r = g ∧ c = t0 + 2 + g.shortest_path_dist.length⌝⦄ := by
+  mvcgen [cp.ListGraph.dijkstra, Cpp.umapCount]
+  all_goals simp_all +zetaDelta
+  all_goals omega
+
+/-- The result of `dijkstra(s)` (nonnegative costs, vertices in range): for every vertex `t`, `distance(s, t)` is
+at most the cost of every walk from `s` to `t` (and at most `UNREACHABLE`); when it is below `UNREACHABLE`, the
+parents of `s` lead from `t` back to `s` (so `shortest_path(s, t)` returns a walk) along edges whose costs add up to
+the distance. -/
+theorem dijkstra_correct {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E Int]
+    {n s : Nat} {d par : Array Int} {D : List Nat} {L : Int} {adj : Array (Array E)}
+    (hV : Valid n (outOf adj)) (hI : Inv n s U (outOf adj) d par [] D L) (t : Nat) (ht : t < n) :
+    d[t]! ≤ U ∧ (∀ w, Walk (outOf adj) s t w → d[t]! ≤ w) ∧
+      (d[t]! < U → ∃ C, Chain par t C ∧ WalkB (outOf adj) s C d[t]!) :=
+  ⟨hI.dle t ht, fun _ hw => final_le hV hI hw, fun hlt => final_chain hV hI t ht hlt⟩
+
+end Dijkstra
 
 end Proofs.Cpp.GraphList

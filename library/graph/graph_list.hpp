@@ -1,7 +1,9 @@
 #pragma once
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <ostream>
+#include <queue>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -58,6 +60,36 @@ public:
     }
     std::reverse(path.begin(), path.end());
     return path;
+  }
+
+  // ダイクストラ法 (experiments/library/cpp/graph/dijkstra.hpp)
+  void dijkstra(int start_node) {
+    if (shortest_path_dist.count(start_node)) {
+      return;
+    }
+    using P = std::pair<Cost, int>;
+    std::vector<Cost> dist(n_, ListGraph::UNREACHABLE);
+    std::vector<int> parent(n_, -1);
+    dist[start_node] = 0;
+    std::priority_queue<P, std::vector<P>, std::greater<P>> pq;
+    pq.emplace(0, start_node);
+    while (!pq.empty()) {
+      P p = pq.top();
+      pq.pop();
+      int v = p.second;
+      if (dist[v] < p.first) {
+        continue;
+      }
+      for (const auto &e : adj[v]) {
+        if (dist[v] + e.cost < dist[e.to]) {
+          dist[e.to] = dist[v] + e.cost;
+          parent[e.to] = v;
+          pq.emplace(dist[e.to], e.to);
+        }
+      }
+    }
+    shortest_path_dist[start_node] = std::move(dist);
+    shortest_path_parent[start_node] = std::move(parent);
   }
 
   template <class C_, class E_>
