@@ -7796,7 +7796,7 @@
     },
     {
       "source": "experiments/library/cpp/graph/lowlink.hpp",
-      "source_sha256": "1a24a2ed78bb43908a1010a135a7acb2261996aa8b61f16fed81a5a44df8a63e",
+      "source_sha256": "983d5aa3b93f5d9bf21b3b6a59a15ed1ff1fe5076e82976ad076d3829d3781a7",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": null,
@@ -7816,16 +7816,23 @@
           "line": 14,
           "declaration": "lowlink 'pair<vector<int>, vector<pair<int, int>>> ()'",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/graph/graph_list.hpp",
           "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
+            "review": "reviewed",
+            "bug": "fixed",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": true
+          },
+          "evidence": [
+            "tests/imports/lowlink_multigraph.cpp",
+            "tests/test_lowlink_original.py",
+            "tests/diff/graph_list.py",
+            "Proofs/Cpp/GraphList.lean",
+            "docs/graph_list.md"
+          ]
         },
         {
           "kind": "TypeAliasDecl",
@@ -7888,15 +7895,15 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": null,
+      "verification_target": "library/graph/graph_list.hpp",
       "status": {
-        "review": "pending",
-        "bug": "unknown",
-        "cpp_tested": false,
-        "common_translator": false,
-        "lean_proved": false,
-        "include_verified": false,
-        "published": false
+        "review": "reviewed",
+        "bug": "fixed",
+        "cpp_tested": true,
+        "common_translator": true,
+        "lean_proved": true,
+        "include_verified": true,
+        "published": true
       },
       "including_drivers": [
         "experiments/library/cpp/verify/articulation_points.test.cpp",
@@ -7912,7 +7919,14 @@
         "experiments/library3/cpp/Graph/Lowlink.hpp",
         "experiments/library3/cpp/Graph/Prim.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "tests/imports/lowlink_multigraph.cpp",
+        "tests/test_lowlink_original.py",
+        "tests/diff/graph_list.py",
+        "Proofs/Cpp/GraphList.lean",
+        "docs/graph_list.md"
+      ]
     },
     {
       "source": "experiments/library/cpp/graph/prim.hpp",

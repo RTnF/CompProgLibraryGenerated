@@ -17,10 +17,13 @@
 | `dijkstra(start)` | 始点 `start` からの距離と親を計算して表に入れる（辺の費用は非負。計算済みなら何もしない） | O((n + m) log(n + m))（＋表の操作） |
 | `bellman_ford(start)` | 始点からの距離と親を計算して表に入れる（負の辺可）。到達不能は `UNREACHABLE`、負閉路から届く頂点は `NEGATIVE_CYCLE`（親 `-1`）。計算済みなら何もしない | O(n (n + m)) |
 | `prim()` | 最小全域森の重み（辺は `add_bidirectional_edge` で入れた無向辺、費用は非負） | O((n + m) log(n + m)) |
+| `lowlink()` | 無向多重グラフの関節点と橋。橋は小さい端点を先にした組。両配列を昇順で返す | O(1 + n + m + k log(k + 1))、`k = min(n, m)` |
 | `operator<<` | `N = n, M = m` と全辺を出力する | O(n + m) |
 
 - 前提: 頂点の引数は `[0, n)`。`distance(from, to)`・`shortest_path(from, …)` は始点 `from` の最短路を計算した後に呼ぶ（計算するメンバーは下記）。`E` は `E(from, to, args...)` で構築でき、公開フィールド `from`・`to`（`int`）と `cost`（`Cost`）を持つ。
 - 表は `std::unordered_map`。辺や頂点を足すと消える。
+
+`lowlink` では各無向辺を両端の行に1本ずつ置く。端点は `[0, n)` とする。平行辺、自己ループ、孤立頂点、空グラフを扱う。関節点は取り除くと連結成分数が増える頂点、橋は1本だけ取り除くと連結成分数が増える辺である。費用には依存せず、辺の型から読むのは `to` だけである。ここで `m` は隣接リストに入っている弧の総数で、追加領域は再帰フレームと結果を含めて O(n) である。
 
 ## 元のソースからの変更
 
@@ -28,6 +31,7 @@
 - `dijkstra` は元の `experiments/library/cpp/graph/dijkstra.hpp` の本体をクラス内に置いた。`Cost v = p.second;` を `int v = p.second;` にした（`v` は頂点の番号で、`adj[v]`・`dist[v]` の添字にしか使わない。整数の `Cost` では同じ値。浮動小数の `Cost` でも番号は正確に表せる範囲なので結果は同じ）。
 - `prim` は元の `experiments/library/cpp/graph/prim.hpp` の本体をクラス内に置いた。ラムダ `span` は、参照引数を取る非公開の const メンバー関数 `prim_span(start_node, mst_dist, dist, used)` にした（同じ処理）。`Cost v = p.second;` を `int v = p.second;` にした（`dijkstra` と同じ理由）。
 - `bellman_ford` は元の `experiments/library/cpp/graph/bellman_ford.hpp` の本体をそのままクラス内に置いた。
+- `lowlink` は元の `experiments/library/cpp/graph/lowlink.hpp` の本体をクラス内に置いた。再帰ラムダを参照引数のある非公開の const メンバー関数に移した。親への辺は1本だけ読み飛ばし、平行な戻り辺を low の更新に使う。原本にも同じ不具合修正を適用した。
 - 元のヘッダは `dijkstra`・`bellman_ford`・`prim`・`lowlink`・`find_cycle_directed`・`topological_sort`・`topological_sort_minimum` を宣言だけし、定義はそれぞれのヘッダ（`dijkstra.hpp` など）にある。公開側では 1 つのクラスにまとめるため、各ヘッダを移植するときに本体ごとこのクラスに加える。まだ移植していないメンバーは宣言も置いていない（宣言だけでは呼び出しがリンクできないので、使える機能は元のヘッダ単体と同じ）。
 
 ## 検証（新方式、`docs/translation.md`）
@@ -52,5 +56,8 @@
 - `bellman_ford_correct`（`Proofs/Math/ListBellmanFordMath.lean` の `bf_correct`。前提: 端点が `[0, n)`、`|cost| ≤ C`、`n C < UNREACHABLE`、`NEGATIVE_CYCLE + C` が有限の距離の下限 `-(1 + (n-1) m) C` より小さい）: 各頂点 `v` について、始点から到達できなければ `UNREACHABLE`、負の閉路を通って到達できる（`NegReach`）なら `NEGATIVE_CYCLE`、それ以外は最短の歩道の費用（全歩道の費用以下で `UNREACHABLE` 未満）で、親をたどると `-1` で終わり（`Chain`）、その列は費用が距離の歩道（`WalkB`）。証明の要点: 前半は完全性（`r` 周で `r` 辺以下の歩道の費用以下）、健全性（有限の距離は歩道の費用）、最後の更新時刻の幽霊変数による親の不変条件（親が後で更新されると不等号が厳密）、鳩の巣による閉路の除去（負閉路に届かない頂点の歩道は `n - 1` 辺以下にできる）。後半は、負閉路に届かない頂点は変わらず、負閉路のどれかの頂点が 1 周目に印を受け、印が 1 周に 1 辺以上広がる。
 - `prim_spec`（`Cost = long long`、任意の `E`。前提: 全辺の行き先が `[0, n)` で費用が `[0, UNREACHABLE)`、辺の集合が対称（`add_bidirectional_edge` で入れた無向グラフ）、`2(n + m) + 1 < 2^64`）: 返り値は非負で、最小全域森の重み（`IsMSF`: その重みの全域森があり、どの全域森の重みもそれ以上。`Proofs/Math/PrimBridge.lean` の既存の証明を使う）。手数は `2 + 2n + K' 2(n + m) + n (K' + 4)` 以下（`K' = log2(2(n + m) + 2) + 3`）。証明は、キューから取り出した新しい頂点が未訪問の頂点の中で距離が最小であること（`Proofs/Math/ListPrimMath.lean` のキューの不変条件 `QI` と、各連結成分の最初の頂点の状態 `SpanB`）を示し、既存の不変条件 `PInv` を進める（`span_spec`）。
 - 数値の範囲: 距離と `dist[v] + cost` が `long long` に収まること（例えば費用の総和が `UNREACHABLE` 未満）は前提として C++ 側で負う。Lean の証明は数学的整数で行う。
+- `lowlink_spec` は任意の `Cost` と、行き先を読める任意の `E` について、停止、結果の完全性と重複なし、整列順、グラフの保持を示す。隣接リストの多重度を保ち、自己ループを除いた射影上で DFS の順序、親、low と再帰スタックの不変条件を維持する。各出力は `k` 件以下で、手数は `1 + 6n + 2m + 2k(log₂ k + 1)` 以下。探索中に保持する頂点配列、出力要素と定数サイズの再帰フレームのモデル上の個数は `lowlink_workspace_slots` により `6n` 以下。整列する配列は各 `k` 件以下である。入力の整数と途中の値が C++ の型の範囲内にあることを前提とする。
 
 C++ のテスト（`tests/graph_list.cpp`）は既定の型の辺の番号・費用、両方向の辺、`add_node`、静的メンバー、`operator<<`、別の辺の型（追加の構築子引数）、`operator[]` を通した書き換えを確かめる。差分テスト（`tests/diff/graph_list.py`、`Cost = long long`、`E = Edge<long long>`）は 2 種の構築子、`add_node`、費用ありとなしの `add_edge`・`add_bidirectional_edge`、`reset_shortest`、表にない始点の `distance(from)` を混ぜ、全行を `operator[]` で比べる。費用が非負のグラフで `dijkstra`（2 回目の呼び出しを含む）、`distance` 2 種、全頂点への `shortest_path` を比べる。C++ のテストは Bellman–Ford と距離を比べ、経路が実在の辺をたどり費用が距離に等しいことを確かめる。`bellman_ford` は負の辺と負閉路を含むグラフで、到達可能性・負閉路の判定（参照実装）と比べ、全頂点への `shortest_path` の費用を確かめる。差分テストも負の費用のグラフで `bellman_ford`、`distance`、`shortest_path` を比べる。`prim` は無向の多重グラフ（自己ループ、非連結を含む）でクラスカル法と比べ、差分テストでも比べる。
+
+`lowlink` は頂点・辺を1つずつ除いて連結成分数を数える基準実装と、4頂点の多重グラフ全11,664通りを正順・逆順で比較する。原本と公開版に同じ ASan/UBSan 回帰を実行し、差分テストでは生成 Lean と同じグラフを2回ずつ探索する。 [多重グラフの回帰テスト](../tests/imports/lowlink_multigraph.cpp)

@@ -208,5 +208,16 @@ int main() {
   test_dijkstra();
   test_bellman_ford();
   test_prim();
+  // The default cost is unnecessary for lowlink, and the edge type only needs a target.
+  struct Target {
+    int to;
+  };
+  cp::ListGraph<double, Target> multi(4);
+  multi[0] = {{1}, {1}};
+  multi[1] = {{0}, {2}, {0}};
+  multi[2] = {{1}, {2}};
+  const auto [articulation, bridges] = multi.lowlink();
+  assert(articulation == std::vector<int>{1});
+  assert((bridges == std::vector<std::pair<int, int>>{{1, 2}}));
   return 0;
 }

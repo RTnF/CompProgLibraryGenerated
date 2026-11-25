@@ -51,6 +51,62 @@ def cp.ListGraph.prim_span {Cost : Type} {E : Type} [Inhabited Cost] [Inhabited 
         pq := t4
   return (mst_dist, dist, used)
 
+def cp.ListGraph.lowlink_dfs_rec {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "to" E Int] (__fuel : Nat) (self : (cp.ListGraph Cost E)) (v : Int) (parent : Int) (visited : (Array Bool)) (ord : (Array Int)) (low : (Array Int)) (articulation_points : (Array Int)) (bridges : (Array (Int × Int))) (visit_count : Int) : Cpp.M ((Array Bool) × (Array Int) × (Array Int) × (Array Int) × (Array (Int × Int)) × Int) :=
+  match __fuel with
+  | 0 => failure
+  | __fuel + 1 => do
+      Cpp.tick
+      let n_ := self.n_
+      let m_ := self.m_
+      let adj := self.adj
+      let shortest_path_dist := self.shortest_path_dist
+      let shortest_path_parent := self.shortest_path_parent
+      let mut visited := visited
+      let mut ord := ord
+      let mut low := low
+      let mut articulation_points := articulation_points
+      let mut bridges := bridges
+      let mut visit_count := visit_count
+      visited := (Cpp.set visited v true)
+      let t1 := visit_count
+      visit_count := (visit_count + 1)
+      ord := (Cpp.set ord v t1)
+      low := (Cpp.set low v (Cpp.get ord v))
+      let mut is_articular : Bool := false
+      let mut skipped_parent_edge : Bool := false
+      let mut child_count : Int := 0
+      for e in (Cpp.get adj v) do
+        Cpp.tick
+        if (!(Cpp.get visited (Cpp.Field.get (member := "to") e))) then
+          child_count := (child_count + 1)
+          let t2 ← cp.ListGraph.lowlink_dfs_rec __fuel (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)) (Cpp.Field.get (member := "to") e) v visited ord low articulation_points bridges visit_count
+          visited := t2.1
+          ord := t2.2.1
+          low := t2.2.2.1
+          articulation_points := t2.2.2.2.1
+          bridges := t2.2.2.2.2.1
+          visit_count := t2.2.2.2.2.2
+          low := (Cpp.set low v (min (Cpp.get low v) (Cpp.get low (Cpp.Field.get (member := "to") e))))
+          if ((decide (parent ≠ (-1))) && (decide ((Cpp.get ord v) ≤ (Cpp.get low (Cpp.Field.get (member := "to") e))))) then
+            is_articular := true
+          if (decide ((Cpp.get ord v) < (Cpp.get low (Cpp.Field.get (member := "to") e)))) then
+            Cpp.tick
+            bridges := (bridges.push ((min v (Cpp.Field.get (member := "to") e)), (max v (Cpp.Field.get (member := "to") e))))
+        else
+          if ((decide ((Cpp.Field.get (member := "to") e) = parent)) && (!skipped_parent_edge)) then
+            skipped_parent_edge := true
+          else
+            low := (Cpp.set low v (min (Cpp.get low v) (Cpp.get ord (Cpp.Field.get (member := "to") e))))
+      if ((decide (parent = (-1))) && (decide (child_count ≥ 2))) then
+        is_articular := true
+      if is_articular then
+        Cpp.tick
+        articulation_points := (articulation_points.push v)
+      return (visited, ord, low, articulation_points, bridges, visit_count)
+
+def cp.ListGraph.lowlink_dfs {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "to" E Int] (self : (cp.ListGraph Cost E)) (v : Int) (parent : Int) (visited : (Array Bool)) (ord : (Array Int)) (low : (Array Int)) (articulation_points : (Array Int)) (bridges : (Array (Int × Int))) (visit_count : Int) : Cpp.M ((Array Bool) × (Array Int) × (Array Int) × (Array Int) × (Array (Int × Int)) × Int) :=
+  cp.ListGraph.lowlink_dfs_rec Cpp.fuel self v parent visited ord low articulation_points bridges visit_count
+
 def cp.ListGraph.UNREACHABLE {Cost : Type} {E : Type} [Cpp.NumericTraits "Cost" Cost] [Cpp.ShiftInt Cost] : Cpp.M Cost := do
   Cpp.tick
   return (Cpp.ShiftInt.shr (Cpp.NumericTraits.maximum (tag := "Cost") (α := Cost)) 2)
@@ -326,5 +382,40 @@ def cp.ListGraph.prim {Cost : Type} {E : Type} [Inhabited Cost] [Inhabited E] [Z
       dist := t4.2.1
       used := t4.2.2
   return (mst_dist, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
+
+def cp.ListGraph.lowlink {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "to" E Int] (self : (cp.ListGraph Cost E)) : Cpp.M (((Array Int) × (Array (Int × Int))) × (cp.ListGraph Cost E)) := do
+  Cpp.tick
+  let mut n_ := self.n_
+  let mut m_ := self.m_
+  let mut adj := self.adj
+  let mut shortest_path_dist := self.shortest_path_dist
+  let mut shortest_path_parent := self.shortest_path_parent
+  let t1 := n_
+  Cpp.tickN t1.toNat
+  let mut visited : (Array Bool) := (Cpp.replicate t1 false)
+  let t2 := n_
+  Cpp.tickN t2.toNat
+  let mut ord : (Array Int) := (Cpp.replicate t2 0)
+  let t3 := n_
+  Cpp.tickN t3.toNat
+  let mut low : (Array Int) := (Cpp.replicate t3 0)
+  let mut articulation_points : (Array Int) := ([] : List Int).toArray
+  let mut bridges : (Array (Int × Int)) := ([] : List (Int × Int)).toArray
+  let mut visit_count : Int := 0
+  for i in (Cpp.range 0 n_) do
+    Cpp.tick
+    if (!(Cpp.get visited i)) then
+      let t4 ← cp.ListGraph.lowlink_dfs (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)) i (-1) visited ord low articulation_points bridges visit_count
+      visited := t4.1
+      ord := t4.2.1
+      low := t4.2.2.1
+      articulation_points := t4.2.2.2.1
+      bridges := t4.2.2.2.2.1
+      visit_count := t4.2.2.2.2.2
+  Cpp.tickN (Cpp.sortCost articulation_points.size)
+  articulation_points := (Cpp.sort articulation_points)
+  Cpp.tickN (Cpp.sortCost bridges.size)
+  bridges := (Cpp.sortLex bridges)
+  return ((articulation_points, bridges), (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
 
 end Proofs.Cpp.Gen

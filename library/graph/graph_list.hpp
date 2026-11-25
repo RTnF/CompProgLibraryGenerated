@@ -46,6 +46,41 @@ template <class Cost = long long, class E = Edge<Cost>> class ListGraph {
     }
   }
 
+  // lowlink: the original recursive lambda `dfs`
+  void lowlink_dfs(int v, int parent, std::vector<bool> &visited, std::vector<int> &ord, std::vector<int> &low,
+                   std::vector<int> &articulation_points, std::vector<std::pair<int, int>> &bridges,
+                   int &visit_count) const {
+    visited[v] = true;
+    low[v] = ord[v] = visit_count++;
+    bool is_articular = false;
+    bool skipped_parent_edge = false;
+    int child_count = 0;
+    for (auto &e : adj[v]) {
+      if (!visited[e.to]) {
+        child_count++;
+        lowlink_dfs(e.to, v, visited, ord, low, articulation_points, bridges, visit_count);
+        low[v] = std::min(low[v], low[e.to]);
+        if (parent != -1 && ord[v] <= low[e.to]) {
+          is_articular = true;
+        }
+        if (ord[v] < low[e.to]) {
+          bridges.emplace_back(std::min(v, e.to), std::max(v, e.to));
+        }
+      } else if (e.to == parent && !skipped_parent_edge) {
+        // Ignore one reverse tree edge. Additional edges to the parent are back edges.
+        skipped_parent_edge = true;
+      } else {
+        low[v] = std::min(low[v], ord[e.to]);
+      }
+    }
+    if (parent == -1 && child_count >= 2) {
+      is_articular = true;
+    }
+    if (is_articular) {
+      articulation_points.emplace_back(v);
+    }
+  }
+
 public:
   static const Cost UNREACHABLE;
   static const Cost NEGATIVE_CYCLE;
@@ -161,6 +196,23 @@ public:
       }
     }
     return mst_dist;
+  }
+
+  // 関節点・橋 (experiments/library/cpp/graph/lowlink.hpp)
+  std::pair<std::vector<int>, std::vector<std::pair<int, int>>> lowlink() {
+    using P = std::pair<int, int>;
+    std::vector<bool> visited(n_, false);
+    std::vector<int> ord(n_, 0), low(n_, 0), articulation_points;
+    std::vector<P> bridges;
+    int visit_count = 0;
+    for (int i = 0; i < n_; ++i) {
+      if (!visited[i]) {
+        lowlink_dfs(i, -1, visited, ord, low, articulation_points, bridges, visit_count);
+      }
+    }
+    std::sort(articulation_points.begin(), articulation_points.end());
+    std::sort(bridges.begin(), bridges.end());
+    return {articulation_points, bridges};
   }
 
   template <class C_, class E_>

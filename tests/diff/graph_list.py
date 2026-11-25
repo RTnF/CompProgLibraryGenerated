@@ -89,4 +89,13 @@ for _ in range(60):
         a, b = rng.randrange(n), rng.randrange(n)
         lines.append(f"do ListGraph.add_bidirectional_edge@1 {k} {a} {b} {rng.randint(0, 40)}")
     lines.append(f"do ListGraph.prim {k}")
+# Lowlink on undirected multigraphs, including isolated vertices and loops.
+for _ in range(300):
+    n = rng.randrange(9)
+    k = new(f"new ListGraph.init_int {n}")
+    for _ in range(rng.randrange(4 * n + 1)):
+        a, b = rng.randrange(n), rng.randrange(n)
+        lines.append(f"do ListGraph.add_bidirectional_edge@0 {k} {a} {b}")
+    lines.append(f"do ListGraph.lowlink {k}")
+    lines.append(f"do ListGraph.lowlink {k}")
 print("\n".join(lines))

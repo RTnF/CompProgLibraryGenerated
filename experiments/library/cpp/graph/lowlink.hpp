@@ -23,6 +23,7 @@ pair<vector<int>, vector<pair<int, int>>> ListGraph<Cost, E>::lowlink() {
     visited[v] = true;
     low[v] = ord[v] = visit_count++;
     bool is_articular = false;
+    bool skipped_parent_edge = false;
     int child_count = 0;
     for (auto &e : adj[v]) {
       if (!visited[e.to]) {
@@ -35,7 +36,10 @@ pair<vector<int>, vector<pair<int, int>>> ListGraph<Cost, E>::lowlink() {
         if (ord[v] < low[e.to]) {
           bridges.emplace_back(min(v, e.to), max(v, e.to));
         }
-      } else if (e.to != parent) {
+      } else if (e.to == parent && !skipped_parent_edge) {
+        // Skip one reverse tree edge. Other edges to the parent are back edges.
+        skipped_parent_edge = true;
+      } else {
         low[v] = min(low[v], ord[e.to]);
       }
     }

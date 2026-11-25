@@ -33,6 +33,8 @@
 | 2026-11-18 | `experiments/library/cpp/string/rolling_hash.hpp` の `RollingHash`（[`build`](../../experiments/library/cpp/string/rolling_hash.hpp#L58)・[`hash_all`](../../experiments/library/cpp/string/rolling_hash.hpp#L67)）と `SimpleRollingHash`（[`build`](../../experiments/library/cpp/string/rolling_hash.hpp#L201)・[`hash_all`](../../experiments/library/cpp/string/rolling_hash.hpp#L210)）で、要素をハッシュに足す箇所 | `{1, -1}` の末尾が `{-1}` かを `ends_with` で調べると、両クラスが不一致を返す | `-1` を符号なしの数として扱うと大きな正の数になる。足し算が型の上限を超えて一周する場合があり、列の一部から取り出したハッシュと、その部分だけを直接計算したハッシュが異なる | 負の要素には、ハッシュを計算する前に `2^61 - 1` を足す。たとえば `-1` は、同じ余りを表す `2^61 - 2` に置き換えてからハッシュに足す | [両クラスでの再現テスト](../../tests/rolling_hash.cpp#L50)と[負の要素を変換する Lean 証明](../../Proofs/Cpp/RollingHash.lean#L61) |
 | 2026-11-25 | `experiments/library/cpp/graph/warshall_floyd.hpp` の `MatrixGraph::warshall_floyd` の親の行列の初期化（[`shortest_path_parent[i][i] = i`](../../experiments/library/cpp/graph/warshall_floyd.hpp#L16)） | `add_edge(0, 1, 5)` の後の `get_shortest_path(0, 1)` が空を返す。`from != to` のすべての組で経路が空になる | 親を対角だけ `i`、他を `-1` で初期化していたため、直接の辺 `i → j` の親が `-1` のまま残り、経路の復元が `-1` に達する | 辺のある組（`mat[i][j] < UNREACHABLE`）の親も `i` にする | [経路が実在の辺をたどり重みが距離に等しいことの比較テスト](../../tests/graph_matrix.cpp#L70)と[経路の重みが距離以下であることの Lean 証明](../../Proofs/Cpp/GraphMatrix.lean) |
 
+| 2026-11-25 | `experiments/library/cpp/graph/lowlink.hpp` の `ListGraph::lowlink` | 2頂点を結ぶ辺が2本あると、どちらを1本取り除いても連結なのに橋 `(0, 1)` を返す | DFSで親への戻り辺をすべて無視していた | 親への辺を1本だけDFS木の辺の逆向きとして飛ばし、残りの辺でlowを更新する | [辺を1本ずつ除いて連結成分数を比較する原本の回帰テスト](../../tests/imports/lowlink_multigraph.cpp) |
+
 ## 付記（直したのではなく、前提に含めたもの）
 
 次は元のコードが持つ性質で、直さずに前提として明記した（`docs/experiments_findings.md`）: `GroupMul::inv()` は整数で `±1` 以外だと 0、`MonoidMul::op` と `CumulativeSum` は符号付きの桁あふれが未定義動作。

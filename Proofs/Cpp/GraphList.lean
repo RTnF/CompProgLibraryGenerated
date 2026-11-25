@@ -5,6 +5,7 @@ import Proofs.Math.ParentChain
 import Proofs.Math.ListDijkstraMath
 import Proofs.Math.ListBellmanFordMath
 import Proofs.Math.ListPrimMath
+import Proofs.Cpp.ListLowlinkCorrect
 
 /-! # `ListGraph<Cost, E>` (library/graph/graph_list.hpp)
 
@@ -1088,5 +1089,39 @@ theorem prim_spec {E : Type} [Inhabited E] [Field "to" E Int] [Field "cost" E In
   case vc11.post.except => simp
 
 end Prim
+
+end Proofs.Cpp.GraphList
+
+namespace Proofs.Cpp.GraphList
+
+open Proofs.Cpp.ListLowlink Proofs.LowlinkInv Proofs.LowlinkMultigraph
+
+/-- The live C++ data are three vertex arrays, the two output buffers, and one constant-size frame
+per active vertex. This counts model slots and frames, with no accounting for object lifetime. -/
+theorem lowlink_workspace_slots {E : Type} [Inhabited E] [Field "to" E Int] {adj : Array (Array E)}
+    {n : Nat} {st : St} {state : DfsState}
+    (I : MInv n (rowHeads adj n) (rowEnds adj n) st)
+    (A : VisitArrays n st state) (hp : state.points.size ≤ n) (hb : state.bridges.size ≤ n) :
+    state.seen.size + state.order.size + state.low.size + state.points.size + state.bridges.size + st.sp ≤
+      6 * n := by
+  have hs := Nat.le_trans I.sp_le I.vis_len_le
+  rw [A.seenSize, A.orderSize, A.lowSize]
+  omega
+
+/-- Complete result and work contract for the translated original API. -/
+theorem lowlink_spec {Cost E : Type} [Inhabited E] [Field "to" E Int] (g : cp.ListGraph Cost E)
+    (edges : List Edge) (H : RowsRepresent edges g.n_.toNat (listTargets g.adj))
+    (valid : Valid g.adj g.n_.toNat) (hsmall : g.n_.toNat ≤ Cpp.fuel) (t0 : Nat) :
+    let n := g.n_.toNat
+    let m := arcCount g.adj n
+    let k := min n m
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.lowlink g
+    ⦃⇓ r c => ⌜r.2 = g ∧ ExactResults edges n r.1.1 r.1.2 ∧
+      r.1.1.size ≤ k ∧ r.1.2.size ≤ k ∧ c ≤ t0 + 1 + 6 * n + 2 * m + 2 * sortCost k⌝⦄ := by
+  obtain ⟨r, c, run, same, result⟩ := run_of_triple (lowlink_correct g edges H valid hsmall t0)
+  obtain ⟨r', c', run', _, points, bridges, work⟩ := run_of_triple (lowlink_work g hsmall valid t0)
+  have he := Option.some.inj (run.symm.trans run')
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj he
+  exact triple_of_run r c run ⟨same, result, points, bridges, work⟩
 
 end Proofs.Cpp.GraphList
