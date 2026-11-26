@@ -28,6 +28,10 @@ class Unsupported(Exception):
     pass
 
 
+class RangeMutation(Unsupported):
+    pass
+
+
 # --------------------------------------------------------------------------------------------- types
 
 @dataclass(frozen=True)
@@ -456,6 +460,7 @@ class Sig:
     constraints: list[str] = field(default_factory=list)
     uses_globals: bool = False
     initializes_globals: bool = False
+    preserves_receiver: bool = False
 
     @property
     def mut_refs(self):
@@ -468,7 +473,7 @@ class Sig:
         if self.ret.kind != "void":
             out.append("ret")
         out += [p[0] for p in self.mut_refs]
-        if self.owner and not self.is_const and not self.is_static:
+        if self.owner and not self.is_const and not self.is_static and not self.preserves_receiver:
             out.append("self")
         if self.uses_globals:
             out.append("@globals")
@@ -1845,11 +1850,11 @@ class Fn:
         sig = self.pick(sigs, args, name)
         if sig.is_static:
             return self.call_sig(sig, None, args, pre)
-        if (not self.sig.is_const or self.sig.is_ctor) and not sig.is_const:
-            return self.call_sig(sig, "self", args, pre)
-        if sig.is_const:
+        if self.sig.is_const and not self.sig.is_ctor and not sig.is_const:
+            raise Unsupported(f"non-const member {name} from a const member")
+        if sig.is_const or sig.preserves_receiver:
             return self.call_sig(sig, self.self_value(), args, pre)
-        raise Unsupported(f"non-const member {name} from a const member")
+        return self.call_sig(sig, "self", args, pre)
 
     def method_call(self, base, name, args, pre):
         raw = strip(base)
@@ -1899,7 +1904,7 @@ class Fn:
             info = self.tr.classes[bty.name]
             sigs = [s for s in info.methods if s.cpp_name == name and not s.is_ctor]
             sig = self.pick(sigs, args, f"{bty.name}::{name}")
-            if sig.is_const:
+            if sig.is_const or sig.preserves_receiver:
                 return self.call_sig(sig, bt, args, pre, owner_ty=bty)
             if strip(base).get("kind") in ("CXXConstructExpr", "CXXTemporaryObjectExpr", "CXXUnresolvedConstructExpr"):
                 # A temporary receiver is consumed here. Its updated state is not
@@ -2160,6 +2165,8 @@ class Fn:
         if sig.is_ctor:
             return values["ret"], expected
         if receiver == "self":
+            if self.sig.preserves_receiver:
+                raise Unsupported("a receiver-preserving member calls a mutating member on this")
             for f, _, _ in self.cls.fields:
                 pre.append(f"{self.field_names[f]} := {values['self']}.{lean_name(f)}")
         elif isinstance(receiver, tuple):
@@ -2253,6 +2260,8 @@ class Fn:
 
     def assign_lines(self, target, value):
         root, path, _, _ = target
+        if self.sig.preserves_receiver and root in self.field_names.values():
+            raise Unsupported("a receiver-preserving member writes a field of this")
         return [f"{root} := {self.update(root, path, value)}"]
 
     def update(self, current, path, value):
@@ -3130,11 +3139,11 @@ class Fn:
                 if name is None and callee.get("kind") == "UnresolvedMemberExpr":
                     name = self.tr.member_token(callee)
                 on_this = strip(inner(callee)[0]).get("kind") == "CXXThisExpr"
-                const_member = on_this and self.cls is not None and any(
+                read_only_member = on_this and self.cls is not None and any(
                     m.cpp_name == name for m in self.cls.methods) and all(
-                    m.is_const for m in self.cls.methods if m.cpp_name == name)
-                if const_member:
-                    # a const member function of this class changes only its reference arguments
+                    m.is_const or m.preserves_receiver for m in self.cls.methods if m.cpp_name == name)
+                if read_only_member:
+                    # A receiver-preserving member can still change its reference arguments.
                     refs = set()
                     for m in self.cls.methods:
                         if m.cpp_name == name:
@@ -3326,7 +3335,7 @@ class Fn:
         changed = self.assigned_names(body)
         read = {r.removesuffix(".size") for r in self.read_names(rng_init)}
         if self.conflicts(read, changed):
-            raise Unsupported("range for over a vector the body changes")
+            raise RangeMutation("range for over a vector the body changes")
         if loop.get("kind") == "DecompositionDecl":
             names = [b["name"] for b in inner(loop) if b.get("kind") == "BindingDecl"]
             if elem.kind != "pair" or len(names) != 2:
@@ -4162,6 +4171,7 @@ class Translator:
                 index_declarations(child)
         for node in self.decls:
             index_declarations(node)
+        self.check_recursive_receivers(sigs)
         built = {}
         for sig, info in sigs:
             built[id(sig)] = self.build_function(sig, info)
@@ -4256,6 +4266,29 @@ class Translator:
             lines.append(f"  {lean_name(fname)} : {lean_type(fty)}")
         lines.append("  deriving Inhabited")
         return "\n".join(lines) + "\n"
+
+    def check_recursive_receivers(self, sigs):
+        """Allow private recursion to read its receiver while keeping mutable C++ overload resolution.
+
+        Existing translations keep their ABI. Retry only when the conservative receiver writeback
+        prevents a range loop. The retry rejects every field assignment or mutating call on this.
+        """
+        for sig, info in sigs:
+            if info is None or sig.public or sig.is_const or sig.is_static or sig.is_ctor:
+                continue
+            if sum(m.cpp_name == sig.cpp_name for m in info.methods) != 1:
+                continue
+            try:
+                self.build_function(sig, info)
+            except RangeMutation:
+                sig.preserves_receiver = True
+                try:
+                    fn = self.build_function(sig, info)
+                    sig.preserves_receiver = any(callee is sig for callee in fn.callees)
+                except Unsupported:
+                    sig.preserves_receiver = False
+            except Unsupported:
+                pass  # The main build reports unsupported source in the original build order.
 
     def build_function(self, sig: Sig, info: ClassInfo | None) -> Fn:
         fn = Fn(self, sig, info)
@@ -4416,7 +4449,7 @@ class Translator:
                     fn.emit(f"let mut {fn.field_names[fname]} : {lean_type(fty)} := {value}")
             else:
                 for fname, fty, _ in info.fields:
-                    mut = "mut " if not sig.is_const else ""
+                    mut = "mut " if not sig.is_const and not sig.preserves_receiver else ""
                     fn.emit(f"let {mut}{fn.field_names[fname]} := self.{lean_name(fname)}")
             for fname, fty, _ in info.fields:
                 fn.scopes[0][fname] = fty

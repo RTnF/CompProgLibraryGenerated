@@ -163,6 +163,74 @@ static void test_prim() {
   }
 }
 
+struct CycleEdge {
+  int from, to, label;
+  CycleEdge(int f, int t, int l = 0) : from(f), to(t), label(l) {}
+  CycleEdge(const CycleEdge &) = default;
+  CycleEdge(CycleEdge &&) = default;
+  CycleEdge(CycleEdge &edge) : from(edge.from), to(edge.to), label(edge.label + 100) {}
+  CycleEdge &operator=(CycleEdge &&) = default;
+  CycleEdge &operator=(CycleEdge &edge) {
+    from = edge.from;
+    to = edge.to;
+    label = edge.label + 10;
+    return *this;
+  }
+};
+
+static void test_find_cycle_directed() {
+  // The two non-const operations above observe the original edge reference qualification.
+  cp::ListGraph<double, CycleEdge> custom(3);
+  custom[0].emplace_back(0, 1, 7);
+  custom[1].emplace_back(1, 0, 8);
+  custom[2].emplace_back(2, 2, 9);
+  auto cycle = custom.find_cycle_directed();
+  assert(cycle.size() == 2);
+  assert(cycle[0].from == 0 && cycle[0].to == 1 && cycle[0].label == 117);
+  assert(cycle[1].from == 1 && cycle[1].to == 0 && cycle[1].label == 108);
+
+  cp::ListGraph<int> before(1);
+  before.add_edge(0, 0);
+  const int previous = before[0][0].id;
+  cp::ListGraph<int> empty;
+  assert(empty.find_cycle_directed().empty());
+  empty.add_node();
+  empty.add_edge(0, 0, -2);
+  assert(empty[0][0].id == previous + 2);
+  const auto loop = empty.find_cycle_directed();
+  assert(loop.size() == 1 && loop[0].id == previous + 2 && loop[0].cost == -2);
+
+  std::mt19937 rng(20261128);
+  for (int iter = 0; iter < 300; ++iter) {
+    int n = rng() % 9;
+    cp::ListGraph<> g(n);
+    std::vector<std::vector<bool>> reach(n, std::vector<bool>(n, false));
+    for (int i = 0, m = rng() % (4 * n + 1); i < m; ++i) {
+      int from = rng() % n, to = rng() % n;
+      g.add_edge(from, to, static_cast<long long>(i) - 20);
+      reach[from][to] = true;
+    }
+    for (int k = 0; k < n; ++k)
+      for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j) reach[i][j] = reach[i][j] || (reach[i][k] && reach[k][j]);
+    bool has_cycle = false;
+    for (int i = 0; i < n; ++i) has_cycle = has_cycle || reach[i][i];
+    const auto result = g.find_cycle_directed();
+    assert(result.empty() == !has_cycle);
+    std::vector<bool> seen(n);
+    for (std::size_t i = 0; i < result.size(); ++i) {
+      const auto &edge = result[i];
+      assert(0 <= edge.from && edge.from < n && !seen[edge.from]);
+      seen[edge.from] = true;
+      assert(edge.to == result[(i + 1) % result.size()].from);
+      assert(std::any_of(g[edge.from].begin(), g[edge.from].end(), [&](const auto &original) {
+        return std::tie(edge.from, edge.to, edge.id, edge.cost) ==
+               std::tie(original.from, original.to, original.id, original.cost);
+      }));
+    }
+  }
+}
+
 int main() {
   // ListGraph<long long, Edge<long long>>: the default arguments
   cp::ListGraph<> g(3);
@@ -208,6 +276,7 @@ int main() {
   test_dijkstra();
   test_bellman_ford();
   test_prim();
+  test_find_cycle_directed();
   // The default cost is unnecessary for lowlink, and the edge type only needs a target.
   struct Target {
     int to;

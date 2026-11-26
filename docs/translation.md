@@ -34,6 +34,7 @@
 - `if`/`else`、`return`、`break`、`continue`、局所変数の宣言（`let mut`）、代入、複合代入、`++`/`--`（文としてのみ）、`assert`（`Cpp.check`、失敗で `none`）、三項演算子（分岐に呼び出しを含まないもの）。
 - 呼び出しは評価順に `let t ← f ...` として前に出す。`&&`/`||` の右辺と三項演算子の分岐の中の呼び出しは拒否する。
 - 自分自身を直接呼ぶ再帰は、燃料引数つきの `name_rec (__fuel : Nat) ...` に翻訳する。本体は `match __fuel with | 0 => failure | __fuel + 1 => do ...` で、再帰呼び出しは `name_rec __fuel ...` になる。関数 `name` 自体は `name_rec Cpp.fuel ...` とする。燃料が尽きると `none`（失敗）なので、成功を述べる定理は再帰の深さが `Cpp.fuel` 未満であることも示す。相互再帰は拒否する（定義の順序は呼び出し先が先）。
+- 同名の別宣言がない非公開の非 const メンバーでは、通常のレシーバー書き戻しで範囲 for の翻訳が止まる場合、レシーバーを読み取り専用にしたモデルで再検査する。直接再帰を確認し、フィールドへの代入・可変参照による書き戻し・`this` へのレシーバーを書き換える呼び出しが生成されれば拒否する。引数の可変参照は通常どおり書き戻し、範囲 for の走査対象と重なる更新も拒否する。C++ では非 const のオーバーロード選択を保つ。回帰は `tests/test_lean_model_recursive_receivers.py`。
 - 代入の連鎖 `a = b = c` は `b = c; a = b`（代入式の値は代入後の左辺）として翻訳する。
 - `std::iota(v.begin(), v.end(), x)` は `Cpp.iota`（`int` の要素、要素ごとに 1 手）、`std::stable_sort(v.begin(), v.end(), [&](E a, E b) { return e; })` は `Cpp.stableSortBy`（安定なマージソート、`sortCost n` 手）に翻訳する。比較のラムダは 2 引数で本体が 1 つの `return` の純粋な式（呼び出しや手数を含まない）に限る。`std::lower_bound(v.begin(), v.end(), x) - v.begin()` は `Cpp.lowerBound`（`x` 未満でない最初の位置。C++ と同じく範囲が `e < x` で分割されていることが前提）、`log2 n + 1` 手に翻訳する。
 - `std::reverse(v.begin(), v.end())` は `Array.reverse`（要素ごとに 1 手）に翻訳する。

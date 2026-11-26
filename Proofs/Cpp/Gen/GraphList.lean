@@ -107,6 +107,51 @@ def cp.ListGraph.lowlink_dfs_rec {Cost : Type} {E : Type} [Inhabited E] [Cpp.Fie
 def cp.ListGraph.lowlink_dfs {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "to" E Int] (self : (cp.ListGraph Cost E)) (v : Int) (parent : Int) (visited : (Array Bool)) (ord : (Array Int)) (low : (Array Int)) (articulation_points : (Array Int)) (bridges : (Array (Int × Int))) (visit_count : Int) : Cpp.M ((Array Bool) × (Array Int) × (Array Int) × (Array Int) × (Array (Int × Int)) × Int) :=
   cp.ListGraph.lowlink_dfs_rec Cpp.fuel self v parent visited ord low articulation_points bridges visit_count
 
+def cp.ListGraph.find_cycle_dfs_rec {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "from" E Int] [Cpp.Field "to" E Int] (__fuel : Nat) (self : (cp.ListGraph Cost E)) (node : Int) (visited : (Array Int)) (in_ : (Array E)) (cycle : (Array E)) : Cpp.M ((Array Int) × (Array E) × (Array E)) :=
+  match __fuel with
+  | 0 => failure
+  | __fuel + 1 => do
+      Cpp.tick
+      let n_ := self.n_
+      let m_ := self.m_
+      let adj := self.adj
+      let shortest_path_dist := self.shortest_path_dist
+      let shortest_path_parent := self.shortest_path_parent
+      let mut visited := visited
+      let mut in_ := in_
+      let mut cycle := cycle
+      visited := (Cpp.set visited node 1)
+      for e in (Cpp.get adj node) do
+        Cpp.tick
+        if (decide ((Cpp.size cycle) ≠ 0)) then
+          break
+        if (!(decide ((Cpp.get visited (Cpp.Field.get (member := "to") e)) ≠ 0))) then
+          in_ := (Cpp.set in_ (Cpp.Field.get (member := "to") e) e)
+          let t1 ← cp.ListGraph.find_cycle_dfs_rec __fuel (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)) (Cpp.Field.get (member := "to") e) visited in_ cycle
+          visited := t1.1
+          in_ := t1.2.1
+          cycle := t1.2.2
+        else
+          if (decide ((Cpp.get visited (Cpp.Field.get (member := "to") e)) = 1)) then
+            Cpp.tick
+            cycle := (cycle.push e)
+            do
+              let mut v : Int := node
+              for _ in Cpp.forever do
+                Cpp.tick
+                if !(decide (v ≠ (Cpp.Field.get (member := "to") e))) then break
+                Cpp.tick
+                cycle := (cycle.push (Cpp.get in_ v))
+                v := (Cpp.Field.get (member := "from") (Cpp.get in_ v))
+            Cpp.tickN cycle.size
+            cycle := cycle.reverse
+            return (visited, in_, cycle)
+      visited := (Cpp.set visited node 2)
+      return (visited, in_, cycle)
+
+def cp.ListGraph.find_cycle_dfs {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "from" E Int] [Cpp.Field "to" E Int] (self : (cp.ListGraph Cost E)) (node : Int) (visited : (Array Int)) (in_ : (Array E)) (cycle : (Array E)) : Cpp.M ((Array Int) × (Array E) × (Array E)) :=
+  cp.ListGraph.find_cycle_dfs_rec Cpp.fuel self node visited in_ cycle
+
 def cp.ListGraph.UNREACHABLE {Cost : Type} {E : Type} [Cpp.NumericTraits "Cost" Cost] [Cpp.ShiftInt Cost] : Cpp.M Cost := do
   Cpp.tick
   return (Cpp.ShiftInt.shr (Cpp.NumericTraits.maximum (tag := "Cost") (α := Cost)) 2)
@@ -417,5 +462,31 @@ def cp.ListGraph.lowlink {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "to" 
   Cpp.tickN (Cpp.sortCost bridges.size)
   bridges := (Cpp.sortLex bridges)
   return ((articulation_points, bridges), (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
+
+def cp.ListGraph.find_cycle_directed {Cost : Type} {E : Type} [Cpp.ConstructState E] [Cpp.Construct E (Int × Int × Unit)] [Inhabited E] [Cpp.Field "from" E Int] [Cpp.Field "to" E Int] (self : (cp.ListGraph Cost E)) (cppConstructState : (Cpp.ConstructState.State E)) : Cpp.M ((Array E) × (Cpp.ConstructState.State E) × (cp.ListGraph Cost E)) := do
+  Cpp.tick
+  let mut n_ := self.n_
+  let mut m_ := self.m_
+  let mut adj := self.adj
+  let mut shortest_path_dist := self.shortest_path_dist
+  let mut shortest_path_parent := self.shortest_path_parent
+  let mut cppConstructState := cppConstructState
+  let t1 := n_
+  Cpp.tickN t1.toNat
+  let mut visited : (Array Int) := (Cpp.replicate t1 0)
+  let t2 ← Cpp.Construct.make (E := E) (Args := Int × Int × Unit) ((-1), (-1), ()) cppConstructState
+  cppConstructState := t2.2
+  let t3 := n_
+  Cpp.tickN t3.toNat
+  let mut in_ : (Array E) := (Cpp.replicate t3 t2.1)
+  let mut ret : (Array E) := ([] : List E).toArray
+  for i in (Cpp.range 0 n_) do
+    Cpp.tick
+    if (!(decide ((Cpp.get visited i) ≠ 0))) then
+      let t4 ← cp.ListGraph.find_cycle_dfs (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)) i visited in_ ret
+      visited := t4.1
+      in_ := t4.2.1
+      ret := t4.2.2
+  return (ret, cppConstructState, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
 
 end Proofs.Cpp.Gen

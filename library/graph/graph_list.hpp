@@ -81,6 +81,28 @@ template <class Cost = long long, class E = Edge<Cost>> class ListGraph {
     }
   }
 
+  // find_cycle_directed: the original recursive lambda `dfs`
+  void find_cycle_dfs(int node, std::vector<char> &visited, std::vector<E> &in, std::vector<E> &cycle) {
+    visited[node] = 1;
+    for (auto &&e : adj[node]) {
+      if (cycle.size()) {
+        break;
+      }
+      if (!visited[e.to]) {
+        in[e.to] = e;
+        find_cycle_dfs(e.to, visited, in, cycle);
+      } else if (visited[e.to] == 1) {
+        cycle.emplace_back(e);
+        for (int v = node; v != e.to; v = in[v].from) {
+          cycle.emplace_back(in[v]);
+        }
+        std::reverse(cycle.begin(), cycle.end());
+        return;
+      }
+    }
+    visited[node] = 2;
+  }
+
 public:
   static const Cost UNREACHABLE;
   static const Cost NEGATIVE_CYCLE;
@@ -213,6 +235,19 @@ public:
     std::sort(articulation_points.begin(), articulation_points.end());
     std::sort(bridges.begin(), bridges.end());
     return {articulation_points, bridges};
+  }
+
+  // サイクルを見つける (experiments/library/cpp/graph/find_cycle.hpp)
+  std::vector<E> find_cycle_directed() {
+    std::vector<char> visited(n_, 0);
+    std::vector<E> in(n_, {-1, -1});
+    std::vector<E> ret;
+    for (int i = 0; i < n_; i++) {
+      if (!visited[i]) {
+        find_cycle_dfs(i, visited, in, ret);
+      }
+    }
+    return ret;
   }
 
   template <class C_, class E_>

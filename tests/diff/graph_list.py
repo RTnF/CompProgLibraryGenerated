@@ -98,4 +98,17 @@ for _ in range(300):
         lines.append(f"do ListGraph.add_bidirectional_edge@0 {k} {a} {b}")
     lines.append(f"do ListGraph.lowlink {k}")
     lines.append(f"do ListGraph.lowlink {k}")
+# Directed cycles retain each edge payload and advance the shared constructor state.
+for _ in range(300):
+    n = rng.randrange(12)
+    k = new(f"new ListGraph.init_int {n}")
+    for _ in range(rng.randrange(4 * n + 1)):
+        a, b = rng.randrange(n), rng.randrange(n)
+        lines.append(f"do ListGraph.add_edge@1 {k} {a} {b} {rng.randrange(-50, 50)}")
+    lines.append(f"do ListGraph.find_cycle_directed {k}")
+    lines.append(f"do ListGraph.find_cycle_directed {k}")
+    lines.append(f"do ListGraph.add_node {k}")
+    lines.append(f"do ListGraph.add_edge@0 {k} {n} {n}")
+    lines.append(f"do ListGraph.op_index {k} {n}")
+    lines.append(f"do ListGraph.find_cycle_directed {k}")
 print("\n".join(lines))

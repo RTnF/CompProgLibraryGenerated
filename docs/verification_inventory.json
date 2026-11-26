@@ -6273,48 +6273,48 @@
           "kind": "CXXMethodDecl",
           "line": 8,
           "declaration": "find_cycle_directed 'vector<E> ()'",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
+          "template_instantiation_review": "generic_model",
+          "verification_target": "library/graph/graph_list.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": true
           }
         },
         {
           "kind": "FunctionTemplateDecl",
           "line": 12,
           "declaration": "operator()",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
+          "template_instantiation_review": "generic_model",
+          "verification_target": "library/graph/graph_list.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": true
           }
         },
         {
           "kind": "CXXMethodDecl",
           "line": 12,
           "declaration": "operator() 'auto (auto &, int) const -> void' inline",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
+          "template_instantiation_review": "generic_model",
+          "verification_target": "library/graph/graph_list.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": true
           }
         }
       ],

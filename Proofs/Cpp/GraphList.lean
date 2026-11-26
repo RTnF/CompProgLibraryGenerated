@@ -1,4 +1,5 @@
 import Proofs.Cpp.Gen.GraphList
+import Proofs.Cpp.ListFindCycleForest
 import Proofs.Cpp.GraphListEdge
 import Proofs.Cpp.Lib.Basic
 import Proofs.Math.ParentChain
@@ -1123,5 +1124,50 @@ theorem lowlink_spec {Cost E : Type} [Inhabited E] [Field "to" E Int] (g : cp.Li
   have he := Option.some.inj (run.symm.trans run')
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj he
   exact triple_of_run r c run ⟨same, result, points, bridges, work⟩
+
+end Proofs.Cpp.GraphList
+
+namespace Proofs.Cpp.GraphList
+
+open Proofs.Cpp.ListFindCycle
+
+theorem find_cycle_directed_spec {Cost E : Type} [Inhabited E] [Field "from" E Int] [Field "to" E Int]
+    [ConstructState E] [Construct E (Int × Int × Unit)]
+    (g : cp.ListGraph Cost E) (valid : ValidGraph g) (hsmall : g.adj.size < Cpp.fuel)
+    (st st' : ConstructState.State E) (sentinel : E) (t0 tc : Nat)
+    (constructorRun : (Construct.make (E := E) ((-1 : Int), (-1 : Int), ()) st).run
+      (t0 + 1 + g.n_.toNat) = some ((sentinel, st'), tc)) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.find_cycle_directed g st
+    ⦃⇓ r c => ⌜r.2.1 = st' ∧ r.2.2 = g ∧
+      (r.1.size = 0 ∧ Acyclic g ∨ CycleWitness g r.1.toList) ∧
+      r.1.size ≤ g.adj.size ∧ c ≤ tc + 9 * g.adj.size + 2 * arcCount g + 5⌝⦄ := by
+  obtain ⟨cycle, t', run, result, length, work⟩ :=
+    directed_cycle_spec g valid hsmall st st' sentinel t0 tc constructorRun
+  exact triple_of_run (cycle, st', g) t' run ⟨rfl, rfl, result, length, work⟩
+
+theorem find_cycle_directed_default_spec {T : Type} [One T] [Inhabited T]
+    (g : cp.ListGraph T (cp.Edge T)) (valid : ValidGraph g) (hsmall : g.adj.size < Cpp.fuel)
+    (st : cp.GlobalState_0b9f55bc762329ec T "Edge") (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.find_cycle_directed g st
+    ⦃⇓ r c => ⌜r.2.1.Edge_next_id = st.Edge_next_id + 1 ∧ r.2.2 = g ∧
+      (r.1.size = 0 ∧ Acyclic g ∨ CycleWitness g r.1.toList) ∧
+      r.1.size ≤ g.adj.size ∧ c ≤ t0 + 10 * g.adj.size + 2 * arcCount g + 7⌝⦄ := by
+  have hctor : (Construct.make (E := cp.Edge T) ((-1 : Int), (-1 : Int), ()) st).run
+      (t0 + 1 + g.n_.toNat) =
+    some ((⟨-1, -1, st.Edge_next_id, 1⟩, { Edge_next_id := st.Edge_next_id + 1 }),
+      t0 + 1 + g.n_.toNat + 1) := rfl
+  obtain ⟨cycle, t', run, result, length, work⟩ := directed_cycle_spec g valid hsmall _ _ _ t0 _ hctor
+  have hsize : g.n_.toNat = g.adj.size := by simp [valid.size_eq]
+  refine triple_of_run _ t' run ⟨rfl, rfl, result, length, ?_⟩
+  omega
+
+/-- Count the colour and parent buffers, the at-most-one cycle buffer, and the live recursive frames. -/
+theorem find_cycle_workspace_slots {Cost E : Type} [Inhabited E] [Field "to" E Int]
+    (g : cp.ListGraph Cost E) (st : Proofs.FindCycleInv.FS) (visited : Array Int) (parents cycle : Array E)
+    (inv : Invariant g st) (active : Active g visited parents st) (cycleLength : cycle.size ≤ g.adj.size) :
+    visited.size + parents.size + cycle.size + st.sp ≤ 4 * g.adj.size := by
+  have hs := inv.sp_le
+  rw [active.visited_size, active.parents_size]
+  omega
 
 end Proofs.Cpp.GraphList
