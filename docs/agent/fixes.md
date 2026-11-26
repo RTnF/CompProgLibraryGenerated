@@ -41,3 +41,7 @@
 ## 付記（直したのではなく、前提に含めたもの）
 
 次は元のコードが持つ性質で、直さずに前提として明記した（`docs/experiments_findings.md`）: `GroupMul::inv()` は整数で `±1` 以外だと 0、`MonoidMul::op` と `CumulativeSum` は符号付きの桁あふれが未定義動作。
+| 2026-11-27 | `experiments/library/cpp/set/set.hpp` の `TreeSet::add` | 同じキー7を2回加えると `size()==2` になる | 既存キーを調べず節点と件数を追加した | 一意のキーを保つ順序付き集合を使う | `tests/imports/tree_set_source.cpp` と `Proofs/Cpp/TreeSet.lean` の `add_spec` |
+| 2026-11-27 | 同ファイルの `TreeSet::remove` | 7だけを含む集合から8を削除すると、UBSan が null 節点へのメンバーアクセスを検出する | 存在しないキーを再帰探索して空の子を読み出した | 不在なら集合を保つ削除操作を使う | `tests/imports/tree_set_source.cpp` と `Proofs/Cpp/TreeSet.lean` の `remove_spec` |
+| 2026-11-27 | 同ファイルの `TreeSet` の節点所有とコピー | 削除後もキーが破棄されず、集合のスコープ終了後にも生存キーが残る。2キーを持つ集合のコピーから子を削除すると、元の集合の件数と探索結果が一致しなくなる | 生ポインタの節点を解放する処理がなく、暗黙コピーがポインタを共有した | 容器が要素を所有し、コピーが独立した要素を保持する | `tests/imports/tree_set_source.cpp` と `tests/tree_set.cpp` のキー寿命とコピー後の回帰 |
+| 2026-11-27 | 同ファイルの `TreeSet` の探索時間 | 固定シードの優先度順にキー値を対応させた4,096要素で、最小キーの検索が4,095回の比較を行う | キー順と優先度順が一致すると treap が一方向に伸びる | 標準順序付き集合の対数時間の契約を使う | `Proofs/Cpp/TreeSet.lean` の `query_membership` と `add_spec`・`remove_spec`。再現は `.cache/wip/tree_set/priority_sequence.cpp` |

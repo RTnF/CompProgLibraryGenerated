@@ -128,6 +128,15 @@ def parse_type(text: str, tparams: set[str], classes, value_params=None, aliases
         return OSTREAM
     if s in tparams:
         return Ty("tparam", s)
+    m = re.fullmatch(r"std::set<(.*)>", s)
+    if m:
+        args = split_args(m.group(1))
+        if len(args) != 1:
+            raise Unsupported("set requires the default comparator and allocator")
+        elem = parse_type(args[0], tparams, classes, value_params, aliases)
+        if elem.kind not in ("int", "u32", "u64", "tparam"):
+            raise Unsupported("set requires ordered scalar elements")
+        return Ty("ordered_set", "less", (elem,))
     m = re.fullmatch(r"std::(priority_queue|stack|queue)<(.*)>", s)
     if m:
         args = split_args(m.group(2))
@@ -337,6 +346,8 @@ def lean_type(ty: Ty) -> str:
         return f"(Cpp.Stack {lean_type(ty.args[0])})"
     if ty.kind == "queue":
         return f"(Cpp.Queue {lean_type(ty.args[0])})"
+    if ty.kind == "ordered_set":
+        return f"(Cpp.OrderedSet {lean_type(ty.args[0])})"
     if ty.kind == "umap":
         return f"(Cpp.UMap {lean_type(ty.args[0])} {lean_type(ty.args[1])})"
     if ty.kind == "cls":
@@ -440,6 +451,205 @@ def strip_casts(node):
 
 def type_of_decl(node) -> str:
     return node["type"]["qualType"]
+
+
+@dataclass(frozen=True)
+class OrderedSetKeyAdapter:
+    record: str
+    member: str
+    parameter: str
+
+
+def key_argument_reference(node, declaration):
+    node = strip(node)
+    return node.get('kind') == 'DeclRefExpr' and node.get('referencedDecl', {}).get('id') == declaration['id']
+
+
+def key_argument_member(node, declaration, field):
+    node = strip(node)
+    kind = node.get('kind')
+    if kind == 'MemberExpr':
+        matches = node.get('referencedMemberDecl') == field['id']
+    elif kind == 'CXXDependentScopeMemberExpr':
+        matches = node.get('member') == field['name'] and not node.get('hasExplicitTemplateArgs')
+    else:
+        return False
+    return matches and not node.get('isArrow') and len(inner(node)) == 1 and key_argument_reference(inner(node)[0], declaration)
+
+
+def ordered_set_key_constructor(node, wrapper, field):
+    nodes = inner(node)
+    if [part.get('kind') for part in nodes] != ['ParmVarDecl', 'CXXCtorInitializer', 'CompoundStmt']:
+        return None
+    param, initializer, body = nodes
+    if (inner(param) or inner(body) or initializer.get('anyInit', {}).get('id') != field['id']
+            or len(inner(initializer)) != 1):
+        return None
+    construct = inner(initializer)[0]
+    if construct.get('kind') != 'ParenListExpr' or len(inner(construct)) != 1:
+        return None
+    value = inner(construct)[0]
+    param_type = type_of_decl(param)
+    if param_type == f"{type_of_decl(field)} &" and key_argument_reference(value, param):
+        return 'payload'
+    if param_type == f"const {wrapper} &" and key_argument_member(value, param, field):
+        return 'copy'
+    return None
+
+
+def ordered_set_key_comparison(node, wrapper, field):
+    if node.get('kind') != 'FriendDecl' or len(inner(node)) != 1:
+        return False
+    function = inner(node)[0]
+    if (function.get('kind') != 'FunctionDecl' or function.get('name') != 'operator<'
+            or type_of_decl(function) != f"bool (const {wrapper} &, const {wrapper} &)"):
+        return False
+    parts = inner(function)
+    if [part.get('kind') for part in parts] != ['ParmVarDecl', 'ParmVarDecl', 'CompoundStmt']:
+        return False
+    left, right, body = parts
+    if len(inner(body)) != 1 or inner(body)[0].get('kind') != 'ReturnStmt':
+        return False
+    expression = inner(inner(body)[0])
+    if len(expression) != 1:
+        return False
+    comparison = strip(expression[0])
+    return (comparison.get('kind') == 'BinaryOperator' and comparison.get('opcode') == '<'
+            and len(inner(comparison)) == 2
+            and key_argument_member(inner(comparison)[0], left, field) and key_argument_member(inner(comparison)[1], right, field))
+
+
+def ordered_set_key_adapter(record, template_parameters):
+    if record.get('tagUsed') != 'struct' or record.get('bases'):
+        return None
+    declarations = [node for node in inner(record) if not node.get('isImplicit') and node.get('kind') != 'FullComment']
+    kinds = [node.get('kind') for node in declarations]
+    if kinds != ['FieldDecl', 'CXXConstructorDecl', 'CXXConstructorDecl', 'FriendDecl']:
+        return None
+    field, initialize, copy, friend = declarations
+    wrapper = record['name']
+    parameter = type_of_decl(field)
+    if parameter not in template_parameters or not field.get('mutable') or inner(field):
+        return None
+    constructors = {ordered_set_key_constructor(c, wrapper, field) for c in (initialize, copy)}
+    if constructors != {'payload', 'copy'} or not ordered_set_key_comparison(friend, wrapper, field):
+        return None
+    return OrderedSetKeyAdapter(wrapper, field['name'], parameter)
+
+
+def normalize_ordered_set_key_adapters(decls):
+    def simple_set_access(call, container_id, names):
+        if call.get('kind') != 'CallExpr' or not inner(call):
+            return None
+        function = strip(inner(call)[0])
+        if (function.get('kind') != 'CXXDependentScopeMemberExpr' or function.get('member') not in names
+                or function.get('isArrow') or function.get('hasExplicitTemplateArgs') or len(inner(function)) != 1):
+            return None
+        base = strip(inner(function)[0])
+        if (base.get('kind') != 'MemberExpr' or base.get('referencedMemberDecl') != container_id
+                or len(inner(base)) != 1 or strip(inner(base)[0]).get('kind') != 'CXXThisExpr'):
+            return None
+        return function
+
+    def normalize_class(record, nested, adapter, container):
+        name, field, parameter = adapter.record, adapter.member, adapter.parameter
+        token = re.compile(rf'\b{re.escape(name)}\b')
+        old_type = type_of_decl(container)
+        new_type = f'std::set<{parameter}>'
+
+        def key_value(node):
+            ref = strip(node)
+            if (ref.get('kind') != 'DeclRefExpr' or type_of_decl(ref) != parameter
+                    or ref.get('valueCategory') != 'lvalue'):
+                raise Unsupported('ordered set wrapper requires a direct key lvalue')
+            return ref
+
+        def walk(node, allow_receiver=False):
+            kind = node.get('kind')
+            kids = inner(node)
+            if kind in ('TypeAliasDecl', 'TypedefDecl', 'TemplateTypeParmDecl') and node.get('name') == name:
+                raise Unsupported('shadowing an ordered set key wrapper')
+            def rewrite_method(method):
+                return {**method, 'inner': [walk(inner(method)[0], allow_receiver=True)]}
+
+            if kind == 'CallExpr':
+                method = simple_set_access(node, container['id'], {'size'})
+                if method is not None and len(kids) == 1:
+                    return {**node, 'inner': [rewrite_method(method)]}
+                method = simple_set_access(node, container['id'], {'emplace', 'erase', 'count'})
+                if method is not None:
+                    if len(kids) != 2:
+                        raise Unsupported('ordered set wrapper call arity')
+                    if method['member'] == 'emplace':
+                        key = key_value(kids[1])
+                        method = {**method, 'member': 'insert'}
+                    else:
+                        construction = strip(kids[1])
+                        if (construction.get('kind') != 'CXXUnresolvedConstructExpr'
+                                or type_of_decl(construction) != name or len(inner(construction)) != 1):
+                            raise Unsupported('ordered set lookup requires its checked key wrapper')
+                        key = key_value(inner(construction)[0])
+                    return {**node, 'inner': [rewrite_method(method), walk(key)]}
+            if (kind == 'CXXDependentScopeMemberExpr' and node.get('member') == field
+                    and node.get('isArrow') and len(kids) == 1):
+                child = strip(kids[0])
+                method = simple_set_access(child, container['id'], {'begin', 'rbegin'})
+                if method is not None:
+                    if len(inner(child)) != 1 or node.get('hasExplicitTemplateArgs'):
+                        raise Unsupported('unsupported ordered set iterator read')
+                    call = {**child, 'inner': [rewrite_method(method)]}
+                    return {'kind': 'UnaryOperator', 'opcode': '*', 'range': node['range'],
+                            'type': {'qualType': parameter}, 'valueCategory': 'lvalue', 'inner': [call]}
+            if kind in ('FieldDecl', 'MemberExpr') and container['id'] in (
+                    node.get('id'), node.get('referencedMemberDecl')):
+                if kind == 'MemberExpr' and not allow_receiver:
+                    raise Unsupported('ordered set wrapper escapes a supported container operation')
+                if type_of_decl(node) != old_type:
+                    raise Unsupported('ordered set receiver type changed')
+                node = {**node, 'type': {'qualType': new_type}}
+            for spelling in node.get('type', {}).values():
+                if isinstance(spelling, str) and token.search(spelling):
+                    raise Unsupported('unmodeled use of ordered set key wrapper')
+            rewritten = {**node, 'inner': [walk(child) for child in kids]} if kids else node
+            if isinstance(node.get('anyInit'), dict):
+                rewritten = {**rewritten, 'anyInit': walk(node['anyInit'])}
+            return rewritten
+
+        return {**record, 'inner':[walk(node) for node in inner(record) if node is not nested]}
+
+    result = []
+    for declaration in decls:
+        if declaration.get('kind') != 'ClassTemplateDecl':
+            result.append(declaration)
+            continue
+        params = {x['name'] for x in inner(declaration) if x.get('kind') == 'TemplateTypeParmDecl' and x.get('name')}
+        record = next((x for x in inner(declaration)
+                       if x.get('kind') == 'CXXRecordDecl' and x.get('completeDefinition')), None)
+        if not record or record.get('bases') or record.get('tagUsed') != 'class':
+            result.append(declaration)
+            continue
+        private = True
+        nested = None
+        adapter = None
+        for part in inner(record):
+            if part.get('kind') == 'AccessSpecDecl':
+                private = part['access'] == 'private'
+            if private and part.get('kind') == 'CXXRecordDecl' and part.get('completeDefinition'):
+                if candidate := ordered_set_key_adapter(part, params):
+                    if adapter is not None:
+                        raise Unsupported('multiple ordered set key wrappers')
+                    nested, adapter = part, candidate
+        if adapter is None:
+            result.append(declaration)
+            continue
+        spelling = rf'std::set\s*<\s*{re.escape(adapter.record)}\s*>'
+        containers = [x for x in inner(record)
+                      if x.get('kind') == 'FieldDecl' and re.fullmatch(spelling, type_of_decl(x))]
+        if len(containers) != 1:
+            raise Unsupported('ordered set wrapper needs one default std::set field')
+        normalized = normalize_class(record, nested, adapter, containers[0])
+        result.append({**declaration, 'inner':[normalized if x is record else x for x in inner(declaration)]})
+    return result
 
 
 def always_returns(node) -> bool:
@@ -994,6 +1204,10 @@ class Fn:
                 return self.numeric_trait(t, "negativeInfinity", Ty("tparam", t))
             if op == "*" and strip(sub).get("kind") == "CXXThisExpr":
                 return self.self_value(), class_ty(self.cls)
+            if op == "*":
+                take = self.ordered_set_deref(sub, pre)
+                if take is not None:
+                    return take
             if op in ("++", "--"):
                 # `i++` / `--i` of a local integer inside a larger expression. `stmt` rejects a full expression that
                 # also reads or changes `i` elsewhere (their order would be unsequenced or unspecified).
@@ -1047,6 +1261,10 @@ class Fn:
         if kind == "CXXOperatorCallExpr":
             op = self.operator_name(n)
             args = inner(n)[1:]
+            if op == "*" and len(args) == 1:
+                take = self.ordered_set_deref(args[0], pre)
+                if take is not None:
+                    return take
             if op in ("+=", "-=", "*=", "/=", "%=") and len(args) == 2:
                 callee = strip(inner(n)[0])
                 if callee.get("referencedDecl", {}).get("kind") != "CXXMethodDecl":
@@ -1145,6 +1363,26 @@ class Fn:
             return f"(fun a b : {lean_type(t)} => decide (a < b))"
         base = lt(elem)
         return base if bty.name == "less" else f"(fun a b => {base} b a)"
+
+    def ordered_set_deref(self, node, pre):
+        call = strip(node)
+        if call.get("kind") not in ("CallExpr", "CXXMemberCallExpr") or len(inner(call)) != 1:
+            return None
+        callee = strip(inner(call)[0])
+        if callee.get("kind") not in ("MemberExpr", "CXXDependentScopeMemberExpr") or not inner(callee):
+            return None
+        name = callee.get("name") or callee.get("member")
+        if name not in ("begin", "rbegin"):
+            return None
+        before = []
+        base, ty = self.expr(inner(callee)[0], before)
+        if ty.kind != "ordered_set":
+            return None
+        pre.extend(before)
+        fn = "orderedSetFirst" if name == "begin" else "orderedSetLast"
+        tmp = self.fresh()
+        pre.append(f"let {tmp} ← Cpp.{fn} {base}")
+        return tmp, ty.args[0]
 
     def construct_call(self, elem, texts, tys, pre):
         """`Cpp.Construct.make` of the class type parameter `elem` on the tuple `texts`; updates the state."""
@@ -1496,8 +1734,10 @@ class Fn:
     def construct(self, ty: Ty, n, pre):
         kind = n.get("kind")
         args = [a for a in inner(n) if strip(a).get("kind") not in ("CXXDefaultArgExpr",)]
-        if ty.kind in ("pq", "stack", "queue", "umap") and not args and kind in ("CXXConstructExpr", "InitListExpr"):
+        if ty.kind in ("pq", "stack", "queue", "umap", "ordered_set") and not args and kind in ("CXXConstructExpr", "InitListExpr"):
             return self.default_value(ty)   # an empty container
+        if ty.kind == "ordered_set" and not args and kind == "ParenListExpr":
+            return self.default_value(ty)
         if ty.kind == "tuple":
             if kind not in ("InitListExpr", "CXXConstructExpr", "ParenListExpr") or len(args) != len(ty.args):
                 raise Unsupported("tuple construction requires one argument per value element")
@@ -1654,7 +1894,7 @@ class Fn:
             return f"(Cpp.replicate ({n} : Int) {self.default_value(ty.args[0])})"
         if ty.kind == "vec":
             return f"([] : List {lean_type(ty.args[0])}).toArray"
-        if ty.kind in ("umap", "pq", "stack", "queue"):
+        if ty.kind in ("umap", "pq", "stack", "queue", "ordered_set"):
             return f"([] : {lean_type(ty)})"
         if ty.kind == "pair":
             return f"({self.default_value(ty.args[0])}, {self.default_value(ty.args[1])})"
@@ -1905,6 +2145,15 @@ class Fn:
             return bt, BOOL   # reading an element of a std::vector<bool> through its proxy
         if bty.kind == "vec":
             return self.vector_call(base, bt, bty, name, args, pre)
+        if bty.kind == "ordered_set":
+            if name == "size" and not args:
+                return f"(UInt64.ofNat {bt}.length)", U64
+            if name == "count" and len(args) == 1:
+                value, _ = self.expr(args[0], pre, bty.args[0])
+                tmp = self.fresh()
+                pre.append(f"let {tmp} ← Cpp.orderedSetCount {self.pq_order(bty)} {bt} {value}")
+                return tmp, U64
+            raise Unsupported(f"set::{name} in an expression")
         if bty.kind in ("pq", "stack", "queue"):
             if name == "empty" and not args:
                 return f"(List.isEmpty {bt})", BOOL
@@ -2864,6 +3113,21 @@ class Fn:
             bt, bty = self.expr(base, pre0)
         except Unsupported:
             return False
+        if bty.kind == "ordered_set":
+            if name not in ("insert", "erase") or len(kids) != 2:
+                return False
+            target = self.lvalue(base)
+            if pre0 or any(part != "field" for part, _ in target[1]):
+                raise Unsupported("set updates require a pure local or member receiver")
+            pre = []
+            key, _ = self.expr(kids[1], pre, bty.args[0])
+            fn = "orderedSetInsert" if name == "insert" else "orderedSetErase"
+            tmp = self.fresh()
+            pre.append(f"let {tmp} ← Cpp.{fn} {self.pq_order(bty)} {self.read_lvalue(target)} {key}")
+            self.flush(pre)
+            for line in self.assign_lines(target, tmp):
+                self.emit(line)
+            return True
         if bty.kind in ("pq", "stack", "queue"):
             args = [a for a in kids[1:] if strip(a).get("kind") != "CXXDefaultArgExpr"]
             target = self.lvalue(base)
@@ -3473,7 +3737,7 @@ def subst(ty: Ty, names, args):
 
 class Translator:
     def __init__(self, decls, source_bytes=b"", external=()):
-        self.decls = decls
+        self.decls = normalize_ordered_set_key_adapters(decls)
         self.source_bytes = source_bytes
         self.external = list(external)   # (decls, source bytes) of the dependencies: callable, not emitted          # list of top-level AST nodes in source order
         self.classes: dict[str, ClassInfo] = {}
@@ -4782,6 +5046,8 @@ def translate_file(source: Path, imports: list[str], deps=(), standard="c++17", 
         imports = [*imports, "Proofs.Cpp.Lib.PQ"]
     if re.search(r"Cpp\.(Queue|queue)", body):
         imports = [*imports, "Proofs.Cpp.Lib.Queue"]
+    if re.search(r"Cpp\.(OrderedSet|orderedSet)", body):
+        imports = [*imports, "Proofs.Cpp.Lib.OrderedSet"]
     imp = "\n".join(f"import {m}" for m in ["Proofs.Cpp.Prelude", *imports])
     rel = source.resolve().relative_to(ROOT).as_posix() if source.resolve().is_relative_to(ROOT) else source.name
     return HEADER.format(source=rel, imports=imp) + "\n" + body + "\nend Proofs.Cpp.Gen\n"
