@@ -53,8 +53,11 @@
 - クラスの `static constexpr` なリテラルのメンバー `NAME` は、モデルの定数 `cp.Class_NAME` として翻訳する。
 - 依存部品のヘッダ（TOML の `dependencies`）のクラステンプレートは、フィールドの配置だけを読む（翻訳しない。依存部品の入出力演算子は読み飛ばす）。既定の引数がそのクラスである型引数（`class E = Edge<Cost>`）の値の `x.member` は、既定のクラスでのフィールドの型 `V` を使い `[Cpp.Field "member" E V]` の `Cpp.Field.get` に翻訳する（`Proofs/Cpp/Lib/DependentOperations.lean`）。証明はこのインスタンスを持つ任意の `E` について述べられ、既定の `Edge<T>` のインスタンスは部品ごとに手で書く（`Proofs/Cpp/GraphListEdge.lean`）。
 - 型引数のパック `template <class... Args>` は 1 つの型 `Args`（パックの組。空なら `Unit`）で、仮引数 `Args... args` はその値 1 つになる。パックは `v.emplace_back(a, b, args...)`（`v` は型引数 `E` の vector）でだけ使える。構築は引数の組 `(a, b, args)` の `Cpp.Construct E (Int × Int × Args)` に翻訳し、`E{a, b}` は `(a, b, ())` とする（組の最後は常にパック）。構築子が共有する状態（`Edge` の番号のカウンタなど）は `Cpp.ConstructState E` の `State` で、`E` を構築するメソッドは合成の参照引数 `cppConstructState` で受け取って返す。差分ハーネスは TOML の `diff.packs`（パックごとの C++ の引数の型の列。コマンド名に `@番号` を付ける）と `diff.lean_imports`（インスタンスのモジュール）を使い、状態の初期値は `Cpp.ConstructState.start`。
+- 型引数 `E` の vector に副作用のない固定引数3個以上を渡す `emplace_back` では、引数の組の末尾に `Unit` を付けて同じ構築状態に渡す。既定型から型を取得できる書き換え可能なスカラーフィールドは `Cpp.WriteField.set` で更新し、入れ子 vector の元の位置へ書き戻す。const・volatile・参照のフィールドや、既定型に存在しないフィールドの代入は拒否する。
 - `std::unordered_map<int, V>`（`V` は整数か vector）は `Cpp.UMap`（キーの重複しない連想リスト、`Proofs/Cpp/Lib/UMap.lean`）に翻訳する。`m[k]` は値（ない鍵には値初期化した値を入れる）と更新した表、`m[k] = e`・`m.count(k)`・`m.clear()` に対応する。手数は文書化された最悪の場合（1 回 `size + 1`）。表にある vector を値で返すとコピーの手数を数える。`m[k] = std::move(x)` は、`x` が局所変数でこの後使われないときだけ受け付け、`x` の値の代入とする。
 - `std::priority_queue<T, std::vector<T>, std::less<T> / std::greater<T>>` と `std::stack<T>` は `Proofs/Cpp/Lib/PQ.lean` のリストに翻訳する。`top` は比較 `comp` で最良の要素（`pqBest`。整数とその組のように同値な要素が等しい全順序では C++ と同じ要素）、`push`・`pop` は `log2 size + 1` 手、`top`・`empty`・`size` は 1 手。`std::pair` の `<` は `Cpp.pairLt`。`top` の性質（比較が非反射的で推移的なら、キューの要素で、どの要素にも負けない）は `pqBest_spec`。
+- スカラー要素と既定の容器を使う `std::queue<T>` は、先頭から末尾までの順序を持つリストに翻訳する（`Proofs/Cpp/Lib/Queue.lean`）。空の構築、`push`、対応する値を作る `emplace`、値としての `front`、`pop`、`empty`、`size` に対応する。`push`・`front`・`pop` は既定の `std::deque` の各操作に1手を数え、空のキューでの `front`・`pop` は失敗とする。
+- スカラーまたはその vector を2要素以上持つ `std::tuple` は Lean の右結合の直積に翻訳する。各要素を副作用のない初期化子で構築し、値の分解宣言で各要素を取り出す。スカラー値2個を持つ `std::pair` も分解できる。参照の要素や参照で分解する宣言は対象外。値の構築で `std::vector` を左辺値からコピーすると、その要素数を手数に加える。
 - 関数内の `using P = …;` は以降の宣言で使える型の別名とする。`std::vector<bool>` の要素の読み書き（代理オブジェクトの `operator bool`・`operator=`）は `Bool` の配列の読み書きとする。式の中の `--v[i]`・`++v[i]` は、添字に副作用がなく、同じ完全式で `v` を他に使わないときに受け付ける。
 - クラステンプレート `C<P1, …, Pk>` の中の `C<P1>::NAME`（残りの引数は既定）は、`NAME` の初期化式が `P1` だけに依存する静的定数なら、このクラスの `NAME` とする（`ListGraph<Cost>::UNREACHABLE`）。静的メンバーの呼び出しでは、引数や結果の型に現れないクラスの型引数を明示する。
 - ループ本体の変更の解析では、`std::min`/`std::max` は何も変えず、`std::reverse`/`std::sort(v.begin(), v.end())` は `v` の要素だけを変え、このクラスの const メンバー関数は参照引数だけを変える。
@@ -66,6 +69,7 @@ STL:
 | `v.size()`、`v.empty()`、`v[i]`、`v.back()`、`v.front()` | `Cpp.size v`、`v.size = 0`、`Cpp.get v i`、`Cpp.back v`、`Cpp.get v 0` |
 | `v[i] = x`、`v[i][j] = x`、`p.first = x` | `Cpp.set` の入れ子、組の更新 |
 | `v.push_back(x)`、`v.emplace_back(x)`、`emplace_back(a, b)`（pair） | `v.push x` |
+| `v.emplace_back()`（スカラーまたは vector の要素） | 値初期化した要素の `v.push` |
 | `v.pop_back()`、`v.clear()`、`v.resize(n[, x])`、`v.assign(n, x)`、`v.assign(w.begin(), w.end())`、`v.reserve(n)`、`v.erase(std::unique(v.begin(), v.end()), v.end())` | `v.pop`、`[].toArray`、`Cpp.resize`、`Cpp.replicate`、`w` のコピー（tick は `w.size()`）、（何もしない）、`Cpp.unique`（tick は `v.size()`） |
 | `std::numeric_limits<T>::min()`/`max()`（`T` は `int`、`long long`、`int64_t`） | 整数リテラル |
 | `std::is_floating_point_v<T>`、`std::numeric_limits<T>::has_infinity`（型パラメータT） | テンプレート引数ごとの `Cpp.NumericTraits "T" T` のBoolフィールド |

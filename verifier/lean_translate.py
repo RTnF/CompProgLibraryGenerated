@@ -93,6 +93,12 @@ def split_args(text: str) -> list[str]:
     return parts
 
 
+def product_value_element(ty: Ty) -> bool:
+    if ty.kind == "vec" and ty.length is None:
+        ty = ty.args[0]
+    return ty.kind in ("int", "u32", "u64", "bool", "tparam")
+
+
 def parse_type(text: str, tparams: set[str], classes, value_params=None, aliases=None) -> Ty:
     value_params = value_params or {}
     s = text.strip()
@@ -122,14 +128,16 @@ def parse_type(text: str, tparams: set[str], classes, value_params=None, aliases
         return OSTREAM
     if s in tparams:
         return Ty("tparam", s)
-    m = re.fullmatch(r"std::(priority_queue|stack)<(.*)>", s)
+    m = re.fullmatch(r"std::(priority_queue|stack|queue)<(.*)>", s)
     if m:
         args = split_args(m.group(2))
         elem = parse_type(args[0], tparams, classes, value_params, aliases)
-        if m.group(1) == "stack":
+        if m.group(1) in ("stack", "queue"):
             if len(args) != 1:
                 raise Unsupported(f"type {text!r}")
-            return Ty("stack", args=(elem,))
+            if m.group(1) == "queue" and elem.kind not in ("int", "u32", "u64", "bool", "tparam"):
+                raise Unsupported("queue requires scalar elements")
+            return Ty(m.group(1), args=(elem,))
         order = "less"
         if len(args) >= 2 and re.sub(r"\s", "", args[1]) not in (f"std::vector<{re.sub(r'[ ]', '', args[0])}>",):
             if parse_type(args[1], tparams, classes, value_params, aliases) != Ty("vec", args=(elem,)):
@@ -171,6 +179,15 @@ def parse_type(text: str, tparams: set[str], classes, value_params=None, aliases
     if m:
         a, b = split_args(m.group(1))
         return Ty("pair", args=(parse_type(a, tparams, classes, value_params, aliases), parse_type(b, tparams, classes, value_params, aliases)))
+    m = re.fullmatch(r"std::tuple<(.*)>", s)
+    if m:
+        args = split_args(text[text.index("<") + 1:text.rindex(">")])
+        if len(args) < 2 or any("&" in arg for arg in args):
+            raise Unsupported("tuple requires at least two value elements")
+        items = tuple(parse_type(arg, tparams, classes, value_params, aliases) for arg in args)
+        if not all(product_value_element(item) for item in items):
+            raise Unsupported("tuple requires scalar or scalar-vector elements")
+        return Ty("tuple", args=items)
     m = re.fullmatch(r"([A-Za-z_][A-Za-z_0-9]*)(?:<(.*)>)?", s)
     if m and m.group(1) in classes:
         raw_args = split_args(m.group(2)) if m.group(2) else []
@@ -310,12 +327,16 @@ def lean_type(ty: Ty) -> str:
         return f"(Array {lean_type(ty.args[0])})"
     if ty.kind == "pair":
         return f"({lean_type(ty.args[0])} × {lean_type(ty.args[1])})"
+    if ty.kind == "tuple":
+        return "(" + " × ".join(lean_type(arg) for arg in ty.args) + ")"
     if ty.kind == "cstate":
         return f"(Cpp.ConstructState.State {lean_type(ty.args[0])})"
     if ty.kind == "pq":
         return f"(Cpp.PQ {lean_type(ty.args[0])})"
     if ty.kind == "stack":
         return f"(Cpp.Stack {lean_type(ty.args[0])})"
+    if ty.kind == "queue":
+        return f"(Cpp.Queue {lean_type(ty.args[0])})"
     if ty.kind == "umap":
         return f"(Cpp.UMap {lean_type(ty.args[0])} {lean_type(ty.args[1])})"
     if ty.kind == "cls":
@@ -1198,7 +1219,7 @@ class Fn:
             self.emit(line)
         return True
 
-    def default_field_type(self, bty, member):
+    def default_field_type(self, bty, member, *, for_write=False):
         """The type of `x.member` for a value of a class type parameter whose default argument is a dependency class
         template (`class E = Edge<Cost>`): the member's type in that class with the default's arguments."""
         if bty.kind != "tparam" or not self.tr.tparam_defaults.get(bty.name):
@@ -1209,6 +1230,8 @@ class Fn:
         dtps, fields = self.tr.dep_layouts[m.group(1)]
         if member not in fields:
             return None
+        if for_write and re.search(r"\b(const|volatile)\b|&", fields[member]):
+            raise Unsupported("dependent assignment needs a writable value member")
         args = split_args(m.group(2)) if m.group(2) else []
         if len(args) != len(dtps):
             raise Unsupported("default class argument needs every template argument")
@@ -1473,8 +1496,24 @@ class Fn:
     def construct(self, ty: Ty, n, pre):
         kind = n.get("kind")
         args = [a for a in inner(n) if strip(a).get("kind") not in ("CXXDefaultArgExpr",)]
-        if ty.kind in ("pq", "stack", "umap") and not args and kind in ("CXXConstructExpr", "InitListExpr"):
+        if ty.kind in ("pq", "stack", "queue", "umap") and not args and kind in ("CXXConstructExpr", "InitListExpr"):
             return self.default_value(ty)   # an empty container
+        if ty.kind == "tuple":
+            if kind not in ("InitListExpr", "CXXConstructExpr", "ParenListExpr") or len(args) != len(ty.args):
+                raise Unsupported("tuple construction requires one argument per value element")
+            values = []
+            for arg, item_ty in zip(args, ty.args, strict=True):
+                before_arg = len(pre)
+                value, _ = self.expr(arg, pre, item_ty)
+                if len(pre) != before_arg:
+                    raise Unsupported("effects in tuple constructor arguments")
+                if item_ty.kind == "vec" and self.is_lvalue_vector(arg):
+                    tmp = self.fresh()
+                    pre.append(f"let {tmp} := {value}")
+                    pre.append(f"Cpp.tickN {tmp}.size")
+                    value = tmp
+                values.append(value)
+            return "(" + ", ".join(values) + ")"
         if kind == "InitListExpr" and ty.kind == "cls":
             sigs = [s for s in self.tr.classes[ty.name].methods if s.is_ctor]
             sig = self.pick(sigs, args, f"list constructor of {ty.name}")
@@ -1615,7 +1654,7 @@ class Fn:
             return f"(Cpp.replicate ({n} : Int) {self.default_value(ty.args[0])})"
         if ty.kind == "vec":
             return f"([] : List {lean_type(ty.args[0])}).toArray"
-        if ty.kind in ("umap", "pq", "stack"):
+        if ty.kind in ("umap", "pq", "stack", "queue"):
             return f"([] : {lean_type(ty)})"
         if ty.kind == "pair":
             return f"({self.default_value(ty.args[0])}, {self.default_value(ty.args[1])})"
@@ -1866,12 +1905,16 @@ class Fn:
             return bt, BOOL   # reading an element of a std::vector<bool> through its proxy
         if bty.kind == "vec":
             return self.vector_call(base, bt, bty, name, args, pre)
-        if bty.kind in ("pq", "stack"):
+        if bty.kind in ("pq", "stack", "queue"):
             if name == "empty" and not args:
                 return f"(List.isEmpty {bt})", BOOL
             if name == "size" and not args:
                 return f"(UInt64.ofNat {bt}.length)", U64
-            if name == "top" and not args:
+            if name == "front" and not args and bty.kind == "queue":
+                tmp = self.fresh()
+                pre.append(f"let {tmp} ← Cpp.queueFront {bt}")
+                return tmp, bty.args[0]
+            if name == "top" and not args and bty.kind != "queue":
                 self.need("Inhabited", bty.args[0])
                 tmp = self.fresh()
                 if bty.kind == "stack":
@@ -2204,6 +2247,12 @@ class Fn:
                 for fname, fty, _ in info.fields:
                     if fname == member:
                         return (root, path + [("field", lean_name(fname))], rty, subst(fty, info.tparams, bty.args))
+            typed = self.default_field_type(bty, member, for_write=True)
+            if typed is not None and typed.kind in ("int", "u32", "u64", "bool", "tparam"):
+                record_type, value_type = lean_type(bty), lean_type(typed)
+                self.reqs.add(f'Cpp.Field "{member}" {record_type} {value_type}')
+                self.reqs.add(f'Cpp.WriteField "{member}" {record_type} {value_type}')
+                return (root, path + [("dependent_field", member)], rty, typed)
             raise Unsupported("unrecognized dependent assignment field")
         if kind in ("CallExpr", "CXXMemberCallExpr") and len(inner(n)) == 1:
             callee = strip(inner(n)[0])
@@ -2256,6 +2305,8 @@ class Fn:
             return f"(Cpp.get {text} {arg})"
         if kind == "pair":
             return f"{text}.{arg + 1}"
+        if kind == "dependent_field":
+            return f'(Cpp.Field.get (member := "{arg}") {text})'
         return f"{text}.{arg}"
 
     def assign_lines(self, target, value):
@@ -2274,6 +2325,8 @@ class Fn:
             return f"(Cpp.set {current} {arg} {new})"
         if kind == "pair":
             return f"({new}, {current}.2)" if arg == 0 else f"({current}.1, {new})"
+        if kind == "dependent_field":
+            return f'(Cpp.WriteField.set (member := "{arg}") {current} {new})'
         return f"{{ {current} with {arg} := {new} }}"
 
     # ------------------------------------------------------------------ statements
@@ -2436,7 +2489,37 @@ class Fn:
             return outs[0]
         return "(" + ", ".join(outs) + ")"
 
+    def decompose(self, d):
+        spelling = d["type"]
+        if (any("&" in spelling.get(key, "") for key in ("qualType", "desugaredQualType"))
+                or d.get("storageClass") in ("static", "extern") or d.get("tls")):
+            raise Unsupported("reference or static structured binding")
+        bindings = [child for child in inner(d) if child.get("kind") == "BindingDecl"]
+        initializers = [child for child in inner(d) if child.get("kind") != "BindingDecl"]
+        if len(initializers) != 1:
+            raise Unsupported("structured binding without a single initializer")
+        pre = []
+        value, ty = self.expr(initializers[0], pre)
+        if ty.kind not in ("tuple", "pair") or len(bindings) != len(ty.args):
+            raise Unsupported("structured binding requires a tuple or pair of matching arity")
+        if ty.kind == "pair" and any(a.kind not in ("int", "u32", "u64", "bool", "tparam") for a in ty.args):
+            raise Unsupported("pair structured binding requires scalar elements")
+        item = self.fresh()
+        self.flush(pre)
+        self.emit(f"let {item} := {value}")
+        lvalue = strip(initializers[0]).get("valueCategory") == "lvalue"
+        for i, (binding, arg) in enumerate(zip(bindings, ty.args, strict=True)):
+            name = binding["name"]
+            projection = ".2" * i + (".1" if i + 1 < len(bindings) else "")
+            self.declare(name, arg)
+            if arg.kind == "vec" and lvalue:
+                self.emit(f"Cpp.tickN {item}{projection}.size")
+            self.emit(f"let mut {self.var_name(name)} : {lean_type(arg)} := {item}{projection}")
+
     def decl(self, d):
+        if d.get("kind") == "DecompositionDecl":
+            self.decompose(d)
+            return
         if d.get("kind") == "UsingDecl":
             if d.get("name") not in ("std::min", "std::max"):
                 raise Unsupported(f"using declaration {d.get('name')}")
@@ -2781,7 +2864,7 @@ class Fn:
             bt, bty = self.expr(base, pre0)
         except Unsupported:
             return False
-        if bty.kind in ("pq", "stack"):
+        if bty.kind in ("pq", "stack", "queue"):
             args = [a for a in kids[1:] if strip(a).get("kind") != "CXXDefaultArgExpr"]
             target = self.lvalue(base)
             cur = self.read_lvalue(target)
@@ -2797,11 +2880,11 @@ class Fn:
                     value, _ = self.expr(args[0], pre, elem)
                 else:
                     raise Unsupported(f"{bty.kind}::{name} arguments")
-                fn = "Cpp.stackPush" if bty.kind == "stack" else "Cpp.pqPush"
+                fn = f"Cpp.{bty.kind}Push"
                 pre.append(f"let {tmp} ← {fn} {cur} {value}")
             elif name == "pop" and not args:
-                if bty.kind == "stack":
-                    pre.append(f"let {tmp} ← Cpp.stackPop {cur}")
+                if bty.kind in ("stack", "queue"):
+                    pre.append(f"let {tmp} ← Cpp.{bty.kind}Pop {cur}")
                 else:
                     self.need("Inhabited", elem)
                     pre.append(f"let {tmp} ← Cpp.pqPop {self.pq_order(bty)} {cur}")
@@ -2862,13 +2945,20 @@ class Fn:
             return True
         if name in ("push_back", "emplace_back"):
             if name == "emplace_back" and len(args) != 1:
-                if not args and elem.kind == "vec" and elem.length is None:
-                    # emplace_back(): a value-initialized (empty) vector
+                if not args and (elem.kind in ("int", "u32", "u64", "bool")
+                                 or (elem.kind == "vec" and elem.length is None)):
                     value = self.default_value(elem)
                 elif elem.kind == "pair" and len(args) == 2:
                     a = self.expr(args[0], pre, elem.args[0])[0]
                     b = self.expr(args[1], pre, elem.args[1])[0]
                     value = f"({a}, {b})"
+                elif elem.kind == "tparam" and len(args) >= 3 and self.lookup(CONSTRUCT_STATE) is not None:
+                    before_args = len(pre)
+                    values = [self.expr(arg, pre) for arg in args]
+                    if len(pre) != before_args:
+                        raise Unsupported("effects in dependent emplace_back arguments")
+                    value = self.construct_call(elem, [text for text, _ in values] + ["()"],
+                                                [lean_type(ty) for _, ty in values] + ["Unit"], pre)
                 else:
                     raise Unsupported("emplace_back arguments")
             else:
@@ -3853,15 +3943,41 @@ class Translator:
                                          uses_globals=True, initializes_globals=True, public=False)))
 
     def constructed_element(self, method, tps):
-        """The class type parameter whose values the method constructs from a forwarded pack, if any."""
-        def constructs(n):
+        """Find stateful construction of a class type parameter in a vector or from a forwarded pack."""
+        def vector_of_parameter(node):
+            depth = 0
+            node = strip(node)
+            while node.get("kind") == "ArraySubscriptExpr" and inner(node):
+                depth += 1
+                node = strip(inner(node)[0])
+            try:
+                ty = parse_type(type_of_decl(node), set(tps), self.classes, aliases=self.aliases)
+            except Unsupported:
+                return False
+            for _ in range(depth + 1):
+                if ty.kind != "vec" or ty.length is not None:
+                    return False
+                ty = ty.args[0]
+            return ty.kind == "tparam" and ty.name in tps
+
+        def constructs(n, dependent_vector=False):
             if not isinstance(n, dict):
                 return False
-            if n.get("kind") == "PackExpansionExpr" or (
-                    # in a template, a braced list of a dependent type has the type `void`
-                    n.get("kind") == "InitListExpr" and n.get("type", {}).get("qualType") in (*tps, "void")):
+            kind = n.get("kind")
+            spelling = n.get("type", {}).get("qualType", "")
+            if kind == "VarDecl":
+                dependent_vector = vector_of_parameter(n)
+            if kind == "PackExpansionExpr" or (kind == "InitListExpr" and
+                    (spelling in tps or (spelling == "void" and dependent_vector))):
                 return True
-            return any(constructs(c) for c in inner(n))
+            if kind in ("CallExpr", "CXXMemberCallExpr") and len(inner(n)) >= 4:
+                callee = strip(inner(n)[0])
+                name = callee.get("name") or callee.get("member")
+                if not name and callee.get("kind") == "UnresolvedMemberExpr":
+                    name = self.member_token(callee)
+                if name == "emplace_back" and inner(callee) and vector_of_parameter(inner(callee)[0]):
+                    return True
+            return any(constructs(c, dependent_vector) for c in inner(n))
         if not constructs(method):
             return None
         candidates = [t for t in tps if self.tparam_defaults.get(t)
@@ -4197,7 +4313,7 @@ class Translator:
                                        requirement) if bindings else requirement
                             type_text = " ".join(r.split()[1:])
                             if bindings or r.startswith(("Cpp.SourceStream", "Cpp.ModToUInt32", "Cpp.StaticCall",
-                                                         "Cpp.AdlCall2", "Cpp.Method1", "Cpp.Field")):
+                                                         "Cpp.AdlCall2", "Cpp.Method1", "Cpp.Field", "Cpp.WriteField")):
                                 type_text = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', '', type_text)
                             type_names = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", type_text))
                             if not type_names <= own | {"Int", "UInt32", "UInt64", "Bool", "Unit", "Ordering", "Array"}:
@@ -4656,7 +4772,7 @@ def translate_file(source: Path, imports: list[str], deps=(), standard="c++17", 
     body = tr.translate()
     dependent = {"Cpp.ReadField", "Cpp.AddResult", "Cpp.MulResult", "Cpp.AssignResult", "Cpp.ConditionalResult",
                  "Cpp.StaticCall", "Cpp.AdlCall2", "Cpp.Invoke1", "Cpp.Method1", "Cpp.ShiftInt",
-                 "Cpp.Field", "Cpp.ConstructState", "Cpp.Construct"}
+                 "Cpp.Field", "Cpp.WriteField", "Cpp.ConstructState", "Cpp.Construct"}
     if any(requirement.split()[0] in dependent
            for fn in tr.built_functions.values() for requirement in fn.reqs.items):
         imports = [*imports, "Proofs.Cpp.Lib.DependentOperations"]
@@ -4664,6 +4780,8 @@ def translate_file(source: Path, imports: list[str], deps=(), standard="c++17", 
         imports = [*imports, "Proofs.Cpp.Lib.UMap"]
     if re.search(r"Cpp\.(PQ|pq|Stack|stack|pairLt)", body):
         imports = [*imports, "Proofs.Cpp.Lib.PQ"]
+    if re.search(r"Cpp\.(Queue|queue)", body):
+        imports = [*imports, "Proofs.Cpp.Lib.Queue"]
     imp = "\n".join(f"import {m}" for m in ["Proofs.Cpp.Prelude", *imports])
     rel = source.resolve().relative_to(ROOT).as_posix() if source.resolve().is_relative_to(ROOT) else source.name
     return HEADER.format(source=rel, imports=imp) + "\n" + body + "\nend Proofs.Cpp.Gen\n"

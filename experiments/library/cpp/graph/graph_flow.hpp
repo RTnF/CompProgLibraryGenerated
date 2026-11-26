@@ -46,17 +46,18 @@ template <class Cost = ll, class E = FlowEdge<Cost>> class FlowGraph {
   }
   tuple<vector<Cost>, vector<int>, vector<int>> bellman_ford(int s) {
     vector<Cost> dist(n_, F_MAX);
-    vector<int> pv(n_, 0), pe(n_, 0);
+    vector<int> pv(n_, -1), pe(n_, 0);
     dist[s] = 0;
+    pv[s] = s;
     while (true) {
       bool update = false;
       for (int v = 0; v < n_; v++) {
-        if (dist[v] == F_MAX) {
+        if (pv[v] == -1) {
           continue;
         }
         for (int i = 0; i < (int)adj[v].size(); i++) {
           auto &e = adj[v][i];
-          if (e.cap > 0 && dist[e.to] > dist[v] + e.cost) {
+          if (e.cap > 0 && (pv[e.to] == -1 || dist[e.to] > dist[v] + e.cost)) {
             dist[e.to] = dist[v] + e.cost;
             update = true;
             pv[e.to] = v;
@@ -86,12 +87,14 @@ public:
     level.emplace_back();
   }
   void add_edge_max_flow(int from, int to, Cost cap) {
-    adj[from].emplace_back(from, to, (int)adj[to].size(), cap);
+    int rev = (int)adj[to].size() + (from == to ? 1 : 0);
+    adj[from].emplace_back(from, to, rev, cap);
     adj[to].emplace_back(to, from, (int)adj[from].size() - 1, 0);
     m_++;
   }
   void add_edge_min_cost_flow(int from, int to, Cost cap, Cost cost) {
-    adj[from].emplace_back(from, to, (int)adj[to].size(), cap, cost);
+    int rev = (int)adj[to].size() + (from == to ? 1 : 0);
+    adj[from].emplace_back(from, to, rev, cap, cost);
     adj[to].emplace_back(to, from, (int)adj[from].size() - 1, 0, -cost);
     m_++;
   }
@@ -117,11 +120,14 @@ public:
   vector<pair<Cost, Cost>> min_cost_flow_slope(int source, int sink,
                                                Cost flow_cutoff = F_MAX) {
     vector<pair<Cost, Cost>> result(1, {0, 0});
+    if (flow_cutoff == 0) {
+      return result;
+    }
     Cost flow_total = 0;
     Cost cost_total = 0;
     while (true) {
       auto [dist, pv, pe] = bellman_ford(source);
-      if (dist[sink] == F_MAX) {
+      if (pv[sink] == -1) {
         return result;
       }
       Cost flow = F_MAX;
@@ -145,6 +151,9 @@ public:
     }
   }
   Cost min_cost_flow(int source, int sink, int flow) {
+    if (flow == 0) {
+      return 0;
+    }
     auto slope = min_cost_flow_slope(source, sink, flow);
     int n = slope.size();
     if (slope[n - 1].first < flow) {

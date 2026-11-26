@@ -34,6 +34,9 @@
 | 2026-11-25 | `experiments/library/cpp/graph/warshall_floyd.hpp` の `MatrixGraph::warshall_floyd` の親の行列の初期化（[`shortest_path_parent[i][i] = i`](../../experiments/library/cpp/graph/warshall_floyd.hpp#L16)） | `add_edge(0, 1, 5)` の後の `get_shortest_path(0, 1)` が空を返す。`from != to` のすべての組で経路が空になる | 親を対角だけ `i`、他を `-1` で初期化していたため、直接の辺 `i → j` の親が `-1` のまま残り、経路の復元が `-1` に達する | 辺のある組（`mat[i][j] < UNREACHABLE`）の親も `i` にする | [経路が実在の辺をたどり重みが距離に等しいことの比較テスト](../../tests/graph_matrix.cpp#L70)と[経路の重みが距離以下であることの Lean 証明](../../Proofs/Cpp/GraphMatrix.lean) |
 
 | 2026-11-25 | `experiments/library/cpp/graph/lowlink.hpp` の `ListGraph::lowlink` | 2頂点を結ぶ辺が2本あると、どちらを1本取り除いても連結なのに橋 `(0, 1)` を返す | DFSで親への戻り辺をすべて無視していた | 親への辺を1本だけDFS木の辺の逆向きとして飛ばし、残りの辺でlowを更新する | [辺を1本ずつ除いて連結成分数を比較する原本の回帰テスト](../../tests/imports/lowlink_multigraph.cpp) |
+| 2026-11-26 | `experiments/library/cpp/graph/graph_flow.hpp` の両方の辺追加 | 自己ループの順辺が逆辺として自分を指す | 同じ行の順辺が逆辺の挿入位置を1つずらす | 自己ループの順辺が持つ逆辺添字に1を足す | [平行辺と自己ループの逆辺を両方向に照合する原本回帰](../../tests/imports/graph_flow_source.cpp) |
+| 2026-11-26 | 同原本の `min_cost_flow`・`min_cost_flow_slope` | 流量0を指定すると到達不能時に配列外参照、到達可能時に残余容量が変化する | 空の流れにも通常の増加路探索と末尾2点の補間を適用していた | 指定流量0はグラフを変更せず、費用0または点 `(0, 0)` だけを返す | [到達不能・到達可能の両方と残余容量を確認する原本回帰](../../tests/imports/graph_flow_source.cpp) |
+| 2026-11-26 | 同原本の Bellman–Ford と傾き列の到達判定 | 費用 `F_MAX` の直接辺や `F_MAX` 以上の中継をたどれず、実現可能な流量に `-1` を返す | 未到達と費用上限を同じ数値で表していた | 親配列の `-1` を未到達の印にする | [費用が `F_MAX` と同じ場合と超える場合を確認する原本回帰](../../tests/imports/graph_flow_source.cpp) |
 
 ## 付記（直したのではなく、前提に含めたもの）
 

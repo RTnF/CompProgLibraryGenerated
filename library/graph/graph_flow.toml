@@ -1,0 +1,25 @@
+name = "graph_flow"
+source = "graph/graph_flow.hpp"
+dependencies = ["edge_flow"]
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.GraphFlow"
+proof = "Proofs/Cpp/GraphFlow.lean"
+model = "Proofs/Cpp/Gen/GraphFlow.lean"
+bridge = "verifier/model_bridge.py"
+tests = ["tests/graph_flow.cpp"]
+sanitizers = true
+spec = "docs/graph_flow.md"
+standard = "c++17"
+source_sha256 = "eade09a7c414a1920d527994101642719968c84128f4091882595cd1038d919f"
+public_declarations = ["ClassTemplateDecl:FlowEdge", "ClassTemplateDecl:FlowGraph", "FunctionTemplateDecl:operator<<<ostream>", "VarDecl:F_MAX", "VarDecl:next_id"]
+unverified_functions = ["operator<<"]
+
+[diff]
+instances = [
+  { Cost = "long long", E = "cp::FlowEdge<long long>" },
+  { Cost = "int", E = "cp::FlowEdge<int>", case_args = "int" },
+]
+bindings = ["edge_flow"]
+lean_imports = ["Proofs.Cpp.FlowEdgeBindings"]
+calls = ["FlowGraph.init_0", "FlowGraph.init_int", "FlowGraph.op_index", "FlowGraph.add_node", "FlowGraph.add_edge_max_flow", "FlowGraph.add_edge_min_cost_flow", "FlowGraph.max_flow", "FlowGraph.min_cost_flow", "FlowGraph.min_cost_flow_slope"]
+cases = "tests/diff/graph_flow.py"

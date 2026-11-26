@@ -62,6 +62,10 @@ instance : ShiftInt Int where
 class Field (member : String) (Record : Type) (Value : Type) where
   get : Record → Value
 
+/-- Updating a named value member of a dependent C++ record. -/
+class WriteField (member : String) (Record : Type) (Value : Type) where
+  set : Record → Value → Record
+
 /-- The state that the constructors of `E` share (e.g. the id counter of `Edge<T>`; `Unit` for a class without
 static data). -/
 class ConstructState (E : Type) where
