@@ -111,4 +111,15 @@ for _ in range(300):
     lines.append(f"do ListGraph.add_edge@0 {k} {n} {n}")
     lines.append(f"do ListGraph.op_index {k} {n}")
     lines.append(f"do ListGraph.find_cycle_directed {k}")
+# Compare both ready-vertex disciplines on DAGs and arbitrary directed multigraphs.
+for trial in range(300):
+    n = rng.randrange(14)
+    k = new(f"new ListGraph.init_int {n}")
+    for _ in range(rng.randrange(5 * n + 1)):
+        a, b = rng.randrange(n), rng.randrange(n)
+        if trial % 2 == 0 and a >= b:
+            continue
+        lines.append(f"do ListGraph.add_edge@1 {k} {a} {b} {rng.randrange(-50, 50)}")
+    lines.append(f"do ListGraph.topological_sort {k}")
+    lines.append(f"do ListGraph.topological_sort_minimum {k}")
 print("\n".join(lines))

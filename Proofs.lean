@@ -100,6 +100,11 @@ import Proofs.Cpp.ListFindCycleReconstruct
 import Proofs.Cpp.ListFindCycleScan
 import Proofs.Cpp.ListFindCycleSearch
 import Proofs.Cpp.ListFindCycleWitness
+import Proofs.Cpp.ListTopologicalInit
+import Proofs.Cpp.ListTopologicalProgram
+import Proofs.Cpp.ListTopologicalProof
+import Proofs.Cpp.ListTopologicalQueue
+import Proofs.Math.ListTopological
 import Proofs.Cpp.GraphMatrix
 import Proofs.Cpp.Group
 import Proofs.Cpp.Interval

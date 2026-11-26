@@ -1,5 +1,6 @@
 import Proofs.Cpp.Gen.GraphList
 import Proofs.Cpp.ListFindCycleForest
+import Proofs.Cpp.ListTopologicalProof
 import Proofs.Cpp.GraphListEdge
 import Proofs.Cpp.Lib.Basic
 import Proofs.Math.ParentChain
@@ -1168,6 +1169,37 @@ theorem find_cycle_workspace_slots {Cost E : Type} [Inhabited E] [Field "to" E I
     visited.size + parents.size + cycle.size + st.sp ≤ 4 * g.adj.size := by
   have hs := inv.sp_le
   rw [active.visited_size, active.parents_size]
+  omega
+
+end Proofs.Cpp.GraphList
+
+namespace Proofs.Cpp.GraphList
+
+open Proofs.Cpp.ListTopological
+
+theorem topological_sort_spec {Cost E : Type} [Inhabited E] [Field "to" E Int]
+    (g : cp.ListGraph Cost E) (valid : ValidGraph g) (hsmall : g.adj.size < Cpp.fuel) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.topological_sort g
+    ⦃⇓ r c => ⌜r.2 = g ∧ TopologicalResult .stack g r.1 ∧ c ≤ t0 + workBound .stack g⌝⦄ := by
+  obtain ⟨order, t', run, correct, work⟩ := program_spec .stack g valid hsmall t0
+  rw [← topological_stack_program g] at run
+  exact triple_of_run (order, g) t' run ⟨rfl, correct, work⟩
+
+theorem topological_sort_minimum_spec {Cost E : Type} [Inhabited E] [Field "to" E Int]
+    (g : cp.ListGraph Cost E) (valid : ValidGraph g) (hsmall : g.adj.size < Cpp.fuel) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.ListGraph.topological_sort_minimum g
+    ⦃⇓ r c => ⌜r.2 = g ∧ TopologicalResult .minimum g r.1 ∧ c ≤ t0 + workBound .minimum g⌝⦄ := by
+  obtain ⟨order, t', run, correct, work⟩ := program_spec .minimum g valid hsmall t0
+  rw [← topological_minimum_program g] at run
+  exact triple_of_run (order, g) t' run ⟨rfl, correct, work⟩
+
+/-- Allow the full reserved order buffer, the peak frontier, and a possible return copy. -/
+theorem topological_sort_workspace_slots {Cost E : Type} [Field "to" E Int]
+    {g : cp.ListGraph Cost E} {mode : Discipline} {s : TopologicalState}
+    (inv : Represents mode g s) (frontierPeak : Nat) (peakBound : frontierPeak ≤ g.adj.size) :
+    g.adj.size + s.2.1.size + frontierPeak + s.1.size ≤ 4 * g.adj.size := by
+  have h := workspace inv
+  have hz := inv.inv.dsz
   omega
 
 end Proofs.Cpp.GraphList

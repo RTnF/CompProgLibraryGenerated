@@ -2,6 +2,7 @@
 #include "../library/graph/graph_list.hpp"
 #include <cassert>
 #include <climits>
+#include <numeric>
 #include <random>
 #include <sstream>
 #include <tuple>
@@ -231,6 +232,53 @@ static void test_find_cycle_directed() {
   }
 }
 
+static void test_topological_sort() {
+  struct Target {
+    int to;
+  };
+  cp::ListGraph<double, Target> branches(3);
+  branches[0] = {{2}, {2}};
+  branches[1] = {{2}};
+  assert((branches.topological_sort() == std::vector<int>{1, 0, 2}));
+  assert((branches.topological_sort_minimum() == std::vector<int>{0, 1, 2}));
+
+  std::mt19937 rng(20261126);
+  for (int trial = 0; trial < 300; ++trial) {
+    int n = rng() % 7;
+    cp::ListGraph<> g(n);
+    std::vector<std::pair<int, int>> edges;
+    for (int i = 0, m = rng() % (4 * n + 1); i < m; ++i) {
+      int from = rng() % n, to = rng() % n;
+      if (trial % 2 == 0 && from >= to) continue;
+      g.add_edge(from, to);
+      edges.emplace_back(from, to);
+    }
+    auto valid = [&](const std::vector<int> &order) {
+      if ((int)order.size() != n) return false;
+      std::vector<int> position(n, -1);
+      for (int i = 0; i < n; ++i) {
+        int v = order[i];
+        if (v < 0 || v >= n || position[v] != -1) return false;
+        position[v] = i;
+      }
+      return std::all_of(edges.begin(), edges.end(), [&](const auto &edge) {
+        return position[edge.first] < position[edge.second];
+      });
+    };
+    std::vector<int> expected(n);
+    std::iota(expected.begin(), expected.end(), 0);
+    while (!valid(expected)) {
+      if (!std::next_permutation(expected.begin(), expected.end())) {
+        expected.clear();
+        break;
+      }
+    }
+    assert(g.topological_sort_minimum() == expected);
+    const auto ordinary = g.topological_sort();
+    assert(expected.empty() ? ordinary.empty() : valid(ordinary));
+  }
+}
+
 int main() {
   // ListGraph<long long, Edge<long long>>: the default arguments
   cp::ListGraph<> g(3);
@@ -277,6 +325,7 @@ int main() {
   test_bellman_ford();
   test_prim();
   test_find_cycle_directed();
+  test_topological_sort();
   // The default cost is unnecessary for lowlink, and the edge type only needs a target.
   struct Target {
     int to;

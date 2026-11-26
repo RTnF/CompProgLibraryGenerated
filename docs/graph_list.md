@@ -19,6 +19,7 @@
 | `prim()` | 最小全域森の重み（辺は `add_bidirectional_edge` で入れた無向辺、費用は非負） | O((n + m) log(n + m)) |
 | `lowlink()` | 無向多重グラフの関節点と橋。橋は小さい端点を先にした組。両配列を昇順で返す | O(1 + n + m + k log(k + 1))、`k = min(n, m)` |
 | `find_cycle_directed()` | 有向グラフの単純閉路を辺 `E` の列で1つ返す。閉路がなければ空 | O(1 + n + m) |
+| `topological_sort()` / `topological_sort_minimum()` | 全頂点のトポロジカル順序。最小版は辞書順で最小。閉路があれば空 | O(1 + n + m) / O(1 + m + n log(n + 1)) |
 | `operator<<` | `N = n, M = m` と全辺を出力する | O(n + m) |
 
 - 前提: 頂点の引数は `[0, n)`。`distance(from, to)`・`shortest_path(from, …)` は始点 `from` の最短路を計算した後に呼ぶ（計算するメンバーは下記）。`E` は `E(from, to, args...)` で構築でき、公開フィールド `from`・`to`（`int`）と `cost`（`Cost`）を持つ。
@@ -34,7 +35,8 @@
 - `bellman_ford` は元の `experiments/library/cpp/graph/bellman_ford.hpp` の本体をそのままクラス内に置いた。
 - `lowlink` は元の `experiments/library/cpp/graph/lowlink.hpp` の本体をクラス内に置いた。再帰ラムダを参照引数のある非公開の const メンバー関数に移した。親への辺は1本だけ読み飛ばし、平行な戻り辺を low の更新に使う。原本にも同じ不具合修正を適用した。
 - `find_cycle_directed` は元の `experiments/library/cpp/graph/find_cycle.hpp` の本体をクラス内に置き、再帰ラムダを参照引数のある非公開メンバー関数に移した。隣接行は元と同じ順に非 const 参照で走査し、辺の構築・代入も元の参照の型を保つ。仕様と検証は [find_cycle](find_cycle.md) にまとめた。
-- 元のヘッダは `dijkstra`・`bellman_ford`・`prim`・`lowlink`・`find_cycle_directed`・`topological_sort`・`topological_sort_minimum` を宣言だけし、定義はそれぞれのヘッダ（`dijkstra.hpp` など）にある。公開側では 1 つのクラスにまとめるため、各ヘッダを移植するときに本体ごとこのクラスに加える。まだ移植していないメンバーは宣言も置いていない（宣言だけでは呼び出しがリンクできないので、使える機能は元のヘッダ単体と同じ）。
+- `topological_sort` と `topological_sort_minimum` は元の `experiments/library/cpp/graph/topological_sort.hpp` の本体をクラス内に置いた。スタック版と最小ヒープ版の仕様と検証は [topological_sort](topological_sort.md) にまとめた。
+- 元のヘッダでは `dijkstra`・`bellman_ford`・`prim`・`lowlink`・`find_cycle_directed`・`topological_sort`・`topological_sort_minimum` の定義がそれぞれのヘッダ（`dijkstra.hpp` など）にある。公開側では各定義をこのクラスに置く。
 
 ## 検証（新方式、`docs/translation.md`）
 

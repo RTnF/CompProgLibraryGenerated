@@ -8049,32 +8049,32 @@
           "kind": "CXXMethodDecl",
           "line": 11,
           "declaration": "topological_sort 'vector<int> ()'",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
+          "template_instantiation_review": "generic_model",
+          "verification_target": "library/graph/graph_list.hpp",
           "status": {
-            "review": "pending",
+            "review": "reviewed",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": true
           }
         },
         {
           "kind": "CXXMethodDecl",
           "line": 48,
           "declaration": "topological_sort_minimum 'vector<int> ()'",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
+          "template_instantiation_review": "generic_model",
+          "verification_target": "library/graph/graph_list.hpp",
           "status": {
-            "review": "pending",
+            "review": "reviewed",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": true
           }
         }
       ],

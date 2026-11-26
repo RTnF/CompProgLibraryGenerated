@@ -489,4 +489,90 @@ def cp.ListGraph.find_cycle_directed {Cost : Type} {E : Type} [Cpp.ConstructStat
       ret := t4.2.2
   return (ret, cppConstructState, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
 
+def cp.ListGraph.topological_sort {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "to" E Int] (self : (cp.ListGraph Cost E)) : Cpp.M ((Array Int) × (cp.ListGraph Cost E)) := do
+  Cpp.tick
+  let mut n_ := self.n_
+  let mut m_ := self.m_
+  let mut adj := self.adj
+  let mut shortest_path_dist := self.shortest_path_dist
+  let mut shortest_path_parent := self.shortest_path_parent
+  let mut sorted_node : (Array Int) := ([] : List Int).toArray
+  let t1 := n_
+  Cpp.tickN t1.toNat
+  let mut in_count : (Array Int) := (Cpp.replicate t1 0)
+  let mut st : (Cpp.Stack Int) := ([] : (Cpp.Stack Int))
+  for es in adj do
+    Cpp.tick
+    for e in es do
+      Cpp.tick
+      in_count := (Cpp.set in_count (Cpp.Field.get (member := "to") e) ((Cpp.get in_count (Cpp.Field.get (member := "to") e)) + 1))
+  for i in (Cpp.range 0 n_) do
+    Cpp.tick
+    if (decide ((Cpp.get in_count i) = 0)) then
+      let t2 ← Cpp.stackPush st i
+      st := t2
+  for _ in Cpp.forever do
+    Cpp.tick
+    if !(!(List.isEmpty st)) then break
+    let t3 ← Cpp.stackTop st
+    let mut v : Int := t3
+    let t4 ← Cpp.stackPop st
+    st := t4
+    Cpp.tick
+    sorted_node := (sorted_node.push v)
+    for e_1 in (Cpp.get adj v) do
+      Cpp.tick
+      in_count := (Cpp.set in_count (Cpp.Field.get (member := "to") e_1) ((Cpp.get in_count (Cpp.Field.get (member := "to") e_1)) - 1))
+      if (decide ((Cpp.get in_count (Cpp.Field.get (member := "to") e_1)) = 0)) then
+        let t5 ← Cpp.stackPush st (Cpp.Field.get (member := "to") e_1)
+        st := t5
+  if (decide ((Cpp.size sorted_node) ≠ n_)) then
+    return (([] : List Int).toArray, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
+  let t6 := sorted_node
+  Cpp.tickN t6.size
+  return (t6, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
+
+def cp.ListGraph.topological_sort_minimum {Cost : Type} {E : Type} [Inhabited E] [Cpp.Field "to" E Int] (self : (cp.ListGraph Cost E)) : Cpp.M ((Array Int) × (cp.ListGraph Cost E)) := do
+  Cpp.tick
+  let mut n_ := self.n_
+  let mut m_ := self.m_
+  let mut adj := self.adj
+  let mut shortest_path_dist := self.shortest_path_dist
+  let mut shortest_path_parent := self.shortest_path_parent
+  let mut sorted_node : (Array Int) := ([] : List Int).toArray
+  let t1 := n_
+  Cpp.tickN t1.toNat
+  let mut in_count : (Array Int) := (Cpp.replicate t1 0)
+  let mut pq : (Cpp.PQ Int) := ([] : (Cpp.PQ Int))
+  for es in adj do
+    Cpp.tick
+    for e in es do
+      Cpp.tick
+      in_count := (Cpp.set in_count (Cpp.Field.get (member := "to") e) ((Cpp.get in_count (Cpp.Field.get (member := "to") e)) + 1))
+  for i in (Cpp.range 0 n_) do
+    Cpp.tick
+    if (decide ((Cpp.get in_count i) = 0)) then
+      let t2 ← Cpp.pqPush pq i
+      pq := t2
+  for _ in Cpp.forever do
+    Cpp.tick
+    if !(!(List.isEmpty pq)) then break
+    let t3 ← Cpp.pqTop (fun a b => (fun a b : Int => decide (a < b)) b a) pq
+    let mut v : Int := t3
+    let t4 ← Cpp.pqPop (fun a b => (fun a b : Int => decide (a < b)) b a) pq
+    pq := t4
+    Cpp.tick
+    sorted_node := (sorted_node.push v)
+    for e_1 in (Cpp.get adj v) do
+      Cpp.tick
+      in_count := (Cpp.set in_count (Cpp.Field.get (member := "to") e_1) ((Cpp.get in_count (Cpp.Field.get (member := "to") e_1)) - 1))
+      if (decide ((Cpp.get in_count (Cpp.Field.get (member := "to") e_1)) = 0)) then
+        let t5 ← Cpp.pqPush pq (Cpp.Field.get (member := "to") e_1)
+        pq := t5
+  if (decide ((Cpp.size sorted_node) ≠ n_)) then
+    return (([] : List Int).toArray, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
+  let t6 := sorted_node
+  Cpp.tickN t6.size
+  return (t6, (⟨n_, m_, adj, shortest_path_dist, shortest_path_parent⟩ : (cp.ListGraph Cost E)))
+
 end Proofs.Cpp.Gen

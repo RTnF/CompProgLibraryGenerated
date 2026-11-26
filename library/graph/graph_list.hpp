@@ -4,6 +4,7 @@
 #include <limits>
 #include <ostream>
 #include <queue>
+#include <stack>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -248,6 +249,68 @@ public:
       }
     }
     return ret;
+  }
+
+  // トポロジカルソート (experiments/library/cpp/graph/topological_sort.hpp)
+  std::vector<int> topological_sort() {
+    std::vector<int> sorted_node, in_count(n_, 0);
+    sorted_node.reserve(n_);
+    std::stack<int> st;
+    for (auto &es : adj) {
+      for (auto &e : es) {
+        in_count[e.to]++;
+      }
+    }
+    for (int i = 0; i < n_; ++i) {
+      if (in_count[i] == 0) {
+        st.emplace(i);
+      }
+    }
+    while (!st.empty()) {
+      int v = st.top();
+      st.pop();
+      sorted_node.emplace_back(v);
+      for (auto &e : adj[v]) {
+        if (--in_count[e.to] == 0) {
+          st.emplace(e.to);
+        }
+      }
+    }
+    if ((int)sorted_node.size() != n_) {
+      return std::vector<int>();
+    }
+    return sorted_node;
+  }
+
+  // 辞書順最小のトポロジカルソート
+  std::vector<int> topological_sort_minimum() {
+    std::vector<int> sorted_node, in_count(n_, 0);
+    sorted_node.reserve(n_);
+    std::priority_queue<int, std::vector<int>, std::greater<int>> pq;
+    for (auto &es : adj) {
+      for (auto &e : es) {
+        in_count[e.to]++;
+      }
+    }
+    for (int i = 0; i < n_; ++i) {
+      if (in_count[i] == 0) {
+        pq.emplace(i);
+      }
+    }
+    while (!pq.empty()) {
+      int v = pq.top();
+      pq.pop();
+      sorted_node.emplace_back(v);
+      for (auto &e : adj[v]) {
+        if (--in_count[e.to] == 0) {
+          pq.emplace(e.to);
+        }
+      }
+    }
+    if ((int)sorted_node.size() != n_) {
+      return std::vector<int>();
+    }
+    return sorted_node;
   }
 
   template <class C_, class E_>
