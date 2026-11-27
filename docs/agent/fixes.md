@@ -24,7 +24,6 @@
 | 2026-11-17 | 同原本の`pow(ll)` | `ModInt<7>(2).pow(LLONG_MIN)`でUBSanが符号反転の未定義動作を検出 | `-n`がllに収まらない | `(pow(-(n + 1)) * *this).inv()`へ分解し、符号反転する指数をll範囲内に保つ。負指数のAPIを維持 | 同回帰で指数の両端・負/0/正をPython modular powと比較。旧原本のUBSan停止を保存済み。指数分解・範囲・逆元の代数補題は`Proofs/Cpp/Lib/ModIntMath.lean` |
 | 2026-11-17 | 同原本のctor/`set`のSFINAE分類 | GCC/C++17で`__int128(-1)`が4294967295になり、法7の剰余6にならない | strict C++17の`is_signed_v<__int128>`がfalseとなり、負の128 bit値をunsigned側の式へ渡していた | cv除去後の符号付き__int128もsigned側へ分類し、unsigned側をその補集合にする。テンプレートの入力型集合は狭めない | 同専用回帰でsigned/unsigned 128 bitの両端、負値、explicit const/volatile template引数をPython剰余と比較。修正前のctor/setの不一致をASan/UBSan付きで確認済み |
 | 2026-11-17 | 同原本の入力operator>> | 空入力や既存fail/eof状態で未初期化のllをsetへ渡す。空入力の結果が自動変数初期化patternでは1、zeroでは0（法7） | istreamのsentryが失敗すると抽出先へ書かず戻るが、一時変数yに初期値がなかった | yを0で初期化し、既存の抽出・setの順序を保持。正常入力、解析失敗や範囲超過で標準抽出が書いた値、例外時のreceiver非更新を維持 | tests/test_modint_original_stream.pyで生成ケースをASan/UBSanとzero/pattern両設定で照合。失敗/EOF/例外、signed64両端/範囲超過、unsigned出力の書式・参照返却を確認する。移植全体の証明は未完了 |
-
 | 2026-11-18 | `experiments/library/cpp/modint/dynamic_modint.hpp` のctor/set | 法7で負倍数が7になり、符号付き128 bitの-1が4294967295になった | 負倍数にも法を足していた。GCC/C++17では`is_signed_v<__int128>`がfalse | 負倍数も0へ正規化し、cvを除いた符号付き128 bitをsigned側へ分類 | `tests/imports/original_dynamic_modint.cpp`のctor/set境界 |
 | 2026-11-18 | 同原本の加減算 | 素数法4294967291で(m-1)+10が4、0-(m-1)が6になった | UInt32の折り返し後に剰余を補正していた | UInt64の中間値で補正する | 同テストで結果9、1を確認 |
 | 2026-11-18 | 同原本の`pow(ll)` | 最小指数でUBSan停止 | `-n`が符号付き64 bitの範囲外 | 非負累乗を別関数にし、絶対値をUInt64で表す | 同テストで法7の`2^INT64_MIN`が2 |
@@ -32,15 +31,10 @@
 | 2026-11-18 | 同原本の階乗と逆階乗cache | 法変更後に以前の剰余が返る。法7で逆階乗0を求めても先行計算で停止 | cacheが法を記録せず、逆階乗を法以上の添字まで作っていた | 両cacheを法ごとに初期化し、逆階乗の先行構築を法未満に制限する | 同テストで法の変更、100000境界、Pascal表との比較を確認 |
 | 2026-11-18 | `experiments/library/cpp/string/rolling_hash.hpp` の `RollingHash`（[`build`](../../experiments/library/cpp/string/rolling_hash.hpp#L58)・[`hash_all`](../../experiments/library/cpp/string/rolling_hash.hpp#L67)）と `SimpleRollingHash`（[`build`](../../experiments/library/cpp/string/rolling_hash.hpp#L201)・[`hash_all`](../../experiments/library/cpp/string/rolling_hash.hpp#L210)）で、要素をハッシュに足す箇所 | `{1, -1}` の末尾が `{-1}` かを `ends_with` で調べると、両クラスが不一致を返す | `-1` を符号なしの数として扱うと大きな正の数になる。足し算が型の上限を超えて一周する場合があり、列の一部から取り出したハッシュと、その部分だけを直接計算したハッシュが異なる | 負の要素には、ハッシュを計算する前に `2^61 - 1` を足す。たとえば `-1` は、同じ余りを表す `2^61 - 2` に置き換えてからハッシュに足す | [両クラスでの再現テスト](../../tests/rolling_hash.cpp#L50)と[負の要素を変換する Lean 証明](../../Proofs/Cpp/RollingHash.lean#L61) |
 | 2026-11-25 | `experiments/library/cpp/graph/warshall_floyd.hpp` の `MatrixGraph::warshall_floyd` の親の行列の初期化（[`shortest_path_parent[i][i] = i`](../../experiments/library/cpp/graph/warshall_floyd.hpp#L16)） | `add_edge(0, 1, 5)` の後の `get_shortest_path(0, 1)` が空を返す。`from != to` のすべての組で経路が空になる | 親を対角だけ `i`、他を `-1` で初期化していたため、直接の辺 `i → j` の親が `-1` のまま残り、経路の復元が `-1` に達する | 辺のある組（`mat[i][j] < UNREACHABLE`）の親も `i` にする | [経路が実在の辺をたどり重みが距離に等しいことの比較テスト](../../tests/graph_matrix.cpp#L70)と[経路の重みが距離以下であることの Lean 証明](../../Proofs/Cpp/GraphMatrix.lean) |
-
 | 2026-11-25 | `experiments/library/cpp/graph/lowlink.hpp` の `ListGraph::lowlink` | 2頂点を結ぶ辺が2本あると、どちらを1本取り除いても連結なのに橋 `(0, 1)` を返す | DFSで親への戻り辺をすべて無視していた | 親への辺を1本だけDFS木の辺の逆向きとして飛ばし、残りの辺でlowを更新する | [辺を1本ずつ除いて連結成分数を比較する原本の回帰テスト](../../tests/imports/lowlink_multigraph.cpp) |
 | 2026-11-26 | `experiments/library/cpp/graph/graph_flow.hpp` の両方の辺追加 | 自己ループの順辺が逆辺として自分を指す | 同じ行の順辺が逆辺の挿入位置を1つずらす | 自己ループの順辺が持つ逆辺添字に1を足す | [平行辺と自己ループの逆辺を両方向に照合する原本回帰](../../tests/imports/graph_flow_source.cpp) |
 | 2026-11-26 | 同原本の `min_cost_flow`・`min_cost_flow_slope` | 流量0を指定すると到達不能時に配列外参照、到達可能時に残余容量が変化する | 空の流れにも通常の増加路探索と末尾2点の補間を適用していた | 指定流量0はグラフを変更せず、費用0または点 `(0, 0)` だけを返す | [到達不能・到達可能の両方と残余容量を確認する原本回帰](../../tests/imports/graph_flow_source.cpp) |
 | 2026-11-26 | 同原本の Bellman–Ford と傾き列の到達判定 | 費用 `F_MAX` の直接辺や `F_MAX` 以上の中継をたどれず、実現可能な流量に `-1` を返す | 未到達と費用上限を同じ数値で表していた | 親配列の `-1` を未到達の印にする | [費用が `F_MAX` と同じ場合と超える場合を確認する原本回帰](../../tests/imports/graph_flow_source.cpp) |
-
-## 付記（直したのではなく、前提に含めたもの）
-
-次は元のコードが持つ性質で、直さずに前提として明記した（`docs/experiments_findings.md`）: `GroupMul::inv()` は整数で `±1` 以外だと 0、`MonoidMul::op` と `CumulativeSum` は符号付きの桁あふれが未定義動作。
 | 2026-11-27 | `experiments/library/cpp/set/set.hpp` の `TreeSet::add` | 同じキー7を2回加えると `size()==2` になる | 既存キーを調べず節点と件数を追加した | 一意のキーを保つ順序付き集合を使う | `tests/imports/tree_set_source.cpp` と `Proofs/Cpp/TreeSet.lean` の `add_spec` |
 | 2026-11-27 | 同ファイルの `TreeSet::remove` | 7だけを含む集合から8を削除すると、UBSan が null 節点へのメンバーアクセスを検出する | 存在しないキーを再帰探索して空の子を読み出した | 不在なら集合を保つ削除操作を使う | `tests/imports/tree_set_source.cpp` と `Proofs/Cpp/TreeSet.lean` の `remove_spec` |
 | 2026-11-27 | 同ファイルの `TreeSet` の節点所有とコピー | 削除後もキーが破棄されず、集合のスコープ終了後にも生存キーが残る。2キーを持つ集合のコピーから子を削除すると、元の集合の件数と探索結果が一致しなくなる | 生ポインタの節点を解放する処理がなく、暗黙コピーがポインタを共有した | 容器が要素を所有し、コピーが独立した要素を保持する | `tests/imports/tree_set_source.cpp` と `tests/tree_set.cpp` のキー寿命とコピー後の回帰 |
@@ -49,3 +43,7 @@
 | 2026-11-27 | 同 `add` と `remove` | 空集合への0個追加で0個のキーが現れ、個数どおりの削除が成功しても `false` が返る | 0個追加の分岐がなく、節点削除後に失敗扱いだった | 0個追加では既存個数だけ返し、個数ちょうどの削除後に `true` を返す | 原本と公開版の更新回帰、`add_run`・`remove_run` |
 | 2026-11-27 | 同 `min` と `max` | 空集合でアサーションを通過する | 非 null の番兵をポインタの真偽で調べていた | 空集合を示す番兵との比較で確かめる | 生成モデルの事前条件、両端取得のテスト |
 | 2026-11-27 | 同 `enumerate(lo, hi)` | 具体化に失敗し、呼び出しを補っても小数キーが半開区間から欠落する | 親引数が欠け、右部分木の条件が `key < hi - 1` だった | 親なしで走査を開始し、両境界を `<` だけで扱う | 小数と整数限界のC++回帰、`enumerate_half_open_run` |
+
+## 付記（直したのではなく、前提に含めたもの）
+
+次は元のコードが持つ性質で、直さずに前提として明記した（`docs/experiments_findings.md`）: `GroupMul::inv()` は整数で `±1` 以外だと 0、`MonoidMul::op` と `CumulativeSum` は符号付きの桁あふれが未定義動作。
