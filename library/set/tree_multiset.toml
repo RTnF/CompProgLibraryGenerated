@@ -1,0 +1,19 @@
+name = "tree_multiset"
+source = "set/tree_multiset.hpp"
+dependencies = []
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.TreeMultiset"
+proof = "Proofs/Cpp/TreeMultiset.lean"
+model = "Proofs/Cpp/Gen/TreeMultiset.lean"
+bridge = "verifier/model_bridge.py"
+tests = ["tests/tree_multiset.cpp"]
+sanitizers = true
+spec = "docs/tree_multiset.md"
+standard = "c++17"
+source_sha256 = "1af7b3f15980eeb4f91938723c9c03cf46c4b6bb1f346b9be9122211e4361ef8"
+public_declarations = ["ClassTemplateDecl:TreeMultiSet", "FunctionDecl:multiset_next_priority", "VarDecl:multiset_priority_offset", "VarDecl:none"]
+
+[diff]
+instances = [{ T = "int" }, { T = "long long" }, { T = "std::int64_t" }]
+cases = "tests/diff/tree_multiset.py"
+lean_imports = ["Proofs.Cpp.TreeMultiset.IntBindings"]

@@ -31,11 +31,10 @@ def support_registry() -> dict[str, list[str]]:
                 or len(paths) != len(set(paths))):
             raise ValueError(f"invalid verifier support {field}")
         for path in paths:
-            repo_file(path)
-            if field == "lean_modules" and Path(path).parent not in (
-                    Path("Proofs/Math"), Path("Proofs/Cpp"), Path("Proofs/Cpp/Gen"), Path("Proofs/Cpp/Lib")):
-                raise ValueError("shared Lean support must be declared in Proofs/Math/, Proofs/Cpp/, Proofs/Cpp/Gen/ "
-                                 "or Proofs/Cpp/Lib/")
+            resolved = repo_file(path)
+            if field == "lean_modules" and not any(
+                    resolved.is_relative_to(ROOT / root) for root in ("Proofs/Math", "Proofs/Cpp")):
+                raise ValueError("shared Lean support must be in Proofs/Math/ or Proofs/Cpp/")
     return data
 
 

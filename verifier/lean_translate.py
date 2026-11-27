@@ -128,6 +128,21 @@ def parse_type(text: str, tparams: set[str], classes, value_params=None, aliases
         return OSTREAM
     if s in tparams:
         return Ty("tparam", s)
+    m = re.fullmatch(r"std::deque<(.*)>", s)
+    if m:
+        args = split_args(m.group(1))
+        if len(args) != 1:
+            raise Unsupported("deque requires the default allocator")
+        return Ty("deque", args=(parse_type(args[0], tparams, classes, value_params, aliases),))
+    m = re.fullmatch(r"std::optional<(.*)>", s)
+    if m:
+        args = split_args(text[text.index("<") + 1:text.rindex(">")])
+        if len(args) != 1 or "&" in args[0]:
+            raise Unsupported("optional requires one value type")
+        item = parse_type(args[0], tparams, classes, value_params, aliases)
+        if item.kind not in ("int", "u32", "u64", "bool", "tparam"):
+            raise Unsupported("optional requires a scalar value type")
+        return Ty("optional", args=(item,))
     m = re.fullmatch(r"std::set<(.*)>", s)
     if m:
         args = split_args(m.group(1))
@@ -332,7 +347,7 @@ def lean_type(ty: Ty) -> str:
         return lean_name(ty.name)
     if ty.kind == "vlit":
         return f"({ty.name} : {lean_type(ty.args[0])})"
-    if ty.kind in ("vec", "string", "constant_array"):
+    if ty.kind in ("vec", "deque", "string", "constant_array"):
         return f"(Array {lean_type(ty.args[0])})"
     if ty.kind == "pair":
         return f"({lean_type(ty.args[0])} × {lean_type(ty.args[1])})"
@@ -346,6 +361,8 @@ def lean_type(ty: Ty) -> str:
         return f"(Cpp.Stack {lean_type(ty.args[0])})"
     if ty.kind == "queue":
         return f"(Cpp.Queue {lean_type(ty.args[0])})"
+    if ty.kind == "optional":
+        return f"(Option {lean_type(ty.args[0])})"
     if ty.kind == "ordered_set":
         return f"(Cpp.OrderedSet {lean_type(ty.args[0])})"
     if ty.kind == "umap":
@@ -537,6 +554,238 @@ def ordered_set_key_adapter(record, template_parameters):
     return OrderedSetKeyAdapter(wrapper, field['name'], parameter)
 
 
+def normalize_owned_deque(record, field, deque_type, source):
+    """Project a nullable private deque owner to its elements (null has zero elements)."""
+    field_id = field["id"]
+
+    def receiver(node):
+        node = strip(node)
+        if node.get("kind") != "MemberExpr" or node.get("referencedMemberDecl") != field_id:
+            return None
+        base = strip(inner(node)[0])
+        if base.get("kind") == "CXXThisExpr":
+            return "this"
+        if base.get("kind") == "DeclRefExpr":
+            ref = base.get("referencedDecl", {})
+            if ref.get("kind") == "ParmVarDecl":
+                return ref["id"]
+        raise Unsupported("owned deque requires a direct member receiver")
+
+    def deque_member(node):
+        node = strip(node)
+        qualified = node.get("type", {}).get("qualType", "")
+        return {**node, "type": {"qualType": ("const " if qualified.startswith("const ") else "") + deque_type}}
+
+    def dereference(node):
+        node = strip(node)
+        if node.get("kind") == "UnaryOperator" and node.get("opcode") == "*":
+            base = strip(inner(node)[0])
+            if receiver(base) is not None:
+                return base
+        return None
+
+    def call_member(node, name, arity=0):
+        node = strip(node)
+        parts = inner(node)
+        if node.get("kind") != "CallExpr" or len(parts) != arity + 1:
+            return None
+        function = strip(parts[0])
+        if (function.get("kind") != "CXXDependentScopeMemberExpr" or function.get("member") != name
+                or function.get("isArrow") or function.get("hasExplicitTemplateArgs")
+                or len(inner(function)) != 1):
+            return None
+        return node, function, inner(function)[0], parts[1:]
+
+    def null_test(node):
+        node = strip(node)
+        if node.get("kind") != "BinaryOperator" or node.get("opcode") != "==":
+            return None
+        left, right = map(strip, inner(node))
+        access = call_member(left, "get")
+        if access is None or right.get("kind") != "CXXNullPtrLiteralExpr":
+            return None
+        return receiver(access[2])
+
+    def with_receiver(call, base, args):
+        node, function, _, _ = call
+        return {**node, "inner": [{**function, "inner": [deque_member(base)]}, *args]}
+
+    def empty_allocation(node):
+        node = strip(node)
+        if node.get("kind") != "CallExpr" or len(inner(node)) != 1:
+            return False
+        function = strip(inner(node)[0])
+        parameters = inner(function)
+        if (function.get("kind") != "UnresolvedLookupExpr" or function.get("name") != "make_unique"
+                or len(parameters) != 1 or parameters[0].get("kind") != "TemplateArgument"
+                or re.sub(r"\s+", "", type_of_decl(parameters[0])) != re.sub(r"\s+", "", deque_type)):
+            return False
+        begin = function["range"]["begin"].get("offset")
+        end = function["range"]["end"].get("offset")
+        return (begin is not None and end is not None and
+                re.match(rb"(?:\s*::)?\s*std\s*::\s*make_unique\s*<", source[begin:end]) is not None)
+
+    def allocated_for_append(branch, following):
+        if branch.get("kind") != "IfStmt" or len(inner(branch)) != 2:
+            return None
+        condition, body = inner(branch)
+        owner = null_test(condition)
+        if owner is None:
+            return None
+        if body.get("kind") == "CompoundStmt" and len(inner(body)) == 1:
+            body = inner(body)[0]
+        if body.get("kind") != "BinaryOperator" or body.get("opcode") != "=":
+            return None
+        target, value = inner(body)
+        if receiver(target) != owner or not empty_allocation(value):
+            return None
+        append = call_member(following, "emplace_back")
+        base = dereference(append[2]) if append is not None else None
+        if base is not None and receiver(base) == owner:
+            return with_receiver(append, base, [])
+        return None
+
+    def rewrite_block(kids):
+        results = []
+        index = 0
+        while index < len(kids):
+            child = kids[index]
+            action = allocated_for_append(child, kids[index + 1]) if index + 1 < len(kids) else None
+            if action is not None:
+                results.append(action)
+                index += 2
+            else:
+                results.append(rewrite(child))
+                index += 1
+        return results
+
+    def rewrite(node):
+        kind = node.get("kind")
+        kids = inner(node)
+        if kind == "FieldDecl" and node.get("id") == field_id:
+            if kids:
+                raise Unsupported("owned deque only supports empty field initialization")
+            return deque_member(node)
+        if kind == "CXXCtorInitializer" and node.get("anyInit", {}).get("id") == field_id:
+            if len(kids) != 1 or kids[0].get("kind") != "ParenListExpr" or inner(kids[0]):
+                raise Unsupported("owned deque needs an empty member initializer")
+            return {**node, "anyInit": deque_member(node["anyInit"])}
+        if kind == "CompoundStmt":
+            return {**node, "inner": rewrite_block(kids)}
+        if kind == "ConditionalOperator" and len(kids) == 3:
+            test, zero, present = kids
+            owner = null_test(test)
+            size = call_member(present, "size")
+            base = dereference(size[2]) if size is not None else None
+            zero = strip(zero)
+            if (owner is not None and base is not None and receiver(base) == owner
+                    and zero.get("kind") == "IntegerLiteral" and zero.get("value") == "0"):
+                return with_receiver(size, base, [])
+        if kind == "ArraySubscriptExpr" and len(kids) == 2:
+            base = dereference(kids[0])
+            if base is not None:
+                return {**node, "inner": [deque_member(base), rewrite(kids[1])]}
+        swap = call_member(node, "swap", arity=1)
+        if swap is not None and receiver(swap[2]) is not None:
+            if receiver(swap[3][0]) is None:
+                raise Unsupported("owned deque swap requires two direct owners")
+            return with_receiver(swap, swap[2], [deque_member(swap[3][0])])
+        if kind == "MemberExpr" and node.get("referencedMemberDecl") == field_id:
+            raise Unsupported("unsupported use of a private deque owner")
+        return {**node, "inner": [rewrite(child) for child in kids]} if kids else node
+
+    return rewrite(record)
+
+
+def expose_nested_deque_records(decls, source):
+    """Qualify private passive record elements of a std::deque in the model."""
+    def translate(declaration):
+        if declaration.get("kind") != "ClassTemplateDecl":
+            return [declaration]
+        parameters = [item for item in inner(declaration) if item.get("kind") == "TemplateTypeParmDecl"]
+        if (not parameters or any(not item.get("name") or item.get("isParameterPack") for item in parameters)
+                or any(item.get("kind") in ("NonTypeTemplateParmDecl", "TemplateTemplateParmDecl")
+                       for item in inner(declaration))):
+            return [declaration]
+        record = next((item for item in inner(declaration)
+                       if item.get("kind") == "CXXRecordDecl" and item.get("completeDefinition")), None)
+        if record is None or record.get("tagUsed") != "class" or record.get("bases"):
+            return [declaration]
+        nested = [item for item in inner(record)
+                  if item.get("kind") == "CXXRecordDecl" and item.get("completeDefinition")]
+        if len(nested) != 1:
+            return [declaration]
+        nested = nested[0]
+        nested_name = nested["name"]
+        before = inner(record)[:inner(record).index(nested)]
+        if any(item.get("kind") == "AccessSpecDecl" for item in before):
+            return [declaration]
+        if nested.get("tagUsed") != "struct" or nested.get("bases"):
+            return [declaration]
+        fields = [field for field in inner(nested) if field.get("kind") == "FieldDecl"]
+        if not fields or any(field.get("isBitfield") or inner(field) for field in fields):
+            return [declaration]
+        if any(item.get("kind") not in ("FieldDecl", "FullComment") and not item.get("isImplicit")
+               for item in inner(nested)):
+            return [declaration]
+        spelling = rf"std::deque\s*<\s*{re.escape(nested_name)}\s*>"
+        owner_spelling = rf"std::unique_ptr\s*<\s*({spelling})\s*>"
+        slots = [item for item in inner(record) if item.get("kind") == "FieldDecl"
+                 and (re.fullmatch(spelling, type_of_decl(item)) or re.fullmatch(owner_spelling, type_of_decl(item)))]
+        if len(slots) != 1:
+            return [declaration]
+        token = re.compile(rf"\b{re.escape(nested_name)}\b")
+        types = {item["name"] for item in parameters}
+        for field in fields:
+            field_type = parse_type(type_of_decl(field), types, {})
+            scalar = {"tparam", "int", "u32", "u64", "bool"}
+            if field_type.kind not in scalar and not (
+                    field_type.kind == "optional" and field_type.args[0].kind in scalar):
+                raise Unsupported("private deque elements need passive scalar or optional fields")
+        private = True
+        for member in inner(record):
+            if member.get("kind") == "AccessSpecDecl":
+                private = member["access"] != "public"
+                continue
+            if member.get("kind") == "FriendDecl":
+                raise Unsupported("a private deque element cannot escape through a friend")
+            if not private and (token.search(member.get("type", {}).get("qualType", ""))
+                                or any(token.search(type_of_decl(arg)) for arg in inner(member)
+                                       if arg.get("kind") == "ParmVarDecl")):
+                raise Unsupported("a private deque element cannot occur in the public API")
+        model_name = record["name"] + "_" + nested_name
+        if any(item.get("name") == model_name for item in decls):
+            raise Unsupported("nested storage record model name conflicts with another declaration")
+        names = [p["name"] for p in parameters]
+        type_spelling = re.compile(rf"(?<![A-Za-z0-9_:]){re.escape(nested_name)}\b")
+        qualified = model_name + "<" + ", ".join(names) + ">"
+
+        def rewrite(value):
+            if isinstance(value, list):
+                return [rewrite(item) for item in value]
+            if not isinstance(value, dict):
+                return value
+            if value.get("kind") in ("TypeAliasDecl", "TypedefDecl", "TemplateTypeParmDecl", "EnumDecl"):
+                if value.get("name") == nested_name:
+                    raise Unsupported("shadowing a private storage record")
+            return {key: type_spelling.sub(qualified, item)
+                    if key in ("qualType", "desugaredQualType") and isinstance(item, str)
+                    else rewrite(item) for key, item in value.items()}
+
+        model = {**rewrite(nested), "name": model_name, "lean_model_only": True}
+        auxiliary = {"kind": "ClassTemplateDecl", "name": model_name,
+                     "inner": [*parameters, model]}
+        receiver = {**record, "inner": [x for x in inner(record) if x is not nested]}
+        owner = re.fullmatch(owner_spelling, type_of_decl(slots[0]))
+        if owner is not None:
+            receiver = normalize_owned_deque(receiver, slots[0], owner[1], source)
+        receiver = rewrite(receiver)
+        declaration = {**declaration, "inner": [receiver if item is record else item for item in inner(declaration)]}
+        return [auxiliary, declaration]
+
+    return [part for declaration in decls for part in translate(declaration)]
+
+
 def normalize_ordered_set_key_adapters(decls):
     def simple_set_access(call, container_id, names):
         if call.get('kind') != 'CallExpr' or not inner(call):
@@ -700,7 +949,12 @@ class Sig:
     def outputs(self):
         out = []
         if self.is_ctor:
-            return ["ret", "@globals"] if self.uses_globals else out
+            if not self.mut_refs and not self.uses_globals:
+                return out
+            out = ["ret", *[p[0] for p in self.mut_refs]]
+            if self.uses_globals:
+                out.append("@globals")
+            return out
         if self.ret.kind != "void":
             out.append("ret")
         out += [p[0] for p in self.mut_refs]
@@ -720,6 +974,7 @@ class ClassInfo:
     public_fields: set[str] = field(default_factory=set)
     value_params: dict = field(default_factory=dict)
     constraints: list[str] = field(default_factory=list)
+    model_only: bool = False
 
 
 def class_ty(info):
@@ -1189,7 +1444,7 @@ class Fn:
                 pre.append(f"let {tmp} ← Cpp.umapIndex {bt} {it}")
                 pre.extend(self.assign_lines(target, f"{tmp}.2"))
                 return f"{tmp}.1", bty.args[1]
-            if bty.kind not in ("vec", "string", "constant_array"):
+            if bty.kind not in ("vec", "deque", "string", "constant_array"):
                 raise Unsupported(f"subscript of {bty}")
             elem = bty.args[0]
             self.need("Inhabited", elem)
@@ -1323,11 +1578,27 @@ class Fn:
                     return (f"(if {ct} then Cpp.ConditionalResult.left (Right := {right}) {tt} "
                             f"else Cpp.ConditionalResult.right (Left := {left}) {et})",
                             Ty("conditional_result", args=(tty, ety)))
-            et, ety = self.expr(e, sub_pre_e, tty if tty.kind != "int" else None)
+            if sub_pre_t and tty.kind == "tparam" and strip(e).get("type", {}).get("qualType") == "int":
+                et, ety = self.expr(e, sub_pre_e)
+                left, right = lean_type(tty), lean_type(ety)
+                self.reqs.add(f"Cpp.ConditionalResult {left} {right}")
+                tt = f"(Cpp.ConditionalResult.left (Right := {right}) {tt})"
+                et = f"(Cpp.ConditionalResult.right (Left := {left}) {et})"
+                tty = Ty("conditional_result", args=(tty, ety))
+            else:
+                et, ety = self.expr(e, sub_pre_e, tty if tty.kind != "int" else None)
+                if tty != ety:
+                    tt, tty = self.convert(tt, tty, ety, t)
             if sub_pre_t or sub_pre_e:
-                raise Unsupported("a call inside a conditional operator branch")
-            if tty != ety:
-                tt, tty = self.convert(tt, tty, ety, t)
+                def optional_branch(steps, value):
+                    if any(not re.match(r"let \w+ ← Cpp\.optionalValue ", step) for step in steps):
+                        raise Unsupported("effectful conditional operator branch")
+                    return "(do " + "; ".join([*steps, f"pure {value}"]) + ")"
+
+                result = self.fresh()
+                pre.append(f"let {result} ← if {ct} then {optional_branch(sub_pre_t, tt)} "
+                           f"else {optional_branch(sub_pre_e, et)}")
+                return result, tty
             return f"(if {ct} then {tt} else {et})", tty
         if kind in ("CallExpr", "CXXMemberCallExpr"):
             return self.call(n, pre, expected)
@@ -1589,6 +1860,7 @@ class Fn:
             pre.extend(self.assign_lines(target, f"{tmp}.1"))
             pre.extend(self.assign_lines(receiver, f"{tmp}.2"))
         elif sty.kind == "ostream" and op == "<<":
+            before_value = len(pre)
             value, ty = self.expr(right, pre)
             operation = "Cpp.StreamWrite.write"
             source_arg = ""
@@ -1597,8 +1869,11 @@ class Fn:
                 value = f"(⟨{value}⟩ : Cpp.StreamChar)"
                 self.reqs.add("Cpp.StreamWrite Cpp.StreamChar")
             else:
-                if strip(right).get("kind") not in (
-                        "DeclRefExpr", "MemberExpr", "CXXDependentScopeMemberExpr", "ArraySubscriptExpr"):
+                optional_read = (len(pre) == before_value + 1
+                                 and re.fullmatch(r"let \w+ ← Cpp\.optionalValue .+", pre[-1]))
+                if (strip(right).get("kind") not in
+                    ("DeclRefExpr", "MemberExpr", "CXXDependentScopeMemberExpr", "ArraySubscriptExpr")
+                        and not optional_read):
                     raise Unsupported("stream insertion needs a typed template value or a character literal")
                 if ty.kind == "tparam":
                     self.reqs.add(f"Cpp.StreamWrite {lean_type(ty)}")
@@ -1731,29 +2006,50 @@ class Fn:
         return lean_type(class_ty(self.cls))
 
     # ------------------------------------------------------------------ construction
+    def tuple_value(self, ty: Ty, args, pre) -> str:
+        values = []
+        for arg, item_ty in zip(args, ty.args, strict=True):
+            before_arg = len(pre)
+            moved = self.moved_local(arg, arg)
+            value, _ = self.expr(moved or arg, pre, item_ty)
+            if any(not re.match(r"let \w+ ← Cpp\.optionalValue ", step) for step in pre[before_arg:]):
+                raise Unsupported("effects in tuple constructor arguments")
+            if item_ty.kind == "vec" and self.is_lvalue_vector(arg):
+                tmp = self.fresh()
+                pre.append(f"let {tmp} := {value}")
+                pre.append(f"Cpp.tickN {tmp}.size")
+                value = tmp
+            values.append(value)
+        return "(" + ", ".join(values) + ")"
+
     def construct(self, ty: Ty, n, pre):
         kind = n.get("kind")
         args = [a for a in inner(n) if strip(a).get("kind") not in ("CXXDefaultArgExpr",)]
         if ty.kind in ("pq", "stack", "queue", "umap", "ordered_set") and not args and kind in ("CXXConstructExpr", "InitListExpr"):
             return self.default_value(ty)   # an empty container
+        if ty.kind == "optional":
+            if kind not in ("InitListExpr", "CXXConstructExpr", "ParenListExpr",
+                            "CXXTemporaryObjectExpr", "CXXUnresolvedConstructExpr"):
+                raise Unsupported("optional construction")
+            if not args:
+                return self.default_value(ty)
+            if len(args) == 1:
+                value, actual = self.expr(args[0], pre)
+                if actual == ty:
+                    return value
+                value, _ = self.convert(value, actual, ty.args[0], args[0])
+                return f"(some {value})"
+            raise Unsupported("optional constructor arity")
+        if ty.kind == "deque":
+            if not args and kind in ("InitListExpr", "CXXConstructExpr", "ParenListExpr", "CXXUnresolvedConstructExpr"):
+                return self.default_value(ty)
+            raise Unsupported("deque construction")
         if ty.kind == "ordered_set" and not args and kind == "ParenListExpr":
             return self.default_value(ty)
         if ty.kind == "tuple":
             if kind not in ("InitListExpr", "CXXConstructExpr", "ParenListExpr") or len(args) != len(ty.args):
                 raise Unsupported("tuple construction requires one argument per value element")
-            values = []
-            for arg, item_ty in zip(args, ty.args, strict=True):
-                before_arg = len(pre)
-                value, _ = self.expr(arg, pre, item_ty)
-                if len(pre) != before_arg:
-                    raise Unsupported("effects in tuple constructor arguments")
-                if item_ty.kind == "vec" and self.is_lvalue_vector(arg):
-                    tmp = self.fresh()
-                    pre.append(f"let {tmp} := {value}")
-                    pre.append(f"Cpp.tickN {tmp}.size")
-                    value = tmp
-                values.append(value)
-            return "(" + ", ".join(values) + ")"
+            return self.tuple_value(ty, args, pre)
         if kind == "InitListExpr" and ty.kind == "cls":
             sigs = [s for s in self.tr.classes[ty.name].methods if s.is_ctor]
             sig = self.pick(sigs, args, f"list constructor of {ty.name}")
@@ -1892,8 +2188,10 @@ class Fn:
             # the C++ value of a scalar is indeterminate, so a component must write an element before reading it).
             n = lean_name(ty.length.name) if ty.length.kind == "vparam" else ty.length.name
             return f"(Cpp.replicate ({n} : Int) {self.default_value(ty.args[0])})"
-        if ty.kind == "vec":
+        if ty.kind in ("vec", "deque"):
             return f"([] : List {lean_type(ty.args[0])}).toArray"
+        if ty.kind == "optional":
+            return f"(_root_.Option.none : {lean_type(ty)})"
         if ty.kind in ("umap", "pq", "stack", "queue", "ordered_set"):
             return f"([] : {lean_type(ty)})"
         if ty.kind == "pair":
@@ -2143,8 +2441,16 @@ class Fn:
         bt, bty = self.expr(base, pre)
         if name == "operator bool" and bty == BOOL and not args:
             return bt, BOOL   # reading an element of a std::vector<bool> through its proxy
-        if bty.kind == "vec":
+        if bty.kind in ("vec", "deque"):
             return self.vector_call(base, bt, bty, name, args, pre)
+        if bty.kind == "optional":
+            if name == "has_value" and not args:
+                return f"{bt}.isSome", BOOL
+            if name == "value" and not args:
+                tmp = self.fresh()
+                pre.append(f"let {tmp} ← Cpp.optionalValue {bt}")
+                return tmp, bty.args[0]
+            raise Unsupported(f"optional::{name}")
         if bty.kind == "ordered_set":
             if name == "size" and not args:
                 return f"(UInt64.ofNat {bt}.length)", U64
@@ -2441,7 +2747,7 @@ class Fn:
         pre.append(f"let {tmp} ← {' '.join(parts)}")
         outputs = sig.outputs()
         ret_ty = sig.ret if not sig.is_ctor else expected
-        if sig.is_ctor and not sig.uses_globals:
+        if sig.is_ctor and not sig.outputs():
             return tmp, expected
         values = {}
         if len(outputs) == 1:
@@ -2535,8 +2841,8 @@ class Fn:
             it, _ = self.expr(index, pre, INT)
             if pre:
                 raise Unsupported("a call inside an index of an assignment target")
-            if bty.kind != "vec":
-                raise Unsupported("subscript of a non-vector")
+            if bty.kind not in ("vec", "deque"):
+                raise Unsupported("subscript of an unsupported container")
             self.need("Inhabited", bty.args[0])
             return (root, path + [("index", it)], rty, bty.args[0])
         raise Unsupported(f"lvalue {kind}")
@@ -3113,6 +3419,21 @@ class Fn:
             bt, bty = self.expr(base, pre0)
         except Unsupported:
             return False
+        if bty.kind == "optional":
+            args = kids[1:]
+            pre = list(pre0)
+            target = self.lvalue(base)
+            if name == "reset" and not args:
+                value = self.default_value(bty)
+            elif name == "emplace" and len(args) == 1:
+                item, _ = self.expr(args[0], pre, bty.args[0])
+                value = f"(some {item})"
+            else:
+                return False
+            self.flush(pre)
+            for line in self.assign_lines(target, value):
+                self.emit(line)
+            return True
         if bty.kind == "ordered_set":
             if name not in ("insert", "erase") or len(kids) != 2:
                 return False
@@ -3166,6 +3487,36 @@ class Fn:
             for line in self.assign_lines(target, tmp):
                 self.emit(line)
             return True
+        if bty.kind == "deque":
+            args = kids[1:]
+            target = self.lvalue(base)
+            if pre0:
+                raise Unsupported("effects in the deque receiver")
+            if name == "swap" and len(args) == 1:
+                other = self.lvalue(args[0])
+                if target[0] == other[0] or other[3] != bty:
+                    raise Unsupported("deque swap requires separate equal-typed receivers")
+                before = self.fresh()
+                self.emit(f"let {before} := {self.read_lvalue(target)}")
+                for line in self.assign_lines(target, self.read_lvalue(other)):
+                    self.emit(line)
+                for line in self.assign_lines(other, before):
+                    self.emit(line)
+                self.emit("Cpp.tick")
+                return True
+            if name != "emplace_back" or len(args) > 1:
+                return False
+            pre = []
+            elem = bty.args[0]
+            if args:
+                item, _ = self.expr(args[0], pre, elem)
+            else:
+                item = self.default_value(elem)
+            self.flush(pre)
+            self.emit("Cpp.tick")
+            for line in self.assign_lines(target, f"({self.read_lvalue(target)}.push {item})"):
+                self.emit(line)
+            return True
         if bty.kind != "vec":
             return False
         args = [a for a in kids[1:] if strip(a).get("kind") != "CXXDefaultArgExpr"]
@@ -3216,6 +3567,8 @@ class Fn:
                     a = self.expr(args[0], pre, elem.args[0])[0]
                     b = self.expr(args[1], pre, elem.args[1])[0]
                     value = f"({a}, {b})"
+                elif elem.kind == "tuple" and len(args) == len(elem.args):
+                    value = self.tuple_value(elem, args, pre)
                 elif elem.kind == "tparam" and len(args) >= 3 and self.lookup(CONSTRUCT_STATE) is not None:
                     before_args = len(pre)
                     values = [self.expr(arg, pre) for arg in args]
@@ -3737,8 +4090,9 @@ def subst(ty: Ty, names, args):
 
 class Translator:
     def __init__(self, decls, source_bytes=b"", external=()):
-        self.decls = normalize_ordered_set_key_adapters(decls)
         self.source_bytes = source_bytes
+        normalized = expose_nested_deque_records(normalize_ordered_set_key_adapters(decls), source_bytes)
+        self.decls = [self.bind_stdout(decl) for decl in normalized]
         self.external = list(external)   # (decls, source bytes) of the dependencies: callable, not emitted          # list of top-level AST nodes in source order
         self.classes: dict[str, ClassInfo] = {}
         self.aliases: dict[str, Ty] = {}
@@ -3764,6 +4118,42 @@ class Translator:
         self.qualified_functions: dict[str, str] = {}
         self.order: list = []       # ("class", ClassInfo) / ("fn", Sig)
         self.tparams_stack: list[set] = []
+
+    def bind_stdout(self, node):
+        """Give direct uses of the standard output stream a model-only mutable parameter."""
+        if node.get("kind") in ("FunctionDecl", "CXXMethodDecl"):
+            body = next((child for child in inner(node) if child.get("kind") == "CompoundStmt"), None)
+            if body is None:
+                return node
+            name = "cppStdout"
+            while re.search(rb"\b" + name.encode() + rb"\b", self.source_bytes):
+                name += "_"
+            declaration = {"kind": "ParmVarDecl", "id": "lean_stdout:" + node["id"], "name": name,
+                           "type": {"qualType": "std::ostream &"}}
+
+            def replace(part):
+                ref = part.get("referencedDecl", {})
+                if (part.get("kind") == "DeclRefExpr" and ref.get("kind") == "VarDecl"
+                        and ref.get("name") == "cout"
+                        and ref.get("type", {}).get("desugaredQualType") == "std::basic_ostream<char>"
+                        and re.fullmatch(r"(?:\s*::)?\s*std\s*::\s*cout", self.span(part))):
+                    return {**part, "referencedDecl": declaration}
+                children = inner(part)
+                if children:
+                    return {**part, "inner": [replace(child) for child in children]}
+                return part
+
+            rewritten = replace(body)
+            if rewritten == body:
+                return node
+            if return_type_text(node["type"]["qualType"]) != "void":
+                raise Unsupported("implicit standard output requires a void function")
+            children = [rewritten if child is body else child for child in inner(node)]
+            children.insert(children.index(rewritten), declaration)
+            return {**node, "inner": children, "lean_stdout_parameter": name}
+        if node.get("kind") in ("ClassTemplateDecl", "CXXRecordDecl", "FunctionTemplateDecl"):
+            return {**node, "inner": [self.bind_stdout(child) for child in inner(node)]}
+        return node
 
     def token(self, node):
         """The first token of a node (Clang's JSON omits the name of some unresolved expressions)."""
@@ -4187,8 +4577,10 @@ class Translator:
         self.collect_local_statics()
         if self.globals:
             name = "initializeGlobals"
-            if self.local_statics or self.static_members:
-                # Local static names contain their source function. A distinct
+            if (self.local_statics or self.static_members
+                    or all(size is None and ty.kind in ("int", "u32", "u64", "bool")
+                           for _, ty, size in self.globals.values())):
+                # Scalar state names and local static names identify their storage. A distinct
                 # state/initializer lets clients import several such models.
                 keys = tuple(name for name, _, _ in self.globals.values())
                 suffix = hashlib.sha256(repr(keys).encode()).hexdigest()[:16]
@@ -4327,7 +4719,8 @@ class Translator:
         name = rec["name"]
         if rec.get("bases"):
             raise Unsupported("class inheritance")
-        info = ClassInfo(name, tps, [], [], value_params=values, constraints=constraints or [])
+        info = ClassInfo(name, tps, [], [], value_params=values, constraints=constraints or [],
+                         model_only=rec.get("lean_model_only", False))
         self.classes[name] = info
         tset = set(tps) - values.keys()
         access = "public" if rec.get("tagUsed") == "struct" else "private"
@@ -4398,7 +4791,9 @@ class Translator:
                           or bool(re.search(r"\(&\s*\(.*\)\s*const\s*\)\s*\[", qual)), is_static=c.get("storageClass") == "static",
                           is_ctor=is_ctor, node=c, tparams=member_tps, value_params=member_values,
                           constraints=member_constraints, public=access == "public")
-                if is_ctor and len(sig.params) == 1 and sig.params[0][1].kind == "cls" and sig.params[0][1].name == name:
+                if (is_ctor and len(sig.params) == 1 and sig.params[0][1].kind == "cls"
+                        and sig.params[0][1].name == name
+                        and not any(ty.kind == "deque" for _, ty, _ in info.fields)):
                     raise Unsupported("user-defined record copy constructor")
                 element = self.constructed_element(c, tps)
                 if element is not None:
@@ -4436,6 +4831,20 @@ class Translator:
                     same = [o for o in sigs if [p[1] for p in o.params] == [p[1] for p in s.params]]
                     if len(same) == 2 and len({o.is_const for o in same}) == 2 and s.is_const:
                         suffix += "_const"
+                if (s.is_ctor and not s.params and all(o is s or
+                        (len(o.params) == 1 and o.params[0][1].kind == "cls" and o.params[0][1].name == name)
+                        for o in sigs)):
+                    suffix = ""
+                if (s.is_ctor and len(s.params) == 1 and s.params[0][1].kind == "cls"
+                        and s.params[0][1].name == name):
+                    declaration = next(p for p in inner(s.node) if p.get("kind") == "ParmVarDecl")
+                    spelling = type_of_decl(declaration)
+                    if "&&" in spelling and not re.search(r"\bconst\b", spelling):
+                        suffix = "_move"
+                    elif "&&" not in spelling and re.search(r"\bconst\b", spelling):
+                        suffix = "_copy"
+                    else:
+                        raise Unsupported("unsupported copy/move constructor qualification")
                 s.lean_name = f"cp.{name}.{lean_name(base)}{suffix}"
         self.order.append(("class", info))
 
@@ -4517,8 +4926,11 @@ class Translator:
                             raise Unsupported("template static state cannot cross class specialization")
                         params = [p for p in inner(sig.node) if p.get("kind") == "ParmVarDecl"]
                         if not self.static_members:
-                            if info or any("&" in type_of_decl(p) for p in params):
-                                raise Unsupported("global state in methods or reference-parameter functions")
+                            if any("&" in type_of_decl(p) for p in params):
+                                raise Unsupported("global state in reference-parameter functions")
+                            if info and any(typ.kind not in ("int", "u32", "u64", "bool") or size is not None
+                                            for _, typ, size in self.globals.values()):
+                                raise Unsupported("a method may use only independent scalar global state")
                         else:
                             # Addressable scalar statics could alias scalar
                             # reference inputs. Class records and streams
@@ -4579,6 +4991,10 @@ class Translator:
                             if bindings or r.startswith(("Cpp.SourceStream", "Cpp.ModToUInt32", "Cpp.StaticCall",
                                                          "Cpp.AdlCall2", "Cpp.Method1", "Cpp.Field", "Cpp.WriteField")):
                                 type_text = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', '', type_text)
+                            if r == "Cpp.StreamWrite Cpp.StreamChar":
+                                type_text = ""
+                            if r.startswith("Cpp.Conv (Cpp.ConditionalResult.Value "):
+                                type_text = re.sub(r"Cpp\.ConditionalResult\.Value|\((?:Left|Right) :=", "", type_text)
                             type_names = set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", type_text))
                             if not type_names <= own | {"Int", "UInt32", "UInt64", "Bool", "Unit", "Ordering", "Array"}:
                                 raise Unsupported(f"requirement {r} of {callee.cpp_name} over another type parameter")
@@ -4835,14 +5251,15 @@ class Translator:
                 fn.scopes[0][fname] = fty
             fn.scopes.append({})
         for pname, pty, is_ref in sig.params:
-            if pname in assigned or pname + "[]" in assigned or pname == CONSTRUCT_STATE:
+            if (pname in assigned or pname + "[]" in assigned or pname == CONSTRUCT_STATE
+                    or pname == node.get("lean_stdout_parameter")):
                 fn.emit(f"let mut {lean_name(pname)} := {lean_name(pname)}")
         fn.scopes.append({})
         for s in inner(body):
             fn.stmt(s)
         if sig.is_ctor:
             value = fn.self_value()
-            fn.emit("return " + (fn.result(value) if sig.uses_globals else value))
+            fn.emit("return " + (fn.result(value) if sig.outputs() else value))
         elif sig.ret.kind == "void":
             fn.emit("return " + fn.result(None))
         elif not always_returns(body):
@@ -4895,7 +5312,7 @@ class Translator:
                 outs.append(self.global_state_type())
             else:
                 outs.append(lean_type(next(p[1] for p in sig.params if p[0] == o)))
-        if sig.is_ctor and not sig.uses_globals:
+        if sig.is_ctor and not sig.outputs():
             rtype = cls_ty
         elif not outs:
             rtype = "Unit"
@@ -5048,6 +5465,8 @@ def translate_file(source: Path, imports: list[str], deps=(), standard="c++17", 
         imports = [*imports, "Proofs.Cpp.Lib.Queue"]
     if re.search(r"Cpp\.(OrderedSet|orderedSet)", body):
         imports = [*imports, "Proofs.Cpp.Lib.OrderedSet"]
+    if "Cpp.optionalValue" in body:
+        imports = [*imports, "Proofs.Cpp.Lib.Optional"]
     imp = "\n".join(f"import {m}" for m in ["Proofs.Cpp.Prelude", *imports])
     rel = source.resolve().relative_to(ROOT).as_posix() if source.resolve().is_relative_to(ROOT) else source.name
     return HEADER.format(source=rel, imports=imp) + "\n" + body + "\nend Proofs.Cpp.Gen\n"

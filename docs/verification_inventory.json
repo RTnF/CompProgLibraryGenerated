@@ -14434,7 +14434,7 @@
     },
     {
       "source": "experiments/library/cpp/set/multiset.hpp",
-      "source_sha256": "0348fe5ee1521df3681b610048ad5f003f855fd280cfcb9eac123f9f46eb095e",
+      "source_sha256": "4193f184f98b9ff984a04e8f1809ef3d707fa417cd574ed1851e3682a84ebaba",
       "series": "experiments/library",
       "kind": "header",
       "purpose_hint": "重複ありの集合",
@@ -14450,16 +14450,22 @@
           "line": 6,
           "declaration": "referenced class Xor64 definition",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "FieldDecl",
@@ -14482,48 +14488,66 @@
           "line": 10,
           "declaration": "used Xor64 'void (ull)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 12,
           "declaration": "referenced get 'ull ()' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "VarDecl",
           "line": 18,
           "declaration": "referenced rnd 'Xor64' static inline cinit",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "ClassTemplateDecl",
@@ -14734,6 +14758,22 @@
           }
         },
         {
+          "kind": "CXXMethodDecl",
+          "line": 37,
+          "declaration": "operator() 'auto () const -> auto' inline",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
           "kind": "VarDecl",
           "line": 37,
           "declaration": "nil 'Node<T> *const' cinit",
@@ -14750,9 +14790,9 @@
           }
         },
         {
-          "kind": "ClassTemplateDecl",
-          "line": 48,
-          "declaration": "TreeMultiSet",
+          "kind": "CXXMethodDecl",
+          "line": 37,
+          "declaration": "operator() 'auto () const -> auto' inline",
           "template_instantiation_review": "pending",
           "verification_target": null,
           "status": {
@@ -14764,38 +14804,88 @@
             "include_verified": false,
             "published": false
           }
+        },
+        {
+          "kind": "VarDecl",
+          "line": 38,
+          "declaration": "referenced sentinel 'Node<T>':'in::Node<T>' static callinit",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
+          "kind": "ClassTemplateDecl",
+          "line": 49,
+          "declaration": "TreeMultiSet",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXRecordDecl",
-          "line": 48,
+          "line": 49,
           "declaration": "class TreeMultiSet definition",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "TypeAliasDecl",
-          "line": 49,
+          "line": 50,
           "declaration": "referenced Tree 'in::Node<T> *'",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "ClassTemplateDecl",
@@ -14815,483 +14905,773 @@
         },
         {
           "kind": "FieldDecl",
-          "line": 50,
+          "line": 51,
           "declaration": "referenced nil 'const Tree':'in::Node<T> *const'",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
-        },
-        {
-          "kind": "FieldDecl",
-          "line": 51,
-          "declaration": "referenced root 'Tree':'in::Node<T> *'",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 52,
+          "declaration": "referenced root 'Tree':'in::Node<T> *'",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "FieldDecl",
+          "line": 53,
           "declaration": "referenced n_ 'size_t':'unsigned long'",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 54,
+          "line": 55,
+          "declaration": "referenced destroy 'void (Tree)' static implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 64,
+          "declaration": "referenced clone 'Tree (Tree)' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 81,
           "declaration": "referenced update_cr 'void (Tree)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 62,
+          "line": 89,
           "declaration": "referenced split 'void (Tree, T, Tree &, Tree &)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
-        },
-        {
-          "kind": "CXXMethodDecl",
-          "line": 75,
-          "declaration": "referenced merge 'void (Tree &, Tree, Tree)' implicit-inline",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
-        },
-        {
-          "kind": "CXXMethodDecl",
-          "line": 90,
-          "declaration": "referenced insert 'void (Tree &, Tree)' implicit-inline",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 102,
+          "declaration": "referenced merge 'void (Tree &, Tree, Tree)' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 117,
+          "declaration": "referenced insert 'void (Tree &, Tree)' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 129,
           "declaration": "remove 'void (Tree &, T)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 112,
+          "line": 141,
           "declaration": "aoj_dump 'void (Tree &, T, T)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 126,
+          "line": 155,
           "declaration": "referenced print 'void (Tree)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 139,
+          "line": 168,
           "declaration": "verify 'void (Tree, size_t &)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 163,
+          "line": 192,
           "declaration": "referenced find_by_order 'T (Tree, size_t)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 175,
+          "line": 204,
           "declaration": "referenced enumerate_in 'void (vector<tuple<T, size_t, T>> &, Tree, const T &, const T &, Tree)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 188,
+          "line": 217,
           "declaration": "referenced enumerate_all_in 'void (vector<tuple<T, size_t, T>> &, Tree, Tree)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
-          "line": 199,
+          "line": 228,
           "declaration": "TreeMultiSet<T> 'void ()' default implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXConstructorDecl",
+          "line": 230,
+          "declaration": "TreeMultiSet<T> 'void (const TreeMultiSet<T> &)' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXConstructorDecl",
+          "line": 233,
+          "declaration": "TreeMultiSet<T> 'void (TreeMultiSet<T> &&) noexcept' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXDestructorDecl",
+          "line": 236,
+          "declaration": "~TreeMultiSet<T> 'void ()' not_selected implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": false,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 207,
+          "line": 244,
           "declaration": "add 'size_t (T, size_t)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 242,
+          "line": 282,
           "declaration": "remove 'bool (T, size_t)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 281,
+          "line": 321,
           "declaration": "remove_all 'size_t (T)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 296,
-          "declaration": "count 'size_t (T)' implicit-inline",
+          "line": 336,
+          "declaration": "referenced count 'size_t (T)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 308,
+          "line": 348,
           "declaration": "find_lower 'optional<T> (T)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 326,
+          "line": 366,
           "declaration": "find_upper 'optional<T> (T)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 344,
+          "line": 384,
           "declaration": "rank 'pair<int, int> (T)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 362,
+          "line": 402,
           "declaration": "min 'T ()' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
-        },
-        {
-          "kind": "CXXMethodDecl",
-          "line": 371,
-          "declaration": "max 'T ()' implicit-inline",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
-        },
-        {
-          "kind": "CXXMethodDecl",
-          "line": 381,
-          "declaration": "get_kth 'T (size_t)' implicit-inline",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
-        },
-        {
-          "kind": "CXXMethodDecl",
-          "line": 387,
-          "declaration": "enumerate 'vector<tuple<T, size_t, T>> (const T &, const T &)' implicit-inline",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
-        },
-        {
-          "kind": "CXXMethodDecl",
-          "line": 396,
-          "declaration": "enumerate_all 'vector<tuple<T, size_t, T>> ()' implicit-inline",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
-        },
-        {
-          "kind": "CXXMethodDecl",
-          "line": 405,
-          "declaration": "aoj_dump 'void (const T &, const T &)' implicit-inline",
-          "template_instantiation_review": "pending",
-          "verification_target": null,
-          "status": {
-            "review": "pending",
-            "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
-            "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 411,
-          "declaration": "size 'size_t ()' implicit-inline",
+          "declaration": "max 'T ()' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
-          "line": 413,
+          "line": 421,
+          "declaration": "get_kth 'T (size_t)' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 427,
+          "declaration": "enumerate 'vector<tuple<T, size_t, T>> (const T &, const T &)' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 436,
+          "declaration": "enumerate_all 'vector<tuple<T, size_t, T>> ()' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 445,
+          "declaration": "aoj_dump 'void (const T &, const T &)' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 451,
+          "declaration": "size 'size_t ()' implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": "library/set/tree_multiset.hpp",
+          "status": {
+            "review": "ported",
+            "bug": "unknown",
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
+            "published": false
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
+        },
+        {
+          "kind": "CXXMethodDecl",
+          "line": 453,
           "declaration": "verify 'void ()' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/set/tree_multiset.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_tree_multiset.py",
+            "tests/tree_multiset.cpp",
+            "tests/diff/tree_multiset.py",
+            "Proofs/Cpp/TreeMultiset.lean"
+          ]
         }
       ],
       "declaration_scan": {
@@ -15306,14 +15686,14 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": null,
+      "verification_target": "library/set/tree_multiset.hpp",
       "status": {
-        "review": "pending",
-        "bug": "unknown",
-        "cpp_tested": false,
-        "common_translator": false,
-        "lean_proved": false,
-        "include_verified": false,
+        "review": "ported",
+        "bug": "fixed",
+        "cpp_tested": true,
+        "common_translator": true,
+        "lean_proved": true,
+        "include_verified": true,
         "published": false
       },
       "including_drivers": [
@@ -15332,7 +15712,6 @@
         "experiments/library/cpp/modint/modint.hpp",
         "experiments/library/cpp/number/ratio.hpp",
         "experiments/library/cpp/random/xorshift.hpp",
-        "experiments/library/cpp/set/set.hpp",
         "experiments/library/cpp/template/marathon_template.cpp",
         "experiments/library/cpp/tree/tree.hpp",
         "experiments/library3/cpp/Geometry/Point.hpp",
@@ -15340,7 +15719,14 @@
         "experiments/library3/cpp/Graph/GraphM.hpp",
         "experiments/library3/cpp/ModInt/ModInt.hpp"
       ],
-      "byte_identical_sources": []
+      "byte_identical_sources": [],
+      "evidence": [
+        "tests/test_original_tree_multiset.py",
+        "tests/tree_multiset.cpp",
+        "tests/diff/tree_multiset.py",
+        "Proofs/Cpp/TreeMultiset.lean"
+      ],
+      "review_notes": "TreeMultiSetの公開APIと優先度生成を公開部品へ移植。原本のin名前空間のポインタ節点、デバッグ表示、未使用node_countは内部実装。publishedは対象コミットのCI・配布物確認後に更新。"
     },
     {
       "source": "experiments/library/cpp/set/set.hpp",
@@ -15368,7 +15754,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15390,7 +15776,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15412,7 +15798,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15434,7 +15820,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15456,7 +15842,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15478,7 +15864,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15500,7 +15886,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15522,7 +15908,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15544,7 +15930,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15566,7 +15952,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15588,7 +15974,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15610,7 +15996,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15632,7 +16018,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15654,7 +16040,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15676,7 +16062,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/imports/tree_set_source.cpp",
@@ -15706,12 +16092,11 @@
         "common_translator": true,
         "lean_proved": true,
         "include_verified": true,
-        "published": false
+        "published": true
       },
       "including_drivers": [],
       "duplicate_candidates": [
-        "experiments/library/cpp/set/multiset.hpp",
-        "experiments/library/cpp/tree/tree.hpp"
+        "experiments/library3/cpp/Geometry/Point.hpp"
       ],
       "byte_identical_sources": [],
       "evidence": [
@@ -20162,7 +20547,6 @@
         "experiments/library/cpp/number/ratio.hpp",
         "experiments/library/cpp/number_theory/factorize.hpp",
         "experiments/library/cpp/set/multiset.hpp",
-        "experiments/library/cpp/set/set.hpp",
         "experiments/library3/cpp/Geometry/Point.hpp",
         "experiments/library3/cpp/Graph/GraphL.hpp",
         "experiments/library3/cpp/Graph/GraphM.hpp",
@@ -24128,6 +24512,7 @@
         "experiments/library/cpp/modint/modint.hpp",
         "experiments/library/cpp/number/ratio.hpp",
         "experiments/library/cpp/set/multiset.hpp",
+        "experiments/library/cpp/set/set.hpp",
         "experiments/library/cpp/tree/tree.hpp",
         "experiments/library3/cpp/Graph/GraphL.hpp",
         "experiments/library3/cpp/Graph/GraphM.hpp",

@@ -34,14 +34,15 @@ template <class T = ll> struct Node {
     return os;
   }
 };
-template <class T> Node<T> *const Node<T>::nil = new Node<T>({}, 0, 0);
+template <class T> Node<T> *const Node<T>::nil = [] {
+  static Node<T> sentinel({}, 0, 0);
+  return &sentinel;
+}();
 } // namespace in
 
 /**
  * @brief 重複ありの集合
- * 挿入 O(log n)
- * 削除 O(log n)
- * 検索 O(log n)
+ * 挿入・削除・検索 O(h + 1)（h は木の高さ）
  * 実装：Treap https://xuzijian629.hatenablog.com/entry/2018/12/08/000452
  * @tparam T 要素の型
  */
@@ -50,6 +51,32 @@ template <class T = ll> class TreeMultiSet {
   const Tree nil = in::Node<T>::nil;
   Tree root = in::Node<T>::nil;
   size_t n_ = 0;
+
+  static void destroy(Tree tree) {
+    if (tree == in::Node<T>::nil) {
+      return;
+    }
+    destroy(tree->l);
+    destroy(tree->r);
+    delete tree;
+  }
+
+  Tree clone(Tree source) {
+    if (source == nil) {
+      return nil;
+    }
+    Tree copy = new in::Node<T>(source->k, source->p, source->c);
+    copy->l = copy->r = nil;
+    try {
+      copy->l = clone(source->l);
+      copy->r = clone(source->r);
+      update_cr(copy);
+      return copy;
+    } catch (...) {
+      destroy(copy);
+      throw;
+    }
+  }
 
   void update_cr(Tree t) {
     if (t != nil) {
@@ -101,7 +128,9 @@ template <class T = ll> class TreeMultiSet {
 
   void remove(Tree &t, T key) {
     if (t->k == key) {
-      merge(t, t->l, t->r);
+      Tree old = t;
+      merge(t, old->l, old->r);
+      delete old;
     } else {
       remove(key < t->k ? t->l : t->r, key);
     }
@@ -177,10 +206,10 @@ template <class T = ll> class TreeMultiSet {
     if (t->l != nil && l < t->k) {
       enumerate_in(v, t->l, l, r, t);
     }
-    if (l <= t->k && t->k < r) {
+    if (!(t->k < l) && t->k < r) {
       v.emplace_back(t->k, t->c, parent ? parent->k : -1);
     }
-    if (t->r != nil && t->k < r - 1) {
+    if (t->r != nil && t->k < r) {
       enumerate_in(v, t->r, l, r, t);
     }
   }
@@ -198,6 +227,14 @@ template <class T = ll> class TreeMultiSet {
 public:
   TreeMultiSet() = default;
 
+  TreeMultiSet(const TreeMultiSet &other)
+      : root(clone(other.root)), n_(other.n_) {}
+
+  TreeMultiSet(TreeMultiSet &&other) noexcept
+      : root(std::exchange(other.root, other.nil)), n_(std::exchange(other.n_, 0)) {}
+
+  ~TreeMultiSet() { destroy(root); }
+
   /**
    * @brief 要素のn個追加
    *
@@ -205,6 +242,9 @@ public:
    * @return size_t 追加後の同じ要素の数
    */
   size_t add(T key, size_t n = 1) {
+    if (n == 0) {
+      return count(key);
+    }
     n_ += n;
     Tree t = root;
     bool found = false;
@@ -247,6 +287,7 @@ public:
         if (t->c == n) {
           n_ -= n;
           remove(root, key);
+          return true;
         } else if (t->c > n) {
           n_ -= n;
           t->c -= n;
@@ -255,7 +296,6 @@ public:
         } else {
           return false;
         }
-        return false;
       }
       t = key < t->k ? t->l : t->r;
     }
@@ -361,7 +401,7 @@ public:
 
   T min() {
     Tree t = root;
-    assert(root);
+    assert(root != nil);
     while (t->l != nil) {
       t = t->l;
     }
@@ -370,7 +410,7 @@ public:
 
   T max() {
     Tree t = root;
-    assert(root);
+    assert(root != nil);
     while (t->r != nil) {
       t = t->r;
     }
@@ -387,7 +427,7 @@ public:
   vector<tuple<T, size_t, T>> enumerate(const T &l, const T &r) {
     vector<tuple<T, size_t, T>> ret;
     if (root != nil) {
-      enumerate_in(ret, root, l, r);
+      enumerate_in(ret, root, l, r, nullptr);
     }
     return ret;
   }

@@ -65,9 +65,12 @@ def type_traits_binding(cpp):
 
 
 CPP_PRELUDE = r"""
+#include <deque>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -80,6 +83,8 @@ template <class X> void rd(std::vector<X> &v);
 template <class A, class B> void rd(std::pair<A, B> &p);
 template <class X> void pr(const std::vector<X> &v);
 template <class A, class B> void pr(const std::pair<A, B> &p);
+template <class... A> void pr(const std::tuple<A...> &t);
+template <class A> void pr(const std::optional<A> &x);
 template <class X, std::size_t N> void pr(const X (&a)[N]);
 template <class X> void rd(X &x) {
   if constexpr (std::is_unsigned_v<X>) { unsigned long long v; std::cin >> v; x = (X)v; }
@@ -110,6 +115,13 @@ template <class X> void pr(const std::vector<X> &v) {
   for (std::size_t i = 0; i < v.size(); i++) pr((X)v[i]);
 }
 template <class A, class B> void pr(const std::pair<A, B> &p) { pr(p.first); pr(p.second); }
+template <class... A> void pr(const std::tuple<A...> &t) {
+  std::apply([](const auto &...values) { (pr(values), ...); }, t);
+}
+template <class A> void pr(const std::optional<A> &x) {
+  pr(x.has_value());
+  if (x.has_value()) pr(x.value());
+}
 // A C array member (an Array in the model): its length and its elements.
 template <class X, std::size_t N> void pr(const X (&a)[N]) {
   std::cout << ' ' << N;
@@ -172,6 +184,8 @@ instance {α : Type} [Pr α] : Pr (Array α) where
   pr v := s!" {v.size}" ++ String.join (v.toList.map Pr.pr)
 instance {α β : Type} [Pr α] [Pr β] : Pr (α × β) where
   pr p := Pr.pr p.1 ++ Pr.pr p.2
+instance {α : Type} [Pr α] : Pr (Option α) where
+  pr | none => " 0" | some x => " 1" ++ Pr.pr x
 instance : Pr Unit where pr _ := ""
 
 def arg {α : Type} [Rd α] (ts : List String) : IO (α × List String) :=
@@ -487,7 +501,7 @@ class Harness:
         for kind, item in self.tr.order:
             if kind == "fn":
                 out.append((None, item))
-            else:
+            elif not item.model_only:
                 for sig in item.methods:
                     # a static data member modelled as a function (lean_translate.inline_template_static_constants)
                     # is no C++ function; its value is used by the other members
@@ -653,7 +667,7 @@ class Harness:
                        .replace("@@CHAR_SIGNED@@", "false" if self.stream_unsigned else "true")
                      if self.stream_character else "") if self.has_streams else ""),
                  *self.cpp_record_io(), "int main() {", "  std::string cmd, name;"]
-        classes = [item for kind, item in self.tr.order if kind == "class"]
+        classes = [item for kind, item in self.tr.order if kind == "class" and not item.model_only]
         checked_traits = {packet for fn in self.tr.built_functions.values()
                           for packet in fn.type_trait_bindings}
         checked_traits.update((self.instance[p], *type_traits_binding(self.instance[p]))
@@ -672,7 +686,9 @@ class Harness:
         if self.source_stream_contracts:
             lines.append('  static_assert(sizeof(int) == 4 && sizeof(long) == 8 && sizeof(long long) == 8);')
         for info in classes:
-            lines.append(f"  std::vector<{self.cpp_class(info)}> objects_{info.name};")
+            container = ("std::deque" if any(sig.is_ctor and sig.mut_refs for sig in info.methods)
+                         else "std::vector")
+            lines.append(f"  {container}<{self.cpp_class(info)}> objects_{info.name};")
         lines.append("  while (std::cin >> cmd >> name) {")
         for info in classes:
             for name, ty, _ in info.fields:
@@ -685,9 +701,15 @@ class Harness:
             if not sig.public or (sig.is_static and info is not None and not self.static_callable(info, sig)):
                 continue
             quals = self.param_quals(sig)
+            stdout = sig.node.get("lean_stdout_parameter")
+            stdout_index = None
             decls, names = [], []
             for i, q in enumerate(quals):
-                pty = sig.params[i][1]
+                pname, pty, _ = sig.params[i]
+                if stdout is not None and pname == stdout:
+                    stdout_index = i
+                    decls.append(f"std::ostringstream a{i};")
+                    continue
                 if pty.kind == "tparam" and pty.name in self.tr.packs:
                     for m, t in enumerate(pack):
                         decls.append(f"{cpp_value_type(t, self.instance)} a{i}_{m}; difftest::rd(a{i}_{m});")
@@ -705,7 +727,7 @@ class Harness:
                         decls.append(f"{t} a{i} = difftest::start(static_cast<{t} *>(nullptr)); difftest::rd(a{i});")
                     else:
                         decls.append(f"{t} a{i}; difftest::rd(a{i});")
-                names.append(f"a{i}")
+                names.append(f"std::move(a{i})" if sig.is_ctor and "&&" in q else f"a{i}")
             if info is None:
                 targs = [self.instance[t.removesuffix("_value_type")] if t.removesuffix("_value_type") in sig.containers
                          else self.instance[t] for t in sig.tparams]
@@ -748,7 +770,11 @@ class Harness:
                     lines.append(f"        auto {ref}r = {call};")
                     lines.append("        std::cout << \"ok\"; difftest::pr(r);")
                 else:
+                    if stdout_index is not None:
+                        lines.append(f"        auto *previous_stdout = std::cout.rdbuf(a{stdout_index}.rdbuf());")
                     lines.append(f"        {call};")
+                    if stdout_index is not None:
+                        lines.append("        std::cout.rdbuf(previous_stdout);")
                     lines.append("        std::cout << \"ok\";")
                 for i, (pname, pty, is_ref) in enumerate(sig.params):
                     if is_ref and pty.kind == "cstate":
@@ -780,7 +806,7 @@ class Harness:
         return lt.lean_type(lt.subst(ty, list(self.lean_instance), [lt.Ty("tparam", v) for v in self.lean_instance.values()]))
 
     def lean_driver(self) -> str:
-        classes = [item for kind, item in self.tr.order if kind == "class"]
+        classes = [item for kind, item in self.tr.order if kind == "class" and not item.model_only]
         streams = ""
         if self.has_streams:
             ops = LEAN_CHARACTER_STREAM_OPS if self.stream_character else (
@@ -992,8 +1018,17 @@ class Harness:
             lines.append('    | none => run ts objs (out.push "fail")')
             lines.append("    | some (r, _) => do")
             if sig.is_ctor:
-                value = "r.1" if sig.uses_globals else "r"
-                state = ", globalState := some r.2" if sig.uses_globals else ""
+                outputs = sig.outputs()
+                value = "r.1" if len(outputs) > 1 else "r"
+                state = ", globalState := some r" + ".2" * (len(outputs) - 1) if sig.uses_globals else ""
+                for i, (pname, pty, is_ref) in enumerate(sig.params):
+                    if not is_ref:
+                        continue
+                    if pty.kind != "cls":
+                        raise lt.Unsupported("constructor differential write-back requires a record argument")
+                    j = outputs.index(pname)
+                    sel = "r" + ".2" * j + (".1" if j < len(outputs) - 1 else "")
+                    lines.append(f"      let objs := {{ objs with o_{pty.name} := objs.o_{pty.name}.set! a{i}k.toNat {sel} }}")
                 lines.append(f"      run ts {{ objs with o_{info.name} := objs.o_{info.name}.push {value}{state} }} (out.push \"new\")")
                 continue
             outputs = sig.outputs()

@@ -10,7 +10,7 @@
 - `bool` は `Bool`、`std::vector<X>` は `Array X`、`std::pair<A, B>` は `A × B`。
 - テンプレート引数 `T` は Lean の型変数になり、使った演算だけを型クラス引数として要求する（`+` → `[Add T]`、`<` → `[LT T] [DecidableLT T]`、`T s = 0` → `[Zero T]`、整数から `T` への変換 → `[IntCast T]`、要素の読み出しと値初期化 → `[Inhabited T]`。2 つの型引数 `S`、`T` の間の `a < b` → `[Cpp.HLt S T]`、`T` から `S` への暗黙の変換 → `[Cpp.Conv T S]`（`T` から整数型への変換も `[Cpp.Conv T Int]` など）。同じ型では `LT` と恒等写像が既定のインスタンス）。静的メンバーだけを使う型引数 `P`（ポリシー）の呼び出し `P::f(args)` は、関数に明示的な引数 `P : cp.<関数>.Policy_P ...`（使われた静的メンバーをフィールドに持つ構造体。引数と結果の型は使われ方から決める）を加え、そのフィールドの呼び出しに翻訳する。差分テストのハーネスは具体化 `P = "cp::DpHeight<long long>"` を `{ e := cp.DpHeight.e, ... }` として渡す。呼び出し先の要求も呼び出し元へ伝わる。証明は Mathlib の代数構造（`AddCommMonoid T` など）を仮定して述べる。値初期化（`std::vector<T>(n)`）は `default` で、`T` が数値のときに `default = 0` を仮定する定理がある。
 - 範囲外の添字は C++ では未定義動作で、各部品の前提（添字が範囲内）で除く。モデルの `Cpp.get`/`Cpp.set` は全域関数にするために範囲外でも値を返すが（`default` を読む、書き込まない）、これは C++ の挙動の主張ではなく、定理と文書はこの値に依存しない。前提を満たす入力で範囲外アクセスが起きないことは、証明の中の添字の範囲と、サニタイザ付きテスト・差分テストで確かめる。
-- C++ オブジェクトの寿命（コピー・ムーブ・破棄）とヒープ上の領域は扱わない。
+- C++ オブジェクトの寿命とヒープ上の領域は扱わない。明示的に定義したコピー・ムーブ構築子は、本体と初期化子が対応構文に収まるときに値の変換として扱う。この場合の生成名は `init_copy`・`init_move` で、ムーブ元への代入も結果に含める。
 
 ## 翻訳の対象
 
@@ -32,7 +32,7 @@
 - それ以外の `for`、`while` → `for _ in Cpp.forever do`（反復ごとに条件を調べて `break`）。`continue` の前に増分を実行する。
 - 範囲 for（値または const 参照で、本体が範囲を変えないもの）→ `for x in v`。
 - `if`/`else`、`return`、`break`、`continue`、局所変数の宣言（`let mut`）、代入、複合代入、`++`/`--`（文としてのみ）、`assert`（`Cpp.check`、失敗で `none`）、三項演算子（分岐に呼び出しを含まないもの）。
-- 呼び出しは評価順に `let t ← f ...` として前に出す。`&&`/`||` の右辺と三項演算子の分岐の中の呼び出しは拒否する。
+- 呼び出しは評価順に `let t ← f ...` として前に出す。`&&`/`||` の右辺と三項演算子の分岐の中の呼び出しは拒否する。三項演算子の枝にある `optional::value()` の読取りは、選ばれた枝の中で実行する。型引数と整数の条件式の共通型と各枝からの変換は `Cpp.ConditionalResult` で指定する。
 - 自分自身を直接呼ぶ再帰は、燃料引数つきの `name_rec (__fuel : Nat) ...` に翻訳する。本体は `match __fuel with | 0 => failure | __fuel + 1 => do ...` で、再帰呼び出しは `name_rec __fuel ...` になる。関数 `name` 自体は `name_rec Cpp.fuel ...` とする。燃料が尽きると `none`（失敗）なので、成功を述べる定理は再帰の深さが `Cpp.fuel` 未満であることも示す。相互再帰は拒否する（定義の順序は呼び出し先が先）。
 - 同名の別宣言がない非公開の非 const メンバーでは、通常のレシーバー書き戻しで範囲 for の翻訳が止まる場合、レシーバーを読み取り専用にしたモデルで再検査する。直接再帰を確認し、フィールドへの代入・可変参照による書き戻し・`this` へのレシーバーを書き換える呼び出しが生成されれば拒否する。引数の可変参照は通常どおり書き戻し、範囲 for の走査対象と重なる更新も拒否する。C++ では非 const のオーバーロード選択を保つ。回帰は `tests/test_lean_model_recursive_receivers.py`。
 - 代入の連鎖 `a = b = c` は `b = c; a = b`（代入式の値は代入後の左辺）として翻訳する。
@@ -57,6 +57,9 @@
 - `std::unordered_map<int, V>`（`V` は整数か vector）は `Cpp.UMap`（キーの重複しない連想リスト、`Proofs/Cpp/Lib/UMap.lean`）に翻訳する。`m[k]` は値（ない鍵には値初期化した値を入れる）と更新した表、`m[k] = e`・`m.count(k)`・`m.clear()` に対応する。手数は文書化された最悪の場合（1 回 `size + 1`）。表にある vector を値で返すとコピーの手数を数える。`m[k] = std::move(x)` は、`x` が局所変数でこの後使われないときだけ受け付け、`x` の値の代入とする。
 - `std::priority_queue<T, std::vector<T>, std::less<T> / std::greater<T>>` と `std::stack<T>` は `Proofs/Cpp/Lib/PQ.lean` のリストに翻訳する。`top` は比較 `comp` で最良の要素（`pqBest`。整数とその組のように同値な要素が等しい全順序では C++ と同じ要素）、`push`・`pop` は `log2 size + 1` 手、`top`・`empty`・`size` は 1 手。`std::pair` の `<` は `Cpp.pairLt`。`top` の性質（比較が非反射的で推移的なら、キューの要素で、どの要素にも負けない）は `pqBest_spec`。
 - スカラー要素と既定の容器を使う `std::queue<T>` は、先頭から末尾までの順序を持つリストに翻訳する（`Proofs/Cpp/Lib/Queue.lean`）。空の構築、`push`、対応する値を作る `emplace`、値としての `front`、`pop`、`empty`、`size` に対応する。`push`・`front`・`pop` は既定の `std::deque` の各操作に1手を数え、空のキューでの `front`・`pop` は失敗とする。
+- `std::optional<T>` は `Option T` に翻訳する。空と値の構築、`has_value()`、値としての `value()`、`reset()`、1引数の `emplace` を扱う。`value()` は値があるときに1手で返し、空の場合は失敗とする（`Proofs/Cpp/Lib/Optional.lean`）。[C++17 の構築](https://timsong-cpp.github.io/cppwp/n4659/optional.ctor)、[参照操作](https://timsong-cpp.github.io/cppwp/n4659/optional.observe)、[emplace](https://timsong-cpp.github.io/cppwp/n4659/optional.assign)、[reset](https://timsong-cpp.github.io/cppwp/n4659/optional.mod)。
+- 既定のアロケータを持つ `std::deque<T>` は `Array T` に翻訳する。空の構築、`size()`、添字での読取り・更新、`emplace_back`、異なる受け手の `swap` を扱う。クラスの非公開領域に置いた入れ子の単純な `struct` は、そのクラスの deque に格納し、スカラーまたは optional のフィールドだけを持つ場合にモデルの補助構造体にできる。[C++17 のコンテナ要件](https://timsong-cpp.github.io/cppwp/n4659/container.requirements.general)、[deque の末尾追加](https://timsong-cpp.github.io/cppwp/n4659/deque.modifiers)。
+- 上の非公開 deque を既定デリータの `std::unique_ptr` で保持する場合、空の所有者を要素数0に対応させる。`get() == nullptr` なら0を返すサイズ取得、同じ所有者を必要に応じて空の deque で初期化した直後の `emplace_back()`、範囲内への添字アクセス、異なる所有者の `swap` を受け付ける。空の構築と所有者の交換では追加割り当てが発生しない。[C++17 の所有者の構築](https://timsong-cpp.github.io/cppwp/n4659/unique.ptr.single.ctor)、[make_unique](https://timsong-cpp.github.io/cppwp/n4659/unique.ptr.create)、[swap](https://timsong-cpp.github.io/cppwp/n4659/unique.ptr.single.modifiers)。
 - スカラーまたはその vector を2要素以上持つ `std::tuple` は Lean の右結合の直積に翻訳する。各要素を副作用のない初期化子で構築し、値の分解宣言で各要素を取り出す。スカラー値2個を持つ `std::pair` も分解できる。参照の要素や参照で分解する宣言は対象外。値の構築で `std::vector` を左辺値からコピーすると、その要素数を手数に加える。
 - スカラー要素と既定の比較・アロケータを使う `std::set` は順序を保つリストに翻訳する（`Proofs/Cpp/Lib/OrderedSet.lean`）。空の構築、結果を捨てる `insert` とキー指定の `erase`、`count`、`size`、その場で `begin` または `rbegin` を逆参照して値を読む形を扱う。比較は厳密全順序の `<`。挿入・削除・検索には要素数に対数の手数を、両端の読取りには1手を数える。
 - private なキーラッパーは、型引数の可変フィールドが1個あり、値とコピーの構築子がそのフィールドを初期化するだけで、唯一の比較 `operator<` が左右のそのフィールドに `<` を適用する形を検査する。このラッパーを既定の `std::set` に格納する場合、モデルはキーの値へ投影する。格納、キーによる削除・個数取得、サイズ、両端でのフィールドの値取得だけが許される。ラッパーやイテレータを別の式へ渡す経路、書き込み、比較や構築子の追加効果は拒否する。
@@ -136,6 +139,8 @@ constexprの両分岐をBool分岐として残し、未選択分岐のtraitフ�
 ## ストリーム引数の状態変換
 
 原本Ratioの入出力に必要な `std::istream&` / `std::ostream&` を、それぞれ `Cpp.IStream` / `Cpp.OStream` の状態へ翻訳する。`[Cpp.Streams]` は状態型を、`[Cpp.StreamRead T]` / `[Cpp.StreamWrite T]` は標準操作の実現を明示する。各操作は `Cpp.M` の純粋な状態変換であり、書式・ロケール・エラーフラグ・例外マスクなどを状態に持ち、その操作のコストと不帰還も表現できる。正本に書式を固定する既定の実現や費用インスタンスは置かない。
+
+戻り値が `void` の関数に直接記述された `std::cout` は、モデルでだけ受け渡す出力状態へ対応させる。差分ハーネスは呼出し中の標準出力を採取する。
 
 読取りは元の対象値も受け取る。これにより、失敗で値を保持する場合と変化させる場合を区別できる。各読取り後に対象フィールドとストリームの両方を更新し、連鎖した次の読取りへ渡す。出力は更新後のストリームへ次の挿入を行い、文字リテラル `'/'` を整数47の挿入と区別する。標準操作の契約は[算術型の抽出](https://eel.is/c++draft/istream.formatted.arithmetic)、[算術型の挿入](https://eel.is/c++draft/ostream.inserters.arithmetic)、[文字の挿入](https://eel.is/c++draft/ostream.inserters.character)に従う。利用する標準操作の実現がこれらの契約に対応することが信頼境界であり、標準I/Oの実装自体を証明したとは扱わない。
 
@@ -219,7 +224,7 @@ UnresolvedMemberExprによる明示receiverの呼出しは、更新対象の収�
 
 生成する非公開補助 `cp.initializeGlobals`（同名宣言があれば末尾に_を追加）は、スカラー/スカラー配列のstatic zero初期化と、クラス/クラス配列の暗黙の引数なし構築をモデル化する。クラス配列では各要素のコンストラクタを順に呼び、ループにもtickを付ける。これはC++オブジェクト寿命の証明ではない。差分ハーネスは起動時にこの補助を実行し、以降のコマンドへ状態を引き継ぐ。
 
-名前空間の可変変数を使うメソッド・参照引数付き関数、thread_local/externグローバル、明示初期化は拒否する。複数の状態付き呼出しや、global読取りと状態付き呼出しが同じ式に含まれる場合も拒否する。コンストラクタやメソッドの呼出しも対象となる場合は、順序が明確になるよう別の式に書く。依存ヘッダ間の共有グローバルは未対応。
+名前空間の可変変数がすべて独立したゼロ初期化のスカラーである場合、メソッドからも状態を利用できる。状態型と初期化関数には宣言名に由来する接尾辞を付ける。スカラー配列やクラス値を含む名前空間状態を使うメソッド、参照引数付き関数、thread_local/externグローバル、明示初期化は拒否する。複数の状態付き呼出しや、global読取りと状態付き呼出しが同じ式に含まれる場合も拒否する。コンストラクタやメソッドの呼出しも対象となる場合は、順序が明確になるよう別の式に書く。依存ヘッダ間の共有グローバルは未対応。
 
 非template・非overloadの自由関数の局所staticを、宣言IDごとに共有状態へ移す。対象はゼロ初期化の可変UInt32と、標準allocatorを取る空の `std::vector`。初期化の値や副作用が呼出し引数や到達順に依存しない形である。参照やポインタで返す関数、値を伴うvector初期化、volatile/thread_localは拒否する。配列の操作と費用は通常のvectorと同じ契約を使う。
 

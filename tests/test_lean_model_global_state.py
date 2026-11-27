@@ -55,6 +55,22 @@ unsigned read() { return unused[0]; }
 }
 ''', 'call successor 41\ncall successor -1\n', ['ok 42', 'ok 0'])
 
+    def test_methods_share_independent_scalar_global_state(self):
+        import test_lean_model_friend as friends
+        friends.FriendTranslationTests().compare('''namespace cp {
+int counter;
+int advance(int amount) { counter += amount; return counter; }
+struct Box {
+  int value;
+  Box(int x) : value(x) {}
+  int read() const { return counter + value; }
+  int step() { return advance(value); }
+};
+}
+''', 'new Box.init 2\nnew Box.init 7\ndo Box.read 0\ndo Box.step 0\n'
+            'do Box.read 1\ncall advance -5\ndo Box.step 1\ndo Box.read 0\n',
+            ['new', 'new', 'ok 2', 'ok 2', 'ok 9', 'ok -3', 'ok 4', 'ok 6'])
+
     def test_same_named_child_namespace_function_keeps_its_state(self):
         import clang_ast
         import test_lean_model_friend as friends
@@ -311,13 +327,13 @@ def main : IO Unit := do
             'using ref = int&;',
             'using cv = const int;',
             'int value; int f(const int& x) { value++; return x; }',
-            'int value; struct X { int f() { return value; } };',
+            'int value[2]; struct X { int f() { return value[0]; } };',
             'int value; int change() { value++; return value; } '
             'int f() { return value + change(); }',
             'int value; int change() { value++; return value; } '
             'int f() { return change() + change(); }',
-            'int value; struct GlobalState { int x; };',
-            'int value; const int GlobalState = 3;',
+            'int value[2]; struct GlobalState { int x; };',
+            'int value[2]; const int GlobalState = 3;',
             'int value; int f() { static int cached; value++; return ++cached; }',
             'struct X { int x; X():x(0){} '
             'X& operator=(const X& y) { x=y.x+1; return *this; } }; '
