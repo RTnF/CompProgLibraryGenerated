@@ -14,11 +14,12 @@ import time
 import check_cache
 import ci_shards
 import memguard
-from public import ROOT, TEMPLATE, include_check, registry, repo_file, support_registry
+from public import (DEFAULT_STANDARD, ROOT, STANDARDS, TEMPLATE, common_standard,
+                    include_check, registry, repo_file, support_registry)
 from offline import disable_network
 
 
-FLAGS = ["-std=c++17", "-O2", "-Wall", "-Wextra", "-pedantic"]
+FLAGS = [f"-std={DEFAULT_STANDARD}", "-O2", "-Wall", "-Wextra", "-pedantic"]
 
 
 # Whole-run wall-clock limit: 80% of the default 5-minute prompt-cache lifetime.
@@ -67,13 +68,13 @@ def check_local_results_untracked():
         raise RuntimeError(f"local benchmark results are tracked by Git: {tracked}")
 
 
-def cpp_flags(standard="c++17"):
-    if standard not in ("c++17", "c++20"):
+def cpp_flags(standard=DEFAULT_STANDARD):
+    if standard not in STANDARDS:
         raise ValueError(f"unsupported C++ standard: {standard}")
     return [f"-std={standard}", *FLAGS[1:]]
 
 
-def flags_tag(standard="c++17"):
+def flags_tag(standard=DEFAULT_STANDARD):
     return " ".join(cpp_flags(standard))
 
 
@@ -82,7 +83,7 @@ def cpp_tasks(entries):
     template = repo_file(TEMPLATE)
     sources = [repo_file(f"library/{data['source']}") for data in entries.values()]
 
-    common_standard = "c++20" if any(data["standard"] == "c++20" for data in entries.values()) else "c++17"
+    standard = common_standard(entries)
 
     def common():
         with tempfile.TemporaryDirectory(prefix="public-check-") as directory:
@@ -91,11 +92,11 @@ def cpp_tasks(entries):
                 source = scratch / f"{label}.cpp"
                 source.write_text(include_check(names, entries))
                 binary = scratch / label
-                run(["g++", *cpp_flags(common_standard), "-I", str(ROOT), str(source), "-o", str(binary)])
+                run(["g++", *cpp_flags(standard), "-I", str(ROOT), str(source), "-o", str(binary)])
                 run([str(binary)])
 
     tasks = [("cpp-common", lambda: check_cache.cached_call(
-        f"cpp-common [{flags_tag(common_standard)}]", [*script, template, *check_cache.cpp_closure(sources)], common))]
+        f"cpp-common [{flags_tag(standard)}]", [*script, template, *check_cache.cpp_closure(sources)], common))]
     for name, data in entries.items():
         tests = [repo_file(test) for test in data["tests"]]
         cases = [repo_file(case[field]) for case in data.get("io_cases", []) for field in ("source", "input", "expected")]

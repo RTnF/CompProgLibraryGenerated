@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/gcd_u64.cpp"]
 sanitizers = true
 spec = "docs/gcd_u64.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "59988eefc89d0fc4be162f5ffdbf7781850a3c276dd17b81bbb408ee4385122e"
 public_declarations = ["FunctionDecl:gcd_u64"]
 

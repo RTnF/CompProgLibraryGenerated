@@ -4,6 +4,10 @@
 #include <vector>
 
 int main() {
+    const std::vector<std::vector<int>> exact_rows = {{0, 0, 1, 1}, {0, 0, 0, 0}};
+    assert(cp::tree_lca_same_depth(exact_rows, 2, 3, 2) == 1);
+    assert(cp::tree_lca_same_depth({}, 0, 0, 0) == 0);
+
     std::mt19937_64 random(20261031);
     for (int round = 0; round < 20000; ++round) {
         int n = 1 + random() % 14;

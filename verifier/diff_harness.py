@@ -32,6 +32,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lean_translate as lt  # noqa: E402
+from clang_ast import DEFAULT_STANDARD, STANDARDS  # noqa: E402
 
 ROOT = lt.ROOT
 
@@ -376,7 +377,7 @@ end DiffTest
 
 
 class Harness:
-    def __init__(self, source: Path, instance: dict, lean_module: str, deps=(), standard="c++17", calls=None,
+    def __init__(self, source: Path, instance: dict, lean_module: str, deps=(), standard=DEFAULT_STANDARD, calls=None,
                  bindings=(), unverified=(), packs=None, lean_imports=()):
         # packs: type parameter pack -> the C++ argument type lists of its calls (one command per list)
         self.packs = dict(packs or {})
@@ -1096,7 +1097,7 @@ def lean_environment():
 
 
 def run_diff(source: Path, instance: dict, lean_module: str, cases: str, timeout: float | None = None,
-             deps=(), standard="c++17", calls=None, bindings=(), unverified=(), packs=None, lean_imports=()):
+             deps=(), standard=DEFAULT_STANDARD, calls=None, bindings=(), unverified=(), packs=None, lean_imports=()):
     """Run both interpreters on `cases` (command text) and require identical output."""
     h = Harness(source, instance, lean_module, deps, standard, calls, bindings, unverified, packs, lean_imports)
     lake, env = lean_environment()
@@ -1138,7 +1139,7 @@ if __name__ == "__main__":
     parser.add_argument("--module", required=True)
     parser.add_argument("--emit", choices=("cpp", "lean"))
     parser.add_argument("--cases")
-    parser.add_argument("--standard", choices=("c++17", "c++20"), default="c++17")
+    parser.add_argument("--standard", choices=STANDARDS, default=DEFAULT_STANDARD)
     args = parser.parse_args()
     inst = dict(item.split("=", 1) for item in args.instance)
     h = Harness(Path(args.source), inst, args.module, standard=args.standard)

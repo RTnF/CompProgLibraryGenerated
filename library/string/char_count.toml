@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/char_count.cpp"]
 sanitizers = true
 spec = "docs/char_count.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "9cc0d5855ba9e2487ad92165e6f650b5c38368d67b8f02c44a89e1276e4ac2f8"
 public_declarations = ["FunctionDecl:char_count"]
 

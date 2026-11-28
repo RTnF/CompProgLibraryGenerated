@@ -1,6 +1,6 @@
 name = "doubling"
 source = "array/doubling.hpp"
-dependencies = ["bit_width_u64"]
+dependencies = []
 translation = "lean_model"
 lean_namespace = "Proofs.Cpp.Doubling"
 proof = "Proofs/Cpp/Doubling.lean"
@@ -9,9 +9,9 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/doubling.cpp"]
 sanitizers = true
 spec = "docs/doubling_experiment.md"
-standard = "c++17"
-source_sha256 = "14831636b4148adf5eeff7b1b2b325399a6f355e16952fd35f1bdfe276d97818"
-public_declarations = ["FunctionDecl:bit_width_u64", "FunctionDecl:doubling"]
+standard = "c++23"
+source_sha256 = "7153d2b4e56e495615e768b1ee57ac6803a9d1785ac9d6e852b9f87dc49b80f1"
+public_declarations = ["FunctionDecl:doubling"]
 
 [diff]
 instances = [{}]

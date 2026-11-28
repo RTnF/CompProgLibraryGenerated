@@ -4,7 +4,7 @@
     "experiments/library/cpp",
     "experiments/library3/cpp"
   ],
-  "compiler": "GCC 13.3.0 / C++17",
+  "compiler": "GCC 13.3.0 / C++23",
   "ast": "Clang 22.1.4 text AST",
   "limitations": [
     "Syntax compilation does not prove runtime correctness or instantiate every template member.",
@@ -1109,10 +1109,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "FieldDecl",
@@ -1129,10 +1129,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
@@ -1149,10 +1149,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
@@ -1169,10 +1169,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXMethodDecl",
@@ -1189,10 +1189,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "FunctionDecl",
@@ -1209,10 +1209,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXRecordDecl",
@@ -1396,10 +1396,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "FunctionTemplateDecl",
@@ -1416,10 +1416,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXMethodDecl",
@@ -1436,10 +1436,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long/RangeMax/RangeMin有限具体化のrecord型applyを選択IDとsource patternで検査。全機能/任意Tの証明済みとはしない。file review_notesを参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "ClassTemplateDecl",
@@ -1504,10 +1504,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "FieldDecl",
@@ -1524,10 +1524,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
@@ -1544,10 +1544,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
@@ -1564,10 +1564,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXMethodDecl",
@@ -1584,10 +1584,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "FunctionDecl",
@@ -1604,10 +1604,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "CXXRecordDecl",
@@ -1624,10 +1624,10 @@
             "include_verified": false,
             "published": false
           },
+          "evidence": [],
           "review_notes": [
             "long long有限具体化のnested fieldモデルを検査済み。任意T/完全object/lifetimeの証明とはしない。file review_notesと登録回帰を参照。"
-          ],
-          "evidence": []
+          ]
         },
         {
           "kind": "FieldDecl",
@@ -2863,13 +2863,13 @@
         }
       ],
       "declaration_scan": {
-        "status": "partial",
-        "diagnostics": "experiments/library/cpp/array/doubling.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\nexperiments/library/cpp/array/doubling.hpp:16:11: error: use of undeclared identifier 'bit_width'; did you mean '__bit_width'?\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\n      |           __bit_width\n/usr/include/c++/13/bit:365:5: note: '__bit_width' declared here\n  365 |     __bit_width(_Tp __x) noexcept\n      |     ^\n1 warning and 1 error generated.\n"
+        "status": "passed",
+        "diagnostics": "experiments/library/cpp/array/doubling.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\n1 warning generated.\n"
       },
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from <scratch>/include.cpp:2:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "syntax-only"
       },
       "problem_url": null,
@@ -4685,13 +4685,13 @@
         }
       ],
       "declaration_scan": {
-        "status": "partial",
-        "diagnostics": "experiments/library/cpp/fps/convolution.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\nexperiments/library/cpp/fps/convolution.hpp:166:11: error: use of undeclared identifier 'countr_zero'; did you mean '__countr_zero'?\n  166 |   int h = countr_zero((unsigned int)n);\n      |           ^~~~~~~~~~~\n      |           __countr_zero\n/usr/include/c++/13/bit:248:5: note: '__countr_zero' declared here\n  248 |     __countr_zero(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/fps/convolution.hpp:184:29: error: use of undeclared identifier 'countr_zero'; did you mean '__countr_zero'?\n  184 |           rot *= info.rate2[countr_zero(~(unsigned int)(s))];\n      |                             ^~~~~~~~~~~\n      |                             __countr_zero\n/usr/include/c++/13/bit:248:5: note: '__countr_zero' declared here\n  248 |     __countr_zero(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/fps/convolution.hpp:209:29: error: use of undeclared identifier 'countr_zero'; did you mean '__countr_zero'?\n  209 |           rot *= info.rate3[countr_zero(~(unsigned int)(s))];\n      |                             ^~~~~~~~~~~\n      |                             __countr_zero\n/usr/include/c++/13/bit:248:5: note: '__countr_zero' declared here\n  248 |     __countr_zero(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/fps/convolution.hpp:218:11: error: use of undeclared identifier 'countr_zero'; did you mean '__countr_zero'?\n  218 |   int h = countr_zero((unsigned int)n);\n      |           ^~~~~~~~~~~\n      |           __countr_zero\n/usr/include/c++/13/bit:248:5: note: '__countr_zero' declared here\n  248 |     __countr_zero(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/fps/convolution.hpp:239:31: error: use of undeclared identifier 'countr_zero'; did you mean '__countr_zero'?\n  239 |           irot *= info.irate2[countr_zero(~(unsigned int)(s))];\n      |                               ^~~~~~~~~~~\n      |                               __countr_zero\n/usr/include/c++/13/bit:248:5: note: '__countr_zero' declared here\n  248 |     __countr_zero(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/fps/convolution.hpp:269:31: error: use of undeclared identifier 'countr_zero'; did you mean '__countr_zero'?\n  269 |           irot *= info.irate3[countr_zero(~(unsigned int)(s))];\n      |                               ^~~~~~~~~~~\n      |                               __countr_zero\n/usr/include/c++/13/bit:248:5: note: '__countr_zero' declared here\n  248 |     __countr_zero(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/fps/convolution.hpp:299:16: error: use of undeclared identifier 'bit_ceil'; did you mean '__bit_ceil'?\n  299 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\n      |                __bit_ceil\n/usr/include/c++/13/bit:323:5: note: '__bit_ceil' declared here\n  323 |     __bit_ceil(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/fps/convolution.hpp:321:16: error: use of undeclared identifier 'bit_ceil'; did you mean '__bit_ceil'?\n  321 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\n      |                __bit_ceil\n/usr/include/c++/13/bit:323:5: note: '__bit_ceil' declared here\n  323 |     __bit_ceil(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/fps/convolution.hpp:337:16: error: use of undeclared identifier 'bit_ceil'; did you mean '__bit_ceil'?\n  337 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\n      |                __bit_ceil\n/usr/include/c++/13/bit:323:5: note: '__bit_ceil' declared here\n  323 |     __bit_ceil(_Tp __x) noexcept\n      |     ^\n1 warning and 9 errors generated.\n"
+        "status": "passed",
+        "diagnostics": "experiments/library/cpp/fps/convolution.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\n1 warning generated.\n"
       },
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from <scratch>/include.cpp:2:\nexperiments/library/cpp/fps/convolution.hpp: In function ‘void butterfly(std::vector<_Tp>&)’:\nexperiments/library/cpp/fps/convolution.hpp:166:11: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  166 |   int h = countr_zero((unsigned int)n);\n      |           ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp:166:11: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\nexperiments/library/cpp/fps/convolution.hpp:184:29: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  184 |           rot *= info.rate2[countr_zero(~(unsigned int)(s))];\n      |                             ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp:209:29: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  209 |           rot *= info.rate3[countr_zero(~(unsigned int)(s))];\n      |                             ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In function ‘void butterfly_inv(std::vector<_Tp>&)’:\nexperiments/library/cpp/fps/convolution.hpp:218:11: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  218 |   int h = countr_zero((unsigned int)n);\n      |           ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp:239:31: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  239 |           irot *= info.irate2[countr_zero(~(unsigned int)(s))];\n      |                               ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp:269:31: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  269 |           irot *= info.irate3[countr_zero(~(unsigned int)(s))];\n      |                               ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In function ‘std::vector<_Tp> convolution_fft(std::vector<_Tp>, std::vector<_Tp>)’:\nexperiments/library/cpp/fps/convolution.hpp:299:16: error: there are no arguments to ‘bit_ceil’ that depend on a template parameter, so a declaration of ‘bit_ceil’ must be available [-fpermissive]\n  299 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In function ‘std::vector<_Tp> convolution(std::vector<_Tp>&&, std::vector<_Tp>&&)’:\nexperiments/library/cpp/fps/convolution.hpp:321:16: error: there are no arguments to ‘bit_ceil’ that depend on a template parameter, so a declaration of ‘bit_ceil’ must be available [-fpermissive]\n  321 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In function ‘std::vector<_ValT> convolution(const std::vector<_ValT>&, const std::vector<_ValT>&)’:\nexperiments/library/cpp/fps/convolution.hpp:337:16: error: there are no arguments to ‘bit_ceil’ that depend on a template parameter, so a declaration of ‘bit_ceil’ must be available [-fpermissive]\n  337 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In instantiation of ‘std::vector<_ValT> convolution(const std::vector<_ValT>&, const std::vector<_ValT>&) [with unsigned int mod = 754974721; T = long int]’:\nexperiments/library/cpp/fps/convolution.hpp:375:30:   required from here\nexperiments/library/cpp/fps/convolution.hpp:337:24: error: ‘bit_ceil’ was not declared in this scope\n  337 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In instantiation of ‘std::vector<_ValT> convolution(const std::vector<_ValT>&, const std::vector<_ValT>&) [with unsigned int mod = 167772161; T = long int]’:\nexperiments/library/cpp/fps/convolution.hpp:376:30:   required from here\nexperiments/library/cpp/fps/convolution.hpp:337:24: error: ‘bit_ceil’ was not declared in this scope\nexperiments/library/cpp/fps/convolution.hpp: In instantiation of ‘std::vector<_ValT> convolution(const std::vector<_ValT>&, const std::vector<_ValT>&) [with unsigned int mod = 469762049; T = long int]’:\nexperiments/library/cpp/fps/convolution.hpp:377:30:   required from here\nexperiments/library/cpp/fps/convolution.hpp:337:24: error: ‘bit_ceil’ was not declared in this scope\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "In file included from experiments/library/cpp/fps/convolution.hpp:2,\n                 from <scratch>/include.cpp:2:\nexperiments/library/cpp/modint/modint.hpp:26:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   26 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:28:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   28 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:33:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   33 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:37:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   37 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\n",
         "mode": "syntax-only"
       },
       "problem_url": null,
@@ -8402,6 +8402,22 @@
         },
         {
           "kind": "CXXMethodDecl",
+          "line": 20,
+          "declaration": "constexpr operator<=> 'auto (const Interval<T> &) const' default implicit-inline",
+          "template_instantiation_review": "pending",
+          "verification_target": null,
+          "status": {
+            "review": "pending",
+            "bug": "unknown",
+            "cpp_tested": false,
+            "common_translator": false,
+            "lean_proved": false,
+            "include_verified": false,
+            "published": false
+          }
+        },
+        {
+          "kind": "CXXMethodDecl",
           "line": 22,
           "declaration": "constexpr start 'T ()' implicit-inline",
           "template_instantiation_review": "pending",
@@ -8514,13 +8530,13 @@
         }
       ],
       "declaration_scan": {
-        "status": "partial",
-        "diagnostics": "experiments/library/cpp/interval/interval.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\nexperiments/library/cpp/interval/interval.hpp:20:26: warning: '<=>' is a single token in C++20; add a space to avoid a change in behavior [-Wc++20-compat]\n   20 |   constexpr auto operator<=>(const Interval &r) const = default;\n      |                          ^ \n      |                             \nexperiments/library/cpp/interval/interval.hpp:20:3: error: non-static data member cannot be constexpr; did you intend to make it const?\n   20 |   constexpr auto operator<=>(const Interval &r) const = default;\n      |   ^~~~~~~~~\n      |   const\nexperiments/library/cpp/interval/interval.hpp:20:18: error: 'operator<=' cannot be the name of a variable or data member\n   20 |   constexpr auto operator<=>(const Interval &r) const = default;\n      |                  ^\nexperiments/library/cpp/interval/interval.hpp:20:28: error: expected ';' at end of declaration list\n   20 |   constexpr auto operator<=>(const Interval &r) const = default;\n      |                            ^\n      |                            ;\n2 warnings and 3 errors generated.\n"
+        "status": "passed",
+        "diagnostics": "experiments/library/cpp/interval/interval.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\n1 warning generated.\n"
       },
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from <scratch>/include.cpp:2:\nexperiments/library/cpp/interval/interval.hpp:20:18: error: declaration of ‘operator<=’ as non-function\n   20 |   constexpr auto operator<=>(const Interval &r) const = default;\n      |                  ^~~~~~~~\nexperiments/library/cpp/interval/interval.hpp:20:26: error: expected ‘;’ at end of member declaration\n   20 |   constexpr auto operator<=>(const Interval &r) const = default;\n      |                          ^~\n      |                            ;\nexperiments/library/cpp/interval/interval.hpp:20:28: error: expected unqualified-id before ‘>’ token\n   20 |   constexpr auto operator<=>(const Interval &r) const = default;\n      |                            ^\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "syntax-only"
       },
       "problem_url": null,
@@ -11303,14 +11319,12 @@
       ],
       "declaration_scan": {
         "status": "passed",
-        "standard": "c++20",
         "diagnostics": "experiments/library/cpp/number/ratio.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\n1 warning generated.\n"
       },
       "compile": {
         "status": "passed",
         "exit_code": 0,
-        "standard": "c++20",
-        "diagnostics": "experiments/library/cpp/number/ratio.hpp:1:9: warning: #pragma once in main file\n    1 | #pragma once\n      |         ^~~~\n",
+        "diagnostics": "",
         "mode": "syntax-only"
       },
       "problem_url": null,
@@ -20503,13 +20517,13 @@
         }
       ],
       "declaration_scan": {
-        "status": "partial",
-        "diagnostics": "experiments/library/cpp/tree/tree.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\nIn file included from experiments/library/cpp/tree/tree.hpp:2:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: use of undeclared identifier 'bit_width'; did you mean '__bit_width'?\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\n      |           __bit_width\n/usr/include/c++/13/bit:365:5: note: '__bit_width' declared here\n  365 |     __bit_width(_Tp __x) noexcept\n      |     ^\nexperiments/library/cpp/tree/tree.hpp:195:18: error: use of undeclared identifier 'bit_width'; did you mean '__bit_width'?\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\n      |                  __bit_width\n/usr/include/c++/13/bit:365:5: note: '__bit_width' declared here\n  365 |     __bit_width(_Tp __x) noexcept\n      |     ^\n1 warning and 2 errors generated.\n"
+        "status": "passed",
+        "diagnostics": "experiments/library/cpp/tree/tree.hpp:1:9: warning: #pragma once in main file [-Wpragma-once-outside-header]\n    1 | #pragma once\n      |         ^\n1 warning generated.\n"
       },
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/tree/tree.hpp:2,\n                 from <scratch>/include.cpp:2:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp: In member function ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const’:\nexperiments/library/cpp/tree/tree.hpp:195:18: error: there are no arguments to ‘bit_width’ that depend on a template parameter, so a declaration of ‘bit_width’ must be available [-fpermissive]\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp:195:18: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "syntax-only"
       },
       "problem_url": null,
@@ -21053,7 +21067,7 @@
       "compile": {
         "status": "passed",
         "exit_code": 0,
-        "diagnostics": "",
+        "diagnostics": "In file included from experiments/library/cpp/verify/ac/combination.test_ac.cpp:2:\nexperiments/library/cpp/modint/modint.hpp:26:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   26 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:28:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   28 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:33:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   33 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:37:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   37 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\n",
         "mode": "compile-and-link"
       },
       "problem_url": "https://atcoder.jp/contests/past202203-open/tasks/past202203_j",
@@ -21089,9 +21103,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/verify/ac/convolution_ll.test_ac.cpp:2:\nexperiments/library/cpp/fps/convolution.hpp: In function ‘void butterfly(std::vector<_Tp>&)’:\nexperiments/library/cpp/fps/convolution.hpp:166:11: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  166 |   int h = countr_zero((unsigned int)n);\n      |           ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp:166:11: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\nexperiments/library/cpp/fps/convolution.hpp:184:29: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  184 |           rot *= info.rate2[countr_zero(~(unsigned int)(s))];\n      |                             ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp:209:29: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  209 |           rot *= info.rate3[countr_zero(~(unsigned int)(s))];\n      |                             ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In function ‘void butterfly_inv(std::vector<_Tp>&)’:\nexperiments/library/cpp/fps/convolution.hpp:218:11: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  218 |   int h = countr_zero((unsigned int)n);\n      |           ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp:239:31: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  239 |           irot *= info.irate2[countr_zero(~(unsigned int)(s))];\n      |                               ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp:269:31: error: there are no arguments to ‘countr_zero’ that depend on a template parameter, so a declaration of ‘countr_zero’ must be available [-fpermissive]\n  269 |           irot *= info.irate3[countr_zero(~(unsigned int)(s))];\n      |                               ^~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In function ‘std::vector<_Tp> convolution_fft(std::vector<_Tp>, std::vector<_Tp>)’:\nexperiments/library/cpp/fps/convolution.hpp:299:16: error: there are no arguments to ‘bit_ceil’ that depend on a template parameter, so a declaration of ‘bit_ceil’ must be available [-fpermissive]\n  299 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In function ‘std::vector<_Tp> convolution(std::vector<_Tp>&&, std::vector<_Tp>&&)’:\nexperiments/library/cpp/fps/convolution.hpp:321:16: error: there are no arguments to ‘bit_ceil’ that depend on a template parameter, so a declaration of ‘bit_ceil’ must be available [-fpermissive]\n  321 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In function ‘std::vector<_ValT> convolution(const std::vector<_ValT>&, const std::vector<_ValT>&)’:\nexperiments/library/cpp/fps/convolution.hpp:337:16: error: there are no arguments to ‘bit_ceil’ that depend on a template parameter, so a declaration of ‘bit_ceil’ must be available [-fpermissive]\n  337 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ^~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In instantiation of ‘std::vector<_ValT> convolution(const std::vector<_ValT>&, const std::vector<_ValT>&) [with unsigned int mod = 754974721; T = long int]’:\nexperiments/library/cpp/fps/convolution.hpp:375:30:   required from here\nexperiments/library/cpp/fps/convolution.hpp:337:24: error: ‘bit_ceil’ was not declared in this scope\n  337 |   int z = (int)bit_ceil((unsigned int)(n + m - 1));\n      |                ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~\nexperiments/library/cpp/fps/convolution.hpp: In instantiation of ‘std::vector<_ValT> convolution(const std::vector<_ValT>&, const std::vector<_ValT>&) [with unsigned int mod = 167772161; T = long int]’:\nexperiments/library/cpp/fps/convolution.hpp:376:30:   required from here\nexperiments/library/cpp/fps/convolution.hpp:337:24: error: ‘bit_ceil’ was not declared in this scope\nexperiments/library/cpp/fps/convolution.hpp: In instantiation of ‘std::vector<_ValT> convolution(const std::vector<_ValT>&, const std::vector<_ValT>&) [with unsigned int mod = 469762049; T = long int]’:\nexperiments/library/cpp/fps/convolution.hpp:377:30:   required from here\nexperiments/library/cpp/fps/convolution.hpp:337:24: error: ‘bit_ceil’ was not declared in this scope\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "In file included from experiments/library/cpp/fps/convolution.hpp:2,\n                 from experiments/library/cpp/verify/ac/convolution_ll.test_ac.cpp:2:\nexperiments/library/cpp/modint/modint.hpp:26:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   26 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:28:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   28 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:33:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   33 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:37:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   37 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\n",
         "mode": "compile-and-link"
       },
       "problem_url": "https://atcoder.jp/contests/past202203-open/tasks/past202203_n",
@@ -21131,9 +21145,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/tree/tree.hpp:2,\n                 from experiments/library/cpp/verify/ac/full_tree_dp.test_ac.cpp:2:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp: In member function ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const’:\nexperiments/library/cpp/tree/tree.hpp:195:18: error: there are no arguments to ‘bit_width’ that depend on a template parameter, so a declaration of ‘bit_width’ must be available [-fpermissive]\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp:195:18: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "In file included from experiments/library/cpp/verify/ac/full_tree_dp.test_ac.cpp:3:\nexperiments/library/cpp/modint/dynamic_modint.hpp:32:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   32 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/dynamic_modint.hpp:34:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   34 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\nexperiments/library/cpp/modint/dynamic_modint.hpp:38:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   38 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr> void set(T x_) {\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/dynamic_modint.hpp:41:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   41 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr> void set(U x_) {\n      |                                                                                          ^~~~~~~~\n",
         "mode": "compile-and-link"
       },
       "problem_url": "https://atcoder.jp/contests/dp/tasks/dp_v",
@@ -21169,9 +21183,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/tree/tree.hpp:2,\n                 from experiments/library/cpp/verify/ac/lowest_common_ancestor_2.test_ac.cpp:2:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp: In member function ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const’:\nexperiments/library/cpp/tree/tree.hpp:195:18: error: there are no arguments to ‘bit_width’ that depend on a template parameter, so a declaration of ‘bit_width’ must be available [-fpermissive]\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp:195:18: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\nexperiments/library/cpp/tree/tree.hpp: In instantiation of ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const [with Cost = long int; E = Edge<long int>]’:\nexperiments/library/cpp/verify/ac/lowest_common_ancestor_2.test_ac.cpp:23:38:   required from here\nexperiments/library/cpp/tree/tree.hpp:195:27: error: ‘bit_width’ was not declared in this scope\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ~~~~~~~~~^~~~~~~~~~~~~~\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "compile-and-link"
       },
       "problem_url": "https://atcoder.jp/contests/past201912-open/tasks/past201912_k",
@@ -21283,9 +21297,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "experiments/library/cpp/verify/ac/rolling_hash_2.test_ac.cpp: In function ‘int main()’:\nexperiments/library/cpp/verify/ac/rolling_hash_2.test_ac.cpp:19:18: error: ‘class std::unordered_set<long unsigned int>’ has no member named ‘contains’\n   19 |       if (hashes.contains(rh.hash(i + sz, i + sz * 2)) && ans < sz) {\n      |                  ^~~~~~~~\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "compile-and-link"
       },
       "problem_url": "https://atcoder.jp/contests/abc141/tasks/abc141_e",
@@ -21857,9 +21871,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/tree/tree.hpp:2,\n                 from experiments/library/cpp/verify/jump_on_tree.test.cpp:2:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp: In member function ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const’:\nexperiments/library/cpp/tree/tree.hpp:195:18: error: there are no arguments to ‘bit_width’ that depend on a template parameter, so a declaration of ‘bit_width’ must be available [-fpermissive]\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp:195:18: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\nexperiments/library/cpp/tree/tree.hpp: In instantiation of ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const [with Cost = int; E = Edge<int>]’:\nexperiments/library/cpp/verify/jump_on_tree.test.cpp:18:39:   required from here\nexperiments/library/cpp/tree/tree.hpp:195:27: error: ‘bit_width’ was not declared in this scope\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ~~~~~~~~~^~~~~~~~~~~~~~\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "compile-and-link"
       },
       "problem_url": "https://judge.yosupo.jp/problem/jump_on_tree",
@@ -21895,9 +21909,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/tree/tree.hpp:2,\n                 from experiments/library/cpp/verify/lowest_common_ancestor.test.cpp:2:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp: In member function ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const’:\nexperiments/library/cpp/tree/tree.hpp:195:18: error: there are no arguments to ‘bit_width’ that depend on a template parameter, so a declaration of ‘bit_width’ must be available [-fpermissive]\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp:195:18: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\nexperiments/library/cpp/tree/tree.hpp: In instantiation of ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const [with Cost = long int; E = Edge<long int>]’:\nexperiments/library/cpp/verify/lowest_common_ancestor.test.cpp:19:37:   required from here\nexperiments/library/cpp/tree/tree.hpp:195:27: error: ‘bit_width’ was not declared in this scope\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ~~~~~~~~~^~~~~~~~~~~~~~\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "compile-and-link"
       },
       "problem_url": "https://judge.yosupo.jp/problem/lca",
@@ -22251,7 +22265,7 @@
       "compile": {
         "status": "passed",
         "exit_code": 0,
-        "diagnostics": "",
+        "diagnostics": "In file included from experiments/library/cpp/verify/point_set_range_composite.test.cpp:3:\nexperiments/library/cpp/modint/modint.hpp:26:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   26 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:28:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   28 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:33:89: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   33 |   template <class T, enable_if_t<(is_signed_v<T> || std::is_same_v<std::remove_cv_t<T>, __int128>)> * = nullptr>\n      |                                                                                         ^~~~~~~~\nexperiments/library/cpp/modint/modint.hpp:37:90: warning: ISO C++ does not support ‘__int128’ for ‘type name’ [-Wpedantic]\n   37 |   template <class U, enable_if_t<!(is_signed_v<U> || std::is_same_v<std::remove_cv_t<U>, __int128>)> * = nullptr>\n      |                                                                                          ^~~~~~~~\n",
         "mode": "compile-and-link"
       },
       "problem_url": "https://judge.yosupo.jp/problem/point_set_range_composite",
@@ -22657,9 +22671,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/tree/tree.hpp:2,\n                 from experiments/library/cpp/verify/tree_diameter.test.cpp:2:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp: In member function ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const’:\nexperiments/library/cpp/tree/tree.hpp:195:18: error: there are no arguments to ‘bit_width’ that depend on a template parameter, so a declaration of ‘bit_width’ must be available [-fpermissive]\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp:195:18: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "compile-and-link"
       },
       "problem_url": "https://judge.yosupo.jp/problem/tree_diameter",
@@ -22695,9 +22709,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/tree/tree.hpp:2,\n                 from experiments/library/cpp/verify/tree_diameter_2.test.cpp:3:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp: In member function ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const’:\nexperiments/library/cpp/tree/tree.hpp:195:18: error: there are no arguments to ‘bit_width’ that depend on a template parameter, so a declaration of ‘bit_width’ must be available [-fpermissive]\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp:195:18: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "compile-and-link"
       },
       "problem_url": null,
@@ -22733,9 +22747,9 @@
       "declarations": [],
       "declaration_scan": null,
       "compile": {
-        "status": "failed",
-        "exit_code": 1,
-        "diagnostics": "In file included from experiments/library/cpp/tree/tree.hpp:2,\n                 from experiments/library/cpp/verify/tree_height.test.cpp:3:\nexperiments/library/cpp/array/doubling.hpp: In function ‘std::vector<std::vector<int> > doubling(std::vector<int>&, uint64_t)’:\nexperiments/library/cpp/array/doubling.hpp:16:11: error: ‘bit_width’ was not declared in this scope\n   16 |   int w = bit_width(kmax);\n      |           ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp: In member function ‘int Tree<Cost, E>::lowest_common_ancestor(int, int) const’:\nexperiments/library/cpp/tree/tree.hpp:195:18: error: there are no arguments to ‘bit_width’ that depend on a template parameter, so a declaration of ‘bit_width’ must be available [-fpermissive]\n  195 |     for (int k = bit_width((unsigned)du); k >= 0; k--) {\n      |                  ^~~~~~~~~\nexperiments/library/cpp/tree/tree.hpp:195:18: note: (if you use ‘-fpermissive’, G++ will accept your code, but allowing the use of an undeclared name is deprecated)\n",
+        "status": "passed",
+        "exit_code": 0,
+        "diagnostics": "",
         "mode": "compile-and-link"
       },
       "problem_url": null,
@@ -23183,7 +23197,8 @@
       "evidence": [],
       "review_notes": [
         "2026-11-06: 原本のGroupSum<long long>/GroupAffine<long long>を共通変換器で15モデルへ生成。Sum invはe().x-xのまま任意typed callerの結果・停止・元memory保持・ScalarPost2 0 80を証明。他14モデルは既存モデルと全プログラム/callFuel一致をLean/固定nanodaで回帰検査。 有限具体化の部分検証であり、原本のAPIや型を変更していない。任意T/U・全caller AST・完全object/lifetime・公開統合は未完了。file/declarationのlean_provedとpublishedはfalseを維持する。"
-      ]
+      ],
+      "verification_target": null
     },
     {
       "source": "experiments/library3/cpp/AlgebraicStructure/Mapping.hpp",
@@ -23448,7 +23463,8 @@
       "evidence": [],
       "review_notes": [
         "2026-11-06: 原本のAffine<long long>の12モデルを共通変換器から生成。apply<long long>/apply<int>の値渡しを保った任意typed callerの結果・停止・元memory保持・ScalarPost2 0 80をLean/固定nanodaで回帰検査。intの結果はGCC13.3 LP64 signedDecode32で、結果のint範囲制限は追加していない。doubleはnative回帰のみ。 有限具体化の部分検証であり、原本のAPIや型を変更していない。任意T/U・全caller AST・完全object/lifetime・公開統合は未完了。file/declarationのlean_provedとpublishedはfalseを維持する。"
-      ]
+      ],
+      "verification_target": null
     },
     {
       "source": "experiments/library3/cpp/AlgebraicStructure/Monoid.hpp",
@@ -23638,7 +23654,8 @@
       ],
       "review_notes": [
         "2026-11-06: 原本MonoidMul<long long>の4モデルを共通変換器で生成。値構築/e/opは既存モデルと全program/callFuel一致、元の委譲による既定構築は任意typed callerで結果1・停止・元memory保持・ScalarPost2 0 70をLean/固定nanoda3588宣言で確認。原本の型/APIは変更していない。公開側がhidden friendの暗黙変換を失う差はnativeで再現後、正本CPPで復元済み。公開版の新モデル全件gateは成功。任意T・全caller AST・完全object/lifetimeは未完了で、file/declaration全体のlean_proved/publishedはfalseを保持する。"
-      ]
+      ],
+      "verification_target": null
     },
     {
       "source": "experiments/library3/cpp/Array/CumulativeSum.hpp",
@@ -30558,7 +30575,7 @@
     }
   ],
   "compile_flags": [
-    "-std=c++17",
+    "-std=c++23",
     "-O2",
     "-Wall",
     "-Wextra",

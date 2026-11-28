@@ -51,7 +51,7 @@ class RatioNumericTests(unittest.TestCase):
                 cpp = scratch / 'driver.cpp'
                 cpp.write_text(harness.cpp_driver())
                 binary = scratch / 'driver'
-                subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined',
+                subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                                 '-I', str(ROOT / 'tests/diff'), str(cpp), '-o', str(binary)],
                                check=True, timeout=60)
                 native = subprocess.run([str(binary)], input=commands, capture_output=True,

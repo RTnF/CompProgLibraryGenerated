@@ -17,7 +17,7 @@ class SegmentTreeSearchTests(unittest.TestCase):
         env = {**LAKE_ENV, "ASAN_OPTIONS": "detect_leaks=0:halt_on_error=1"}
         with tempfile.TemporaryDirectory() as directory:
             binary = Path(directory) / "native"
-            subprocess.run(["g++", "-std=c++17", "-O1", "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
+            subprocess.run(["g++", "-std=c++23", "-O1", "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                             str(ROOT / "tests/imports/segment_tree_search.cpp"), "-o", str(binary)],
                            cwd=ROOT, env=env, check=True, timeout=120)
             native = subprocess.check_output([binary], cwd=ROOT, env=env, text=True, timeout=60)

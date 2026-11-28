@@ -9,8 +9,8 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/bit_width_u64.cpp"]
 sanitizers = true
 spec = "docs/bit_width_u64.md"
-standard = "c++17"
-source_sha256 = "a37f75ac88b777158d81356d256d1993523c91fd70decbe4405c07beb3659adc"
+standard = "c++23"
+source_sha256 = "237039abf481b883929312a4e8e3139fc99f3e05a3e566b7be8134128eddf430"
 public_declarations = ["FunctionDecl:bit_width_u64"]
 
 [diff]

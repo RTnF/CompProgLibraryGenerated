@@ -6,7 +6,7 @@
 
 - 関数は `Proofs.Cpp.M := StateT Nat Option` の値になる。状態は tick 数、`none` は「正常に戻らない」（`assert` の失敗、`while` ループや再帰が `Cpp.fuel = 2^64` 回を超えること）を表す。正しさの定理は結果が `some` であることを含むので、停止も示す。
 - 整数型（`int`、`long long` など符号付き）は `Int`。部品ごとに「入力と途中の値が型の範囲に収まる」を前提として一度述べ、各演算の範囲は証明しない。`/` と `%` は 0 方向への丸め（`Int.tdiv`/`Int.tmod`）、`&`・`|`・`^` は 2 の補数（Mathlib の `Int.land` などと同じ定義）、`<<` は `2^b` 倍、`>>` は算術シフト。
-- 符号なし 32/64 bit 型（`unsigned`、`unsigned long long`、`std::uint64_t`、`size_t` など）は `UInt32`/`UInt64` で、折り返しを含めて C++ と同じ意味になる。符号付き・符号なしが混ざる演算は、翻訳器が C++ の通常の算術変換（幅と符号から共通の型を決める）を自分の型付けで再現し、明示的な変換を挟む（符号付き → 符号なしは `UInt64.ofInt` で 2^64 を法とする値、符号なし → 符号付きは、変換先が広ければ値のまま、同じ幅以下なら 2^w を法とした 2 の補数での値 `Cpp.toSigned w`（C++20 の規定、GCC は C++17 でも同じ）。`unsigned __int128` は 2^127 未満で使う前提で整数として扱う。`v.size()` は `Int`（非負）で、Clang が挿入する暗黙の `size_t` への変換は使わない。
+- 符号なし 32/64 bit 型（`unsigned`、`unsigned long long`、`std::uint64_t`、`size_t` など）は `UInt32`/`UInt64` で、折り返しを含めて C++ と同じ意味になる。符号付き・符号なしが混ざる演算は、翻訳器が C++ の通常の算術変換（幅と符号から共通の型を決める）を自分の型付けで再現し、明示的な変換を挟む（符号付き → 符号なしは `UInt64.ofInt` で 2^64 を法とする値、符号なし → 符号付きは、変換先が広ければ値のまま、同じ幅以下なら 2^w を法とした 2 の補数での値 `Cpp.toSigned w`（C++23 [conv.integral]）。`unsigned __int128` は 2^127 未満で使う前提で整数として扱う。`v.size()` は `Int`（非負）で、Clang が挿入する暗黙の `size_t` への変換は使わない。
 - `bool` は `Bool`、`std::vector<X>` は `Array X`、`std::pair<A, B>` は `A × B`。
 - テンプレート引数 `T` は Lean の型変数になり、使った演算だけを型クラス引数として要求する（`+` → `[Add T]`、`<` → `[LT T] [DecidableLT T]`、`T s = 0` → `[Zero T]`、整数から `T` への変換 → `[IntCast T]`、要素の読み出しと値初期化 → `[Inhabited T]`。2 つの型引数 `S`、`T` の間の `a < b` → `[Cpp.HLt S T]`、`T` から `S` への暗黙の変換 → `[Cpp.Conv T S]`（`T` から整数型への変換も `[Cpp.Conv T Int]` など）。同じ型では `LT` と恒等写像が既定のインスタンス）。静的メンバーだけを使う型引数 `P`（ポリシー）の呼び出し `P::f(args)` は、関数に明示的な引数 `P : cp.<関数>.Policy_P ...`（使われた静的メンバーをフィールドに持つ構造体。引数と結果の型は使われ方から決める）を加え、そのフィールドの呼び出しに翻訳する。差分テストのハーネスは具体化 `P = "cp::DpHeight<long long>"` を `{ e := cp.DpHeight.e, ... }` として渡す。呼び出し先の要求も呼び出し元へ伝わる。証明は Mathlib の代数構造（`AddCommMonoid T` など）を仮定して述べる。値初期化（`std::vector<T>(n)`）は `default` で、`T` が数値のときに `default = 0` を仮定する定理がある。
 - 範囲外の添字は C++ では未定義動作で、各部品の前提（添字が範囲内）で除く。モデルの `Cpp.get`/`Cpp.set` は全域関数にするために範囲外でも値を返すが（`default` を読む、書き込まない）、これは C++ の挙動の主張ではなく、定理と文書はこの値に依存しない。前提を満たす入力で範囲外アクセスが起きないことは、証明の中の添字の範囲と、サニタイザ付きテスト・差分テストで確かめる。
@@ -46,7 +46,7 @@
 - 配列への参照を返すメンバー関数（`T (&operator[](int i))[n] { return mat[i]; }`）は、その行の値を返す関数に翻訳する。参照を通した書き込みはモデルに含めない。`const` と非 `const` の同じ引数の多重定義は、`const` 版の名前に `_const` を付けて区別する。
 - `bool` から算術の型引数 `T` への変換は、`0`/`1` の整数を `Int.cast` で `T` に変換する。
 - クラスの hidden friend の二項演算子は、型引数を持つクラスでも、両辺がそのクラスで呼び出し元が同じ名前の型引数を持つときに解決する（ADL で見つかる別の完全一致は曖昧さのコンパイルエラーになるので、選択が黙って変わることはない）。
-- `return a = e;` は代入 `a = e;` のあと、代入後の左辺 `a` を読み直して返す。左辺の評価に副作用（呼び出し、`++`/`--`、代入）があれば拒否する。C++17 では代入の右辺が左辺より先に評価されるので、`_ps[a] = root(_ps[a])` の呼び出しは書き込みより前に行う。
+- `return a = e;` は代入 `a = e;` のあと、代入後の左辺 `a` を読み直して返す。左辺の評価に副作用（呼び出し、`++`/`--`、代入）があれば拒否する。C++23 [expr.assign] では代入の右辺が左辺より先に評価されるので、`_ps[a] = root(_ps[a])` の呼び出しは書き込みより前に行う。
 - 左辺が三項演算子の複合代入 `(c ? a : b) op= x` は `if c then a op= x else b op= x` として翻訳する。
 - 式文のコンマ演算子 `e1, e2` は左から順に評価する文として翻訳する。
 - テンプレートでないクラスの `std::vector` メンバーへの代入 `v = w` は値の代入として翻訳する。右辺が左辺値の vector ならコピーの tick `w.size()` を加える。
@@ -57,9 +57,9 @@
 - `std::unordered_map<int, V>`（`V` は整数か vector）は `Cpp.UMap`（キーの重複しない連想リスト、`Proofs/Cpp/Lib/UMap.lean`）に翻訳する。`m[k]` は値（ない鍵には値初期化した値を入れる）と更新した表、`m[k] = e`・`m.count(k)`・`m.clear()` に対応する。手数は文書化された最悪の場合（1 回 `size + 1`）。表にある vector を値で返すとコピーの手数を数える。`m[k] = std::move(x)` は、`x` が局所変数でこの後使われないときだけ受け付け、`x` の値の代入とする。
 - `std::priority_queue<T, std::vector<T>, std::less<T> / std::greater<T>>` と `std::stack<T>` は `Proofs/Cpp/Lib/PQ.lean` のリストに翻訳する。`top` は比較 `comp` で最良の要素（`pqBest`。整数とその組のように同値な要素が等しい全順序では C++ と同じ要素）、`push`・`pop` は `log2 size + 1` 手、`top`・`empty`・`size` は 1 手。`std::pair` の `<` は `Cpp.pairLt`。`top` の性質（比較が非反射的で推移的なら、キューの要素で、どの要素にも負けない）は `pqBest_spec`。
 - スカラー要素と既定の容器を使う `std::queue<T>` は、先頭から末尾までの順序を持つリストに翻訳する（`Proofs/Cpp/Lib/Queue.lean`）。空の構築、`push`、対応する値を作る `emplace`、値としての `front`、`pop`、`empty`、`size` に対応する。`push`・`front`・`pop` は既定の `std::deque` の各操作に1手を数え、空のキューでの `front`・`pop` は失敗とする。
-- `std::optional<T>` は `Option T` に翻訳する。空と値の構築、`has_value()`、値としての `value()`、`reset()`、1引数の `emplace` を扱う。`value()` は値があるときに1手で返し、空の場合は失敗とする（`Proofs/Cpp/Lib/Optional.lean`）。[C++17 の構築](https://timsong-cpp.github.io/cppwp/n4659/optional.ctor)、[参照操作](https://timsong-cpp.github.io/cppwp/n4659/optional.observe)、[emplace](https://timsong-cpp.github.io/cppwp/n4659/optional.assign)、[reset](https://timsong-cpp.github.io/cppwp/n4659/optional.mod)。
-- 既定のアロケータを持つ `std::deque<T>` は `Array T` に翻訳する。空の構築、`size()`、添字での読取り・更新、`emplace_back`、異なる受け手の `swap` を扱う。クラスの非公開領域に置いた入れ子の単純な `struct` は、そのクラスの deque に格納し、スカラーまたは optional のフィールドだけを持つ場合にモデルの補助構造体にできる。[C++17 のコンテナ要件](https://timsong-cpp.github.io/cppwp/n4659/container.requirements.general)、[deque の末尾追加](https://timsong-cpp.github.io/cppwp/n4659/deque.modifiers)。
-- 上の非公開 deque を既定デリータの `std::unique_ptr` で保持する場合、空の所有者を要素数0に対応させる。`get() == nullptr` なら0を返すサイズ取得、同じ所有者を必要に応じて空の deque で初期化した直後の `emplace_back()`、範囲内への添字アクセス、異なる所有者の `swap` を受け付ける。空の構築と所有者の交換では追加割り当てが発生しない。[C++17 の所有者の構築](https://timsong-cpp.github.io/cppwp/n4659/unique.ptr.single.ctor)、[make_unique](https://timsong-cpp.github.io/cppwp/n4659/unique.ptr.create)、[swap](https://timsong-cpp.github.io/cppwp/n4659/unique.ptr.single.modifiers)。
+- `std::optional<T>` は `Option T` に翻訳する。空と値の構築、`has_value()`、値としての `value()`、`reset()`、1引数の `emplace` を扱う。`value()` は値があるときに1手で返し、空の場合は失敗とする（`Proofs/Cpp/Lib/Optional.lean`）。[C++23 の構築](https://timsong-cpp.github.io/cppwp/n4950/optional.ctor)、[参照操作](https://timsong-cpp.github.io/cppwp/n4950/optional.observe)、[emplace](https://timsong-cpp.github.io/cppwp/n4950/optional.assign)、[reset](https://timsong-cpp.github.io/cppwp/n4950/optional.mod)。
+- 既定のアロケータを持つ `std::deque<T>` は `Array T` に翻訳する。空の構築、`size()`、添字での読取り・更新、`emplace_back`、異なる受け手の `swap` を扱う。クラスの非公開領域に置いた入れ子の単純な `struct` は、そのクラスの deque に格納し、スカラーまたは optional のフィールドだけを持つ場合にモデルの補助構造体にできる。[C++23 のコンテナ要件](https://timsong-cpp.github.io/cppwp/n4950/container.requirements.general)、[deque の末尾追加](https://timsong-cpp.github.io/cppwp/n4950/deque.modifiers)。
+- 上の非公開 deque を既定デリータの `std::unique_ptr` で保持する場合、空の所有者を要素数0に対応させる。`get() == nullptr` なら0を返すサイズ取得、同じ所有者を必要に応じて空の deque で初期化した直後の `emplace_back()`、範囲内への添字アクセス、異なる所有者の `swap` を受け付ける。空の構築と所有者の交換では追加割り当てが発生しない。[C++23 の所有者の構築](https://timsong-cpp.github.io/cppwp/n4950/unique.ptr.single.ctor)、[make_unique](https://timsong-cpp.github.io/cppwp/n4950/unique.ptr.create)、[swap](https://timsong-cpp.github.io/cppwp/n4950/unique.ptr.single.modifiers)。
 - スカラーまたはその vector を2要素以上持つ `std::tuple` は Lean の右結合の直積に翻訳する。各要素を副作用のない初期化子で構築し、値の分解宣言で各要素を取り出す。スカラー値2個を持つ `std::pair` も分解できる。参照の要素や参照で分解する宣言は対象外。値の構築で `std::vector` を左辺値からコピーすると、その要素数を手数に加える。
 - スカラー要素と既定の比較・アロケータを使う `std::set` は順序を保つリストに翻訳する（`Proofs/Cpp/Lib/OrderedSet.lean`）。空の構築、結果を捨てる `insert` とキー指定の `erase`、`count`、`size`、その場で `begin` または `rbegin` を逆参照して値を読む形を扱う。比較は厳密全順序の `<`。挿入・削除・検索には要素数に対数の手数を、両端の読取りには1手を数える。
 - private なキーラッパーは、型引数の可変フィールドが1個あり、値とコピーの構築子がそのフィールドを初期化するだけで、唯一の比較 `operator<` が左右のそのフィールドに `<` を適用する形を検査する。このラッパーを既定の `std::set` に格納する場合、モデルはキーの値へ投影する。格納、キーによる削除・個数取得、サイズ、両端でのフィールドの値取得だけが許される。ラッパーやイテレータを別の式へ渡す経路、書き込み、比較や構築子の追加効果は拒否する。
@@ -116,11 +116,17 @@ constexprの両分岐をBool分岐として残し、未選択分岐のtraitフ�
 
 ## C++規格と比較
 
-登録の `standard` は `c++17` または、新方式（`lean_model`）では `c++20` を指定できる。AST抽出・公開宣言の照合・差分テスト・C++テスト・サニタイザ付きテスト・入出力テスト・テンプレート先行includeは同じ規格で実行する。全ヘッダの一括includeと配布物のinclude検査は、含まれる部品が要求する規格の最大値を使う。C++17の部品からC++20の部品への依存は登録エラーになる。翻訳器と差分ハーネスのCLIでは `--standard c++20` を指定する（既定はC++17）。規格を変えても未対応構文は引き続き拒否する。
+全公開部品の `standard` は `c++23`。AST抽出・公開宣言の照合・差分テスト・C++テスト・サニタイザ付きテスト・入出力テスト・テンプレート先行include・配布物検査に適用する。翻訳器と差分ハーネスのCLIも C++23 が既定で、旧規格の調査には `--standard c++17` または `--standard c++20` を明示できる。規格が混在する登録では、部品が自分より新しい規格の部品に依存するとエラーになり、一括includeと配布物検査には最大の規格を使う。構文の受理範囲は以下の翻訳規則に従う。
 
 整数と型引数の `<=>` は `Ordering`（`lt` / `eq` / `gt`）へ翻訳し、2方向の `<` で比較する。型引数には `[LT T] [DecidableLT T]` を要求し、C++の比較と同じ順序を使う。浮動小数の部分順序は対象に含めない。C++の `std::strong_ordering` とLeanの `Ordering` の差分テスト出力はそれぞれ `-1` / `0` / `1` に揃える。
 
 `bool operator==(const C&) const = default` はスカラーの全フィールドの等値の連言になる（型引数には `[DecidableEq T]`）。これは分数としての同値ではなく、フィールドごとの等値である。継承、非スカラーフィールドのデフォルト比較、その他の明示的なデフォルトメンバーは対応するまで拒否する。比較とデフォルト等値の回帰テストは `tests/test_lean_model_friend.py` にある。
+
+既定のメンバー `operator<=>` は、スカラーの各フィールドを宣言順に比較し、最初の非等値を返す。真偽値は `false < true`。型引数ごとに、C++ の三方比較が強順序を返し、その順序が Lean 側の `LT` と一致することを前提とする。`Interval` の等値・三方比較は `tests/diff/interval.py` で検査する。
+
+## 固定幅整数のビット演算
+
+`std::bit_width(x)` と `std::countr_zero(x)` は、解決済みの符号なし 32/64 bit の呼び出しを扱う。幅はゼロなら 0、それ以外は `log2(x) + 1`。末尾のゼロ数は上限を型のビット幅とし、ゼロ入力ではその上限を返す。返却型は `int`、呼び出しに 1 tick を課す。[C++23 作業草案の bit.pow.two・bit.count](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf)
 
 ## 整数GCD・LCMの契約と費用
 

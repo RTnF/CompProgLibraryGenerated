@@ -66,19 +66,19 @@ class RatioIntegralTests(unittest.TestCase):
     def test_explicit_selection_rejects_unknown_and_private_calls(self):
         for name in ['Ratio.not_a_method', 'Ratio.numeric_gcd']:
             with self.subTest(name=name), self.assertRaisesRegex(lean_translate.Unsupported, 'non-public differential calls'):
-                diff_harness.Harness(SOURCE, {'T': 'int'}, 'Unused', standard='c++20', calls={name})
+                diff_harness.Harness(SOURCE, {'T': 'int'}, 'Unused', standard='c++23', calls={name})
 
     def compare_binding(self, scalar, commands, expected, selected, model):
         env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         with self.subTest(scalar=scalar), tempfile.TemporaryDirectory(dir=ROOT / 'tests/diff') as directory:
             scratch = Path(directory)
-            harness = diff_harness.Harness(SOURCE, {'T': scalar}, 'Unused', standard='c++20', calls=selected)
+            harness = diff_harness.Harness(SOURCE, {'T': scalar}, 'Unused', standard='c++23', calls=selected)
             self.assertFalse(harness.has_streams)
             cpp = scratch / 'driver.cpp'
             cpp.write_text(harness.cpp_driver())
             binary = scratch / 'driver'
-            subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
+            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                             '-I', str(ROOT / 'tests/diff'), str(cpp), '-o', str(binary)],
                            check=True, timeout=60)
             native = subprocess.run([str(binary)], input=commands, capture_output=True, text=True,
@@ -94,12 +94,12 @@ class RatioIntegralTests(unittest.TestCase):
 
     def test_integral_arithmetic_against_fraction(self):
         commands, expected, selected = arithmetic_cases()
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         for scalar in ['signed char', 'char', 'short', 'int', 'long', 'long long', 'unsigned', 'unsigned long long']:
             self.compare_binding(scalar, commands, expected, selected, model)
 
     def test_narrow_unsigned_template_promotions(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         for scalar, bits in [('unsigned char', 8), ('unsigned short', 16)]:
             commands, expected, selected = arithmetic_cases()
             count = sum(value in ('new', 'ok obj') for value in expected)
@@ -121,7 +121,7 @@ class RatioIntegralTests(unittest.TestCase):
                     lean_translate.translate_file(source, [])
 
     def test_unsigned_full_range_normalization(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         selected = {'Ratio.init_T_T', 'Ratio.op_eq'}
         for scalar, bits in [('unsigned', 32), ('unsigned long long', 64)]:
             hi = 2 ** bits - 1
@@ -137,7 +137,7 @@ class RatioIntegralTests(unittest.TestCase):
             self.compare_binding(scalar, '\n'.join(commands) + '\n', expected, selected, model)
 
     def test_unsigned_lcm_boundary_arithmetic(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         selected = {'Ratio.init_T_T', 'Ratio.op_eq', 'op_add_Ratio_Ratio'}
         for scalar, bits in [('unsigned', 32), ('unsigned long long', 64)]:
             hi = 2 ** bits - 1
@@ -155,7 +155,7 @@ class RatioIntegralTests(unittest.TestCase):
             self.compare_binding(scalar, '\n'.join(commands) + '\n', expected, selected, model)
 
     def test_unsigned_cross_cancel_boundary(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         selected = {'Ratio.init_T_T', 'Ratio.op_eq', 'op_mul_Ratio_Ratio'}
         for scalar, bits in [('unsigned', 32), ('unsigned long long', 64)]:
             hi = 2 ** bits - 1
@@ -175,7 +175,7 @@ class RatioIntegralTests(unittest.TestCase):
             self.compare_binding(scalar, '\n'.join(commands) + '\n', expected, selected, model)
 
     def test_unsigned_division_cross_cancel_and_alias(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         selected = {'Ratio.init_T_T', 'Ratio.op_eq', 'op_div_Ratio_Ratio', 'Ratio.op_div_assign'}
         for scalar, bits in [('unsigned', 32), ('unsigned long long', 64)]:
             hi = 2 ** bits - 1
@@ -200,7 +200,7 @@ class RatioIntegralTests(unittest.TestCase):
             self.compare_binding(scalar, '\n'.join(commands) + '\n', expected, selected, model)
 
     def test_unsigned_add_subtract_boundaries(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         selected = {'Ratio.init_T_T', 'Ratio.op_eq', 'Ratio.op_add_assign', 'Ratio.op_sub_assign'}
         for scalar, bits in [('unsigned', 32), ('unsigned long long', 64)]:
             hi = 2 ** bits - 1
@@ -228,7 +228,7 @@ class RatioIntegralTests(unittest.TestCase):
             self.compare_binding(scalar, '\n'.join(commands) + '\n', expected, selected, model)
 
     def test_unsigned_comparison_after_denominator_cancellation(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         selected = {'Ratio.init_T_T', 'Ratio.op_cmp'}
         for scalar, bits in [('unsigned', 32), ('unsigned long long', 64)]:
             hi = 2 ** bits - 1
@@ -251,7 +251,7 @@ class RatioIntegralTests(unittest.TestCase):
             self.compare_binding(scalar, '\n'.join(commands) + '\n', expected, selected, model)
 
     def test_integral_prefix_postfix_boundaries(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         selected = {'Ratio.init_T_T', 'Ratio.op_eq', 'Ratio.op_inc_0', 'Ratio.op_inc_int',
                     'Ratio.op_dec_0', 'Ratio.op_dec_int'}
         for scalar, bits in [('signed char', 8), ('char', 8), ('short', 16), ('int', 32),
@@ -284,7 +284,7 @@ class RatioIntegralTests(unittest.TestCase):
             self.compare_binding(scalar, '\n'.join(commands) + '\n', expected, selected, model)
 
     def test_integral_unary_boundaries(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         selected = {'Ratio.init_T_T', 'Ratio.op_eq', 'Ratio.op_add', 'Ratio.op_sub'}
         for scalar, bits in [('signed char', 8), ('char', 8), ('short', 16), ('int', 32),
                              ('long', 64), ('long long', 64), ('unsigned', 32),

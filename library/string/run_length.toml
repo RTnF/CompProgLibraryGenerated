@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/run_length.cpp"]
 sanitizers = true
 spec = "docs/run_length.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "15f91c5583f5254e0866404f5650b4cfd6fbb2b6fca7c00d6175c75a387a97ee"
 public_declarations = ["FunctionTemplateDecl:run_length<vector>"]
 

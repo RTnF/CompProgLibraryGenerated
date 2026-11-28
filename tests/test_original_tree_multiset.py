@@ -34,7 +34,7 @@ class OriginalTreeMultiSetTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="tree-multiset-original-") as directory:
             binary = Path(directory) / "tree_multiset"
             subprocess.run([
-                "g++", "-std=c++17", "-O1", "-g", "-Wall", "-Wextra", "-pedantic",
+                "g++", "-std=c++23", "-O1", "-g", "-Wall", "-Wextra", "-pedantic",
                 "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                 "-fno-omit-frame-pointer", "-no-pie", "-DTEST_ORIGINAL_TREE_MULTISET",
                 "-I", str(ROOT / "experiments/library/cpp"),

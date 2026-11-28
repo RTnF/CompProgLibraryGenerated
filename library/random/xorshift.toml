@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/xorshift.cpp"]
 sanitizers = true
 spec = "docs/xorshift.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "e87c91791def3ddc7493af95646223b076035701cbd4fba7d4664198d142b691"
 public_declarations = ["CXXRecordDecl:Xor64"]
 

@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/csr_build.cpp"]
 sanitizers = true
 spec = "docs/csr_build.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "cb01b2ae41cb026a5af40344025f7068a4b13fecf27d9e2a866b9d191e741187"
 public_declarations = ["FunctionDecl:csr_build"]
 

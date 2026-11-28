@@ -16,7 +16,7 @@ class OriginalModIntStreamTests(unittest.TestCase):
             for mode in ('zero', 'pattern'):
                 with self.subTest(mode=mode):
                     binary = Path(directory) / ('driver-'+mode)
-                    subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined',
+                    subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                                     '-fno-sanitize-recover=all', '-ftrivial-auto-var-init='+mode,
                                     '-I', str(ROOT / 'experiments/library/cpp'),
                                     str(ROOT / 'tests/imports/original_modint_stream.cpp'),

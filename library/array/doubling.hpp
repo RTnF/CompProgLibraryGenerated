@@ -1,6 +1,7 @@
 #pragma once
-#include "../number_theory/bit_width_u64.hpp"
+#include <bit>
 #include <cassert>
+#include <cstdint>
 #include <limits>
 #include <vector>
 
@@ -16,7 +17,7 @@ inline std::vector<std::vector<int>> doubling(const std::vector<int> &v,
     assert(0 <= v[i]);
     assert(v[i] < n);
   }
-  const int w = bit_width_u64(kmax);
+  const int w = std::bit_width(kmax);
   std::vector<std::vector<int>> ret(w);
   ret[0].assign(v.begin(), v.end());
   for (int i = 1; i < w; ++i) {

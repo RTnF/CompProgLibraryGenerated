@@ -15,7 +15,7 @@ class OriginalGraphFlowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="graph-flow-original-") as directory:
             binary = Path(directory) / "graph_flow_source"
             subprocess.run([
-                "g++", "-std=c++17", "-O1", "-g", "-Wall", "-Wextra", "-pedantic",
+                "g++", "-std=c++23", "-O1", "-g", "-Wall", "-Wextra", "-pedantic",
                 "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                 "-fno-omit-frame-pointer", "-no-pie",
                 "-I", str(ROOT / "experiments/library/cpp"),

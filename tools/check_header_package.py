@@ -8,14 +8,14 @@ import zipfile
 
 from check_public import cpp_flags, check_compiler
 from offline import disable_network
-from public import PUBLIC, registry
+from public import PUBLIC, common_standard, registry
 
 
 def check(archive_path):
     disable_network()
     check_compiler()
     entries = registry()
-    standard = "c++20" if any(data["standard"] == "c++20" for data in entries.values()) else "c++17"
+    standard = common_standard(entries)
     expected = {"library/" + path.relative_to(PUBLIC).as_posix(): path.read_bytes()
                 for path in PUBLIC.rglob("*.hpp")}
     with tempfile.TemporaryDirectory(prefix="headers-only-") as directory:

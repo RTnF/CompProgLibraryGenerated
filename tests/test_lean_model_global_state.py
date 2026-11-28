@@ -249,7 +249,7 @@ def main : IO Unit := do
             cpp.write_text(source + '\n#include <iostream>\nint main() { std::cout<<cp::total()<<"\\n";'
                            'cp::init();std::cout<<cp::total()<<"\\n"<<cp::last.x<<"\\n";}')
             binary = scratch / 'driver'
-            subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined', str(cpp), '-o', str(binary)],
+            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined', str(cpp), '-o', str(binary)],
                            check=True, timeout=60)
             native = subprocess.run([str(binary)], text=True, capture_output=True, check=True, timeout=20,
                                     env=dict(os.environ, ASAN_OPTIONS='detect_leaks=0:halt_on_error=1',
@@ -312,7 +312,7 @@ def main : IO Unit := do
                            'for (int n : {4,-2}) { auto r=cp::session(n); '
                            'std::cout<<r<<" "<<cp::counter<<" "<<cp::table[2]<<"\\n"; }\n}\n')
             binary = scratch / 'driver'
-            subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined', str(cpp), '-o', str(binary)],
+            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined', str(cpp), '-o', str(binary)],
                            check=True, timeout=60)
             native = subprocess.run([str(binary)], text=True, capture_output=True, env=env, check=True, timeout=20)
             self.assertEqual(native.stdout, '111 5 6\n116 4 12\n')

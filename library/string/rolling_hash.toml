@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/rolling_hash.cpp"]
 sanitizers = true
 spec = "docs/rolling_hash.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "8b66fc3d259059fe86f53e2eb17eaa7e47ca8d86153930901a074651a0024209"
 public_declarations = ["CXXRecordDecl:MultiRollingHash", "CXXRecordDecl:SimpleRollingHash", "ClassTemplateDecl:RollingHash", "FunctionDecl:base_at", "FunctionDecl:hash_interval", "FunctionDecl:rh_in::mod", "FunctionDecl:rh_in::mul", "FunctionDecl:rh_in::to_vec_char", "FunctionTemplateDecl:append_hash<uint64_t>", "FunctionTemplateDecl:reduce_symbol<T>", "TypeAliasDecl:rolling_hash::RollingHash", "VarDecl:RH_NPOS", "VarDecl:SIMPLE_BASE", "VarDecl:rh_in::M30", "VarDecl:rh_in::M31", "VarDecl:rh_in::M61", "VarDecl:rh_in::SZ_BASE", "VarDecl:rh_in::base"]
 

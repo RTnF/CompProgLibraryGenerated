@@ -7,6 +7,10 @@ int main() {
     assert(Interval().is_null() && Interval().start() == 0 && Interval().end() == 0 && Interval().length() == 0);
     assert(Interval(3, 3).is_null() && !Interval(3, 4).is_null());
     assert(Interval(-5, 7).start() == -5 && Interval(-5, 7).end() == 7 && Interval(-5, 7).length() == 12);
+    Interval flag(0, 0), empty(0, 0);
+    flag.is_n = false;
+    assert((flag <=> empty) == std::strong_ordering::less);
+    assert(flag != empty);
     const long long values[] = {-100, -3, -1, 0, 1, 2, 5, 100};
     for (long long a : values)
         for (long long b : values) {
@@ -27,6 +31,7 @@ int main() {
                     // comparison operators: lexicographic on (start, end), as the original defaulted <=>
                     assert((x == y) == (a == c && b == d) && (x != y) == !(a == c && b == d));
                     assert((x < y) == (a != c ? a < c : (b != d && b < d)));
+                    assert((x <=> y) == (a != c ? a <=> c : b <=> d));
                     assert((x > y) == (y < x) && (x <= y) == !(y < x) && (x >= y) == !(x < y));
                     Interval w = y.intersection(x);
                     assert(w.start() == z.start() && w.end() == z.end() && w.is_null() == z.is_null());

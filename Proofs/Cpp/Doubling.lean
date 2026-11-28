@@ -1,21 +1,10 @@
 import Proofs.Cpp.Gen.Doubling
-import Proofs.Cpp.BitWidthU64
 
 /-! # `doubling` (library/array/doubling.hpp) -/
 
 open Std.Do Proofs.Cpp Proofs.Cpp.Gen
 
 namespace Proofs.Cpp.Doubling
-
-@[spec] theorem bit_width_wp (value : UInt64) {Q : PostCond Int PS} :
-    ⦃fun t => Q.1 (bitWidth value.toNat : Int) (t + 2 + bitWidth value.toNat)⦄ cp.bit_width_u64 value ⦃Q⦄ := by
-  have W := wp_of_triple (Q := Q) (fun t0 => Proofs.Cpp.BitWidthU64.bit_width_u64_spec value t0)
-  apply Triple.iff.mpr
-  intro s hs
-  apply (Triple.iff.mp W) s
-  intro r t' ⟨hE, ht'⟩
-  rw [hE, ht']
-  exact hs
 
 /-- Row `i` of the table: `f^(2^i)` with `f x = v[x]`. -/
 def F (v : Array Int) (i : Nat) (j : Int) : Int := (fun x => v[x.toNat]!)^[2 ^ i] j
@@ -91,7 +80,7 @@ theorem doubling_spec (v : Array Int) (kmax : UInt64) (hk : 0 < kmax.toNat) (hn 
   case inv2 =>
     rename_i _ s0 _ _ _ _
     exact ⇓⟨xs, ret⟩ c => ⌜DI v ret (bitWidth kmax.toNat) (1 + xs.prefix.length) ∧
-      c = s0 + 2 + 2 * bitWidth kmax.toNat + v.size + xs.prefix.length * (1 + 2 * v.size)⌝
+      c = s0 + 1 + bitWidth kmax.toNat + v.size + xs.prefix.length * (1 + 2 * v.size)⌝
   case inv3 =>
     rename_i pref _ _ _ _ s2 _
     exact ⇓⟨ys, ret⟩ c => ⌜RI v ret (bitWidth kmax.toNat) (1 + pref.length) ys.prefix.length ∧
@@ -136,7 +125,7 @@ theorem doubling_spec (v : Array Int) (kmax : UInt64) (hk : 0 < kmax.toNat) (hn 
     · exact r2 i h
     · subst h; exact ⟨r3, r4⟩
   case vc9.isTrue.isTrue.post.success.pre =>
-    refine ⟨⟨by simp [replicate], fun i hi hw => ?_, fun i hi hw => ?_⟩, by omega⟩
+    refine ⟨by simp [replicate], fun i hi hw => ?_, fun i hi hw => ?_⟩
     · have : i = 0 := by omega
       subst this
       rw [getElemBang_set _ _ _ _ (by simp [replicate]; omega)]
@@ -155,7 +144,7 @@ theorem doubling_spec (v : Array Int) (kmax : UInt64) (hk : 0 < kmax.toNat) (hn 
     simp [range_length, size] at h0
     have hm : 1 + 2 * v.size ≤ bitWidth kmax.toNat * (1 + 2 * v.size) := Nat.le_mul_of_pos_left _ hbw
     rw [Nat.sub_mul, Nat.one_mul] at hc
-    have hc2 := ‹_ = _ + 2 + 2 * bitWidth kmax.toNat + v.size + _›
+    have hc2 := ‹_ = _ + 1 + bitWidth kmax.toNat + v.size + _›
     omega
   case vc13.isTrue.isFalse =>
     rename_i h

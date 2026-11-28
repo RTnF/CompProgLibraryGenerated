@@ -10,7 +10,7 @@ for _ in range(60):
     count += 1
 for _ in range(600):
     a, b = rng.randrange(count), rng.randrange(count)
-    op = rng.choice(["start", "end_", "is_null", "length", "op_eq", "op_ne", "op_lt", "op_gt", "op_le", "op_ge",
+    op = rng.choice(["start", "end_", "is_null", "length", "op_eq", "op_cmp",
                      "intersection"])
     if op in ("start", "end_", "is_null", "length"):
         lines.append(f"do Interval.{op} {a}")

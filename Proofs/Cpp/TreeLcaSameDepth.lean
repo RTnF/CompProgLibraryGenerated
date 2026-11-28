@@ -4,7 +4,7 @@ import Proofs.Cpp.Lib.Basic
 /-! # `tree_lca_same_depth` (library/tree/tree_lca_same_depth.hpp)
 
 The first meeting point of the paths from two vertices of the same depth, from a doubling table;
-`O(log depth)` steps. -/
+`O(1 + log(depth + 1))` steps. -/
 
 open Std.Do Proofs.Cpp Proofs.Cpp.Gen
 
@@ -83,23 +83,19 @@ theorem step_same (anc : Array (Array Int)) (f : Int → Int) (n u v : Int) (D :
 
 /-- `tree_lca_same_depth(anc, u, v, D)`: when the paths from `u` and `v` along `f` (a map of `[0, n)` into itself, `anc`
 its doubling table) meet after `D` steps, the result is their first meeting point (`FirstMeet`); at most
-`2 bitWidth D + 4` steps (`O(log D)`). For two vertices of depth `D` in a rooted tree (`f` the parent map, the root
+`2 bitWidth D + 4` steps (`O(1 + log(D + 1))`). For two vertices of depth `D` in a rooted tree (`f` the parent map, the root
 its own parent) both paths reach the root after `D` steps, and the first meeting point is the lowest common ancestor. -/
 theorem tree_lca_same_depth_spec (anc : Array (Array Int)) (f : Int → Int) (n u v : Int) (D : Nat)
     (hf : ∀ x, 0 ≤ x → x < n → 0 ≤ f x ∧ f x < n) (hu : 0 ≤ u ∧ u < n) (hv : 0 ≤ v ∧ v < n)
     (hD : D < 2 ^ 30) (hmeet : f^[D] u = f^[D] v) (htab : TabLca anc f n D) (t0 : Nat) :
     ⦃fun c => ⌜c = t0⌝⦄ cp.tree_lca_same_depth anc u v D
     ⦃⇓ r c => ⌜FirstMeet f u v r ∧ c ≤ t0 + 4 + 2 * bitWidth D⌝⦄ := by
-  have hbw : bitWidth D ≤ 30 := bitWidth_lt_pow D 30 hD
-  clear hD
+  have word : (UInt32.ofInt (D : Int)).toNat = D := by
+    simp only [UInt32.ofInt, UInt32.toNat_ofNat']
+    rw [Int.emod_eq_of_lt (by omega) (by omega), Int.toNat_natCast]
+    exact Nat.mod_eq_of_lt (by omega)
   mvcgen [cp.tree_lca_same_depth]
-  case vc1.inv =>
-    exact ⟨fun ⟨top, p⟩ c => ⌜0 ≤ top ∧ p = 2 ^ top.toNat ∧ top.toNat ≤ bitWidth D ∧ (top = 0 ∨ 2 ^ top.toNat ≤ D) ∧
-             c = t0 + 1 + top.toNat⌝,
-           fun ⟨top, p⟩ c => ⌜0 ≤ top ∧ p = 2 ^ top.toNat ∧ top.toNat ≤ bitWidth D ∧ (top = 0 ∨ 2 ^ top.toNat ≤ D) ∧
-             D < 2 ^ (top.toNat + 1) ∧ c = t0 + 2 + top.toNat⌝,
-           fun ⟨top, _⟩ => bitWidth D - top.toNat⟩
-  case vc6.inv =>
+  case inv =>
     exact ⟨fun ⟨u', v', k⟩ c => ⌜-1 ≤ k ∧ (k < 0 ∨ k = 0 ∨ 2 ^ k.toNat ≤ D) ∧ u' ≠ v' ∧
              0 ≤ u' ∧ u' < n ∧ 0 ≤ v' ∧ v' < n ∧ f^[2 ^ (k + 1).toNat] u' = f^[2 ^ (k + 1).toNat] v' ∧
              (∃ a : Nat, u' = f^[a] u ∧ v' = f^[a] v ∧ ∀ s, s ≤ a → f^[s] u ≠ f^[s] v) ∧
@@ -109,22 +105,7 @@ theorem tree_lca_same_depth_spec (anc : Array (Array Int)) (f : Int → Int) (n 
              c ≤ t0 + 4 + 2 * bitWidth D⌝,
            fun ⟨_, _, k⟩ => (k + 1).toNat⟩
   all_goals simp +zetaDelta [fuel] at *
-  -- the first loop: `top` is the largest level with `2^top <= max(D, 1)`
-  · obtain ⟨h0, hp, hb, hl, hc⟩ := ‹(0 : Int) ≤ _ ∧ _›
-    refine ⟨h0, hp, hb, hl, ?_, by omega⟩
-    have := ‹(D : Int) < _›
-    rw [hp] at this
-    rw [Nat.pow_succ]; exact_mod_cast this
-  · obtain ⟨h0, hp, hb, hl, hc⟩ := ‹(0 : Int) ≤ _ ∧ _›
-    have hle := ‹_ * 2 ≤ (D : Int)›
-    rw [hp] at hle
-    have hle' : 2 ^ (‹Int × Int›.1.toNat + 1) ≤ D := by rw [Nat.pow_succ]; exact_mod_cast hle
-    have := lt_bitWidth hle'
-    have e : (‹Int × Int›.1 + 1).toNat = ‹Int × Int›.1.toNat + 1 := by omega
-    refine ⟨⟨by omega, by rw [hp, e, Int.pow_succ], by omega, Or.inr (by rw [e]; exact hle'), by omega⟩, by omega⟩
-  · omega
-  · obtain ⟨h0, hp, hb, hl, hD, hc⟩ := ‹(0 : Int) ≤ _ ∧ _›
-    subst ‹u = v›
+  · subst ‹u = v›
     exact ⟨⟨0, rfl, rfl, fun s hs => absurd hs (by omega)⟩, by omega⟩
   -- the descent
   · obtain ⟨hk1, -, hne0, hu0, hun, -, -, hm, hex, hc⟩ := ‹(-1 : Int) ≤ _ ∧ _›
@@ -133,11 +114,23 @@ theorem tree_lca_same_depth_spec (anc : Array (Array Int)) (f : Int → Int) (n 
     exact ⟨hne0, hu0, hun, hm, hex, by omega⟩
   · exact step_diff anc f n u v D hf htab _ _ _ _ _ ‹_› ‹_› ‹_›
   · exact step_same anc f n u v D hf htab _ _ _ _ _ ‹_› ‹_› ‹_›
-  · obtain ⟨h0, hp, hb, hl, hD, hc⟩ := ‹(0 : Int) ≤ _ ∧ _›
-    have e : (‹Int × Int›.1 + 1).toNat = ‹Int × Int›.1.toNat + 1 := by omega
-    refine ⟨⟨by omega, by omega, ‹_›, hu.1, hu.2, hv.1, hv.2, ?_, ⟨0, rfl, rfl, fun s hs => ?_⟩, by omega⟩, by omega⟩
-    · rw [e]; exact met_mono f u v hmeet (by omega)
-    · rw [show s = 0 by omega]; exact ‹¬u = v›
+  · have hpos : 0 < D := by
+      by_contra! hd
+      have hzero : D = 0 := by omega
+      exact ‹u ≠ v› (by simpa [hzero] using hmeet)
+    have hwidth : bitWidth D = D.log2 + 1 := by
+      simp [bitWidth, Nat.ne_of_gt hpos]
+    have hlevel := Nat.log2_self_le hpos.ne'
+    have hbound := (Nat.log2_lt hpos.ne').mp (Nat.lt_succ_self D.log2)
+    have hmeet' : f^[2 ^ (D.log2 + 1)] u = f^[2 ^ (D.log2 + 1)] v :=
+      met_mono f u v hmeet hbound.le
+    have hlog : D.log2 < 30 := by
+      have := bitWidth_lt_pow D 30 hD
+      omega
+    have hprefix : ∃ a : Nat, u = f^[a] u ∧ v = f^[a] v ∧ ∀ s ≤ a, ¬f^[s] u = f^[s] v := by
+      exact ⟨0, rfl, rfl, fun s hs => by simpa [show s = 0 by omega] using ‹u ≠ v›⟩
+    simp +zetaDelta [word, hwidth, hu.1, hu.2, hv.1, hv.2, hlevel, hmeet', hprefix, ‹u ≠ v›]
+    all_goals omega
   · obtain ⟨hne0, hu0, hun, hm, ⟨a, ha, hb, hnot⟩, hc⟩ := ‹¬(_ : Int) = _ ∧ _›
     have g := tab_get anc f n D htab 0 _ (by omega) (by omega) ⟨hu0, hun⟩
     simp only [Int.toNat_zero, Nat.pow_zero] at g

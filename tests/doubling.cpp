@@ -1,5 +1,7 @@
 #include "../experiments/library/cpp/template/small_template.hpp"
 #include "../library/array/doubling.hpp"
+#include "../library/number_theory/bit_width_u64.hpp"
+#include <bit>
 #include <cstdint>
 #include <random>
 #include <vector>
@@ -32,10 +34,9 @@ void check_table(const std::vector<int> &v, std::uint64_t kmax) {
 }
 
 namespace original {
-// std::bit_width is C++20 and this test is compiled as C++17: the same value from the compiler builtin.
-inline int bit_width(std::uint64_t x) { return x == 0 ? 0 : 64 - __builtin_clzll(x); }
 // Verbatim copy of experiments/library/cpp/array/doubling.hpp (the test is compiled without -I, so the header cannot
 // be included by its own relative include).
+using std::bit_width;
 using std::vector;
 using std::uint64_t;
 // ダブリング

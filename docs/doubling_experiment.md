@@ -1,34 +1,20 @@
-# doubling の C++17 修復と公開（`library/array/doubling.hpp`）
+# doubling（`library/array/doubling.hpp`）
 
-原本 `experiments/library/cpp/array/doubling.hpp` は C++20 の `bit_width` を参照し、固定した C++17 環境ではコンパイルできない。原本を保持し、候補を `library/array/doubling.hpp` に置いた。入力を const 参照とし、添字への int 変換前にサイズ上限を検査する。ライブラリのテンプレートを先に include するテストを用意した。
+`cp::doubling(v, kmax)` は写像 `f(x) = v[x]` の累乗表を作る。行数 `w` は `std::bit_width(kmax)` で、行 `i` の頂点 `j` は `f` の `2^i` 回適用の結果。前提は `kmax > 0`、`v.size() <= INT_MAX`、全要素が `[0, v.size())` 内であること。空配列も受け付ける。
 
-前提は `kmax > 0`、サイズが INT_MAX 以下、全要素が `[0,n)` 内であること。空配列も許す。行数は kmax のビット幅、行 i の頂点 j は写像の 2^i 回適用である。候補の時間と出力領域は O(n × bit_width(kmax))。vector の割当・添字・所有権・寿命・例外を含む本体の AST 変換と Lean 証明は未完了で、公開済みとは扱わない。
-
-C++17 の `bit_width_u64` はゼロに0を返し、それ以外では2による除算を繰り返す。共通変換器の生成 IR と Lean モデルを保存し、再生成の全文一致を検査する。`Proofs/BitWidthU64.lean` は実際の生成本体について、全 uint64 入力での結果、整数範囲内の実行、停止、caller メモリの保持を証明する。幅 w は64以下で、実行枠80で成功する。抽象仕事量は `9 + 14*w`（最大905）、追加領域は8。これは実測時間やバイト数ではなく共通モデルの単位である。幅の数学的特徴付けも証明し、C++ の signed 加算・unsigned 除算の検査を通す。
-
-`tests/test_bit_width_u64.py` は523入力で Python の bit_length と生成モデル・費用・caller メモリを照合し、改名の不変性を確認する。実行枠不足は exhausted、負値・uint64 範囲超過・引数不足 / 過剰・参照引数は fault として拒否する。除数・増分・条件・返却値の4改変を再生成し、元の全入力証明が拒否されることを確認する。`tools/check_import_doubling.py` は原本の C++17 エラーを再現し、候補を通常実行と ASan/UBSan で検査する。独立した経路・周期の計算と全3,414写像（サイズ0〜5）、各14種類の kmax を照合する。ヘルパーは小整数、全64桁の境界、固定乱数でも検査する。テストはネットワークを禁止して実行する。
-
-読み書き・reserve・容量内追加と参照の再割当無効化に必要な共通モデル基盤を追加した。[vector 操作の契約と未接続部分](vector_contracts.md)を参照する。これは doubling の AST 本体の生成・証明を完了させるものではない。
-
-## 全入力の Lean 証明（2026-10-07）
-
-生成した入れ子 vector の本体（`Proofs/Generated/DoublingNested.lean`、生成器 `verifier/nested_ir.py`）について、`Proofs.DoublingCall.doubling_correct` が全入力の結果・停止・費用を証明する。前提は `CallerOK`（検証済みの呼出し状態に const な根 vector `v` が束縛されている）、全要素が `[0,n)`、`0 < kmax < 2^64`、`n` が INT_MAX 未満。結論は、ある fuel で `NProgram.callFuel` が `finished` になり、返る根の行 k が `tableRow items k`、行数が `bit_width(kmax)`、`v` の buffer が不変、根が呼出し側 scope に移ることである。
-
-費用は `DoublingPost` に記録する。vector 側の追加仕事量は `(w+1)+(n+1)+(w-1)(2n+1)`（w は行数）で、ちょうどこの値に等しい。スカラー側の仕事量は `kexpr` の式の大きさに加えて `(w-1)(60n+200)+100n+1010` 以下、領域の peak は呼出し側の live 領域に `w + n·w + 3` を加えた値以下である。
-
-`DoublingProgram.body_eq` は、Lean の `bodyCmd` が生成物の本体と `rfl` で一致することを示す。生成物を変えるとこの検査が壊れる（`tests/test_doubling_proof.py` に改変の拒否検査がある）。呼出し側の `v` 以外の buffer が不変であることと、前提違反時に必ず fault になることは、この定理にまだ含めていない。
+時間と返却表の領域は O((n + 1)w)、返却表を除く追加領域は O(1)。`n = 0` の場合も `w` 行を構築する。
 
 ## 検証（新方式、`docs/translation.md`）
 
-`verifier/lean_translate.py` が `Proofs/Cpp/Gen/Doubling.lean` を生成する（`std::numeric_limits<int>::max()` はリテラル、`ret[0].assign(v.begin(), v.end())` は `v` のコピー）。`Proofs/Cpp/Doubling.lean` の `doubling_spec` は、`0 < kmax`、`v.size() < 2^31`、全要素が `[0, n)` のとき、返る表の行数が `bitWidth kmax`、各行の長さが `n`、行 `i` の `j` 番目が `F v i j = f^(2^i)(j)`（`f x = v[x]`）であり、tick 数が `3 + 2n + 3 bitWidth kmax + bitWidth kmax * (1 + 2n)` 以下（`O(n log kmax)`）であることを示す。行 `i` の要素は行 `i - 1` を 2 回引いて作る（`F_succ`、範囲は `F_range`）。差分テストは `tests/diff/doubling.py`。
+`verifier/lean_translate.py` が `Proofs/Cpp/Gen/Doubling.lean` を生成する（`std::numeric_limits<int>::max()` はリテラル、`ret[0].assign(v.begin(), v.end())` は `v` のコピー）。`Proofs/Cpp/Doubling.lean` の `doubling_spec` は、`0 < kmax`、`v.size() < 2^31`、全要素が `[0, n)` のとき、返る表の行数が `bitWidth kmax`、各行の長さが `n`、行 `i` の `j` 番目が `F v i j = f^(2^i)(j)`（`f x = v[x]`）であり、tick 数が `3 + 2n + 3 bitWidth kmax + bitWidth kmax * (1 + 2n)` 以下であることを示す。行 `i` の要素は行 `i - 1` を 2 回引いて作る（`F_succ`、範囲は `F_range`）。差分テストは `tests/diff/doubling.py`。
 
 ## 元のソースからの変更
 
 元の `experiments/library/cpp/array/doubling.hpp` の `doubling(vector<int> &v, uint64_t kmax)` に対し、公開版 `cp::doubling` は名前空間 `cp` に入れ、次の点だけを変えた。いずれも元と同じ入力に同じ表を返す。
 
 - 引数 `v` を `const std::vector<int> &` にした（元の非 const 左辺値参照が受けるすべての引数を受け、右辺値や const な vector も受ける。`v` は読むだけ）。
-- C++20 の `std::bit_width(kmax)` を、検証済みの `cp::bit_width_u64`（同じ値、`kmax > 0`）に置き換えた。ヘッダーは C++17 で使える。
-- `int n = v.size()` の暗黙の縮小変換に対し、`v.size() <= INT_MAX` の assert を明示した（元は超過時に未規定）。
+- `int n = v.size()` の暗黙の縮小変換に対し、`v.size() <= INT_MAX` の assert を明示した。
 
 `tests/doubling.cpp` の `check_against_original` が、元の関数の逐語コピー（`original::doubling`）と公開版の表を乱択と境界値（`kmax = 1`、`kmax = 2^64 - 1`）で比較して一致を確認する。
 
+`tools/check_import_doubling.py` は原本ヘッダの C++23 構文確認と、公開版の通常実行・ASan/UBSan 実行を行う。全3,414写像（サイズ0〜5）を各14種類の `kmax` で独立オラクルと比較する。

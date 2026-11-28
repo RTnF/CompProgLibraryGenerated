@@ -12,6 +12,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parent.parent
 CLANG_VERSION = "clang version 22.1.4"
 GCC_VERSION = "13.3.0"
+STANDARDS = ("c++17", "c++20", "c++23")
+DEFAULT_STANDARD = STANDARDS[-1]
 VOLATILE_KEYS = {"id", "loc", "range", "mangledName"}
 PUBLIC_KINDS = {"FunctionDecl", "TypeAliasDecl", "TypeAliasTemplateDecl", "CXXRecordDecl", "EnumDecl", "VarDecl", "ClassTemplateDecl", "FunctionTemplateDecl",
                 "ClassTemplateSpecializationDecl"}
@@ -56,8 +58,8 @@ def gcc_include_dirs():
     return [line.strip() for line in lines[start:end]]
 
 
-def clang_command(standard="c++17"):
-    if standard not in ("c++17", "c++20"):
+def clang_command(standard=DEFAULT_STANDARD):
+    if standard not in STANDARDS:
         raise ValueError(f"unsupported C++ standard: {standard}")
     lean = subprocess.check_output([elan_binary(), "which", "lean"], text=True).strip()
     clang = str(Path(lean).with_name("clang"))
@@ -78,7 +80,7 @@ def filtered_ast(source: Path, name: str):
     return json.loads(subprocess.check_output(command, text=True, cwd=ROOT))
 
 
-def public_declarations(source: Path, standard="c++17"):
+def public_declarations(source: Path, standard=DEFAULT_STANDARD):
     command = clang_command(standard) + [
         "-Xclang", "-ast-dump=json", "-Xclang", "-ast-dump-filter=cp::",
         str(source),
@@ -138,7 +140,7 @@ def check_source_contract(source: Path, metadata: dict):
     actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
     if actual_hash != metadata["source_sha256"]:
         raise RuntimeError(f"C++ source changed: {source}; review the entire header")
-    actual_declarations = public_declarations(source, metadata.get("standard", "c++17"))
+    actual_declarations = public_declarations(source, metadata.get("standard", DEFAULT_STANDARD))
     if actual_declarations != sorted(metadata["public_declarations"]):
         raise RuntimeError(
             f"public declarations changed in {source}: {actual_declarations}; "

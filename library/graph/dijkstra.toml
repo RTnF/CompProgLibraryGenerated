@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/dijkstra.cpp"]
 sanitizers = true
 spec = "docs/dijkstra.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "b88227c56c9aa48589667ff50e5c562e4615649cda5dc5eda82c442ecbe786c5"
 public_declarations = ["FunctionTemplateDecl:dijkstra<vector>"]
 

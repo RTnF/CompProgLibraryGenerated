@@ -9,8 +9,8 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/tree_lca_same_depth.cpp"]
 sanitizers = true
 spec = "docs/tree_lca_same_depth.md"
-standard = "c++17"
-source_sha256 = "148644302597dc4168c7f7545d9bc8a349949399872ca21d4c46e79b67e3d449"
+standard = "c++23"
+source_sha256 = "93b4bed01d2ec9834a18b09c50c0a6e79b42db1bd29749fc27baba255267bf65"
 public_declarations = ["FunctionDecl:tree_lca_same_depth"]
 
 [diff]

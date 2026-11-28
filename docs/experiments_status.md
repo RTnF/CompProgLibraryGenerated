@@ -29,7 +29,7 @@
 | graph/topological_sort.hpp | 移植・公開済（CI 確認済） | `ListGraph::topological_sort()` のスタック版と `ListGraph::topological_sort_minimum()` の最小ヒープ版を保持。完全な順序の有無、辞書順最小性、停止、時間と追加領域を証明。既存の CSR 自由関数も登録済み |
 | graph/lowlink.hpp | 移植・公開済（CI 確認済） | `library/graph/graph_list.hpp` の `ListGraph::lowlink()`。再帰 DFS の生成モデルについて、平行辺・自己ループを含む無向グラフで橋と関節点の2配列を重複なく昇順で返すことと、停止・手数の上界を証明した。原本の平行辺の誤判定を修正し、辺を1本ずつ除く ASan/UBSan 回帰を原本と公開版に実行した。旧 CSR 部品も登録されている |
 | graph/prim.hpp | 済（新方式、2026-11-25） | `library/graph/graph_list.hpp` の `ListGraph::prim`（元の本体、ラムダ `span` を非公開メンバー `prim_span` に、`Cost v` を `int v` に）。無向グラフで返り値が最小全域森の重みであること、`O((n+m) log(n+m))` の手数を証明（`Cost = long long`、`docs/graph_list.md`）。旧部品 `prim`（CSR 配列・O(n²)）は残している |
-| interval/interval.hpp | 済 | `interval`。2026-11-09に元の既定 `operator<=>` と同じ順序の `==`/`!=`/`<`/`>`/`<=`/`>=` を追加（C++17、単一return式）。生成モデル13関数と一般定理 `interval_{eq,ne,lt,gt,le,ge}_correct`、全件gate（実7336秒、独立kernel49269宣言）成功。入出力演算子は方針（2026-10-12）により対象外 |
+| interval/interval.hpp | 済 | `interval`。原本の既定 `operator<=>` を使用し、等値と辞書式順序を Lean で検証。入出力演算子は方針（2026-10-12）により対象外 |
 | interval/interval_union.hpp | 済（新方式） | `interval_union`（元の `interval_union_inclusive` の本体のまま。244b2ec。`docs/interval_union.md`） |
 | modint/dynamic_modint.hpp | 公開 | `dynamic_modint` に元のクラスAPI、静的な法、負指数、入出力、両階乗表、二項係数を復元。動的版の二項係数は `cp::dynamic_modint::C`。ローカル全件gate済み。push後のCIは未確認 |
 | modint/modint.hpp | 移植済（新方式、未push） | `modint`へ元のクラス全API、型template、負指数、IO、mint/mint17、fac/C/initとMAX_FAC=20000003を復元。新方式の生成と一般証明、公開C++/include・差分検査が成功。全件gate・独立kernel成功。push後のCIと配布更新は未確認 |

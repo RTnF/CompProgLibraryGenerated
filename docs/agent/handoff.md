@@ -1,6 +1,14 @@
 # 作業引き継ぎ
 
-## 2026-11-19 の状態（最新。ここから読む）
+## C++23 への移行
+
+- 公開70部品、GCC 13.3.0・Clang 22.1.4 の検査、翻訳・差分ハーネス、配布ZIP検査を `-std=c++23` に揃えた。調査用に旧規格を指定できる。
+- `doubling`、`tree_lca_same_depth`、公開ラッパー `bit_width_u64` は `std::bit_width`、公開ラッパー `countr_zero_u64` は `std::countr_zero` を使用する。`tree_lca_same_depth` は必要な行だけを持つ表を受け付ける。`Interval` は原本の既定の三方比較と既定の等値を使用する。ほかの比較は通常の演算子式で呼び出す。
+- 5部品の生成モデル・Lean 証明・仕様台帳を更新した。GCC の通常実行・ASan/UBSan、5部品の差分テスト、配布ZIP検査、Lean 全ビルドを確認した。
+- 持ち込みソースの台帳を更新した。137件の構文、69件のコンパイル・リンク、72件の宣言抽出が C++23 で成功した。
+- 配布ZIPは個別70ヘッダと一括 include を C++23 で検査した。
+
+## 2026-11-19 の状態
 
 - 登録56部品はすべて新方式（`lean_model`）。monoid_lazy を 104cc0f で push。104cc0f の CI は失敗（23分）: `diff_harness.py` と新方式テストが `.tools/elan/bin/lake` を固定で使い、CI（PATH の lake）で FileNotFoundError。`lean_environment()`（`tests/lean_env.py`、`diff_harness.lean_environment`）で PATH の lake に落ちるよう修正済み（未push）。
 - 旧方式の削除（未commit→この節の直後にcommit）: 旧 `Proofs/*.lean`（約450）、`Proofs/Generated/`、旧変換器（`verifier/` の scalar_ir/state_ir/nested_ir など）、旧テスト約120本、旧文書95本、STL 契約公理（`verification/stl_contracts.json` と関連コード）を削除。新方式の証明が使う旧定義・定理は宣言単位で抽出して `Proofs/Math/`（41モジュール、名前空間は旧名のまま）に残した。抽出の道具は `.cache/wip/legacy_prune/`（`Used.lean` が新方式の証明から推移的に使う旧宣言を列挙、`prune.py` が未使用宣言を削除、`iterate.sh` が未定義名を足して再ビルド）。statements.json は再生成（差分はモジュール名と束縛変数の衛生名だけであることを確認して `--accept-changed`）。

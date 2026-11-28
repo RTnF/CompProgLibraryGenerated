@@ -74,9 +74,9 @@ class ModIntConstructorModelTests(unittest.TestCase):
             header = scratch / 'Source.hpp'
             header.write_text(source)
             declarations = lean_translate.source_decls(header)
-            def unchanged_ast(path, standard='c++17'):
+            def unchanged_ast(path, standard='c++23'):
                 self.assertEqual(Path(path).resolve(), header.resolve())
-                self.assertEqual(standard, 'c++17')
+                self.assertEqual(standard, 'c++23')
                 self.assertEqual(header.read_text(), source)
                 return copy.deepcopy(declarations)
             env = dict(LAKE_ENV,
@@ -104,7 +104,7 @@ class ModIntConstructorModelTests(unittest.TestCase):
                                                      calls=[ctor, setter, 'ModInt.get_'])
                             native_source, binary = scratch / 'driver.cpp', scratch / 'driver'
                             native_source.write_text(h.cpp_driver())
-                            subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined',
+                            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                                             '-I', str(ROOT / 'tests/diff'), str(native_source), '-o', str(binary)],
                                            check=True, timeout=60)
                             inputs = '\n'.join(commands)+'\n'

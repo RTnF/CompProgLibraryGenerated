@@ -220,7 +220,7 @@ int main() {
 }
 ''')
             binary = scratch / 'traits'
-            subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined',
+            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                             str(cpp), '-o', str(binary)], check=True, timeout=60)
             env = dict(LAKE_ENV,
                        ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')

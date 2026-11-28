@@ -10,7 +10,7 @@ static int original_countr_zero(unsigned int n) {
 }
 
 int main() {
-    assert(cp::countr_zero_u64(0) == 64);  // as std::countr_zero in C++20
+    assert(cp::countr_zero_u64(0) == 64);
     for (int k = 0; k < 64; ++k) {
         unsigned long long p = 1ULL << k;
         assert(cp::countr_zero_u64(p) == k);

@@ -86,7 +86,7 @@ class RatioStreamModelTests(unittest.TestCase):
                 'int main() { cp::Ratio<> r(7, 3); r /= r; std::ostringstream out; out << r;\n'
                 'return out.str() != "1"; }\n')
             binary = Path(directory) / 'driver'
-            subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
+            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                             '-fno-omit-frame-pointer', str(source), '-o', str(binary)], check=True, timeout=60)
             env = dict(os.environ, ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
             subprocess.run([str(binary)], check=True, env=env, timeout=30)
@@ -129,7 +129,7 @@ class RatioStreamModelTests(unittest.TestCase):
             source.write_text(complete_header())
             for scalar in ['bool', '__int128']:
                 with self.subTest(scalar=scalar), self.assertRaisesRegex(lean_translate.Unsupported, 'stream differential'):
-                    diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++20')
+                    diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++23')
 
     def test_generic_harness_stream_arguments_and_object_writeback(self):
         env = dict(LAKE_ENV,
@@ -139,8 +139,8 @@ class RatioStreamModelTests(unittest.TestCase):
                 scratch = Path(directory)
                 source = scratch / 'ratio.hpp'
                 source.write_text(complete_header())
-                model = lean_translate.translate_file(source, [], standard='c++20')
-                harness = diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++20')
+                model = lean_translate.translate_file(source, [], standard='c++23')
+                harness = diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++23')
                 lo, hi = -(2 ** (bits - 1)), 2 ** (bits - 1) - 1
                 cases = [([], 7, 3, True, True), (['x'], 0, 3, False, True),
                          (['2'], 2, 3, True, True), (['2', '4'], 2, 4, True, False),
@@ -167,7 +167,7 @@ class RatioStreamModelTests(unittest.TestCase):
                 cpp = scratch / 'driver.cpp'
                 cpp.write_text(harness.cpp_driver())
                 binary = scratch / 'driver'
-                subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
+                subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                                 '-fno-omit-frame-pointer', '-I', str(ROOT / 'tests/diff'),
                                 str(cpp), '-o', str(binary)], check=True, timeout=60)
                 command_text = '\n'.join(commands) + '\n'
@@ -186,7 +186,7 @@ class RatioStreamModelTests(unittest.TestCase):
         env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         source = ROOT / 'library/number/ratio.hpp'
-        model = lean_translate.translate_file(source, [], standard='c++20')
+        model = lean_translate.translate_file(source, [], standard='c++23')
         for scalar, bits in [('unsigned short', 16), ('unsigned', 32), ('unsigned long long', 64)]:
             hi = 2 ** bits - 1
             cases = [([], 7, 3, True, True), (['x'], 0, 3, False, True),
@@ -203,7 +203,7 @@ class RatioStreamModelTests(unittest.TestCase):
                      (['x', '2'], 0, 3, False, True)]
             with self.subTest(scalar=scalar), tempfile.TemporaryDirectory() as directory:
                 scratch = Path(directory)
-                harness = diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++20')
+                harness = diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++23')
                 commands, expected = [], []
                 for i, (tokens, n, d, eof, failed) in enumerate(cases):
                     commands += ['new Ratio.init_T_T 7 3',
@@ -219,7 +219,7 @@ class RatioStreamModelTests(unittest.TestCase):
                 cpp = scratch / 'driver.cpp'
                 cpp.write_text(harness.cpp_driver())
                 binary = scratch / 'driver'
-                subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
+                subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                                 '-fno-omit-frame-pointer', '-I', str(ROOT / 'tests/diff'),
                                 str(cpp), '-o', str(binary)], check=True, timeout=60)
                 command_text = '\n'.join(commands) + '\n'
@@ -238,7 +238,7 @@ class RatioStreamModelTests(unittest.TestCase):
         env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         source = ROOT / 'library/number/ratio.hpp'
-        model = lean_translate.translate_file(source, [], standard='c++20')
+        model = lean_translate.translate_file(source, [], standard='c++23')
         cases = [([], 7, 3, True, True), (['x'], 120, 3, True, True),
                  (['2'], 50, 3, True, True), (['2', '4'], 50, 52, False, False),
                  (['24'], 50, 52, False, False), (['2', 'x'], 50, 120, False, False),
@@ -248,7 +248,7 @@ class RatioStreamModelTests(unittest.TestCase):
         for scalar in ['char', 'signed char', 'unsigned char']:
             with self.subTest(scalar=scalar), tempfile.TemporaryDirectory() as directory:
                 scratch = Path(directory)
-                harness = diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++20')
+                harness = diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++23')
                 commands, expected = [], []
                 for i, (tokens, n, d, eof, failed) in enumerate(cases):
                     commands += ['new Ratio.init_T_T 7 3',
@@ -274,7 +274,7 @@ class RatioStreamModelTests(unittest.TestCase):
                 cpp = scratch / 'driver.cpp'
                 cpp.write_text(harness.cpp_driver())
                 binary = scratch / 'driver'
-                subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
+                subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                                 '-fno-omit-frame-pointer', '-I', str(ROOT / 'tests/diff'),
                                 str(cpp), '-o', str(binary)], check=True, timeout=60)
                 command_text = '\n'.join(commands) + '\n'
@@ -293,7 +293,7 @@ class RatioStreamModelTests(unittest.TestCase):
         env = dict(LAKE_ENV,
                    ASAN_OPTIONS='detect_leaks=0:halt_on_error=1', UBSAN_OPTIONS='halt_on_error=1')
         source = ROOT / 'library/number/ratio.hpp'
-        model = lean_translate.translate_file(source, [], standard='c++20')
+        model = lean_translate.translate_file(source, [], standard='c++23')
         whitespace = {9, 10, 11, 12, 13, 32}
         cases = []
         for byte in range(256):
@@ -310,7 +310,7 @@ class RatioStreamModelTests(unittest.TestCase):
         for scalar in ['char', 'signed char', 'unsigned char']:
             with self.subTest(scalar=scalar), tempfile.TemporaryDirectory() as directory:
                 scratch = Path(directory)
-                harness = diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++20')
+                harness = diff_harness.Harness(source, {'T': scalar}, 'Unused', standard='c++23')
                 commands, expected = [], []
                 typed_cases = [(payload, n % 256 if n < 0 and scalar == 'unsigned char' else n,
                                 d % 256 if d < 0 and scalar == 'unsigned char' else d, eof, failed)
@@ -334,7 +334,7 @@ class RatioStreamModelTests(unittest.TestCase):
                 cpp = scratch / 'driver.cpp'
                 cpp.write_text(harness.cpp_driver())
                 binary = scratch / 'driver'
-                subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
+                subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                                 '-fno-omit-frame-pointer', '-I', str(ROOT / 'tests/diff'),
                                 str(cpp), '-o', str(binary)], check=True, timeout=60)
                 command_text = '\n'.join(commands) + '\n'
@@ -355,7 +355,7 @@ class RatioStreamModelTests(unittest.TestCase):
             source.write_text(complete_header() + '\nnamespace cp { template <typename U> U identity(U x) { return x; } }\n')
             for other in ['int', 'unsigned long long', 'char']:
                 with self.subTest(other=other), self.assertRaisesRegex(lean_translate.Unsupported, 'stream differential'):
-                    diff_harness.Harness(source, {'T': 'unsigned', 'U': other}, 'Unused', standard='c++20')
+                    diff_harness.Harness(source, {'T': 'unsigned', 'U': other}, 'Unused', standard='c++23')
 
     def test_complete_model_streams_and_contracts(self):
         original = ROOT / 'experiments/library/cpp/number/ratio.hpp'
@@ -365,7 +365,7 @@ class RatioStreamModelTests(unittest.TestCase):
             scratch = Path(directory)
             source = scratch / 'ratio.hpp'
             source.write_text(header)
-            model = lean_translate.translate_file(source, [], standard='c++20')
+            model = lean_translate.translate_file(source, [], standard='c++23')
             lean = scratch / 'Driver.lean'
             lean.write_text('import Proofs.Cpp.Lib.RatioMath\nimport Proofs.Cpp.Lib.RatioArithmeticSpace\n' + model
                             + (ROOT / 'tests/lean/ratio_arithmetic_contract.lean').read_text()
@@ -380,7 +380,7 @@ class RatioStreamModelTests(unittest.TestCase):
                 '            << "|" << in_alias << "|" << out_alias << "\\n";\n'
                 '} }\n')
             binary = scratch / 'driver'
-            subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
+            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                             '-fno-omit-frame-pointer', '-I', str(ROOT / 'experiments/library/cpp'),
                             str(cpp), '-o', str(binary)], check=True, timeout=60)
             env = dict(LAKE_ENV,

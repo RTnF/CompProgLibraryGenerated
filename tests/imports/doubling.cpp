@@ -1,5 +1,6 @@
 #include "../../experiments/library/cpp/template/small_template.hpp"
 #include "../../library/array/doubling.hpp"
+#include "../../library/number_theory/bit_width_u64.hpp"
 #include <array>
 #include <cassert>
 #include <cstdint>

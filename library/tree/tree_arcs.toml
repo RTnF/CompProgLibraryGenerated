@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/tree_arcs.cpp"]
 sanitizers = true
 spec = "docs/tree_arcs.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "5840aff1d36bb7298f387152cfd4e7e447e7dd76584f7597191b41a6c9c8e389"
 public_declarations = ["FunctionDecl:tree_arcs_from_list"]
 

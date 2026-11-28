@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/tree_full_dp.cpp"]
 sanitizers = true
 spec = "docs/tree_full_dp.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "5499e89015df92ce48dc8fd68f6a978ebbb0e7d4553387ea2dd2ba5733db3473"
 public_declarations = ["ClassTemplateDecl:DpHeight", "ClassTemplateSpecializationDecl:DpHeight<long long>", "FunctionTemplateDecl:tree_full_dp<vector>"]
 

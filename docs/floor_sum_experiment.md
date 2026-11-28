@@ -18,7 +18,7 @@
 
 ## 検証（新方式、signed 版 `floor_sum`）
 
-`verifier/lean_translate.py` が `Proofs/Cpp/Gen/FloorSum.lean` を生成する。`uint64_t` から `int64_t` への変換は 2 の補数での値 `Cpp.toSigned 64`（C++20 の規定、GCC は C++17 でも同じ）に翻訳する。`Proofs/Cpp/FloorSum.lean` の `floor_sum_spec` は `0 <= n < 2^32`、`1 <= m < 2^32`、`a`、`b` が signed 64 bit の全範囲のとき、返り値が `signedDecode64 (signedSum m a b n)`（総和を 2^64 を法として signed 64 bit に復号した値。総和が範囲内なら総和そのもの: `signedDecode64_exact`）であり、tick 数が `t0 + 10 + 2 * log2 m` 以下であることを示す。
+`verifier/lean_translate.py` が `Proofs/Cpp/Gen/FloorSum.lean` を生成する。`uint64_t` から `int64_t` への変換は 2 の補数での値 `Cpp.toSigned 64`（C++23 [conv.integral]）に翻訳する。`Proofs/Cpp/FloorSum.lean` の `floor_sum_spec` は `0 <= n < 2^32`、`1 <= m < 2^32`、`a`、`b` が signed 64 bit の全範囲のとき、返り値が `signedDecode64 (signedSum m a b n)`（総和を 2^64 を法として signed 64 bit に復号した値。総和が範囲内なら総和そのもの: `signedDecode64_exact`）であり、tick 数が `t0 + 10 + 2 * log2 m` 以下であることを示す。
 
 - `a < 0` の補正 `0 - n*(n-1)/2 * ((a2 - a) / m)` は `UInt64.ofInt (triangle n * (a / m))` に等しい（`tri_eq`、`coef_eq`、`ansA_eq`）。`b < 0` も同様（`ansB_eq`）。`a2 - a` は `2^63 + 2^32` 未満なので折り返さない。
 - 和の分解は旧来の `Proofs/Math/FloorSumSignedArithmetic.lean` の `signedSum_normalization` から `sum_norm_a`、`sum_norm_b` を導き、非負の係数では `signedSum_of_nat` で `directSum` に移す。`floor_sum_unsigned` の呼び出しには `floor_sum_unsigned_wp`、仕事量には `gcd_bound`（`gcdCost m x <= 3 + 2 log2 m`）を使う。

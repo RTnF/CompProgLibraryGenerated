@@ -64,7 +64,7 @@ def main():
     run(['lake', 'build', 'Proofs.Cpp.Lib.RatioArithmeticSpace', 'Proofs.Cpp.Lib.RatioMath', 'Proofs.Cpp.Lib.UnsignedMagnitude'])
     path = run(['lake', 'env', 'printenv', 'LEAN_PATH'], capture_output=True, text=True).stdout.strip()
     env['LEAN_PATH'] = str(scratch) + os.pathsep + path
-    model = lean_translate.translate_file(ROOT / 'library/number/ratio.hpp', [], standard='c++20')
+    model = lean_translate.translate_file(ROOT / 'library/number/ratio.hpp', [], standard='c++23')
     if model != (ROOT / 'Proofs/Cpp/Gen/Ratio.lean').read_text():
         raise ValueError('public Ratio model differs from fresh translation')
     canonical = (ROOT / 'Proofs/Cpp/Ratio.lean').read_text()

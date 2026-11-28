@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/segment_tree.cpp"]
 sanitizers = true
 spec = "docs/segment_tree.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "7e3d44e3e47eff87a6baae9b311b2a45aa6cb3c85ba65ecd08aeb092c2d5893f"
 public_declarations = ["ClassTemplateDecl:SegmentTree"]
 

@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/fenwick_tree.cpp"]
 sanitizers = true
 spec = "docs/fenwick_tree.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "db9c22f0168d1990a07c38228413e9888c9bcfd7536e5ffdbba7c58c0a2a8032"
 public_declarations = ["ClassTemplateDecl:FenwickTree", "TypeAliasTemplateDecl:BinaryIndexedTree", "ClassTemplateSpecializationDecl:FenwickTree<long long>"]
 

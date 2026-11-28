@@ -9,8 +9,8 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/countr_zero.cpp"]
 sanitizers = true
 spec = "docs/countr_zero.md"
-standard = "c++17"
-source_sha256 = "4a8dc20340b718aa05ffeccf68b228a116e0e3b2e682e44a7c52e104afa58794"
+standard = "c++23"
+source_sha256 = "8758de530187680a6cf98a975bf627e92d1f69385e06bcabe9b8033693e50088"
 public_declarations = ["FunctionDecl:countr_zero_u64"]
 
 [diff]

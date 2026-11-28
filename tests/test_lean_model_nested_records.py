@@ -52,7 +52,7 @@ class NestedScopeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "family.hpp"
             path.write_text("namespace cp {" + body + "}")
-            declarations = tr.source_decls(path, "c++17")
+            declarations = tr.source_decls(path, "c++23")
             return tr.Translator(declarations, path.read_bytes(), []).translate()
 
 

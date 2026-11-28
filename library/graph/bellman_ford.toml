@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/bellman_ford.cpp"]
 sanitizers = true
 spec = "docs/bellman_ford.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "48c3175ac5f393c2515e21cdb093b17509577584f75e8ecf0b951f5ada14a734"
 public_declarations = ["FunctionTemplateDecl:bellman_ford<vector>"]
 

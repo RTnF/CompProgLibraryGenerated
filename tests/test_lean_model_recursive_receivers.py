@@ -39,7 +39,7 @@ public:
 }};
 }}
 """)
-            return translator.translate_file(source, [], [], "c++17", [])
+            return translator.translate_file(source, [], [], "c++23", [])
 
     def test_keeps_reference_output_without_writing_back_receiver(self):
         lean = self.translate()

@@ -21,7 +21,7 @@ class MonoidLazyOriginalApiTests(unittest.TestCase):
         candidate=CANDIDATE.read_text().split('namespace cp {\n',1)[1].removesuffix('\n} // namespace cp\n')
         self.assertEqual(candidate,original)
         check_compiler()
-        flags=['-std=c++17','-O1','-Wall','-Wextra','-pedantic','-fsanitize=undefined',
+        flags=['-std=c++23','-O1','-Wall','-Wextra','-pedantic','-fsanitize=undefined',
                '-fno-sanitize-recover=all','-I',str(ROOT),'-I',str(ROOT/'experiments/library/cpp')]
         with tempfile.TemporaryDirectory(prefix='monoid-lazy-api-') as tmp:
             directory=Path(tmp);traces=[]

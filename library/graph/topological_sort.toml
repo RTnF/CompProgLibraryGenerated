@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/topological_sort.cpp"]
 sanitizers = true
 spec = "docs/topological_sort.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "4b3a68a70c00c70fb6575f07e2764380e8b2dbc2c49a11efd9b9c458fc7e32fa"
 public_declarations = ["FunctionDecl:topological_sort"]
 

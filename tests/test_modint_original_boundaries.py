@@ -14,7 +14,7 @@ class OriginalModIntBoundaryTests(unittest.TestCase):
     def test_original_full_factorial_table(self):
         with tempfile.TemporaryDirectory(prefix='original-modint-factorial-') as directory:
             binary = Path(directory) / 'factorial'
-            subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined',
+            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                             '-fno-sanitize-recover=all', '-I', str(ROOT / 'experiments/library/cpp'),
                             str(ROOT / 'tests/imports/original_modint_factorial.cpp'),
                             '-o', str(binary)], check=True, timeout=60)
@@ -36,7 +36,7 @@ class OriginalModIntBoundaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='modint-constexpr-') as directory:
             cpp = Path(directory) / 'Constexpr.cpp'
             cpp.write_text('\n'.join(source)+'\n')
-            subprocess.run(['g++', '-std=c++17', '-fsyntax-only',
+            subprocess.run(['g++', '-std=c++23', '-fsyntax-only',
                             '-I', str(ROOT / 'experiments/library/cpp'), str(cpp)],
                            check=True, timeout=60)
 
@@ -44,7 +44,7 @@ class OriginalModIntBoundaryTests(unittest.TestCase):
         generator = runpy.run_path(str(ROOT / 'tests/diff/modint_original.py'))
         with tempfile.TemporaryDirectory(prefix='original-modint-boundaries-') as directory:
             binary = Path(directory) / 'driver'
-            subprocess.run(['g++', '-std=c++17', '-O1', '-fsanitize=address,undefined',
+            subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                             '-fno-sanitize-recover=all', '-I', str(ROOT / 'experiments/library/cpp'),
                             str(ROOT / 'tests/imports/original_modint_boundaries.cpp'),
                             '-o', str(binary)], check=True, timeout=60)

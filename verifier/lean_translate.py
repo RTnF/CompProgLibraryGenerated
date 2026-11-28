@@ -1248,7 +1248,7 @@ class Fn:
                 src = 32 if ty.kind == "u32" else 64
                 if expected.width > src:
                     return f"({text}.toNat : Int)", expected
-                # unsigned to a signed type of the same or smaller width: two's complement (C++20 [conv.integral])
+                # unsigned to a signed type of the same or smaller width: two's complement (C++23 [conv.integral])
                 return f"(Cpp.toSigned {expected.width} {text}.toNat)", expected
             if expected.kind == "bool":
                 return f"(decide ({text} ≠ 0))", BOOL
@@ -2327,7 +2327,7 @@ class Fn:
                 fty = self.lookup(name)
                 if fty is not None and fty.kind == "tparam":
                     return self.invoke_call(name, fty, args, pre, expected)
-            return self.free_call(name, args, pre, callee)
+            return self.free_call(name, args, pre, callee, n)
         if ck == "DependentScopeDeclRefExpr":
             return self.policy_call(callee, args, pre, expected)
         raise Unsupported(f"call {ck}")
@@ -2523,7 +2523,7 @@ class Fn:
             return (f"(Cpp.back {bt})" if name == "back" else f"(Cpp.get {bt} 0)"), elem
         raise Unsupported(f"vector::{name} in an expression")
 
-    def free_call(self, name, args, pre, callee):
+    def free_call(self, name, args, pre, callee, node):
         declaration = callee.get("referencedDecl", {})
         qualified = self.tr.qualified_functions.get(declaration.get("id"))
         if qualified is not None:
@@ -2532,6 +2532,18 @@ class Fn:
         if any(call_text in (qualified, f"cp::{qualified}", f"::cp::{qualified}")
                for qualified in self.tr.qualified_functions.values()):
             raise Unsupported(f"unresolved child namespace function {call_text}")
+        if name in ("bit_width", "countr_zero") and call_text in (f"std::{name}", f"::std::{name}"):
+            if len(args) != 1 or declaration.get("kind") != "FunctionDecl":
+                raise Unsupported(f"unresolved standard bit operation std::{name}")
+            value, ty = self.expr(args[0], pre)
+            if (ty.kind not in ("u32", "u64")
+                    or node["type"].get("desugaredQualType", type_of_decl(node)) != "int"):
+                raise Unsupported(f"std::{name} requires an unsigned 32- or 64-bit argument")
+            pre.append("Cpp.tick")
+            if name == "bit_width":
+                return f"(Int.ofNat (Cpp.bitWidth {value}.toNat))", INT32
+            width = 32 if ty.kind == "u32" else 64
+            return f"(Int.ofNat (Cpp.countrZero {width} {value}.toNat))", INT32
         if name in ("min", "max") and call_text.startswith(f"std::{name}<"):
             raise Unsupported("explicit template arguments of a standard extrema function")
         if name in ("min", "max") and not args and "numeric_limits<" in call_text:
@@ -4779,13 +4791,20 @@ class Translator:
                         if kind == "CXXConstructorDecl":
                             raise Unsupported("deleted constructor")
                         continue
-                    if not (c.get("explicitlyDefaulted") and c["name"] == "operator=="):
+                    if not (c.get("explicitlyDefaulted") and c["name"] in ("operator==", "operator<=>")):
                         raise Unsupported(f"member without a body: {c['name']}")
                 is_ctor = kind == "CXXConstructorDecl"
                 qual = c["type"]["qualType"]
                 all_values = {**values, **member_values}
                 all_tps = list(tps) + member_tps
-                ret = VOID if is_ctor else parse_type(return_type_text(qual), set(all_tps) - all_values.keys(), self.classes, all_values, self.aliases)
+                return_text = return_type_text(qual)
+                if is_ctor:
+                    ret = VOID
+                elif c.get("explicitlyDefaulted") and c["name"] == "operator<=>" and return_text == "auto":
+                    # The model accepts scalar fields whose instance supplies a strong order.
+                    ret = ORDERING
+                else:
+                    ret = parse_type(return_text, set(all_tps) - all_values.keys(), self.classes, all_values, self.aliases)
                 sig = Sig(c["name"].split("<")[0] if is_ctor else c["name"], "", self.param_list(c, all_tps, values=all_values), ret, owner=name,
                           is_const=qual.rstrip().endswith("const") or is_ctor
                           or bool(re.search(r"\(&\s*\(.*\)\s*const\s*\)\s*\[", qual)), is_static=c.get("storageClass") == "static",
@@ -5147,20 +5166,35 @@ class Translator:
                 fn.field_names[fname] = ("this_" + fname) if fname in names else lean_name(fname)
                 fn.used_names.add(fn.field_names[fname])
         if node.get("explicitlyDefaulted"):
-            if info is None or sig.cpp_name != "operator==" or not sig.is_const or len(sig.params) != 1:
-                raise Unsupported("defaulted member other than const equality")
+            if info is None or sig.cpp_name not in ("operator==", "operator<=>") or not sig.is_const or len(sig.params) != 1:
+                raise Unsupported("defaulted member other than const comparison")
             pname, pty, is_ref = sig.params[0]
             expected = class_ty(info)
-            if pty != expected or is_ref or sig.ret != BOOL:
-                raise Unsupported("defaulted equality signature")
+            equality = sig.cpp_name == "operator=="
+            if pty != expected or is_ref or sig.ret != (BOOL if equality else ORDERING):
+                raise Unsupported("defaulted comparison signature")
             comparisons = []
             for fname, fty, _ in info.fields:
                 if fty.kind not in ("int", "u32", "u64", "bool", "tparam"):
-                    raise Unsupported("defaulted equality of a non-scalar field")
-                fn.need("DecidableEq", fty)
-                comparisons.append(f"(self.{lean_name(fname)} = {fn.var_name(pname)}.{lean_name(fname)})")
+                    raise Unsupported("defaulted comparison of a non-scalar field")
+                lhs, rhs = f"self.{lean_name(fname)}", f"{fn.var_name(pname)}.{lean_name(fname)}"
+                if equality:
+                    fn.need("DecidableEq", fty)
+                    comparisons.append(f"({lhs} = {rhs})")
+                elif fty.kind == "bool":
+                    comparisons.append((f"!{lhs} && {rhs}", f"{lhs} && !{rhs}"))
+                else:
+                    fn.need("LT", fty)
+                    fn.need("DecidableLT", fty)
+                    comparisons.append((f"{lhs} < {rhs}", f"{rhs} < {lhs}"))
             fn.emit("Cpp.tick")
-            fn.emit("return decide (" + (" ∧ ".join(comparisons) if comparisons else "True") + ")")
+            if equality:
+                fn.emit("return decide (" + (" ∧ ".join(comparisons) if comparisons else "True") + ")")
+            else:
+                outcome = "Ordering.eq"
+                for lt, gt in reversed(comparisons):
+                    outcome = f"if {lt} then Ordering.lt else if {gt} then Ordering.gt else {outcome}"
+                fn.emit("return " + outcome)
             return fn
         body = next(x for x in inner(node) if x.get("kind") == "CompoundStmt")
         assigned = fn.assigned_names(body)
@@ -5362,7 +5396,7 @@ def local_names(node, out=None):
 
 # ------------------------------------------------------------------------------------------ driver
 
-def source_decls(source: Path, standard="c++17"):
+def source_decls(source: Path, standard=clang_ast.DEFAULT_STANDARD):
     """Declarations written in `source` directly in cp or a supported child namespace.
 
     Clang's JSON prints a location's file only when it differs from the previously printed location, so the
@@ -5447,7 +5481,7 @@ def drop_unverified(decls, names):
     return [walk(d) for d in decls if keep(d)]
 
 
-def translate_file(source: Path, imports: list[str], deps=(), standard="c++17", unverified=()) -> str:
+def translate_file(source: Path, imports: list[str], deps=(), standard=clang_ast.DEFAULT_STANDARD, unverified=()) -> str:
     decls = drop_unverified(source_decls(source, standard), unverified)
     tr = Translator(decls, source.read_bytes(), [(source_decls(Path(d), standard), Path(d).read_bytes()) for d in deps])
     body = tr.translate()
@@ -5467,6 +5501,10 @@ def translate_file(source: Path, imports: list[str], deps=(), standard="c++17", 
         imports = [*imports, "Proofs.Cpp.Lib.OrderedSet"]
     if "Cpp.optionalValue" in body:
         imports = [*imports, "Proofs.Cpp.Lib.Optional"]
+    if "Cpp.bitWidth " in body:
+        imports = [*imports, "Proofs.Cpp.Lib.Basic"]
+    if "Cpp.countrZero " in body:
+        imports = [*imports, "Proofs.Cpp.Lib.BitOperations"]
     imp = "\n".join(f"import {m}" for m in ["Proofs.Cpp.Prelude", *imports])
     rel = source.resolve().relative_to(ROOT).as_posix() if source.resolve().is_relative_to(ROOT) else source.name
     return HEADER.format(source=rel, imports=imp) + "\n" + body + "\nend Proofs.Cpp.Gen\n"
@@ -5478,7 +5516,7 @@ def main():
     parser.add_argument("--import", dest="imports", action="append", default=[])
     parser.add_argument("--dep", dest="deps", action="append", default=[], help="header of a dependency")
     parser.add_argument("--output")
-    parser.add_argument("--standard", choices=("c++17", "c++20"), default="c++17")
+    parser.add_argument("--standard", choices=clang_ast.STANDARDS, default=clang_ast.DEFAULT_STANDARD)
     parser.add_argument("--unverified", action="append", default=[], help="stream operator left out of the model")
     args = parser.parse_args()
     text = translate_file(Path(args.source), args.imports, args.deps, args.standard, args.unverified)

@@ -59,7 +59,7 @@ class ClassConstraintTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT / 'tests/diff', prefix='.constraint-') as directory:
             source = Path(directory) / 'Invalid.cpp'
             source.write_text(HEADER + '\ncp::Box<1> invalid(0);\n')
-            cpp = subprocess.run(['g++', '-std=c++17', '-fsyntax-only', str(source)],
+            cpp = subprocess.run(['g++', '-std=c++23', '-fsyntax-only', str(source)],
                                  capture_output=True, text=True, timeout=60)
             self.assertNotEqual(cpp.returncode, 0)
             self.assertIn('enable_if', cpp.stderr)

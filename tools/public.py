@@ -9,6 +9,13 @@ import tomllib
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC = ROOT / "library"
 TEMPLATE = "experiments/library/cpp/template/small_template.hpp"
+STANDARDS = ("c++17", "c++20", "c++23")
+DEFAULT_STANDARD = STANDARDS[-1]
+
+
+def common_standard(entries):
+    return max((data["standard"] for data in entries.values()),
+               key=STANDARDS.index, default=DEFAULT_STANDARD)
 
 
 def repo_file(relative: str) -> Path:
@@ -46,7 +53,7 @@ def load_component(metadata: Path) -> dict:
         raise ValueError(f"invalid component name in {metadata}")
     if data.get("source") != metadata.resolve().relative_to(PUBLIC.resolve()).with_suffix(".hpp").as_posix():
         raise ValueError(f"invalid source name for {name}")
-    if data.get("standard") not in ("c++17", "c++20"):
+    if data.get("standard") not in STANDARDS:
         raise ValueError(f"unsupported C++ standard for {name}")
     translation = data.get("translation")
     if translation != "lean_model":
@@ -247,9 +254,11 @@ def dependency_order(name: str, entries: dict[str, dict]) -> list[str]:
         active.add(current)
         for dependency in entries[current]["dependencies"]:
             visit(dependency)
-            if entries[current].get("standard", "c++17") == "c++17" and \
-                    entries[dependency].get("standard", "c++17") == "c++20":
-                raise ValueError(f"C++17 component {current} depends on C++20 component {dependency}")
+            current_standard = entries[current].get("standard", DEFAULT_STANDARD)
+            dependency_standard = entries[dependency].get("standard", DEFAULT_STANDARD)
+            if STANDARDS.index(current_standard) < STANDARDS.index(dependency_standard):
+                raise ValueError(f"{current_standard.upper()} component {current} depends on "
+                                 f"{dependency_standard.upper()} component {dependency}")
         active.remove(current)
         visited.add(current)
         ordered.append(current)

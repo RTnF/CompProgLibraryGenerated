@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/search_util.cpp"]
 sanitizers = true
 spec = "docs/search_util.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "d6c6edb97dfd1f9ead1953650811efa22aceb6d2225a810f8dc0a4e242134219"
 public_declarations = ["FunctionTemplateDecl:count<vector>", "FunctionTemplateDecl:counts<vector>", "FunctionTemplateDecl:lower_bound_index<vector>"]
 

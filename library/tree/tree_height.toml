@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/tree_height.cpp"]
 sanitizers = true
 spec = "docs/tree_height.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "05cf9ef516f4fb8b20445c0db8742cbf98cabde0f7389fa5dd09e595da8fc325"
 public_declarations = ["FunctionTemplateDecl:tree_height<vector>"]
 

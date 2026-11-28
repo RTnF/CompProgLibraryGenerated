@@ -1,5 +1,6 @@
 import Proofs.Cpp.Prelude
 import Proofs.Cpp.Lib.Basic
+import Proofs.Cpp.Lib.BitOperations
 import Proofs.Cpp.Lib.DependentOperations
 import Proofs.Cpp.Lib.DynamicModIntFactorial
 import Proofs.Cpp.Lib.GroupMath

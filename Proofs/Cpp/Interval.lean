@@ -55,49 +55,20 @@ theorem op_eq_spec (a b : cp.Interval T) (t0 : Nat) :
   mvcgen [cp.Interval.op_eq]
   all_goals simp +zetaDelta at *
   refine ⟨?_, by assumption⟩
-  rw [Bool.eq_iff_iff]; simp [ext_iff2]; tauto
+  rw [Bool.eq_iff_iff]; simp [ext_iff2]
 
-theorem op_ne_spec (a b : cp.Interval T) (t0 : Nat) :
-    ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_ne a b ⦃⇓ r c => ⌜r = decide (a ≠ b) ∧ c = t0 + 1⌝⦄ := by
-  mvcgen [cp.Interval.op_ne]
+theorem op_cmp_spec (a b : cp.Interval T) (t0 : Nat) :
+    ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_cmp a b
+    ⦃⇓ r c => ⌜(r = .lt ↔ ILt a b) ∧ (r = .gt ↔ ILt b a) ∧ (r = .eq ↔ a = b) ∧ c = t0 + 1⌝⦄ := by
+  mvcgen [cp.Interval.op_cmp]
   all_goals simp +zetaDelta at *
-  refine ⟨?_, by assumption⟩
-  rw [Bool.eq_iff_iff]; simp [ext_iff2]; tauto
-
-theorem op_lt_spec (a b : cp.Interval T) (t0 : Nat) :
-    ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_lt a b ⦃⇓ r c => ⌜r = decide (ILt a b) ∧ c = t0 + 1⌝⦄ := by
-  mvcgen [cp.Interval.op_lt]
-  all_goals simp +zetaDelta at *
-  refine ⟨?_, by assumption⟩
-  rw [Bool.eq_iff_iff, decide_eq_true_iff]; simp [ILt, and_assoc]
-
-theorem op_gt_spec (a b : cp.Interval T) (t0 : Nat) :
-    ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_gt a b ⦃⇓ r c => ⌜r = decide (ILt b a) ∧ c = t0 + 1⌝⦄ := by
-  mvcgen [cp.Interval.op_gt]
-  all_goals simp +zetaDelta at *
-  refine ⟨?_, by assumption⟩
-  rw [Bool.eq_iff_iff, decide_eq_true_iff]; simp only [ILt, @eq_comm _ b.s a.s, @eq_comm _ b.e a.e]; simp [and_assoc]; tauto
-
-theorem op_le_spec (a b : cp.Interval T) (t0 : Nat) :
-    ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_le a b ⦃⇓ r c => ⌜r = decide (ILt a b ∨ a = b) ∧ c = t0 + 1⌝⦄ := by
-  mvcgen [cp.Interval.op_le]
-  all_goals simp +zetaDelta at *
-  refine ⟨?_, by assumption⟩
-  rw [Bool.eq_iff_iff]
-  simp only [Bool.or_eq_true, decide_eq_true_iff]
-  rcases a with ⟨s, e, i⟩; rcases b with ⟨s', e', i'⟩
-  cases i <;> cases i' <;> simp [ILt, ext_iff2] <;> tauto
-
-theorem op_ge_spec (a b : cp.Interval T) (t0 : Nat) :
-    ⦃fun c => ⌜c = t0⌝⦄ cp.Interval.op_ge a b ⦃⇓ r c => ⌜r = decide (ILt b a ∨ a = b) ∧ c = t0 + 1⌝⦄ := by
-  mvcgen [cp.Interval.op_ge]
-  all_goals simp +zetaDelta at *
-  refine ⟨?_, by assumption⟩
-  rw [Bool.eq_iff_iff]
-  simp only [Bool.or_eq_true, decide_eq_true_iff]
-  rcases a with ⟨s, e, i⟩; rcases b with ⟨s', e', i'⟩
-  cases i <;> cases i' <;> simp [ILt, ext_iff2] <;> constructor <;> intro h <;>
-    (try simp_all [eq_comm]) <;> (try tauto)
+  all_goals
+    rcases a with ⟨s, e, i⟩
+    rcases b with ⟨s', e', i'⟩
+    rcases lt_trichotomy s s' with hs | rfl | hs <;>
+      rcases lt_trichotomy e e' with he | rfl | he <;>
+      cases i <;> cases i' <;>
+      simp_all [ILt, ext_iff2, ne_of_lt, ne_of_gt, not_lt_of_ge, le_of_lt]
 
 /-- `intersection(b)` of two valid intervals: `[max, min)` when they overlap, otherwise `[0, 0)`. -/
 theorem intersection_spec [Zero T] (a b : cp.Interval T) (ha : a.s ≤ a.e) (hb : b.s ≤ b.e) (t0 : Nat) :

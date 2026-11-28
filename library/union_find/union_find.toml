@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/union_find.cpp"]
 sanitizers = true
 spec = "docs/union_find.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "033ff421ce694aaa29b1a6483693d4edb73c116a4e1b3d4fa473570cd730f959"
 public_declarations = ["CXXRecordDecl:UnionFind"]
 

@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/enumerate_quotients.cpp"]
 sanitizers = true
 spec = "docs/enumerate_quotients.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "63c295ca89a89e3b2033f4fad3ebc3b1513123dd249251deba3c4c7600ae4c5c"
 public_declarations = ["FunctionDecl:enumerate_quotients"]
 

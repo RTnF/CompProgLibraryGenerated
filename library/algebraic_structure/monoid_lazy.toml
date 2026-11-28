@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/monoid_lazy.cpp"]
 sanitizers = true
 spec = "docs/monoid_lazy.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "556253d2531cc46477ce05051dd62c1799c6d63a437f178f618c7ba623f2561f"
 public_declarations = ["ClassTemplateDecl:RangeAdd", "ClassTemplateDecl:RangeAddRangeMaxMin", "ClassTemplateDecl:RangeAddRangeSum", "ClassTemplateDecl:RangeSet", "ClassTemplateDecl:RangeSetRangeMaxMin", "ClassTemplateDecl:RangeSetRangeSum", "ClassTemplateDecl:RangeSum", "ClassTemplateSpecializationDecl:RangeAdd<long long>", "ClassTemplateSpecializationDecl:RangeSet<long long>", "ClassTemplateSpecializationDecl:RangeSum<long long>", "FunctionTemplateDecl:compose<RangeAdd>", "FunctionTemplateDecl:compose<RangeSet>", "FunctionTemplateDecl:op<RangeSum>", "TypeAliasTemplateDecl:monoid_lazy::RangeAddRangeMaxMin", "TypeAliasTemplateDecl:monoid_lazy::RangeAddRangeSum", "TypeAliasTemplateDecl:monoid_lazy::RangeSetRangeMaxMin", "TypeAliasTemplateDecl:monoid_lazy::RangeSetRangeSum"]
 

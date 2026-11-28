@@ -15,14 +15,15 @@ LAKE, LAKE_ENV = lean_environment()
 
 
 class FriendTranslationTests(unittest.TestCase):
-    def compare(self, header, cases, expected_values, standard="c++17", instance=None, calls=None):
+    def compare(self, header, cases, expected_values, standard="c++23", instance=None, calls=None,
+                rejected_standard=None):
         with tempfile.TemporaryDirectory(dir=ROOT / 'tests/diff', prefix='.friend-') as directory:
             scratch = Path(directory)
             source = scratch / 'friend.hpp'
             source.write_text(header)
-            if standard == "c++20":
+            if rejected_standard is not None:
                 with self.assertRaises(subprocess.CalledProcessError):
-                    lean_translate.translate_file(source, [])
+                    lean_translate.translate_file(source, [], standard=rejected_standard)
             model = lean_translate.translate_file(source, [], standard=standard)
             h = diff_harness.Harness(source, instance or {'T': 'long long'}, 'Unused', standard=standard, calls=calls)
             cpp = scratch / 'driver.cpp'
@@ -119,7 +120,7 @@ long long ordinary(long long x) { return x + 3; }
             receiver = new(a)
             check(call('Ratio.op_div_assign', [receiver, receiver], True), Fraction(1))
             check(receiver, Fraction(1))
-        self.compare(header, '\n'.join(lines) + '\n', expected, standard='c++20')
+        self.compare(header, '\n'.join(lines) + '\n', expected, standard='c++23')
 
     def test_user_defined_copy_is_not_silently_replaced(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -168,15 +169,27 @@ long long gcd(long long a, long long b) { return a + b + 100; }
      'call mixed_gcd 4294967295 18446744073709551615\ncall gcd 1 2\ncall mixed_sign_gcd -42 56\ncall mixed_sign_lcm -42 56\n',
      ['ok 14', 'ok 168', 'ok 0', 'ok 0', 'ok 4294967295', 'ok 103', 'ok 14', 'ok 168'])
 
-    def test_cpp20_uses_same_standard_for_ast_and_cpp(self):
+    def test_cpp23_uses_same_standard_for_ast_and_cpp(self):
         self.compare("""#pragma once
-#if __cplusplus < 202002L
-#error C++20 required
+#if __cplusplus <= 202002L
+#error C++23 required
 #endif
 namespace cp {
 constexpr long long answer(long long x) { return x + 20; }
 }
-""", 'call answer 22\n', ['ok 42'], standard="c++20")
+""", 'call answer 22\n', ['ok 42'], rejected_standard="c++20")
+
+    def test_standard_bit_operations_keep_unsigned_word_width(self):
+        self.compare("""#include <bit>
+namespace cp {
+int width32(unsigned x) { return std::bit_width(x >> 1); }
+int trailing32(unsigned x) { return ::std::countr_zero(x); }
+int trailing64(unsigned long long x) { return std::countr_zero(x); }
+}
+""", 'call width32 0\ncall width32 4294967295\n'
+     'call trailing32 0\ncall trailing32 2147483648\n'
+     'call trailing64 0\ncall trailing64 9223372036854775808\n',
+     ['ok 0', 'ok 31', 'ok 32', 'ok 31', 'ok 64', 'ok 63'])
 
     def test_cpp20_spaceship_and_defaulted_field_equality(self):
         self.compare("""#pragma once
@@ -197,7 +210,7 @@ public:
      'do Fraction.op_cmp 0 1\ndo Fraction.op_cmp 1 0\ndo Fraction.op_cmp 0 3\n'
      'do Fraction.op_eq 0 1\ndo Fraction.op_eq 0 2\ndo Fraction.op_eq 0 3\n',
      ['new', 'new', 'new', 'new', 'ok -1', 'ok 1', 'ok 0', 'ok 0', 'ok 1', 'ok 0'],
-     standard="c++20")
+     rejected_standard="c++17")
 
     def test_prefix_and_postfix_receiver_and_return(self):
         self.compare("""#pragma once

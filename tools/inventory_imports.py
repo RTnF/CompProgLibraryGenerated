@@ -15,6 +15,7 @@ import tempfile
 
 from offline import disable_network
 from check_public import FLAGS, check_compiler
+from public import DEFAULT_STANDARD
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "verifier"))
@@ -264,7 +265,7 @@ def build_inventory():
     # Candidate only: same spelling never establishes semantic equivalence.
     update_duplicate_candidates(rows)
     return {"schema_version": 1, "scope": [relative(t) for t in TREES],
-            "compiler": "GCC 13.3.0 / C++17", "ast": "Clang 22.1.4 text AST",
+            "compiler": f"GCC 13.3.0 / {DEFAULT_STANDARD.upper()}", "ast": "Clang 22.1.4 text AST",
             "compile_flags": FLAGS,
             "network_policy": "Linux seccomp socket/connect/send denial inherited by subprocesses",
             "limitations": ["Syntax compilation does not prove runtime correctness or instantiate every template member.",

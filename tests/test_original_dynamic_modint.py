@@ -19,7 +19,7 @@ class OriginalDynamicModIntTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="dynamic-modint-original-") as directory:
             binary = Path(directory) / "dynamic_modint"
             subprocess.run([
-                "g++", "-std=c++17", "-O1", "-fsanitize=address,undefined",
+                "g++", "-std=c++23", "-O1", "-fsanitize=address,undefined",
                 "-fno-sanitize-recover=all", "-ftrivial-auto-var-init=pattern",
                 "-I", str(ROOT / "experiments/library/cpp"),
                 str(ROOT / "tests/imports/original_dynamic_modint.cpp"),

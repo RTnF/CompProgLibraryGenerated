@@ -16,7 +16,7 @@ def run_cpp_test(source, label):
     with tempfile.TemporaryDirectory(prefix="import-test-") as directory:
         for sanitizer in (False, True):
             binary = Path(directory) / "test"
-            flags = FLAGS if not sanitizer else ["-std=c++17", "-O1", "-g", "-Wall", "-Wextra",
+            flags = FLAGS if not sanitizer else ["-std=c++23", "-O1", "-g", "-Wall", "-Wextra",
                 "-pedantic", "-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
             subprocess.run(["g++", *flags, *includes, str(ROOT / source), "-o", str(binary)],
                            cwd=ROOT, check=True)

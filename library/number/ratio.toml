@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/ratio.cpp"]
 sanitizers = true
 spec = "docs/ratio.md"
-standard = "c++20"
+standard = "c++23"
 source_sha256 = "fbd4a4446fa546d817e28aa424e61be09e7d41dabbbbe1a97bd2ded1eefe7a95"
 public_declarations = ["ClassTemplateDecl:Ratio"]
 

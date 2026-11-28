@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/tree_set.cpp"]
 sanitizers = true
 spec = "docs/tree_set.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "d223ac3ed0f454a60551bcf272971e23f83f7928f1873b7964028e8fcb9c3aed"
 public_declarations = ["ClassTemplateDecl:TreeSet"]
 

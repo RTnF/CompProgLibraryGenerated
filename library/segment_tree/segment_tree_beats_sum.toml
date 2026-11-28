@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/segment_tree_beats_sum.cpp"]
 sanitizers = true
 spec = "docs/segment_tree_beats_sum.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "7886079e5080b7e40dd06c39185b6310f08418b4c3713b4ddd78809720ba9fdf"
 public_declarations = ["CXXRecordDecl:SegmentTreeBeatsSum"]
 

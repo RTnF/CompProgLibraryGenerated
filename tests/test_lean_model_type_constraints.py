@@ -157,7 +157,7 @@ template<class V> unsigned unknown(V value) { Marker marker(value); return marke
                 {'T': 'unsigned long long', 'U': 'unsigned long long'}, 'Unused')
             cpp = Path(directory) / 'Invalid.cpp'
             cpp.write_text(harness.cpp_driver())
-            checked_cpp = subprocess.run(['g++', '-std=c++17', '-fsyntax-only',
+            checked_cpp = subprocess.run(['g++', '-std=c++23', '-fsyntax-only',
                                          '-I', str(ROOT / 'tests/diff'), str(cpp)],
                                         capture_output=True, text=True, timeout=60)
             self.assertNotEqual(checked_cpp.returncode, 0)

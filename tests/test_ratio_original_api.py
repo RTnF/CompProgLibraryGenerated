@@ -29,7 +29,7 @@ class RatioOriginalApiTests(unittest.TestCase):
             binary = Path(directory) / 'driver'
             for scalar in ('int', 'long long'):
                 with self.subTest(scalar=scalar):
-                    subprocess.run(['g++', '-std=c++20', '-O1', '-fsanitize=address,undefined',
+                    subprocess.run(['g++', '-std=c++23', '-O1', '-fsanitize=address,undefined',
                                     '-fno-omit-frame-pointer', f'-DRATIO_TEST_TYPE={scalar}',
                                     '-I', str(ROOT / 'experiments/library/cpp'),
                                     str(ROOT / 'tests/imports/ratio_scalar_left.cpp'), '-o', str(binary)],

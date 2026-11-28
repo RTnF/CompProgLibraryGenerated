@@ -18,7 +18,7 @@ class OrderedSetTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="tree-set-original-") as directory:
             binary = Path(directory) / "tree_set_source"
             subprocess.run([
-                "g++", "-std=c++17", "-O1", "-g", "-Wall", "-Wextra", "-pedantic",
+                "g++", "-std=c++23", "-O1", "-g", "-Wall", "-Wextra", "-pedantic",
                 "-fsanitize=address,undefined", "-fno-sanitize-recover=all",
                 "-fno-omit-frame-pointer", "-no-pie", "-I", str(ROOT / "experiments/library/cpp"),
                 str(ROOT / "tests/imports/tree_set_source.cpp"), "-o", str(binary),

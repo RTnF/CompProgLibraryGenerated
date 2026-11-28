@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/modint.cpp"]
 sanitizers = true
 spec = "docs/modint.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "b3b79e56312fd303ba2f30b836b8560f104f3bd0e3e98b090131fb376e44c3ab"
 public_declarations = ["ClassTemplateDecl:ModInt", "FunctionDecl:C", "FunctionDecl:init", "TypeAliasDecl:mint", "TypeAliasDecl:mint17", "VarDecl:MAX_FAC", "VarDecl:fac"]
 

@@ -54,47 +54,13 @@ def cp.Interval.length {T : Type} [Sub T] (self : (cp.Interval T)) : Cpp.M T := 
   let is_n := self.is_n
   return (e - s)
 
+def cp.Interval.op_cmp {T : Type} [LT T] [DecidableLT T] (self : (cp.Interval T)) (r : (cp.Interval T)) : Cpp.M Ordering := do
+  Cpp.tick
+  return if self.s < r.s then Ordering.lt else if r.s < self.s then Ordering.gt else if self.e < r.e then Ordering.lt else if r.e < self.e then Ordering.gt else if !self.is_n && r.is_n then Ordering.lt else if self.is_n && !r.is_n then Ordering.gt else Ordering.eq
+
 def cp.Interval.op_eq {T : Type} [DecidableEq T] (self : (cp.Interval T)) (r : (cp.Interval T)) : Cpp.M Bool := do
   Cpp.tick
-  let s := self.s
-  let e := self.e
-  let is_n := self.is_n
-  return (((decide (s = r.s)) && (decide (e = r.e))) && (decide (is_n = r.is_n)))
-
-def cp.Interval.op_ne {T : Type} [DecidableEq T] (self : (cp.Interval T)) (r : (cp.Interval T)) : Cpp.M Bool := do
-  Cpp.tick
-  let s := self.s
-  let e := self.e
-  let is_n := self.is_n
-  return (((decide (s ≠ r.s)) || (decide (e ≠ r.e))) || (decide (is_n ≠ r.is_n)))
-
-def cp.Interval.op_lt {T : Type} [LT T] [DecidableLT T] [DecidableEq T] (self : (cp.Interval T)) (r : (cp.Interval T)) : Cpp.M Bool := do
-  Cpp.tick
-  let s := self.s
-  let e := self.e
-  let is_n := self.is_n
-  return ((decide (s < r.s)) || ((decide (s = r.s)) && ((decide (e < r.e)) || (((decide (e = r.e)) && (!is_n)) && r.is_n))))
-
-def cp.Interval.op_gt {T : Type} [LT T] [DecidableLT T] [DecidableEq T] (self : (cp.Interval T)) (r : (cp.Interval T)) : Cpp.M Bool := do
-  Cpp.tick
-  let s := self.s
-  let e := self.e
-  let is_n := self.is_n
-  return ((decide (s > r.s)) || ((decide (s = r.s)) && ((decide (e > r.e)) || (((decide (e = r.e)) && is_n) && (!r.is_n)))))
-
-def cp.Interval.op_le {T : Type} [LT T] [DecidableLT T] [DecidableEq T] (self : (cp.Interval T)) (r : (cp.Interval T)) : Cpp.M Bool := do
-  Cpp.tick
-  let s := self.s
-  let e := self.e
-  let is_n := self.is_n
-  return ((decide (s < r.s)) || ((decide (s = r.s)) && ((decide (e < r.e)) || ((decide (e = r.e)) && ((!is_n) || r.is_n)))))
-
-def cp.Interval.op_ge {T : Type} [LT T] [DecidableLT T] [DecidableEq T] (self : (cp.Interval T)) (r : (cp.Interval T)) : Cpp.M Bool := do
-  Cpp.tick
-  let s := self.s
-  let e := self.e
-  let is_n := self.is_n
-  return ((decide (s > r.s)) || ((decide (s = r.s)) && ((decide (e > r.e)) || ((decide (e = r.e)) && (is_n || (!r.is_n))))))
+  return decide ((self.s = r.s) ∧ (self.e = r.e) ∧ (self.is_n = r.is_n))
 
 def cp.Interval.intersection {T : Type} [Zero T] [LE T] [DecidableLE T] [DecidableEq T] [Min T] [Max T] (self : (cp.Interval T)) (b : (cp.Interval T)) : Cpp.M (cp.Interval T) := do
   Cpp.tick

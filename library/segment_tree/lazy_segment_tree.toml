@@ -9,7 +9,7 @@ bridge = "verifier/model_bridge.py"
 tests = ["tests/lazy_segment_tree.cpp"]
 sanitizers = true
 spec = "docs/lazy_segment_tree.md"
-standard = "c++17"
+standard = "c++23"
 source_sha256 = "b2e7c006f33f9fcb53c4a496212872b2827d86f9d6bb94e11ecb81e4a4e36b94"
 public_declarations = ["ClassTemplateDecl:LazySegmentTree"]
 

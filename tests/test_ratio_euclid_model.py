@@ -32,7 +32,7 @@ class RatioEuclidTests(unittest.TestCase):
         self.assertEqual(SOURCE.read_text(), expected)
 
     def test_fresh_helpers_and_stream_proofs(self):
-        model = lean_translate.translate_file(SOURCE, [], standard='c++20')
+        model = lean_translate.translate_file(SOURCE, [], standard='c++23')
         canonical = (ROOT / 'Proofs/Cpp/Ratio.lean').read_text()
         imports = [line for line in canonical.splitlines() if line.startswith('import ')
                    and line != 'import Proofs.Cpp.Gen.Ratio']
@@ -80,7 +80,7 @@ public:
 
     def test_public_arithmetic_against_fraction(self):
         class CandidateArithmetic(friend_tests.FriendTranslationTests):
-            def compare(self, header, cases, expected_values, standard="c++17"):
+            def compare(self, header, cases, expected_values, standard="c++23"):
                 super().compare(SOURCE.read_text(), cases, expected_values, standard=standard)
         CandidateArithmetic().test_original_ratio_arithmetic_translation()
 

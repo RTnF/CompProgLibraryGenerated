@@ -14,7 +14,7 @@ class ReadOnlyCollectionsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "fixture.hpp"
             path.write_text('#include <string>\nnamespace cp { ' + body + ' }\n')
-            declarations = translator.source_decls(path, "c++17")
+            declarations = translator.source_decls(path, "c++23")
             return translator.Translator(declarations, path.read_bytes(), []).translate()
 
     def test_reads_size_and_element(self):
