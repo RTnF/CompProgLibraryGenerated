@@ -1,18 +1,42 @@
 import random
 
 random_keys = random.Random(20261126)
-values = set()
+values = [set(), set()]
 print("new TreeSet.init")
-for _ in range(400):
-    key = random_keys.randrange(-16, 17)
-    if random_keys.getrandbits(1):
-        print(f"do TreeSet.add 0 {key}")
-        values.add(key)
+print("do TreeSet.rank 0 0")
+print("do TreeSet.find_lower 0 0")
+print("do TreeSet.find_upper 0 0")
+print("new TreeSet.init")
+
+for step in range(360):
+    index = step % len(values)
+    present = values[index]
+    key = random_keys.randrange(-60, 61)
+    if random_keys.randrange(5) < 3:
+        print(f"do TreeSet.add {index} {key}")
+        present.add(key)
     else:
-        print(f"do TreeSet.remove 0 {key}")
-        values.discard(key)
-    print(f"do TreeSet.find 0 {key}")
-    print("do TreeSet.size_ 0")
-    if values:
-        print("do TreeSet.min_ 0")
-        print("do TreeSet.max_ 0")
+        print(f"do TreeSet.remove {index} {key}")
+        present.discard(key)
+    for operation in ("find", "rank", "find_lower", "find_upper"):
+        print(f"do TreeSet.{operation} {index} {key}")
+    print(f"do TreeSet.size_ {index}")
+    if present:
+        print(f"do TreeSet.get_kth {index} {random_keys.randrange(len(present))}")
+        print(f"do TreeSet.min_ {index}")
+        print(f"do TreeSet.max_ {index}")
+
+for case in (
+    "new TreeSet.init_copy 0",
+    "do TreeSet.add 2 -200",
+    "new TreeSet.init_move 2",
+    "do TreeSet.size_ 2",
+    "do TreeSet.rank 3 -200",
+    "do TreeSet.op_assign_copy 2 3",
+    "do TreeSet.rank 2 -200",
+    "do TreeSet.op_assign_move 1 2",
+    "do TreeSet.rank 1 -200",
+    "do TreeSet.rank 2 -200",
+    "do TreeSet.rank 3 -200",
+):
+    print(case)

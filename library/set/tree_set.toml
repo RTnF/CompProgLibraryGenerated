@@ -10,9 +10,9 @@ tests = ["tests/tree_set.cpp"]
 sanitizers = true
 spec = "docs/tree_set.md"
 standard = "c++23"
-source_sha256 = "d223ac3ed0f454a60551bcf272971e23f83f7928f1873b7964028e8fcb9c3aed"
-public_declarations = ["ClassTemplateDecl:TreeSet"]
+source_sha256 = "4bdd1d4d377e1f68e0948c494ede063cc832b44b2cdb326d53f58299d2d8474b"
+public_declarations = ["ClassTemplateDecl:TreeSet", "VarDecl:none"]
 
 [diff]
-instances = [{ T = "int" }, { T = "long long" }]
+instances = [{ T = "int" }, { T = "long long" }, { T = "std::int64_t" }]
 cases = "tests/diff/tree_set.py"

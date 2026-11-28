@@ -1,62 +1,12 @@
 import Proofs.Cpp.Gen.TreeSet
-import Mathlib.Order.Basic
+import Proofs.Cpp.TreeSet.Copy
+import Proofs.Cpp.Lib.OrderedSet
 
 open Proofs.Cpp Proofs.Cpp.Gen
 
 namespace Proofs.Cpp.TreeSet
 
 def less [LT T] [DecidableLT T] (a b : T) : Bool := decide (a < b)
-
-theorem constructed_empty {T : Type} (clock : Nat) :
-    (cp.TreeSet.init (T := T)).run clock = some (⟨[]⟩, clock + 1) := rfl
-
-theorem insert_run {T : Type} [LT T] [DecidableLT T] (s : cp.TreeSet T) (key : T) (clock : Nat) :
-    (cp.TreeSet.add s key).run clock =
-      some (⟨insertOrdered less key s.values⟩, clock + 1 + orderedSetLookupCost s.values.length) := by
-  cases s
-  rfl
-
-theorem erase_run {T : Type} [LT T] [DecidableLT T] (s : cp.TreeSet T) (key : T) (clock : Nat) :
-    (cp.TreeSet.remove s key).run clock =
-      some (⟨eraseOrdered less key s.values⟩, clock + 1 + (orderedSetLookupCost s.values.length + 1)) := by
-  cases s
-  rfl
-
-theorem lookup_run {T : Type} [LT T] [DecidableLT T] (s : cp.TreeSet T) (key : T) (clock : Nat) :
-    (cp.TreeSet.find s key).run clock =
-      some ((s.values.any (equivalentKey less key), s), clock + 1 + (orderedSetLookupCost s.values.length + 1)) := by
-  cases s with
-  | mk values =>
-    change some ((decide ((if values.any (equivalentKey less key) then 1 else 0 : UInt64) ≠ 0), _), _) = _
-    generalize values.any (equivalentKey less key) = b
-    cases b <;> rfl
-
-theorem min_run {T : Type} (s : cp.TreeSet T) (key : T) (hasKey : s.values.head? = some key)
-    (clock : Nat) : (cp.TreeSet.min_ s).run clock = some ((key, s), clock + 2) := by
-  cases s with
-  | mk values =>
-    simp only [cp.TreeSet.min_, orderedSetFirst, StateT.run_bind, tick, StateT.run_pure] at *
-    rw [hasKey]
-    rfl
-
-theorem max_run {T : Type} (s : cp.TreeSet T) (key : T) (hasKey : s.values.getLast? = some key)
-    (clock : Nat) : (cp.TreeSet.max_ s).run clock = some ((key, s), clock + 2) := by
-  cases s with
-  | mk values =>
-    simp only [cp.TreeSet.max_, orderedSetLast, StateT.run_bind, tick, StateT.run_pure] at *
-    rw [hasKey]
-    rfl
-
-theorem size_run {T : Type} (s : cp.TreeSet T) (fits : s.values.length < 2 ^ 31) (clock : Nat) :
-    (cp.TreeSet.size_ s).run clock = some ((Int.ofNat s.values.length, s), clock + 1) := by
-  cases s with
-  | mk values =>
-    change some ((Cpp.toSigned 32 (UInt64.ofNat values.length).toNat, _), _) = _
-    change values.length < 2 ^ 31 at fits
-    have fit64 : values.length < 2 ^ 64 := by omega
-    have fit32 : values.length < 2 ^ 32 := by omega
-    rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt fit64]
-    simp [Cpp.toSigned, Nat.mod_eq_of_lt fit32, fits]
 
 theorem insert_slots {T : Type} (lt : T → T → Bool) (key : T) (values : List T) :
     (insertOrdered lt key values).length ≤ values.length + 1 := by
@@ -72,6 +22,9 @@ theorem erase_slots {T : Type} (lt : T → T → Bool) (key : T) (values : List 
     (eraseOrdered lt key values).length ≤ values.length := List.length_filter_le ..
 
 section Order
+
+-- Preserve the direct LinearOrder projections in the existing list contracts.
+attribute [local instance 2000] LinearOrder.toPartialOrder
 
 variable {T : Type} [LinearOrder T]
 
@@ -124,19 +77,6 @@ theorem erase_ordered (key : T) (values : List T) (ordered : values.Pairwise (·
     (eraseOrdered less key values).Pairwise (· < ·) :=
   ordered.sublist List.filter_sublist
 
-theorem query_membership (s : cp.TreeSet T) (key : T) (clock : Nat) :
-    (cp.TreeSet.find s key).run clock =
-      some ((decide (key ∈ s.values), s), clock + 1 + (orderedSetLookupCost s.values.length + 1)) := by
-  rw [lookup_run]
-  have same : s.values.any (equivalentKey less key) = decide (key ∈ s.values) := by
-    apply Bool.eq_iff_iff.mpr
-    simp only [List.any_eq_true, decide_eq_true_eq, equivalent_iff]
-    constructor
-    · rintro ⟨value, member, eq⟩
-      rwa [eq]
-    · exact fun member => ⟨key, member, rfl⟩
-  rw [same]
-
 theorem first_is_minimum (values : List T) (ordered : values.Pairwise (· < ·))
     (key : T) (first : values.head? = some key) :
     key ∈ values ∧ ∀ other ∈ values, key ≤ other := by
@@ -162,42 +102,124 @@ theorem last_is_maximum (values : List T) (ordered : values.Pairwise (· < ·))
   · have eq : other = key := by simpa using right
     exact eq.le
 
-theorem add_spec (s : cp.TreeSet T) (key : T) (sorted : s.values.Pairwise (· < ·)) (clock : Nat) :
-    ∃ out, (cp.TreeSet.add s key).run clock =
-        some (out, clock + 1 + orderedSetLookupCost s.values.length) ∧
-      out.values.Pairwise (· < ·) ∧
-      (∀ x, x ∈ out.values ↔ x = key ∨ x ∈ s.values) ∧
-      out.values.length ≤ s.values.length + 1 := by
-  exact ⟨⟨insertOrdered less key s.values⟩, insert_run s key clock, insert_ordered key s.values sorted,
-    fun x => mem_insert key x s.values, insert_slots less key s.values⟩
-
-theorem remove_spec (s : cp.TreeSet T) (key : T) (sorted : s.values.Pairwise (· < ·)) (clock : Nat) :
-    ∃ out, (cp.TreeSet.remove s key).run clock =
-        some (out, clock + 1 + (orderedSetLookupCost s.values.length + 1)) ∧
-      out.values.Pairwise (· < ·) ∧
-      (∀ x, x ∈ out.values ↔ x ∈ s.values ∧ x ≠ key) ∧
-      out.values.length ≤ s.values.length := by
-  exact ⟨⟨eraseOrdered less key s.values⟩, erase_run s key clock, erase_ordered key s.values sorted,
-    fun x => mem_erase key x s.values, erase_slots less key s.values⟩
-
-theorem min_spec (s : cp.TreeSet T) (sorted : s.values.Pairwise (· < ·)) (nonempty : s.values ≠ [])
-    (clock : Nat) :
-    ∃ key, (cp.TreeSet.min_ s).run clock = some ((key, s), clock + 2) ∧
-      key ∈ s.values ∧ ∀ other ∈ s.values, key ≤ other := by
-  cases s with
-  | mk values =>
-    cases values with
-    | nil => exact False.elim (nonempty rfl)
-    | cons head tail =>
-      exact ⟨head, min_run _ _ rfl clock, first_is_minimum _ sorted _ rfl⟩
-
-theorem max_spec (s : cp.TreeSet T) (sorted : s.values.Pairwise (· < ·)) (nonempty : s.values ≠ [])
-    (clock : Nat) :
-    ∃ key, (cp.TreeSet.max_ s).run clock = some ((key, s), clock + 2) ∧
-      key ∈ s.values ∧ ∀ other ∈ s.values, other ≤ key := by
-  let key := s.values.getLast nonempty
-  have last : s.values.getLast? = some key := List.getLast?_eq_some_getLast nonempty
-  exact ⟨key, max_run s key last clock, last_is_maximum _ sorted key last⟩
-
 end Order
+
+theorem constructed_empty {K : Type} (clock : Nat) :
+    (cp.TreeSet.init (T := K)).run clock = some (⟨List.toArray [], endIndex, endIndex⟩, clock + 3) := by
+  exact generated_init clock
+
+theorem add_spec {K : Type} [Inhabited K] [LinearOrder K]
+    (arena : cp.TreeSet K) (tree : Tree K) (key : K) (used free : List Nat)
+    (layout : Layout arena.slots arena.root tree used) (available : FreeChain arena.slots arena.free_head free)
+    (balanced : tree.Balanced) (ordered : tree.Ordered) (fits : arena.slots.size < 2 ^ 63) (start : Nat) :
+    ∃ next occupied remaining stop, (cp.TreeSet.add arena key).run start = some (next, stop) ∧
+      stop ≤ start + 9 + 57 * (2 * (tree.size + 1).log2 + 1) ∧
+      Layout next.slots next.root (tree.insert key) occupied ∧
+      FreeChain next.slots next.free_head remaining ∧ next.slots.size ≤ arena.slots.size + 1 ∧
+      (tree.insert key).Balanced ∧ (tree.insert key).Ordered ∧
+      (∀ k, k ∈ (tree.insert key).keys ↔ k = key ∨ k ∈ tree.keys) := by
+  exact generated_add_spec arena tree key used free layout available balanced ordered fits start
+
+theorem remove_spec {K : Type} [Inhabited K] [LinearOrder K]
+    (arena : cp.TreeSet K) (tree : Tree K) (key : K) (used free : List Nat)
+    (layout : Layout arena.slots arena.root tree used) (available : FreeChain arena.slots arena.free_head free)
+    (balanced : tree.Balanced) (ordered : tree.Ordered) (fits : arena.slots.size ≤ 2 ^ 63) (start : Nat) :
+    ∃ next occupied remaining stop, (cp.TreeSet.remove arena key).run start = some (next, stop) ∧
+      stop ≤ start + 7 + 57 * (2 * (tree.size + 1).log2 + 1) ∧
+      Layout next.slots next.root (tree.erase key) occupied ∧
+      FreeChain next.slots next.free_head remaining ∧ next.slots.size = arena.slots.size ∧
+      (tree.erase key).Balanced ∧ (tree.erase key).Ordered ∧
+      (tree.erase key).keys = tree.keys.filter (fun k => decide (k ≠ key)) := by
+  exact generated_remove_spec arena tree key used free layout available balanced ordered fits start
+
+theorem find_spec {K : Type} [Inhabited K] [LinearOrder K]
+    (arena : cp.TreeSet K) (key : K) (tree : Tree K) (used : List Nat)
+    (layout : Layout arena.slots arena.root tree used) (fits : arena.slots.size ≤ 2 ^ 63)
+    (balanced : tree.Balanced) (ordered : tree.Ordered) (start : Nat) :
+    ∃ stop, (cp.TreeSet.find arena key).run start = some ((decide (key ∈ tree.keys), arena), stop) ∧
+      stop ≤ start + 3 + 2 * (2 * (tree.size + 1).log2 + 1) := by
+  exact generated_find_spec arena key tree used layout fits balanced ordered start
+
+theorem rank_spec {K : Type} [Inhabited K] [LinearOrder K]
+    (arena : cp.TreeSet K) (key : K) (tree : Tree K) (occupied : List Nat)
+    (layout : Layout arena.slots arena.root tree occupied)
+    (fits : tree.size < 2 ^ 31) (balanced : tree.Balanced) (ordered : tree.Ordered) (start : Nat) :
+    ∃ result stop, (cp.TreeSet.rank arena key).run start = some (result, stop) ∧
+      stop ≤ start + 3 + 4 * (2 * (tree.size + 1).log2 + 1) ∧
+      result = if key ∈ tree.keys then rankBounds ((tree.keys.filter (fun k => decide (k < key))).length)
+        else (-1, -1) := by
+  exact generated_rank_spec arena key tree occupied layout fits balanced ordered start
+
+theorem get_kth_spec {K : Type} [Inhabited K] (arena : cp.TreeSet K)
+    (tree : Tree K) (used : List Nat) (position : UInt64)
+    (layout : Layout arena.slots arena.root tree used)
+    (fits : arena.slots.size ≤ 2 ^ 63) (valid : position.toNat < tree.size)
+    (balanced : tree.Balanced) (start : Nat) :
+    ∃ key stop, (cp.TreeSet.get_kth arena position).run start = some (key, stop) ∧
+      stop ≤ start + 3 + 3 * (2 * (tree.size + 1).log2 + 1) ∧ tree.keys[position.toNat]? = some key := by
+  exact generated_get_kth_spec arena tree used position layout fits valid balanced start
+
+theorem neighbors_spec {K : Type} [Inhabited K] [LinearOrder K]
+    (arena : cp.TreeSet K) (key : K) (tree : Tree K) (occupied : List Nat)
+    (layout : Layout arena.slots arena.root tree occupied) (fits : tree.size < 2 ^ 31)
+    (balanced : tree.Balanced) (ordered : tree.Ordered) (start : Nat) :
+    let work := 5 + 2 * (2 * (tree.size + 1).log2 + 1)
+    (∃ lowerStop, (cp.TreeSet.find_lower arena key).run start =
+      some ((tree.keys.filter (fun k => decide (k ≤ key))).getLast?, lowerStop) ∧
+      lowerStop ≤ start + work) ∧
+    (∃ upperStop, (cp.TreeSet.find_upper arena key).run start =
+      some ((tree.keys.filter (fun k => decide (key ≤ k))).head?, upperStop) ∧
+      upperStop ≤ start + work) := by
+  exact generated_neighbors_spec arena key tree occupied layout fits balanced ordered start
+
+theorem extrema_spec {K : Type} [Inhabited K] (arena : cp.TreeSet K)
+    (tree : Tree K) (used : List Nat) (layout : Layout arena.slots arena.root tree used)
+    (nonempty : tree ≠ .empty) (start : Nat) :
+    ∃ lo hi, tree.keys.head? = some lo ∧ tree.keys.getLast? = some hi ∧
+      (cp.TreeSet.min_ arena).run start = some ((lo, arena), start + 2) ∧
+      (cp.TreeSet.max_ arena).run start = some ((hi, arena), start + 2) := by
+  exact generated_extrema_spec arena tree used layout nonempty start
+
+theorem min_spec {K : Type} [Inhabited K] [LinearOrder K] (arena : cp.TreeSet K)
+    (tree : Tree K) (used : List Nat) (layout : Layout arena.slots arena.root tree used)
+    (nonempty : tree ≠ .empty) (ordered : tree.Ordered) (start : Nat) :
+    ∃ minimum, (cp.TreeSet.min_ arena).run start = some ((minimum, arena), start + 2) ∧
+      minimum ∈ tree.keys ∧ ∀ key ∈ tree.keys, minimum ≤ key := by
+  obtain ⟨minimum, _, first, _, ran, _⟩ := extrema_spec arena tree used layout nonempty start
+  exact ⟨minimum, ran, first_is_minimum tree.keys ordered minimum first⟩
+
+theorem max_spec {K : Type} [Inhabited K] [LinearOrder K] (arena : cp.TreeSet K)
+    (tree : Tree K) (used : List Nat) (layout : Layout arena.slots arena.root tree used)
+    (nonempty : tree ≠ .empty) (ordered : tree.Ordered) (start : Nat) :
+    ∃ maximum, (cp.TreeSet.max_ arena).run start = some ((maximum, arena), start + 2) ∧
+      maximum ∈ tree.keys ∧ ∀ key ∈ tree.keys, key ≤ maximum := by
+  obtain ⟨_, maximum, _, last, _, ran⟩ := extrema_spec arena tree used layout nonempty start
+  exact ⟨maximum, ran, last_is_maximum tree.keys ordered maximum last⟩
+
+theorem size_spec {K : Type} [Inhabited K] (arena : cp.TreeSet K)
+    (tree : Tree K) (used : List Nat) (layout : Layout arena.slots arena.root tree used)
+    (fits : tree.size < 2 ^ 31) (start : Nat) :
+    (cp.TreeSet.size_ arena).run start = some (((tree.size : Int), arena), start + 3) := by
+  exact generated_size_spec arena tree used layout fits start
+
+theorem copy_spec {K : Type} [Inhabited K] (source : cp.TreeSet K)
+    (fits : source.slots.size ≤ 2 ^ 63) (start : Nat) :
+    (cp.TreeSet.init_copy source).run start = some (source, start + 5 + 2 * source.slots.size) := by
+  exact generated_copy_spec source fits start
+
+theorem move_spec {K : Type} (source : cp.TreeSet K) (start : Nat) :
+    (cp.TreeSet.init_move source).run start =
+      some ((source, ⟨(List.toArray []), endIndex, endIndex⟩), start + 4) := by
+  exact generated_move_spec source start
+
+theorem copy_assignment_spec {K : Type} [Inhabited K] (target source : cp.TreeSet K)
+    (fits : source.slots.size ≤ 2 ^ 63) (start : Nat) :
+    (cp.TreeSet.op_assign_copy target source).run start =
+      some ((source, source), start + 8 + 2 * source.slots.size) := by
+  exact generated_copy_assignment_spec target source fits start
+
+theorem move_assignment_spec {K : Type} (target source : cp.TreeSet K) (start : Nat) :
+    (cp.TreeSet.op_assign_move target source).run start = some ((source, target, source), start + 2) := by
+  exact generated_move_assignment_spec target source start
+
 end Proofs.Cpp.TreeSet

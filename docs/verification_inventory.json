@@ -15747,7 +15747,7 @@
       "source_sha256": "76019dace12c3470ba417955b71a2ed2fa8c4f532bd325bcb589d3a3dc9a9212",
       "series": "experiments/library",
       "kind": "header",
-      "purpose_hint": "重複なしの集合",
+      "purpose_hint": null,
       "dependencies": [
         {
           "include": "template/small_template.hpp",

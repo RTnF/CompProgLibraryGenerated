@@ -728,7 +728,7 @@ class Harness:
                         decls.append(f"{t} a{i} = difftest::start(static_cast<{t} *>(nullptr)); difftest::rd(a{i});")
                     else:
                         decls.append(f"{t} a{i}; difftest::rd(a{i});")
-                names.append(f"std::move(a{i})" if sig.is_ctor and "&&" in q else f"a{i}")
+                names.append(f"std::move(a{i})" if q.rstrip().endswith("&&") else f"a{i}")
             if info is None:
                 targs = [self.instance[t.removesuffix("_value_type")] if t.removesuffix("_value_type") in sig.containers
                          else self.instance[t] for t in sig.tparams]

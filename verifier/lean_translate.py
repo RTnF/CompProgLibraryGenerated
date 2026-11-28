@@ -4842,6 +4842,12 @@ class Translator:
         for s in info.methods:
             groups.setdefault("init" if s.is_ctor else s.cpp_name, []).append(s)
         for base, sigs in groups.items():
+            assignment_pair = base == "operator=" and len(sigs) == 2 and all(
+                not o.is_const and o.ret.kind == "cls" and o.ret.name == name and
+                len(o.params) == 1 and o.params[0][1].kind == "cls" and o.params[0][1].name == name
+                for o in sigs
+            )
+            generated_names = set()
             for s in sigs:
                 suffix = ""
                 if len(sigs) > 1:
@@ -4854,17 +4860,23 @@ class Translator:
                         (len(o.params) == 1 and o.params[0][1].kind == "cls" and o.params[0][1].name == name)
                         for o in sigs)):
                     suffix = ""
-                if (s.is_ctor and len(s.params) == 1 and s.params[0][1].kind == "cls"
+                if ((s.is_ctor or assignment_pair) and len(s.params) == 1 and s.params[0][1].kind == "cls"
                         and s.params[0][1].name == name):
                     declaration = next(p for p in inner(s.node) if p.get("kind") == "ParmVarDecl")
                     spelling = type_of_decl(declaration)
+                    if assignment_pair and (not spelling.endswith("&") or re.search(r"\bvolatile\b", spelling)):
+                        raise Unsupported("unsupported copy/move assignment qualification")
                     if "&&" in spelling and not re.search(r"\bconst\b", spelling):
                         suffix = "_move"
                     elif "&&" not in spelling and re.search(r"\bconst\b", spelling):
                         suffix = "_copy"
                     else:
-                        raise Unsupported("unsupported copy/move constructor qualification")
+                        kind = "constructor" if s.is_ctor else "assignment"
+                        raise Unsupported(f"unsupported copy/move {kind} qualification")
                 s.lean_name = f"cp.{name}.{lean_name(base)}{suffix}"
+                if assignment_pair and s.lean_name in generated_names:
+                    raise Unsupported("ambiguous copy/move assignment")
+                generated_names.add(s.lean_name)
         self.order.append(("class", info))
 
     # --------------------------------------------------------------- emission

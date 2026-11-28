@@ -28,7 +28,7 @@ class OrderedSetTests(unittest.TestCase):
             subprocess.run([str(binary)], check=True, env=environment, timeout=30)
 
     def test_rejects_unmodeled_wrapper_behavior(self):
-        header = (ROOT / "library/set/tree_set.hpp").read_text()
+        header = (ROOT / "tests/fixtures/ordered_set_wrapper.hpp").read_text()
         changes = [
             ("a.key < b.key", "b.key < a.key", "nested records"),
             ("mutable T key", "T key", "nested records"),
