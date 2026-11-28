@@ -279,3 +279,9 @@ import Proofs.Math.FlowLayerSearchMath
 import Proofs.Math.FlowResidualMath
 import Proofs.Math.FlowResidualOptimality
 import Proofs.Math.FlowResidualPaths
+import Proofs.Cpp.DisjointSet
+import Proofs.Cpp.DisjointSet.Bridge
+import Proofs.Cpp.DisjointSet.Contracts
+import Proofs.Cpp.DisjointSet.RootCount
+import Proofs.Cpp.DisjointSet.RootMass
+import Proofs.Cpp.DisjointSet.SizedForest

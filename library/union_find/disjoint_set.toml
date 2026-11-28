@@ -1,0 +1,18 @@
+name = "disjoint_set"
+source = "union_find/disjoint_set.hpp"
+dependencies = []
+translation = "lean_model"
+lean_namespace = "Proofs.Cpp.DisjointSet"
+proof = "Proofs/Cpp/DisjointSet.lean"
+model = "Proofs/Cpp/Gen/DisjointSet.lean"
+bridge = "verifier/model_bridge.py"
+tests = ["tests/disjoint_set.cpp"]
+sanitizers = true
+spec = "docs/disjoint_set.md"
+standard = "c++23"
+source_sha256 = "47b5b68aeca843b117a5ff7c98a2d9af1c4ce016636d7dc5dbedf829ac8dae07"
+public_declarations = ["CXXRecordDecl:DisjointSet"]
+
+[diff]
+instances = [{}]
+cases = "tests/diff/disjoint_set.py"

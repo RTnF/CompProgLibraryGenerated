@@ -14472,7 +14472,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14510,7 +14510,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14532,7 +14532,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14554,7 +14554,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14848,7 +14848,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14870,7 +14870,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14892,7 +14892,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14930,7 +14930,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14952,7 +14952,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14974,7 +14974,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -14996,7 +14996,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15018,7 +15018,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15040,7 +15040,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15062,7 +15062,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15084,7 +15084,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15106,7 +15106,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15128,7 +15128,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15150,7 +15150,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15172,7 +15172,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15194,7 +15194,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15216,7 +15216,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15238,7 +15238,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15260,7 +15260,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15282,7 +15282,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15304,7 +15304,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15326,7 +15326,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15348,7 +15348,7 @@
             "common_translator": true,
             "lean_proved": false,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15370,7 +15370,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15392,7 +15392,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15414,7 +15414,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15436,7 +15436,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15458,7 +15458,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15480,7 +15480,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15502,7 +15502,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15524,7 +15524,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15546,7 +15546,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15568,7 +15568,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15590,7 +15590,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15612,7 +15612,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15634,7 +15634,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15656,7 +15656,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15678,7 +15678,7 @@
             "common_translator": true,
             "lean_proved": true,
             "include_verified": true,
-            "published": false
+            "published": true
           },
           "evidence": [
             "tests/test_original_tree_multiset.py",
@@ -15708,7 +15708,7 @@
         "common_translator": true,
         "lean_proved": true,
         "include_verified": true,
-        "published": false
+        "published": true
       },
       "including_drivers": [
         "experiments/library/cpp/verify/multi_set.test.cpp",
@@ -15740,7 +15740,7 @@
         "tests/diff/tree_multiset.py",
         "Proofs/Cpp/TreeMultiset.lean"
       ],
-      "review_notes": "TreeMultiSetの公開APIと優先度生成を公開部品へ移植。原本のin名前空間のポインタ節点、デバッグ表示、未使用node_countは内部実装。publishedは対象コミットのCI・配布物確認後に更新。"
+      "review_notes": "TreeMultiSetの公開APIと優先度生成を公開部品へ移植。原本のin名前空間のポインタ節点、デバッグ表示、未使用node_countは内部実装。"
     },
     {
       "source": "experiments/library/cpp/set/set.hpp",
@@ -26114,162 +26114,219 @@
           "line": 5,
           "declaration": "class DisjointSet definition",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 6,
           "declaration": "_n 'int'",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 9,
           "declaration": "referenced ps 'vector<int>':'std::vector<int>'",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "FieldDecl",
           "line": 10,
           "declaration": "referenced num_groups 'int'",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "CXXConstructorDecl",
           "line": 13,
           "declaration": "DisjointSet 'void (int)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 15,
           "declaration": "unite 'int (int, int)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 28,
           "declaration": "same 'bool (int, int)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 29,
           "declaration": "used root 'int (int)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 35,
           "declaration": "size 'int (int)' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "pending",
+            "review": "ported",
             "bug": "unknown",
-            "cpp_tested": false,
-            "common_translator": false,
-            "lean_proved": false,
-            "include_verified": false,
+            "cpp_tested": true,
+            "common_translator": true,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
-          }
+          },
+          "evidence": [
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
+          ]
         },
         {
           "kind": "CXXMethodDecl",
           "line": 36,
           "declaration": "getNum 'int ()' implicit-inline",
           "template_instantiation_review": "pending",
-          "verification_target": null,
+          "verification_target": "library/union_find/disjoint_set.hpp",
           "status": {
-            "review": "partial",
+            "review": "ported",
             "bug": "unknown",
             "cpp_tested": true,
             "common_translator": true,
-            "lean_proved": false,
-            "include_verified": false,
+            "lean_proved": true,
+            "include_verified": true,
             "published": false
           },
           "evidence": [
-            "tests/imports/disjoint_set_getter.cpp"
+            "tests/test_original_disjoint_set.py",
+            "tests/disjoint_set.cpp",
+            "tests/diff/disjoint_set.py",
+            "Proofs/Cpp/DisjointSet.lean"
           ],
           "review_notes": [
             "2026-10-24: 元DisjointSet/getNumのみを同一TU FieldDecl監査から選択生成し、本体の任意有効counter値の返却・保持・仕事量2をLeanで証明。通常/空/moved-from Contextおよび元C++ UBSanを検査。元クラス全体、任意caller準備/復元・総資源の一般証明、recursive root等と公開版対応は未完了。",
@@ -26291,14 +26348,14 @@
       },
       "problem_url": null,
       "ignored_driver": false,
-      "verification_target": null,
+      "verification_target": "library/union_find/disjoint_set.hpp",
       "status": {
-        "review": "partial",
+        "review": "ported",
         "bug": "unknown",
-        "cpp_tested": false,
-        "common_translator": false,
-        "lean_proved": false,
-        "include_verified": false,
+        "cpp_tested": true,
+        "common_translator": true,
+        "lean_proved": true,
+        "include_verified": true,
         "published": false
       },
       "including_drivers": [
@@ -26307,13 +26364,17 @@
       "duplicate_candidates": [],
       "byte_identical_sources": [],
       "evidence": [
-        "tests/imports/disjoint_set_getter.cpp"
+        "tests/test_original_disjoint_set.py",
+        "tests/disjoint_set.cpp",
+        "tests/diff/disjoint_set.py",
+        "Proofs/Cpp/DisjointSet.lean"
       ],
       "review_notes": [
         "2026-10-24: 元DisjointSet/getNumのみを同一TU FieldDecl監査から選択生成し、本体の任意有効counter値の返却・保持・仕事量2をLeanで証明。通常/空/moved-from Contextおよび元C++ UBSanを検査。元クラス全体、任意caller準備/復元・総資源の一般証明、recursive root等と公開版対応は未完了。",
         "2026-10-25: 元getNumのfield/header/capabilityとtyped heap/scope条件からprepare/compact/body/finish/restoreを構成し、実fuel2終了・全scalar memory/全owner payload lookup保持・work≤元+10・caller-only scalar/heap/total peak上界を正本登録。n=vector長や成功した中間操作を前提にしない。通常/空/moved-from、readonly size、counter権限不足を検査。旧classの他API/constructor・任意caller ASTは未完了。新全件gateの確定までは宣言のlean_provedを昇格させない。",
         "2026-10-25 all211確定: 実full gate終了0、公開41部品/220checks、raw35908監査、独立kernel33522宣言エラーなし。getNum宣言だけlean_proved=trueへ更新。対象は記載したfield/header/capability・typed heap/scope条件下の元生成getterの意味/停止/値保持/仕事量/3peak。クラス全体のreviewはpartial、他method/constructor/任意caller AST/公開版復元は未完了。",
-        "2026-11-11: 旧方式の証明とテスト（寿命・レシーバのモデル）を削除した（docs/redesign_2026-11.md）。lean_proved を false に戻した。"
+        "2026-11-11: 旧方式の証明とテスト（寿命・レシーバのモデル）を削除した（docs/redesign_2026-11.md）。lean_proved を false に戻した。",
+        "2026-11-28: 原本の暗黙構築、全メソッド、別カウンタと再帰経路圧縮を cp::DisjointSet として移植。生成モデルで成分サイズ・成分数・代表元・経路圧縮・停止・対数上界を証明。配布前。"
       ]
     },
     {

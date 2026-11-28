@@ -44,8 +44,8 @@
 | segment_tree/segment_tree.hpp | 済（新方式、2026-11-19） | `segment_tree`（クラス `SegmentTree<M>` 全体: 構築子3種・`set`・`get`・`product`・`product_all`・`search_prod_right`・`search_prod_left`。元の本体のまま、任意のモノイド `M` と任意の述語について結果・停止・計算量を証明。`docs/segment_tree.md`）。`segtree_sum` は同じ原本から和だけを切り出した旧部品で、整理は未了 |
 | segment_tree/lazy_segment_tree.hpp | 済（新方式、2026-11-20） | `lazy_segment_tree`（クラス `LazySegmentTree<M, F>` 全体: 構築子3種・`set`・`get`・`product`・`product_all`・`update(idx, f)`・`update(l, r, f)`・`search_prod_right`/`left`。元の任意のモノイドと作用のオブジェクトの木のまま。`M`・`F` は汎用の `Act` で証明し、差分テストは `monoid_lazy` の `RangeAddRangeSum`・`RangeSetRangeSum`。`docs/lazy_segment_tree.md`） |
 | segment_tree/segment_tree_beats*.hpp | 済（新方式） | 2026-11-21: `segment_tree_beats.hpp` を新方式で再公開した（`library/segment_tree/segment_tree_beats.hpp`）。API・型・入力範囲は元のままで、構築子だけを同じ値を作る再帰 `_build` に書き換えた（`docs/segment_tree_beats.md`）。構築と 6 操作を `Proofs/Cpp/SegmentTreeBeats.lean` で証明（各操作 `O(n)`。償却 `O(log^2 n)` は未証明）。2026-11-21: `segment_tree_beats_sum.hpp` も同じ形で公開（`library/segment_tree/segment_tree_beats_sum.hpp`、区間和 `calc_sum` を含む全 API、`docs/segment_tree_beats_sum.md`） |
-| set/set.hpp | 移植・AVL 版のローカル全件検証済 | `library/set/tree_set.hpp`。重複・不在削除・節点の寿命・コピーを修正。非 const 比較とコピーのキー型を維持。部分木サイズ付き AVL 木で順位・k番目・上下検索を追加。生成モデルで挿入・削除後の平衡、各問い合わせの正しさ、最悪時対数手数を証明 |
-| set/multiset.hpp | 移植・ローカル全件gate成功（CI確認前） | `library/set/tree_multiset.hpp`。treap の個数、順位、列挙の親キー、閉区間の出力、コピーとムーブを保持。生成モデルの仕様をLeanで証明し、3型の差分と原本のサニタイザ回帰を確認。詳細は `docs/tree_multiset.md` |
+| set/set.hpp | 移植・AVL 版公開済（CI 確認済） | `library/set/tree_set.hpp`。重複・不在削除・節点の寿命・コピーを修正。非 const 比較とコピーのキー型を維持。部分木サイズ付き AVL 木で順位・k番目・上下検索を追加。生成モデルで挿入・削除後の平衡、各問い合わせの正しさ、最悪時対数手数を証明 |
+| set/multiset.hpp | 移植・公開済（CI 確認済） | `library/set/tree_multiset.hpp`。treap の個数、順位、列挙の親キー、閉区間の出力、コピーとムーブを保持。生成モデルの仕様をLeanで証明し、3型の差分と原本のサニタイザ回帰を確認。詳細は `docs/tree_multiset.md` |
 | string/char_count.hpp | 済（新方式、2026-11-23） | `library/string/char_count.hpp`（元の `char_count(const string &)` の本体のまま）。結果が `rle s` に等しいことと `3n+2` 手以下を `Proofs/Cpp/CharCount.lean` で証明（前提 `s.size() < 2^31`）。任意コンテナ版は `element_count` |
 | string/rolling_hash.hpp | 済 | `rolling_hash` に両クラス、全基数、文字列・整数列の公開操作を復元。旧公開 `cp::RollingHash<T>` を維持。ローカル全件検証済み。push後のCIは未確認 |
 | tree/tree.hpp | 一部 | `library/tree/tree_arcs.hpp`（辺リスト版コンストラクタの辺（両方向）の並べ方。辺の費用の写しは `library/tree/tree_arc_costs.hpp`、`Cost = long long`）と `library/tree/tree_find_root.hpp`（根なし親配列版コンストラクタの根の決定）と `library/tree/tree_edges.hpp`（`Tree(root, parent)` の隣接リスト構築のうち、親配列から辺（両方向）を並べる部分。`csr_build` と合成して CSR にする）と `library/tree/tree_height.hpp`（`Tree::height` の最後のループ `h[i] = max(cd0[i], cd1[i])`。直径の両端を求める部分は未）と `library/tree/tree_distance.hpp`（`Tree::distance`。`lca` を引数に取る）と `library/tree/tree_lca_same_depth.hpp`（`Tree::lowest_common_ancestor` の深さを揃えたあとの部分。深さを揃える前半は `tree_ancestor` で別関数に分けている）と `library/tree/tree_ancestor.hpp`（`Tree::ancestor`。ダブリング表を引数に取り、ビット判定を `(i / j) % 2 == 1` に変えている。`i` 個先の祖先を返すことまで証明）と `library/tree/tree_path.hpp`（`Tree::path`。`tree_root` の親配列を `to` から `from` までたどって `out` に書き、長さを返す。元の経路と同じ頂点列）と `library/tree/tree_root.hpp`（`Tree::build_depth` の `parent_`/`depth_`/`cost_depth_` を CSR 配列と手動スタックで求める。`Cost` はテンプレートのまま、検証した具体化は `long long`。到達性・辺と深さと費用の関係・`O(n+m)` の仕事量まで証明。違反一覧: `diameter`・`height` を 1 関数としての形（直径の両端を求める合成）・`height`・`path` の 1 関数としての形（深さ優先探索で復元する元の形。到達不能な `to` に空の経路を返す部分）・`build_ancestor`/`lowest_common_ancestor`/`distance` の 1 関数としての形・`full_tree_dp` の一般の関数オブジェクト `P`（反復版 `library/tree/tree_full_dp.hpp` は `DpHeight<long long>` で追加済み。`ord` は `library/tree/tree_order.hpp` が幅優先の並びとして作る）・辺リスト/親配列のコンストラクタ・`ListGraph`/`Edge` の形・根ごとの `vector<vector<int>>` は未） |
@@ -69,7 +69,7 @@
 | Graph/Dijkstra.hpp | `library/graph/dijkstra.hpp` | 一部（CSR、O(n²+m)、親あり） |
 | Graph/TopologicalSort.hpp | `library/graph/topological_sort.hpp` | 一部（辞書順最小版なし） |
 | Graph/GraphM.hpp, WarshallFloyd.hpp | `library/graph/graph_matrix.hpp` | 統合済み（旧版の `GraphM`。名前が `addEdge`/`warshallFloyd`/`getDist`/`getShortestPath`/`hasNegativeCycle` で、`UNREACHABLE` がクラス内初期化。機能は `MatrixGraph` と同じで、親の初期化の不具合も同じ） |
-| Graph/UnionFind.hpp | `library/union_find/union_find.hpp` | 一部（対応先を共有。元`DisjointSet::getNum()`の選択生成・元field条件からの実call/復元・仕事量/3peakと原本C++ UBSanを確認。元constructor/残りAPIと任意caller ASTは未検証。経路圧縮・別カウンタ・元の入力範囲の公開版復元も未完了） |
+| Graph/UnionFind.hpp | `library/union_find/disjoint_set.hpp` | 移植済み。暗黙構築、`unite`、`same`、`root`、`size`、`getNum` を維持。生成モデルで成分の代表と要素数、経路圧縮、停止と最悪時対数手数を証明。原本と公開版を同じ独立モデルで検査。 |
 | Graph/GraphL.hpp, Lowlink.hpp, Prim.hpp | なし | 未（追記 47 の機能待ち） |
 | ModInt/ModInt.hpp | `library/modint/modint.hpp` | 新方式のlibrary側ではIOと型template構築も復元。library3原本との差分確認は別途必要 |
 | NumberTheory/Factorize.hpp, IsPrime.hpp | なし | 未（`__uint128_t`、ミラー–ラビン） |
@@ -84,7 +84,7 @@
 
 ## 規則違反の一覧（AGENTS.md の「クラスとしてまとめる」「元の汎用性を保つ」）
 
-次の部品は現在、規則に違反している。解消するまでこの表を残し、直したら行を消す。解消済み: `monoid_lazy`（型パラメータ）、`fenwick_tree`（旧 `fenwick*`）、`union_find`（旧 `uf_*` のファイル分割を解消。機能・入力範囲の違反は下記に残る）、`cumulative_sum`（旧 `prefix_sums` を統合し `CumulativeSum2D` を持つ）、`group`（旧 `affine` を統合し `GroupAffine` を持つ）、`monoid`、`interval`、`vector_sum`/`vector_min`/`vector_max`/`vector_fill`/`mat_mul`/`floyd_warshall`/`compress`/`segtree_sum`（型パラメータ）、`extrema`（型パラメータを元のまま残し、`long long` の具体化を検証する）。
+次の部品は現在、規則に違反している。解消するまでこの表を残し、直したら行を消す。解消済み: `monoid_lazy`（型パラメータ）、`fenwick_tree`（旧 `fenwick*`）、`union_find`（旧 `uf_*` のファイル分割を解消し、経路圧縮と別カウンタを復元）、`cumulative_sum`（旧 `prefix_sums` を統合し `CumulativeSum2D` を持つ）、`group`（旧 `affine` を統合し `GroupAffine` を持つ）、`monoid`、`interval`、`vector_sum`/`vector_min`/`vector_max`/`vector_fill`/`mat_mul`/`floyd_warshall`/`compress`/`segtree_sum`（型パラメータ）、`extrema`（型パラメータを元のまま残し、`long long` の具体化を検証する）。
 
 ### 1. 同じクラスなのにファイルを分けている、またはクラスにしていない
 
@@ -101,7 +101,7 @@
 - 旧`library3`の`Group`/`Mapping`のAPI・意味を縮小している: public field `x/a/b`、`ide/compose`、`template<class U> U apply(U)` の値渡しを現行公開版は保持していない。逆元の演算の定義も異なり、doubleの0の符号が変わる。上の旧版対応表と `docs/experiments_findings.md` に実比較を記録した。元APIを持つクラスとして全機能を検証するまで未解消。
 
 - 型 `T` を `long long` に固定: なし（`run_length`・`bellman_ford`・`dijkstra` も 2026-10-12 にテンプレート化済み。`monoid_lazy` もテンプレート化済み。入れ子の構造体の平らな形は下の「構造を変えている」に残る）。
-- 機能を落としている、または構造を変えている: `tree_root`/`tree_ancestor`（`Tree` の高さ・直径・全方位木 DP とコンストラクタ類を含めず、隣接リストを CSR、`stack<tuple>` を呼び出し側の `stk` に変えている。解消は残りの `Tree` の機能を同じ枠組みで足す）、`union_find`（`unite`/`same`/`size` が経路圧縮をしない。木の数を `ps` の末尾に持つ。入力assertは復元済み）、`interval`（`<=>` と入出力演算子なし）、`bellman_ford`（負閉路の印は元の `NEGATIVE_CYCLE` 値でなく `-inf`。負閉路から届く頂点が必ず `-inf` になることは未証明でテストのみ）、`dijkstra`（`priority_queue` でなく O(n²)）、`floyd_warshall`（負の辺と親なし）、`mat_mul`（積のみ）、`segtree_sum`（和のみ）、`monoid_lazy`（平らなAPIは簡便APIとして残す。元の入れ子APIは公開済みで、`T` は変換器の整数4種のみ検証、`short`/`char`/浮動小数は未）。
+- 機能を落としている、または構造を変えている: `tree_root`/`tree_ancestor`（`Tree` の高さ・直径・全方位木 DP とコンストラクタ類を含めず、隣接リストを CSR、`stack<tuple>` を呼び出し側の `stk` に変えている。解消は残りの `Tree` の機能を同じ枠組みで足す）、`interval`（`<=>` と入出力演算子なし）、`bellman_ford`（負閉路の印は元の `NEGATIVE_CYCLE` 値でなく `-inf`。負閉路から届く頂点が必ず `-inf` になることは未証明でテストのみ）、`dijkstra`（`priority_queue` でなく O(n²)）、`floyd_warshall`（負の辺と親なし）、`mat_mul`（積のみ）、`segtree_sum`（和のみ）、`monoid_lazy`（平らなAPIは簡便APIとして残す。元の入れ子APIは公開済みで、`T` は変換器の整数4種のみ検証、`short`/`char`/浮動小数は未）。
 - 機能を落としている（`segment_tree`）: 元の `SegmentTree<M>` は任意のモノイド `M` のオブジェクトの木だが、公開版は値（`vector<value_type>`）の木で、モノイドは `value_type`・静的 `e()`・静的 `apply` を持つ方針として与える（1 つの値だけのモノイドに限る）。`search_prod_right`/`search_prod_left`（述語を取る二分探索）と `assert` は含めない。検証した具体化は `long long` の最大値と最小値のみ。解消は、構造体のオブジェクトのベクトルを扱う変換器の拡張、述語 `F` の扱い、`MonoidMin/Mul` などの具体化を足すこと。
 
 - （解消済み 2026-11-11）入力範囲を狭めていた `segment_tree_beats` の公開版（`4*n` を `8*n+8` に変え、長さと子添字を32-bit intのまま計算）は公開を取り下げた。新方式で再公開するときは元の範囲を保つ。

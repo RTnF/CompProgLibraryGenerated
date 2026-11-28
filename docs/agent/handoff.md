@@ -1,5 +1,15 @@
 # 作業引き継ぎ
 
+## 2026-11-28 の原本検証
+
+- TreeSet の AVL 版を含む `1cad35eceef2fd76d7657400fdc78f5bca685288` の [CI 46142797681](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/46142797681) は18ジョブすべて成功。開始から完了まで8分25秒で、配布ZIP内の70ヘッダーは対象コミットの全ヘッダーとバイト単位で一致した。
+- `experiments/library3/cpp/Graph/UnionFind.hpp` を `library/union_find/disjoint_set.hpp` の `cp::DisjointSet` へ移植。生成モデルから全メソッドの結果と停止、成分の要素数、経路上の全頂点の圧縮、各問い合わせと併合の最悪時対数手数を証明。差分1,227出力、原本と公開版の ASan/UBSan、テンプレート先行 include、配布ZIP内71ヘッダーの単独・一括コンパイルが成功。定理台帳の既存宣言の変更は0件。公開入口6件の Lean 再生と独立カーネル3,377宣言も成功。最初の全件ゲートは並列の補助検査が空きメモリ不足で停止した。直列の全件ゲートで71部品・204検査、Lean 再生7モジュール、独立カーネル31,430宣言が成功した。再走査では72ファイルの宣言と原本台帳137件を確認した。測定・検証ログは `benchmarks/local/disjoint-set/`。
+- `.cache/wip/legacy_affine/` に `experiments/library3/cpp/AlgebraicStructure/Mapping.hpp` の試作を作成。異なるテンプレート引数同士の乗算を既存の `MulResult` に、積の中間型からの加算と戻り型への変換を `AddResult` と `Conv` に翻訳し、`Spec.lean` に構築・合成・逆写像・異種型の適用の証明を置いた。原本と試作の C++ で値渡し、混合整数、浮動小数、ユーザー定義型の中間積と和を検査し、生成モデルとの照合は `T=int,U=long long` と逆の組み合わせで各364出力が一致した。変換器本体への反映、浮動小数の誤差評価、正式登録が残る。
+- `array/element_count.hpp` は `.cache/wip/element_count_check/self_elements.cpp` で、添字演算がコンテナ自身の型を返す場合に原本が動き、公開版は `value_type` がなくコンパイルできないことを再現した。試作 `compat.hpp` はこのケースと標準コンテナの ASan/UBSan を通る。変換器はコンセプト宣言を拒否する。2つの明示的実体化定義を除いても生成 Lean がパスのコメント以外で一致することと、ループの出力配列の領域上界を `Space.lean` で確認した。
+- `experiments/library/cpp/union_find/` の2原本はバイト単位で同一で、クラス本体は名前空間と `std::` の修飾を除くと公開 `UnionFind` と同じ。両原本を公開版と同じテストで ASan/UBSan 検査した。`.cache/wip/union_find_contracts/Spec.lean` では `DisjointSet` との生成モデルの等価性を使い、既定構築を含む7入口について、成分の要素数、根の個数、経路全体の圧縮、結合結果、対数手数の定理を `UnionFind` 側に移した。定理の登録と台帳更新は次回の検証単位に残す。
+- `.cache/wip/geometry_order/` の C++ 回帰で、原本 `Vec2<long double>::compare_x` の循環と、同じ象限内での `compare_arg` の比較不能関係の非推移性を再現した。`Counterexample.lean` は正の許容誤差を持つ有理数モデルで同じ反例を証明する。幾何部品を移植するときは、ソートに使う順序と幾何判定の許容誤差の両方を検証する。
+- `.cache/wip/legacy_monoid/` では旧 `library3` の `MonoidMul` の4入口を現在の公開モデルに対応させ、任意の係数型で値と手数の一致を証明した。原本と公開版の照合は整数、浮動小数、ユーザー定義の積で ASan/UBSan を通過した。`.cache/wip/legacy_group/` では旧 `GroupSum` と `GroupAffine` の10入口を生成し、値と手数を証明した。旧 `GroupSum::inv` の `0 - x` を生成モデルに残している。正式登録と原本台帳への接続は残る。
+
 ## C++23 への移行
 
 - 公開70部品、GCC 13.3.0・Clang 22.1.4 の検査、翻訳・差分ハーネス、配布ZIP検査を `-std=c++23` に揃えた。調査用に旧規格を指定できる。
@@ -947,6 +957,7 @@ L=`experiments/library/cpp/`、L3=`experiments/library3/cpp/`。公開部分あ�
 - 2026-11-27（TreeMultiSet の正式登録）: 試作でコピー・ムーブと閉区間出力まで含む4,871宣言が独立カーネルを通った。公開ヘッダ、生成モデル、純粋 treap とスロット配置の証明を登録し、定理台帳に28個の公開ルートを追加した。既存の仕様は変わらない。原本の修正を `docs/agent/fixes.md` に記録し、61宣言を再走査した。全137ファイルの台帳照合、C++ サニタイザ、原本と公開版の2,400更新と親キー列、`int`・`long long` 各4,712出力の生成モデル差分が成功した。全70ヘッダの配布ZIPは展開後の結合コンパイルまで検査した。ビルド増分とローカル全件ゲートのログは `benchmarks/local/tree-multiset/`。ゲートの完走、push後の同一SHAのCIと配布は続行中。
 - TreeMultiSet は原本の `ll` と同じ `std::int64_t` を既定型にした。deque の確保を最初の挿入まで遅らせ、原本と同じ `noexcept` の既定構築・ムーブを割り当てなしで実装した。この変更で公開 C++ から再生成された Lean モデルはバイト単位で一致。変換器は非公開の所有者を要素列へ対応させ、無条件のサイズ取得、確保なしの挿入、別の所有者のサイズ取得を拒否する。確定版の原本回帰・3型各4,712出力の差分・配布ZIPが成功し、確定版の全件gateを実行中。`set/set.hpp` の公開版にも同じ既定型の差が残っていることを `.cache/wip/tree_set/default-key-regression.log` で再現した。
 - TreeMultiSet 確定版で全70部品・201検査のローカル全件gateが成功。最終監査は同一Lean入力の実行結果を再利用した。その実行でLean再生48モジュールと独立カーネル30,454宣言を確認済み。原本台帳137ファイルと展開後の70ヘッダも検査した。配布と30分条件は対象コミットのpush後に確認する。
+- TreeMultiSet を `8fdd91fe3f8ec76af6d9c0d34560f86116d152ac` で公開した。[CI 46010878566](https://github.com/RTnF/CompProgLibraryGenerated/actions/runs/46010878566) は push から8分10秒で配布まで全18ジョブを完了。同じコミットを指すリリースの ZIP はローカル検証済み70ヘッダの ZIP と一致した。記録は `benchmarks/local/tree-multiset/`。
 - 2026-11-28（TreeSet の順位・順序統計）: 最悪時 `O(log n)` の要件に合わせ、`.cache/wip/tree_set/avl/` で部分木サイズを持つ AVL 木を試作。順位は存在時に0始まりの半開区間、不在時に `{-1, -1}`。上下検索は指定キーを含む。純粋 AVL の挿入・削除が平衡と整列を保ち、高さが `2 * log2(n + 1) + 1` 以下になることを証明した。生成 C++ モデルは有効な節点配置と平衡条件のもとで順位、k番目、上下検索の結果と対数手数上界を証明済み。ASan/UBSan では昇順・降順・混合の計10,000更新と残存キーの削除を検査し、生成モデルとの照合は `int` と `std::int64_t` で各3,256出力が一致。生成更新入口への接続と登録・全件gateが残っているため、新APIは試作に置いている。
 - TreeSet の生成モデルで挿入・削除後の平衡と整列、空き枠の再利用、順位・k番目・上下検索を検証し、公開ヘッダと証明に組み込んだ。最小値・最大値は両端の添字を保持して定数時間。追加領域は探索が定数、更新が高さに比例するスタックを使う。格納枠は削除後も再利用のために保持する。公開部品の C++ サニタイザ・テンプレート先行 include、生成一致、原本台帳137ファイル、配布ZIPの結合検査が成功。Lean のビルド増分と全件ゲートのログは `benchmarks/local/tree-set-avl/` に保存。全件ゲート、コミットと push 後の確認を進めている。
 - TreeSet の公開入口15件をすべて差分検査し、`int`・`long long`・`std::int64_t` 各3,250出力が一致。旧順序付き集合の変換器回帰は専用の試験用ヘッダに移した。修正後の全件ゲートは70部品・201検査が成功し、Lean の再生21モジュールと独立カーネル31,233宣言を確認した。ローカル結果は `benchmarks/local/tree-set-avl/gate-final.log`。
